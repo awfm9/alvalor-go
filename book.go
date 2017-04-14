@@ -61,13 +61,10 @@ type SimpleBook struct {
 }
 
 // NewSimpleBook function.
-func NewSimpleBook(addrs []string) *SimpleBook {
-	entries := make(map[string]*entry)
-	for _, addr := range addrs {
-		entries[addr] = &entry{addr: addr}
-	}
+func NewSimpleBook() *SimpleBook {
 	return &SimpleBook{
-		entries: entries,
+		blacklist: make(map[string]struct{}),
+		entries:   make(map[string]*entry),
 	}
 }
 

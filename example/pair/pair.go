@@ -30,7 +30,8 @@ func main() {
 		network.SetMinPeers(1),
 		network.SetMaxPeers(1),
 	)
-	book := network.NewSimpleBook([]string{addr})
+	book := network.NewSimpleBook()
+	book.Add("127.0.0.1:10000")
 	log2 := network.NewSimpleLog("B")
 	node2 := network.NewNode(
 		network.SetLog(log2),

@@ -20,7 +20,8 @@ func main() {
 	var nodes []*network.Node
 	sub := make(chan interface{})
 	for i := 0; i < 16; i++ {
-		book := network.NewSimpleBook([]string{"127.0.0.1:10000"})
+		book := network.NewSimpleBook()
+		book.Add("127.0.0.1:10000")
 		addr := fmt.Sprintf("127.0.0.1:%v", 10000)
 		log1 := network.NewSimpleLog(fmt.Sprintf("node-%v", i))
 		node := network.NewNode(
