@@ -19,7 +19,6 @@ package main
 
 import (
 	"fmt"
-	"log"
 	"math/rand"
 	"os"
 	"os/signal"
@@ -27,6 +26,7 @@ import (
 	"syscall"
 	"time"
 
+	logger "github.com/veltor/veltor-logger"
 	network "github.com/veltor/veltor-network"
 )
 
@@ -37,13 +37,13 @@ func main() {
 	var nodes []*network.Node
 	sub := make(chan interface{})
 	beacon := "127.0.0.1:10000"
+	log := logger.New()
 	for i := 0; i < 16; i++ {
 		book := network.NewSimpleBook()
 		book.Add(beacon)
 		addr := fmt.Sprintf("127.0.0.1:%v", 10000+i)
-		log1 := network.NewSimpleLog(fmt.Sprintf("node-%v", i))
 		node := network.NewNode(
-			network.SetLog(log1),
+			network.SetLog(log),
 			network.SetBook(book),
 			network.SetSubscriber(sub),
 			network.SetListen(true),
@@ -59,16 +59,16 @@ func main() {
 			select {
 			case <-done:
 				break Loop
-			case <-time.After(time.Second * 5):
+			case <-time.After(time.Second * 1):
 				msg := strconv.FormatUint(uint64(rand.Uint32()), 10)
 				node := nodes[rand.Int()%len(nodes)]
 				err := node.Send(beacon, msg)
 				if err != nil {
-					log.Printf("message send failed: %v", err)
+					log.Warningf("message send failed: %v", err)
 				}
 			case packet := <-sub:
 				msg := packet.(*network.Packet).Message.(string)
-				log.Printf("received message: %v", msg)
+				log.Infof("received message: %v", msg)
 			}
 		}
 	}()

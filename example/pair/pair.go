@@ -18,7 +18,6 @@
 package main
 
 import (
-	"log"
 	"math/rand"
 	"os"
 	"os/signal"
@@ -26,6 +25,7 @@ import (
 	"syscall"
 	"time"
 
+	logger "github.com/veltor/veltor-logger"
 	network "github.com/veltor/veltor-network"
 	"github.com/veltor/veltor-network/proto"
 )
@@ -37,9 +37,10 @@ func main() {
 	addr := "127.0.0.1:10000"
 	sub := make(chan interface{})
 	codec := proto.Codec{}
-	log1 := network.NewSimpleLog("A")
+	log := logger.New()
+	log.SetLevel(logger.Debug)
 	node1 := network.NewNode(
-		network.SetLog(log1),
+		network.SetLog(log),
 		network.SetCodec(codec),
 		network.SetSubscriber(sub),
 		network.SetListen(true),
@@ -49,9 +50,8 @@ func main() {
 	)
 	book := network.NewSimpleBook()
 	book.Add(addr)
-	log2 := network.NewSimpleLog("B")
 	node2 := network.NewNode(
-		network.SetLog(log2),
+		network.SetLog(log),
 		network.SetCodec(codec),
 		network.SetBook(book),
 		network.SetSubscriber(sub),
@@ -68,11 +68,11 @@ func main() {
 				msg := strconv.FormatUint(uint64(rand.Uint32()), 10)
 				err := node2.Send(addr, msg)
 				if err != nil {
-					log.Printf("message send failed: %v", err)
+					log.Warningf("message send failed: %v", err)
 				}
 			case packet := <-sub:
 				msg := packet.(*network.Packet).Message.(string)
-				log.Printf("received message: %v", msg)
+				log.Infof("received message: %v", msg)
 			}
 		}
 	}()
