@@ -54,9 +54,6 @@ type entry struct {
 
 // score method.
 func (e entry) score() float64 {
-	if e.active {
-		return 0
-	}
 	if e.failure == 0 {
 		return 1
 	}
@@ -81,8 +78,9 @@ type SimpleBook struct {
 // NewSimpleBook function.
 func NewSimpleBook() *SimpleBook {
 	return &SimpleBook{
-		blacklist: make(map[string]struct{}),
-		entries:   make(map[string]*entry),
+		blacklist:  make(map[string]struct{}),
+		entries:    make(map[string]*entry),
+		sampleSize: 10,
 	}
 }
 
@@ -118,6 +116,7 @@ func (s *SimpleBook) Connected(addr string) {
 	if !ok {
 		return
 	}
+	e.active = true
 	e.success++
 }
 
@@ -152,7 +151,7 @@ func (s *SimpleBook) Failed(addr string) {
 
 // Get method.
 func (s *SimpleBook) Get() (string, error) {
-	entries := s.slice()
+	entries := s.slice(false)
 	if len(entries) == 0 {
 		return "", errBookEmpty
 	}
@@ -164,39 +163,32 @@ func (s *SimpleBook) Get() (string, error) {
 
 // Sample method.
 func (s *SimpleBook) Sample() ([]string, error) {
-	entries := s.slice()
-	if len(entries) <= s.sampleSize {
-		addrs := make([]string, 0, len(s.entries))
-		for addr := range s.entries {
-			addrs = append(addrs, addr)
-		}
-		return addrs, nil
+	entries := s.slice(true)
+	if len(entries) == 0 {
+		return nil, errors.New("no valid addresses")
 	}
-	selected := make(map[string]struct{}, s.sampleSize)
-	for {
-		index := rand.Int() % len(entries)
-		entry := entries[index]
-		if entry.score() > rand.Float64() {
-			selected[entry.addr] = struct{}{}
+	if len(entries) > s.sampleSize {
+		for i := 0; i < len(entries); i++ {
+			j := rand.Intn(i + 1)
+			entries[i], entries[j] = entries[j], entries[i]
 		}
-		if len(selected) == s.sampleSize {
-			break
-		}
+		entries = entries[:s.sampleSize]
 	}
-	addrs := make([]string, s.sampleSize)
-	for addr := range selected {
-		addrs = append(addrs, addr)
+	addrs := make([]string, 0, s.sampleSize)
+	for _, e := range entries {
+		addrs = append(addrs, e.addr)
 	}
 	return addrs, nil
 }
 
 // slice method.
-func (s *SimpleBook) slice() []*entry {
-	entries := make([]*entry, 0, len(s.entries))
-	for _, entry := range s.entries {
-		if entry.score() > 0 {
-			entries = append(entries, entry)
+func (s *SimpleBook) slice(active bool) []*entry {
+	entries := make([]*entry, 0)
+	for _, e := range s.entries {
+		if !active && e.active {
+			continue
 		}
+		entries = append(entries, e)
 	}
 	return entries
 }

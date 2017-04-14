@@ -27,14 +27,14 @@ var DefaultConfig = Config{
 	book:       DefaultBook,
 	codec:      DefaultCodec,
 	subscriber: nil,
-	listen:     false,
+	server:     false,
 	address:    "",
 	minPeers:   3,
 	maxPeers:   10,
 	balance:    time.Millisecond * 100,
 	heartbeat:  time.Second * 1,
 	timeout:    time.Second * 3,
-	discovery:  time.Second * 10,
+	discovery:  time.Second * 2,
 }
 
 // Config struct.
@@ -43,7 +43,7 @@ type Config struct {
 	book       Book
 	codec      Codec
 	subscriber chan<- interface{}
-	listen     bool
+	server     bool
 	address    string
 	minPeers   uint
 	maxPeers   uint
@@ -81,10 +81,10 @@ func SetSubscriber(sub chan<- interface{}) func(*Config) {
 	}
 }
 
-// SetListen function.
-func SetListen(listen bool) func(*Config) {
+// SetServer function.
+func SetServer(server bool) func(*Config) {
 	return func(cfg *Config) {
-		cfg.listen = listen
+		cfg.server = server
 	}
 }
 

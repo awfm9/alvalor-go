@@ -43,7 +43,7 @@ func main() {
 		network.SetLog(log),
 		network.SetCodec(codec),
 		network.SetSubscriber(sub),
-		network.SetListen(true),
+		network.SetServer(true),
 		network.SetAddress(addr),
 		network.SetMinPeers(1),
 		network.SetMaxPeers(1),

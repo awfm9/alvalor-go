@@ -36,6 +36,11 @@ type Node struct {
 	book       Book
 	codec      Codec
 	subscriber chan<- interface{}
+	server     bool
+	address    string
+	minPeers   uint
+	maxPeers   uint
+	balance    time.Duration
 	heartbeat  time.Duration
 	timeout    time.Duration
 	discovery  *time.Ticker
@@ -54,16 +59,21 @@ func NewNode(options ...func(*Config)) *Node {
 		book:       cfg.book,
 		codec:      cfg.codec,
 		subscriber: cfg.subscriber,
+		server:     cfg.server,
+		address:    cfg.address,
+		minPeers:   cfg.minPeers,
+		maxPeers:   cfg.maxPeers,
+		balance:    cfg.balance,
 		heartbeat:  cfg.heartbeat,
 		timeout:    cfg.timeout,
 		discovery:  time.NewTicker(cfg.discovery),
 		peers:      make(map[string]*peer),
 	}
 	node.book.Blacklist(cfg.address)
-	if cfg.listen {
-		go node.listen(cfg.address, cfg.maxPeers)
+	if cfg.server {
+		go node.listen()
 	}
-	go node.balance(cfg.balance, cfg.minPeers, cfg.maxPeers)
+	go node.check()
 	go node.manage()
 	return node
 }
@@ -173,12 +183,9 @@ func (node *Node) processDiscover(pk *Packet) error {
 	if err != nil {
 		return errors.Wrap(err, "could not get address sample")
 	}
-	peers := message.Peers{
-		Addresses: addrs,
-	}
-	err = node.Send(pk.Address, &peers)
+	err = node.share(pk.Address, addrs)
 	if err != nil {
-		return errors.Wrap(err, "could not send peers message")
+		return errors.Wrap(err, "could not share address sample")
 	}
 	return nil
 }
@@ -188,6 +195,10 @@ func (node *Node) processPeers(pk *Packet) error {
 	peers := pk.Message.(*message.Peers)
 	for _, addr := range peers.Addresses {
 		node.book.Add(addr)
+		_, ok := node.peers[addr]
+		if ok {
+			node.book.Connected(addr)
+		}
 	}
 	return nil
 }
@@ -203,15 +214,15 @@ func (node *Node) processCustom(pk *Packet) error {
 }
 
 // listen method.
-func (node *Node) listen(localAddr string, maxPeers uint) {
-	_, _, err := net.SplitHostPort(localAddr)
+func (node *Node) listen() {
+	_, _, err := net.SplitHostPort(node.address)
 	if err != nil {
 		node.log.Errorf("invalid listen address: %v", err)
 		return
 	}
-	ln, err := net.Listen("tcp", localAddr)
+	ln, err := net.Listen("tcp", node.address)
 	if err != nil {
-		node.log.Errorf("could not create listener on %v: %v", localAddr, err)
+		node.log.Errorf("could not create listener on %v: %v", node.address, err)
 		return
 	}
 	for {
@@ -220,20 +231,20 @@ func (node *Node) listen(localAddr string, maxPeers uint) {
 			node.log.Errorf("could not accept connection: %v", err)
 			break
 		}
-		remoteAddr := conn.RemoteAddr().String()
-		if localAddr == remoteAddr {
-			node.log.Warningf("attempted connectiong to self, dropping")
+		addr := conn.RemoteAddr().String()
+		if addr == node.address {
+			node.log.Warningf("attempted connection to self, dropping")
 			conn.Close()
 			return
 		}
-		if len(node.peers) > int(maxPeers) {
-			node.log.Infof("too many peers, not accepting %v", remoteAddr)
+		if len(node.peers) > int(node.maxPeers) {
+			node.log.Infof("too many peers, not accepting %v", addr)
 			conn.Close()
 			return
 		}
-		_, ok := node.peers[remoteAddr]
+		_, ok := node.peers[addr]
 		if ok {
-			node.log.Warningf("refusing duplicate incoming peer on %v", remoteAddr)
+			node.log.Warningf("refusing duplicate incoming peer on %v", addr)
 			conn.Close()
 			return
 		}
@@ -241,16 +252,16 @@ func (node *Node) listen(localAddr string, maxPeers uint) {
 	}
 }
 
-// balance method.
-func (node *Node) balance(balance time.Duration, minPeers uint, maxPeers uint) {
+// check method.
+func (node *Node) check() {
 	for {
-		if node.count < minPeers {
+		if node.count < node.minPeers {
 			node.add()
 		}
-		if node.count > maxPeers {
+		if node.count > node.maxPeers {
 			node.remove()
 		}
-		time.Sleep(balance)
+		time.Sleep(node.balance)
 	}
 }
 
@@ -370,6 +381,24 @@ func (node *Node) init(conn net.Conn) {
 	node.peers[addr] = &p
 	node.book.Connected(addr)
 	go p.receive()
+	if node.server {
+		err := node.share(addr, []string{node.address})
+		if err != nil {
+			node.log.Errorf("could not share initial address: %v", err)
+		}
+	}
+}
+
+// share method.
+func (node *Node) share(addr string, addrs []string) error {
+	peers := message.Peers{
+		Addresses: addrs,
+	}
+	err := node.Send(addr, &peers)
+	if err != nil {
+		return errors.Wrap(err, "could not send peers message")
+	}
+	return nil
 }
 
 // drop method.

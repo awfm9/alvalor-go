@@ -38,6 +38,7 @@ func main() {
 	sub := make(chan interface{})
 	beacon := "127.0.0.1:10000"
 	log := logger.New()
+	log.SetLevel(logger.Debug)
 	for i := 0; i < 16; i++ {
 		book := network.NewSimpleBook()
 		book.Add(beacon)
@@ -46,7 +47,7 @@ func main() {
 			network.SetLog(log),
 			network.SetBook(book),
 			network.SetSubscriber(sub),
-			network.SetListen(true),
+			network.SetServer(true),
 			network.SetAddress(addr),
 			network.SetMinPeers(4),
 			network.SetMaxPeers(15),
