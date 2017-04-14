@@ -25,9 +25,9 @@ import (
 	"syscall"
 	"time"
 
+	logger "github.com/veltor/veltor-go/logger"
 	network "github.com/veltor/veltor-go/network"
 	"github.com/veltor/veltor-go/proto"
-	logger "github.com/veltor/veltor-logger"
 )
 
 func main() {
