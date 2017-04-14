@@ -145,7 +145,7 @@ func (s *SimpleBook) Sample() ([]string, error) {
 	for {
 		index := rand.Int() % len(entries)
 		entry := entries[index]
-		if rand.Float64() > entry.score() {
+		if entry.score() > rand.Float64() {
 			selected[entry.addr] = struct{}{}
 		}
 		if len(selected) == s.sampleSize {
