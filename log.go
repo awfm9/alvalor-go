@@ -17,68 +17,36 @@
 
 package network
 
-import (
-	"fmt"
-	"io"
-	"io/ioutil"
-	"os"
-	"sync"
-	"time"
-)
-
 // Log interface.
 type Log interface {
+	Tracef(format string, v ...interface{})
 	Debugf(format string, v ...interface{})
 	Infof(format string, v ...interface{})
 	Warningf(format string, v ...interface{})
 	Errorf(format string, v ...interface{})
+	Criticalf(format string, v ...interface{})
 }
 
 // DefaultLog variable.
-var DefaultLog = &SimpleLog{w: os.Stderr, prefix: "node"}
+var DefaultLog = &NoopLog{}
 
-// NoopLog variable.
-var NoopLog = &SimpleLog{w: ioutil.Discard}
+// NoopLog struct.
+type NoopLog struct{}
 
-// SimpleLog struct.
-type SimpleLog struct {
-	lock   sync.Mutex
-	prefix string
-	w      io.Writer
-}
-
-// NewSimpleLog function.
-func NewSimpleLog(prefix string) *SimpleLog {
-	return &SimpleLog{
-		prefix: prefix,
-		w:      os.Stderr,
-	}
-}
+// Tracef method.
+func (s *NoopLog) Tracef(format string, v ...interface{}) {}
 
 // Debugf method.
-func (s *SimpleLog) Debugf(format string, v ...interface{}) {
-	s.printf("DEBUG", format, v...)
-}
+func (s *NoopLog) Debugf(format string, v ...interface{}) {}
 
 // Infof method.
-func (s *SimpleLog) Infof(format string, v ...interface{}) {
-	s.printf("INFO", format, v...)
-}
+func (s *NoopLog) Infof(format string, v ...interface{}) {}
 
 // Warningf method.
-func (s *SimpleLog) Warningf(format string, v ...interface{}) {
-	s.printf("WARNING", format, v...)
-}
+func (s *NoopLog) Warningf(format string, v ...interface{}) {}
 
 // Errorf method.
-func (s *SimpleLog) Errorf(format string, v ...interface{}) {
-	s.printf("ERROR", format, v...)
-}
+func (s *NoopLog) Errorf(format string, v ...interface{}) {}
 
-// Printf method.
-func (s *SimpleLog) printf(level string, format string, v ...interface{}) {
-	s.lock.Lock()
-	defer s.lock.Unlock()
-	message := fmt.Sprintf(format, v...)
-	fmt.Fprintf(s.w, "%v - (%v) - [%v] %v\n", time.Now().UTC().Format(time.RFC3339), s.prefix, level, message)
-}
+// Criticalf method.
+func (s *NoopLog) Criticalf(format string, v ...interface{}) {}
