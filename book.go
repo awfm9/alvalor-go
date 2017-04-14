@@ -27,6 +27,7 @@ import (
 // Book interface.
 type Book interface {
 	Add(addr string)
+	Whitelist(addr string)
 	Blacklist(addr string)
 	Connected(addr string)
 	Disconnected(addr string)
@@ -83,6 +84,17 @@ func NewSimpleBook() *SimpleBook {
 		blacklist: make(map[string]struct{}),
 		entries:   make(map[string]*entry),
 	}
+}
+
+// Whitelist method.
+func (s *SimpleBook) Whitelist(addr string) {
+	delete(s.blacklist, addr)
+	peer, ok := s.entries[addr]
+	if !ok {
+		return
+	}
+	peer.failure = 0
+	peer.success = 1
 }
 
 // Blacklist method.
