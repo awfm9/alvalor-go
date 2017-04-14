@@ -36,9 +36,10 @@ type Node struct {
 	book       Book
 	codec      Codec
 	subscriber chan<- interface{}
-	check      time.Duration
 	heartbeat  time.Duration
 	timeout    time.Duration
+	discovery  *time.Ticker
+	count      uint
 	peers      map[string]*peer
 }
 
@@ -53,16 +54,16 @@ func NewNode(options ...func(*Config)) *Node {
 		book:       cfg.book,
 		codec:      cfg.codec,
 		subscriber: cfg.subscriber,
-		check:      cfg.check,
 		heartbeat:  cfg.heartbeat,
 		timeout:    cfg.timeout,
+		discovery:  time.NewTicker(cfg.discovery),
 		peers:      make(map[string]*peer),
 	}
 	node.book.Blacklist(cfg.address)
 	if cfg.listen {
 		go node.listen(cfg.address, cfg.maxPeers)
 	}
-	go node.balance(cfg.minPeers, cfg.maxPeers)
+	go node.balance(cfg.balance, cfg.minPeers, cfg.maxPeers)
 	go node.manage()
 	return node
 }
@@ -82,7 +83,6 @@ Outer:
 			heartbeater := reflect.SelectCase{Dir: reflect.SelectRecv, Chan: reflect.ValueOf(peer.hb.C)}
 			cases = append(cases, heartbeater)
 		}
-		node.log.Debugf("rebuilt select cases for %v peers", len(peers))
 		if len(cases) == 0 {
 			time.Sleep(time.Millisecond * 100)
 			continue
@@ -90,59 +90,67 @@ Outer:
 		for {
 			i, val, ok := reflect.Select(cases)
 			if !ok {
-				peer := peers[i]
-				delete(node.peers, peer.addr)
-				peer.close()
-				node.book.Dropped(peer.addr)
-				node.log.Warningf("dropped failed peer on %v: %v", peer.addr, peer.err)
+				node.disconnect(peers[i])
 				continue Outer
 			}
 			_, ok = val.Interface().(time.Time)
 			if ok {
-				i = i % len(peers)
-				peer := peers[i]
-				ping := message.Ping{
-					Nonce: rand.Uint32(),
-				}
-				node.log.Debugf("pinging peer %v", peer.addr)
-				err := node.Send(peer.addr, &ping)
-				if err != nil {
-					node.log.Errorf("could not send ping to %v: %v", peer.addr, err)
-				}
+				node.ping(peers[i%len(peers)])
 				continue
 			}
-			packet, ok := val.Interface().(*Packet)
+			pk, ok := val.Interface().(*Packet)
 			if ok {
-				node.log.Debugf("processing packet from peer %v", packet.Address)
-				err := node.process(val.Interface().(*Packet))
-				if err != nil {
-					node.log.Errorf("could not process packet from %v: %v", packet.Address, err)
-				}
+				node.process(pk)
 				continue
 			}
 		}
 	}
 }
 
+// ping method.
+func (node *Node) ping(peer *peer) {
+	node.log.Debugf("pinging peer on %v", peer.addr)
+	ping := message.Ping{
+		Nonce: rand.Uint32(),
+	}
+	err := node.Send(peer.addr, &ping)
+	if err != nil {
+		node.log.Errorf("could not send ping to %v: %v", peer.addr, err)
+	}
+}
+
+// disconnect method.
+func (node *Node) disconnect(peer *peer) {
+	node.log.Infof("disconnecting peer on %v", peer.addr)
+	delete(node.peers, peer.addr)
+	peer.close()
+	node.book.Dropped(peer.addr)
+	node.count--
+}
+
 // process method.
-func (node *Node) process(pk *Packet) error {
+func (node *Node) process(pk *Packet) {
+	node.log.Debugf("processing %T message from %v", pk.Message, pk.Address)
+	var err error
 	switch pk.Message.(type) {
 	case *message.Ping:
-		return node.processPing(pk)
+		err = node.processPing(pk)
 	case *message.Pong:
-		return node.processPong(pk)
+		err = node.processPong(pk)
 	case *message.Discover:
-		return node.processDiscover(pk)
+		err = node.processDiscover(pk)
 	case *message.Peers:
-		return node.processPeers(pk)
+		err = node.processPeers(pk)
 	default:
-		return node.processCustom(pk)
+		err = node.processCustom(pk)
+	}
+	if err != nil {
+		node.log.Errorf("could not process %T message: %v", pk.Message, err)
 	}
 }
 
 // processPing method.
 func (node *Node) processPing(pk *Packet) error {
-	node.log.Debugf("processing ping from %v", pk.Address)
 	ping := pk.Message.(*message.Ping)
 	pong := message.Pong{
 		Nonce: ping.Nonce,
@@ -156,14 +164,11 @@ func (node *Node) processPing(pk *Packet) error {
 
 // processPong method.
 func (node *Node) processPong(pk *Packet) error {
-	node.log.Debugf("processing pong from %v", pk.Address)
-	node.book.Connected(pk.Address)
 	return nil
 }
 
 // processDiscover method.
 func (node *Node) processDiscover(pk *Packet) error {
-	node.log.Debugf("processing discover from %v", pk.Address)
 	addrs, err := node.book.Sample()
 	if err != nil {
 		return errors.Wrap(err, "could not get address sample")
@@ -180,7 +185,6 @@ func (node *Node) processDiscover(pk *Packet) error {
 
 // processPeers method.
 func (node *Node) processPeers(pk *Packet) error {
-	node.log.Debugf("processing peers from %v", pk.Address)
 	peers := pk.Message.(*message.Peers)
 	for _, addr := range peers.Addresses {
 		node.book.Add(addr)
@@ -190,7 +194,6 @@ func (node *Node) processPeers(pk *Packet) error {
 
 // processCustom method.
 func (node *Node) processCustom(pk *Packet) error {
-	node.log.Debugf("processing custom from %v", pk.Address)
 	select {
 	case node.subscriber <- pk:
 		return nil
@@ -239,17 +242,15 @@ func (node *Node) listen(localAddr string, maxPeers uint) {
 }
 
 // balance method.
-func (node *Node) balance(minPeers uint, maxPeers uint) {
+func (node *Node) balance(balance time.Duration, minPeers uint, maxPeers uint) {
 	for {
-		if uint(len(node.peers)) < minPeers {
-			node.log.Infof("adding peer to rebalance")
+		if node.count < minPeers {
 			node.add()
 		}
-		if uint(len(node.peers)) > maxPeers {
-			node.log.Infof("removing peer to bebalance")
+		if node.count > maxPeers {
 			node.remove()
 		}
-		time.Sleep(node.check)
+		time.Sleep(balance)
 	}
 }
 
@@ -257,12 +258,7 @@ func (node *Node) balance(minPeers uint, maxPeers uint) {
 func (node *Node) add() {
 	addr, err := node.book.Get()
 	if err != nil {
-		node.log.Infof("could not get address from book, launching discovery")
-		discover := message.Discover{}
-		err = node.Broadcast(&discover)
-		if err != nil {
-			node.log.Errorf("could not broadcast discover: %v", err)
-		}
+		node.discover()
 		return
 	}
 	_, ok := node.peers[addr]
@@ -272,32 +268,46 @@ func (node *Node) add() {
 	}
 	conn, err := net.Dial("tcp", addr)
 	if err != nil {
-		node.log.Errorf("could not dial address to add peer: %v", err)
+		node.log.Errorf("could not dial peer %v: %v", addr, err)
 		return
 	}
 	go node.handshake(conn)
+}
+
+// discover method.
+func (node *Node) discover() {
+	select {
+	case <-node.discovery.C:
+	default:
+		return
+	}
+	node.log.Infof("launching peer discovery")
+	discover := message.Discover{}
+	err := node.Broadcast(&discover)
+	if err != nil {
+		node.log.Errorf("could not launch discovery: %v", err)
+	}
 }
 
 // remove method.
 func (node *Node) remove() {
 	index := 0
 	goal := rand.Int() % len(node.peers)
-	for addr, peer := range node.peers {
+	for _, peer := range node.peers {
 		if index != goal {
 			index++
 			continue
 		}
-		delete(node.peers, addr)
-		peer.close()
-		node.book.Disconnected(addr)
+		node.disconnect(peer)
 		return
 	}
-	node.log.Errorf("could not find node to remove")
 }
 
 // handshake method.
 func (node *Node) handshake(conn net.Conn) {
-	node.log.Infof("adding outgoing peer on %v", conn.RemoteAddr())
+	addr := conn.RemoteAddr().String()
+	node.log.Infof("adding outgoing peer on %v", addr)
+	node.count++
 	_, err := conn.Write(MsgSyn)
 	if err != nil {
 		node.drop(conn)
@@ -318,7 +328,9 @@ func (node *Node) handshake(conn net.Conn) {
 
 // welcome method.
 func (node *Node) welcome(conn net.Conn) {
-	node.log.Infof("adding incoming peer on %v", conn.RemoteAddr())
+	addr := conn.RemoteAddr().String()
+	node.log.Infof("adding incoming peer on %v", addr)
+	node.count++
 	syn := make([]byte, 4)
 	_, err := conn.Read(syn)
 	if err != nil {
@@ -339,8 +351,8 @@ func (node *Node) welcome(conn net.Conn) {
 
 // init method.
 func (node *Node) init(conn net.Conn) {
-	node.log.Infof("finished handshake with %v", conn.RemoteAddr())
 	addr := conn.RemoteAddr().String()
+	node.log.Infof("finalizing handshake with %v", addr)
 	r := lz4.NewReader(conn)
 	w := lz4.NewWriter(conn)
 	out := make(chan *Packet)
@@ -363,6 +375,8 @@ func (node *Node) init(conn net.Conn) {
 // drop method.
 func (node *Node) drop(conn net.Conn) {
 	addr := conn.RemoteAddr().String()
+	node.log.Infof("dropping connection to %v", addr)
+	node.count--
 	err := conn.Close()
 	if err != nil {
 		node.log.Errorf("could not close dropped connection: %v", err)
@@ -372,6 +386,7 @@ func (node *Node) drop(conn net.Conn) {
 
 // Send method.
 func (node *Node) Send(addr string, msg interface{}) error {
+	node.log.Debugf("sending %T message to %v", msg, addr)
 	peer, ok := node.peers[addr]
 	if !ok {
 		return errors.New("could not find peer with given address")
@@ -386,7 +401,7 @@ func (node *Node) Send(addr string, msg interface{}) error {
 
 // Broadcast method.
 func (node *Node) Broadcast(msg interface{}) error {
-	node.log.Infof("broadcasting message")
+	node.log.Debugf("broadcasting %T message", msg)
 	for _, peer := range node.peers {
 		err := peer.send(msg)
 		if err != nil {

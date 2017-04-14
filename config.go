@@ -31,9 +31,10 @@ var DefaultConfig = Config{
 	address:    "",
 	minPeers:   3,
 	maxPeers:   10,
-	check:      time.Second * 2,
+	balance:    time.Millisecond * 100,
 	heartbeat:  time.Second * 1,
-	timeout:    time.Second * 5,
+	timeout:    time.Second * 3,
+	discovery:  time.Second * 10,
 }
 
 // Config struct.
@@ -46,9 +47,10 @@ type Config struct {
 	address    string
 	minPeers   uint
 	maxPeers   uint
-	check      time.Duration
+	balance    time.Duration
 	heartbeat  time.Duration
 	timeout    time.Duration
+	discovery  time.Duration
 }
 
 // SetLog function.
@@ -107,10 +109,10 @@ func SetMaxPeers(maxPeers uint) func(*Config) {
 	}
 }
 
-// SetCheck function.
-func SetCheck(check time.Duration) func(*Config) {
+// SetBalance function.
+func SetBalance(balance time.Duration) func(*Config) {
 	return func(cfg *Config) {
-		cfg.check = check
+		cfg.balance = balance
 	}
 }
 
@@ -125,5 +127,12 @@ func SetHeartbeat(heartbeat time.Duration) func(*Config) {
 func SetTimeout(timeout time.Duration) func(*Config) {
 	return func(cfg *Config) {
 		cfg.timeout = timeout
+	}
+}
+
+// SetDiscovery function.
+func SetDiscovery(discovery time.Duration) func(*Config) {
+	return func(cfg *Config) {
+		cfg.discovery = discovery
 	}
 }

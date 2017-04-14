@@ -165,19 +165,12 @@ func (s *SimpleBook) Get() (string, error) {
 // Sample method.
 func (s *SimpleBook) Sample() ([]string, error) {
 	entries := s.slice()
-	for i, entry := range entries {
-		if entry.score() == 0 {
-			last := len(entries) - 1
-			entries[last], entries[i] = entries[i], entries[last]
-			entries = entries[:last]
-		}
-	}
 	if len(entries) <= s.sampleSize {
 		addrs := make([]string, 0, len(s.entries))
 		for addr := range s.entries {
 			addrs = append(addrs, addr)
-			return addrs, nil
 		}
+		return addrs, nil
 	}
 	selected := make(map[string]struct{}, s.sampleSize)
 	for {
@@ -201,7 +194,9 @@ func (s *SimpleBook) Sample() ([]string, error) {
 func (s *SimpleBook) slice() []*entry {
 	entries := make([]*entry, 0, len(s.entries))
 	for _, entry := range s.entries {
-		entries = append(entries, entry)
+		if entry.score() > 0 {
+			entries = append(entries, entry)
+		}
 	}
 	return entries
 }

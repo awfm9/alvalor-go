@@ -48,7 +48,7 @@ func main() {
 		network.SetMaxPeers(1),
 	)
 	book := network.NewSimpleBook()
-	book.Add("127.0.0.1:10000")
+	book.Add(addr)
 	log2 := network.NewSimpleLog("B")
 	node2 := network.NewNode(
 		network.SetLog(log2),
@@ -66,8 +66,7 @@ func main() {
 				break Loop
 			case <-time.After(2 * time.Second):
 				msg := strconv.FormatUint(uint64(rand.Uint32()), 10)
-				log.Printf("sending message: %v", msg)
-				err := node2.Send("127.0.0.1:10000", msg)
+				err := node2.Send(addr, msg)
 				if err != nil {
 					log.Printf("message send failed: %v", err)
 				}

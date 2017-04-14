@@ -36,10 +36,11 @@ func main() {
 	done := make(chan struct{})
 	var nodes []*network.Node
 	sub := make(chan interface{})
+	beacon := "127.0.0.1:10000"
 	for i := 0; i < 16; i++ {
 		book := network.NewSimpleBook()
-		book.Add("127.0.0.1:10000")
-		addr := fmt.Sprintf("127.0.0.1:%v", 10000)
+		book.Add(beacon)
+		addr := fmt.Sprintf("127.0.0.1:%v", 10000+i)
 		log1 := network.NewSimpleLog(fmt.Sprintf("node-%v", i))
 		node := network.NewNode(
 			network.SetLog(log1),
@@ -48,7 +49,7 @@ func main() {
 			network.SetListen(true),
 			network.SetAddress(addr),
 			network.SetMinPeers(4),
-			network.SetMaxPeers(16),
+			network.SetMaxPeers(15),
 		)
 		nodes = append(nodes, node)
 	}
@@ -58,11 +59,10 @@ func main() {
 			select {
 			case <-done:
 				break Loop
-			case <-time.After(time.Millisecond * 100):
+			case <-time.After(time.Second * 5):
 				msg := strconv.FormatUint(uint64(rand.Uint32()), 10)
-				log.Printf("sending message: %v", msg)
 				node := nodes[rand.Int()%len(nodes)]
-				err := node.Send("127.0.0.1:10000", msg)
+				err := node.Send(beacon, msg)
 				if err != nil {
 					log.Printf("message send failed: %v", err)
 				}
