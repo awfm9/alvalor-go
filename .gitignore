@@ -1,0 +1,7 @@
+example/many/many
+example/pair/pair
+proto/discover.capnp.go
+proto/peers.capnp.go
+proto/ping.capnp.go
+proto/pong.capnp.go
+proto/z.capnp.go
