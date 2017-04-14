@@ -10,6 +10,7 @@ import (
 // Book interface.
 type Book interface {
 	Add(addr string)
+	Blacklist(addr string)
 	Connected(addr string)
 	Disconnected(addr string)
 	Dropped(addr string)
@@ -20,6 +21,7 @@ type Book interface {
 
 // DefaultBook variable.
 var DefaultBook = &SimpleBook{
+	blacklist:  make(map[string]struct{}),
 	entries:    make(map[string]*entry),
 	sampleSize: 10,
 }
@@ -53,6 +55,7 @@ var (
 
 // SimpleBook struct.
 type SimpleBook struct {
+	blacklist  map[string]struct{}
 	entries    map[string]*entry
 	sampleSize int
 }
@@ -68,10 +71,19 @@ func NewSimpleBook(addrs []string) *SimpleBook {
 	}
 }
 
+// Blacklist method.
+func (s *SimpleBook) Blacklist(addr string) {
+	delete(s.entries, addr)
+	s.blacklist[addr] = struct{}{}
+}
+
 // Add method.
 func (s *SimpleBook) Add(addr string) {
+	_, ok := s.blacklist[addr]
+	if ok {
+		return
+	}
 	s.entries[addr] = &entry{addr: addr}
-	return
 }
 
 // Connected method.

@@ -41,6 +41,7 @@ func NewNode(options ...func(*Config)) *Node {
 		timeout:    cfg.timeout,
 		peers:      make(map[string]*peer),
 	}
+	node.book.Blacklist(cfg.address)
 	if cfg.listen {
 		go node.listen(cfg.address)
 	}
@@ -182,15 +183,15 @@ func (node *Node) processCustom(pk *Packet) error {
 }
 
 // listen method.
-func (node *Node) listen(addr string) {
-	_, _, err := net.SplitHostPort(addr)
+func (node *Node) listen(localAddr string) {
+	_, _, err := net.SplitHostPort(localAddr)
 	if err != nil {
 		node.log.Errorf("invalid listen address: %v", err)
 		return
 	}
-	ln, err := net.Listen("tcp", addr)
+	ln, err := net.Listen("tcp", localAddr)
 	if err != nil {
-		node.log.Errorf("could not create listener on %v: %v", addr, err)
+		node.log.Errorf("could not create listener on %v: %v", localAddr, err)
 		return
 	}
 	for {
@@ -199,10 +200,15 @@ func (node *Node) listen(addr string) {
 			node.log.Errorf("could not accept connection: %v", err)
 			break
 		}
-		addr := conn.RemoteAddr().String()
-		_, ok := node.peers[addr]
+		remoteAddr := conn.RemoteAddr().String()
+		if localAddr == remoteAddr {
+			node.log.Warningf("attempted connectiong to self, dropping")
+			conn.Close()
+			return
+		}
+		_, ok := node.peers[remoteAddr]
 		if ok {
-			node.log.Warningf("refusing duplicate incoming peer on %v", addr)
+			node.log.Warningf("refusing duplicate incoming peer on %v", remoteAddr)
 			conn.Close()
 			return
 		}
