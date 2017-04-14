@@ -43,7 +43,7 @@ func NewNode(options ...func(*Config)) *Node {
 	}
 	node.book.Blacklist(cfg.address)
 	if cfg.listen {
-		go node.listen(cfg.address)
+		go node.listen(cfg.address, cfg.maxPeers)
 	}
 	go node.balance(cfg.minPeers, cfg.maxPeers)
 	go node.manage()
@@ -183,7 +183,7 @@ func (node *Node) processCustom(pk *Packet) error {
 }
 
 // listen method.
-func (node *Node) listen(localAddr string) {
+func (node *Node) listen(localAddr string, maxPeers uint) {
 	_, _, err := net.SplitHostPort(localAddr)
 	if err != nil {
 		node.log.Errorf("invalid listen address: %v", err)
@@ -203,6 +203,11 @@ func (node *Node) listen(localAddr string) {
 		remoteAddr := conn.RemoteAddr().String()
 		if localAddr == remoteAddr {
 			node.log.Warningf("attempted connectiong to self, dropping")
+			conn.Close()
+			return
+		}
+		if len(node.peers) > int(maxPeers) {
+			node.log.Infof("too many peers, not accepting %v", remoteAddr)
 			conn.Close()
 			return
 		}
