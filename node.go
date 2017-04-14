@@ -396,3 +396,12 @@ func (node *Node) Broadcast(msg interface{}) error {
 	}
 	return nil
 }
+
+// Peers method.
+func (node *Node) Peers() []string {
+	addrs := make([]string, 0, len(node.peers))
+	for _, peer := range node.peers {
+		addrs = append(addrs, peer.addr)
+	}
+	return addrs
+}
