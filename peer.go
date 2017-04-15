@@ -20,12 +20,14 @@ package network
 import (
 	"io"
 	"net"
+	"sync"
 	"time"
 
 	"github.com/pkg/errors"
 )
 
 type peer struct {
+	mutex     sync.Mutex
 	conn      net.Conn
 	addr      string
 	nonce     []byte
@@ -59,6 +61,8 @@ func (p *peer) receive() {
 }
 
 func (p *peer) send(i interface{}) error {
+	p.mutex.Lock()
+	defer p.mutex.Unlock()
 	err := p.codec.Encode(p.w, i)
 	if err != nil {
 		return errors.Wrap(err, "could not encode message")

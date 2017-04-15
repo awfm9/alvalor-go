@@ -22,6 +22,7 @@ import (
 	"math/rand"
 	"net"
 	"reflect"
+	"sync/atomic"
 	"time"
 
 	"github.com/pierrec/lz4"
@@ -46,7 +47,7 @@ type Node struct {
 	heartbeat  time.Duration
 	timeout    time.Duration
 	discovery  *time.Ticker
-	count      uint
+	count      int32
 	peers      map[string]*peer
 }
 
@@ -87,13 +88,13 @@ Outer:
 	for {
 		var peers []*peer
 		var cases []reflect.SelectCase
-		for _, peer := range node.peers {
+		for _, peer := range node.peers { // TODO: fix race condition
 			peers = append(peers, peer)
-			submitter := reflect.SelectCase{Dir: reflect.SelectRecv, Chan: reflect.ValueOf(peer.out)}
+			submitter := reflect.SelectCase{Dir: reflect.SelectRecv, Chan: reflect.ValueOf(peer.out)} // TODO: fix race condition
 			cases = append(cases, submitter)
 		}
 		for _, peer := range node.peers {
-			heartbeater := reflect.SelectCase{Dir: reflect.SelectRecv, Chan: reflect.ValueOf(peer.hb.C)}
+			heartbeater := reflect.SelectCase{Dir: reflect.SelectRecv, Chan: reflect.ValueOf(peer.hb.C)} // TODO: fix race condition
 			cases = append(cases, heartbeater)
 		}
 		if len(cases) == 0 {
@@ -122,7 +123,7 @@ Outer:
 
 // ping method.
 func (node *Node) ping(peer *peer) {
-	node.log.Debugf("pinging peer on %v", peer.addr)
+	node.log.Debugf("pinging peer on %v", peer.addr) // TODO: fix race condition
 	ping := message.Ping{
 		Nonce: rand.Uint32(),
 	}
@@ -138,7 +139,7 @@ func (node *Node) disconnect(peer *peer) {
 	delete(node.peers, peer.addr)
 	peer.close()
 	node.book.Dropped(peer.addr)
-	node.count--
+	atomic.AddInt32(&node.count, -1)
 }
 
 // process method.
@@ -258,10 +259,11 @@ func (node *Node) listen() {
 // check method.
 func (node *Node) check() {
 	for {
-		if node.count < node.minPeers {
+		count := uint(atomic.LoadInt32(&node.count))
+		if count < node.minPeers {
 			node.add()
 		}
-		if node.count > node.maxPeers {
+		if count > node.maxPeers {
 			node.remove()
 		}
 		time.Sleep(node.balance)
@@ -331,7 +333,7 @@ func (node *Node) known(nonce []byte) bool {
 func (node *Node) handshake(conn net.Conn) {
 	addr := conn.RemoteAddr().String()
 	node.log.Infof("adding outgoing peer on %v", addr)
-	node.count++
+	atomic.AddInt32(&node.count, 1)
 	syn := append(CodeSyn, node.nonce...)
 	_, err := conn.Write(syn)
 	if err != nil {
@@ -368,7 +370,7 @@ func (node *Node) handshake(conn net.Conn) {
 func (node *Node) welcome(conn net.Conn) {
 	addr := conn.RemoteAddr().String()
 	node.log.Infof("adding incoming peer on %v", addr)
-	node.count++
+	atomic.AddInt32(&node.count, 1)
 	ack := append(CodeAck, node.nonce...)
 	syn := make([]byte, len(CodeSyn)+len(node.nonce))
 	_, err := conn.Read(syn)
@@ -408,7 +410,7 @@ func (node *Node) init(conn net.Conn, nonce []byte) {
 	r := lz4.NewReader(conn)
 	w := lz4.NewWriter(conn)
 	out := make(chan *Packet)
-	p := peer{
+	p := peer{ // TODO: fix race condition
 		conn:      conn,
 		addr:      addr,
 		nonce:     nonce,
@@ -418,9 +420,9 @@ func (node *Node) init(conn net.Conn, nonce []byte) {
 		codec:     node.codec,
 		heartbeat: node.heartbeat,
 		timeout:   node.timeout,
-		hb:        time.NewTimer(node.heartbeat),
+		hb:        time.NewTimer(node.heartbeat), // TODO: fix race condition
 	}
-	node.peers[addr] = &p
+	node.peers[addr] = &p // TODO: fix race condition
 	node.book.Connected(addr)
 	go p.receive()
 	if node.server {
@@ -447,7 +449,7 @@ func (node *Node) share(addr string, addrs []string) error {
 func (node *Node) drop(conn net.Conn) {
 	addr := conn.RemoteAddr().String()
 	node.log.Infof("dropping connection to %v", addr)
-	node.count--
+	atomic.AddInt32(&node.count, -1)
 	err := conn.Close()
 	if err != nil {
 		node.log.Errorf("could not close dropped connection: %v", err)
