@@ -90,11 +90,11 @@ Outer:
 		var cases []reflect.SelectCase
 		for _, peer := range peers {
 			peers = append(peers, peer)
-			submitter := reflect.SelectCase{Dir: reflect.SelectRecv, Chan: reflect.ValueOf(peer.out)} // TODO: fix race condition
+			submitter := reflect.SelectCase{Dir: reflect.SelectRecv, Chan: reflect.ValueOf(peer.out)}
 			cases = append(cases, submitter)
 		}
 		for _, peer := range peers {
-			heartbeater := reflect.SelectCase{Dir: reflect.SelectRecv, Chan: reflect.ValueOf(peer.hb.C)} // TODO: fix race condition
+			heartbeater := reflect.SelectCase{Dir: reflect.SelectRecv, Chan: reflect.ValueOf(peer.hb.C)}
 			cases = append(cases, heartbeater)
 		}
 		if len(cases) == 0 {
@@ -125,7 +125,7 @@ Outer:
 
 // ping method.
 func (node *Node) ping(peer *peer) {
-	node.log.Debugf("pinging peer on %v", peer.addr) // TODO: fix race condition
+	node.log.Debugf("pinging peer on %v", peer.addr)
 	ping := message.Ping{
 		Nonce: rand.Uint32(),
 	}
@@ -408,7 +408,7 @@ func (node *Node) init(conn net.Conn, nonce []byte) {
 		codec:     node.codec,
 		heartbeat: node.heartbeat,
 		timeout:   node.timeout,
-		hb:        time.NewTimer(node.heartbeat), // TODO: fix race condition
+		hb:        time.NewTimer(node.heartbeat),
 	}
 	node.peers.add(addr, &p)
 	node.book.Connected(addr)

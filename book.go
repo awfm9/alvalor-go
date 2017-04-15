@@ -22,6 +22,7 @@ import (
 	"math"
 	"math/rand"
 	"sort"
+	"sync"
 )
 
 // Book interface.
@@ -70,6 +71,7 @@ var (
 
 // SimpleBook struct.
 type SimpleBook struct {
+	mutex      sync.Mutex
 	blacklist  map[string]struct{}
 	entries    map[string]*entry
 	sampleSize int
@@ -86,6 +88,8 @@ func NewSimpleBook() *SimpleBook {
 
 // Whitelist method.
 func (s *SimpleBook) Whitelist(addr string) {
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
 	delete(s.blacklist, addr)
 	peer, ok := s.entries[addr]
 	if !ok {
@@ -97,12 +101,16 @@ func (s *SimpleBook) Whitelist(addr string) {
 
 // Blacklist method.
 func (s *SimpleBook) Blacklist(addr string) {
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
 	delete(s.entries, addr)
 	s.blacklist[addr] = struct{}{}
 }
 
 // Add method.
 func (s *SimpleBook) Add(addr string) {
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
 	_, ok := s.blacklist[addr]
 	if ok {
 		return
@@ -112,6 +120,8 @@ func (s *SimpleBook) Add(addr string) {
 
 // Connected method.
 func (s *SimpleBook) Connected(addr string) {
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
 	e, ok := s.entries[addr]
 	if !ok {
 		return
@@ -122,6 +132,8 @@ func (s *SimpleBook) Connected(addr string) {
 
 // Disconnected method.
 func (s *SimpleBook) Disconnected(addr string) {
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
 	e, ok := s.entries[addr]
 	if !ok {
 		return
@@ -131,6 +143,8 @@ func (s *SimpleBook) Disconnected(addr string) {
 
 // Dropped method.
 func (s *SimpleBook) Dropped(addr string) {
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
 	e, ok := s.entries[addr]
 	if !ok {
 		return
@@ -141,6 +155,8 @@ func (s *SimpleBook) Dropped(addr string) {
 
 // Failed method.
 func (s *SimpleBook) Failed(addr string) {
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
 	e, ok := s.entries[addr]
 	if !ok {
 		return
@@ -151,6 +167,8 @@ func (s *SimpleBook) Failed(addr string) {
 
 // Get method.
 func (s *SimpleBook) Get() (string, error) {
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
 	entries := s.slice(false)
 	if len(entries) == 0 {
 		return "", errBookEmpty
@@ -163,6 +181,8 @@ func (s *SimpleBook) Get() (string, error) {
 
 // Sample method.
 func (s *SimpleBook) Sample() ([]string, error) {
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
 	entries := s.slice(true)
 	if len(entries) == 0 {
 		return nil, errors.New("no valid addresses")
