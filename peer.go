@@ -28,6 +28,7 @@ import (
 type peer struct {
 	conn      net.Conn
 	addr      string
+	nonce     []byte
 	r         io.Reader
 	w         io.Writer
 	out       chan *Packet

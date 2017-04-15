@@ -26,12 +26,14 @@ import (
 
 	"github.com/pierrec/lz4"
 	"github.com/pkg/errors"
+	uuid "github.com/satori/go.uuid"
 
 	"github.com/veltor/veltor-network/message"
 )
 
 // Node struct.
 type Node struct {
+	nonce      []byte
 	log        Log
 	book       Book
 	codec      Codec
@@ -55,6 +57,7 @@ func NewNode(options ...func(*Config)) *Node {
 		option(&cfg)
 	}
 	node := &Node{
+		nonce:      uuid.NewV4().Bytes(),
 		log:        cfg.log,
 		book:       cfg.book,
 		codec:      cfg.codec,
@@ -314,27 +317,51 @@ func (node *Node) remove() {
 	}
 }
 
+// known method.
+func (node *Node) known(nonce []byte) bool {
+	for _, peer := range node.peers {
+		if bytes.Equal(nonce, peer.nonce) {
+			return true
+		}
+	}
+	return false
+}
+
 // handshake method.
 func (node *Node) handshake(conn net.Conn) {
 	addr := conn.RemoteAddr().String()
 	node.log.Infof("adding outgoing peer on %v", addr)
 	node.count++
-	_, err := conn.Write(MsgSyn)
+	syn := append(CodeSyn, node.nonce...)
+	_, err := conn.Write(syn)
 	if err != nil {
 		node.drop(conn)
 		return
 	}
-	ack := make([]byte, 4)
+	ack := make([]byte, len(CodeAck)+len(node.nonce))
 	_, err = conn.Read(ack)
 	if err != nil {
 		node.drop(conn)
 		return
 	}
-	if !bytes.Equal(ack, MsgAck) {
+	code := ack[:len(CodeAck)]
+	nonce := ack[len(CodeSyn):]
+	if !bytes.Equal(code, CodeAck) {
+		node.log.Warningf("invalid ack code, dropping %v", addr)
 		node.drop(conn)
 		return
 	}
-	node.init(conn)
+	if bytes.Equal(nonce, node.nonce) {
+		node.log.Warningf("connection to self, dropping %v", addr)
+		node.drop(conn)
+		return
+	}
+	if node.known(nonce) {
+		node.log.Warningf("duplicate connection, dropping %v", addr)
+		node.drop(conn)
+		return
+	}
+	node.init(conn, nonce)
 }
 
 // welcome method.
@@ -342,26 +369,40 @@ func (node *Node) welcome(conn net.Conn) {
 	addr := conn.RemoteAddr().String()
 	node.log.Infof("adding incoming peer on %v", addr)
 	node.count++
-	syn := make([]byte, 4)
+	ack := append(CodeAck, node.nonce...)
+	syn := make([]byte, len(CodeSyn)+len(node.nonce))
 	_, err := conn.Read(syn)
 	if err != nil {
 		node.drop(conn)
 		return
 	}
-	if !bytes.Equal(syn, MsgSyn) {
+	code := syn[:len(CodeSyn)]
+	nonce := syn[len(CodeSyn):]
+	if !bytes.Equal(code, CodeSyn) {
+		node.log.Warningf("invalid syn code, dropping %v", addr)
 		node.drop(conn)
 		return
 	}
-	_, err = conn.Write(MsgAck)
+	if bytes.Equal(nonce, node.nonce) {
+		node.log.Warningf("connection to self, dropping %v", addr)
+		node.drop(conn)
+		return
+	}
+	if node.known(nonce) {
+		node.log.Warningf("duplicate connection, dropping %v", addr)
+		node.drop(conn)
+		return
+	}
+	_, err = conn.Write(ack)
 	if err != nil {
 		node.drop(conn)
 		return
 	}
-	node.init(conn)
+	node.init(conn, nonce)
 }
 
 // init method.
-func (node *Node) init(conn net.Conn) {
+func (node *Node) init(conn net.Conn, nonce []byte) {
 	addr := conn.RemoteAddr().String()
 	node.log.Infof("finalizing handshake with %v", addr)
 	r := lz4.NewReader(conn)
@@ -370,6 +411,7 @@ func (node *Node) init(conn net.Conn) {
 	p := peer{
 		conn:      conn,
 		addr:      addr,
+		nonce:     nonce,
 		r:         r,
 		w:         w,
 		out:       out,
