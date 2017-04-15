@@ -104,14 +104,12 @@ Outer:
 		for {
 			i, val, ok := reflect.Select(cases)
 			if !ok {
-				peer := peers[i]
-				node.disconnect(peer)
+				node.disconnect(peers[i])
 				continue Outer
 			}
 			_, ok = val.Interface().(time.Time)
 			if ok {
-				peer := peers[i%len(peers)]
-				node.ping(peer)
+				node.ping(peers[i%len(peers)])
 				continue
 			}
 			pk, ok := val.Interface().(*Packet)
@@ -336,18 +334,8 @@ func (node *Node) handshake(conn net.Conn) {
 	}
 	code := ack[:len(CodeAck)]
 	nonce := ack[len(CodeSyn):]
-	if !bytes.Equal(code, CodeAck) {
-		node.log.Warningf("invalid ack code, dropping %v", addr)
-		node.drop(conn)
-		return
-	}
-	if bytes.Equal(nonce, node.nonce) {
-		node.log.Warningf("connection to self, dropping %v", addr)
-		node.drop(conn)
-		return
-	}
-	if node.known(nonce) {
-		node.log.Warningf("duplicate connection, dropping %v", addr)
+	if !bytes.Equal(code, CodeAck) || bytes.Equal(nonce, node.nonce) || node.known(nonce) {
+		node.log.Warningf("dropping invalid outgoing connection to %v", addr)
 		node.drop(conn)
 		return
 	}
@@ -368,18 +356,8 @@ func (node *Node) welcome(conn net.Conn) {
 	}
 	code := syn[:len(CodeSyn)]
 	nonce := syn[len(CodeSyn):]
-	if !bytes.Equal(code, CodeSyn) {
-		node.log.Warningf("invalid syn code, dropping %v", addr)
-		node.drop(conn)
-		return
-	}
-	if bytes.Equal(nonce, node.nonce) {
-		node.log.Warningf("connection to self, dropping %v", addr)
-		node.drop(conn)
-		return
-	}
-	if node.known(nonce) {
-		node.log.Warningf("duplicate connection, dropping %v", addr)
+	if !bytes.Equal(code, CodeSyn) || bytes.Equal(nonce, node.nonce) || node.known(nonce) {
+		node.log.Warningf("dropping invalid incoming connection from %v", addr)
 		node.drop(conn)
 		return
 	}
@@ -443,6 +421,7 @@ func (node *Node) drop(conn net.Conn) {
 		node.log.Errorf("could not close dropped connection: %v", err)
 	}
 	node.book.Dropped(addr)
+	node.book.Blacklist(addr)
 }
 
 // Send method.
