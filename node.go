@@ -48,7 +48,7 @@ type Node struct {
 	timeout    time.Duration
 	discovery  *time.Ticker
 	count      int32
-	peers      map[string]*peer
+	peers      *registry
 }
 
 // NewNode function.
@@ -71,7 +71,7 @@ func NewNode(options ...func(*Config)) *Node {
 		heartbeat:  cfg.heartbeat,
 		timeout:    cfg.timeout,
 		discovery:  time.NewTicker(cfg.discovery),
-		peers:      make(map[string]*peer),
+		peers:      &registry{peers: make(map[string]*peer)},
 	}
 	node.book.Blacklist(cfg.address)
 	if cfg.server {
@@ -86,14 +86,14 @@ func NewNode(options ...func(*Config)) *Node {
 func (node *Node) manage() {
 Outer:
 	for {
-		var peers []*peer
+		peers := node.peers.slice()
 		var cases []reflect.SelectCase
-		for _, peer := range node.peers { // TODO: fix race condition
+		for _, peer := range peers {
 			peers = append(peers, peer)
 			submitter := reflect.SelectCase{Dir: reflect.SelectRecv, Chan: reflect.ValueOf(peer.out)} // TODO: fix race condition
 			cases = append(cases, submitter)
 		}
-		for _, peer := range node.peers {
+		for _, peer := range peers {
 			heartbeater := reflect.SelectCase{Dir: reflect.SelectRecv, Chan: reflect.ValueOf(peer.hb.C)} // TODO: fix race condition
 			cases = append(cases, heartbeater)
 		}
@@ -104,12 +104,14 @@ Outer:
 		for {
 			i, val, ok := reflect.Select(cases)
 			if !ok {
-				node.disconnect(peers[i])
+				peer := peers[i]
+				node.disconnect(peer)
 				continue Outer
 			}
 			_, ok = val.Interface().(time.Time)
 			if ok {
-				node.ping(peers[i%len(peers)])
+				peer := peers[i%len(peers)]
+				node.ping(peer)
 				continue
 			}
 			pk, ok := val.Interface().(*Packet)
@@ -136,7 +138,7 @@ func (node *Node) ping(peer *peer) {
 // disconnect method.
 func (node *Node) disconnect(peer *peer) {
 	node.log.Infof("disconnecting peer on %v", peer.addr)
-	delete(node.peers, peer.addr)
+	node.peers.remove(peer.addr)
 	peer.close()
 	node.book.Dropped(peer.addr)
 	atomic.AddInt32(&node.count, -1)
@@ -199,8 +201,7 @@ func (node *Node) processPeers(pk *Packet) error {
 	peers := pk.Message.(*message.Peers)
 	for _, addr := range peers.Addresses {
 		node.book.Add(addr)
-		_, ok := node.peers[addr]
-		if ok {
+		if node.peers.has(addr) {
 			node.book.Connected(addr)
 		}
 	}
@@ -235,20 +236,8 @@ func (node *Node) listen() {
 			node.log.Errorf("could not accept connection: %v", err)
 			break
 		}
-		addr := conn.RemoteAddr().String()
-		if addr == node.address {
-			node.log.Warningf("attempted connection to self, dropping")
-			conn.Close()
-			return
-		}
-		if len(node.peers) > int(node.maxPeers) {
-			node.log.Infof("too many peers, not accepting %v", addr)
-			conn.Close()
-			return
-		}
-		_, ok := node.peers[addr]
-		if ok {
-			node.log.Warningf("refusing duplicate incoming peer on %v", addr)
+		if node.peers.count() > int(node.maxPeers) {
+			node.log.Debugf("too many peers, not accepting %v", conn.RemoteAddr())
 			conn.Close()
 			return
 		}
@@ -277,9 +266,8 @@ func (node *Node) add() {
 		node.discover()
 		return
 	}
-	_, ok := node.peers[addr]
-	if ok {
-		node.log.Warningf("already connected to peer %v", addr)
+	if node.peers.has(addr) {
+		node.log.Errorf("already connected to peer %v", addr)
 		return
 	}
 	conn, err := net.Dial("tcp", addr)
@@ -308,8 +296,8 @@ func (node *Node) discover() {
 // remove method.
 func (node *Node) remove() {
 	index := 0
-	goal := rand.Int() % len(node.peers)
-	for _, peer := range node.peers {
+	goal := rand.Int() % node.peers.count()
+	for _, peer := range node.peers.slice() {
 		if index != goal {
 			index++
 			continue
@@ -321,7 +309,7 @@ func (node *Node) remove() {
 
 // known method.
 func (node *Node) known(nonce []byte) bool {
-	for _, peer := range node.peers {
+	for _, peer := range node.peers.slice() {
 		if bytes.Equal(nonce, peer.nonce) {
 			return true
 		}
@@ -410,7 +398,7 @@ func (node *Node) init(conn net.Conn, nonce []byte) {
 	r := lz4.NewReader(conn)
 	w := lz4.NewWriter(conn)
 	out := make(chan *Packet)
-	p := peer{ // TODO: fix race condition
+	p := peer{
 		conn:      conn,
 		addr:      addr,
 		nonce:     nonce,
@@ -422,7 +410,7 @@ func (node *Node) init(conn net.Conn, nonce []byte) {
 		timeout:   node.timeout,
 		hb:        time.NewTimer(node.heartbeat), // TODO: fix race condition
 	}
-	node.peers[addr] = &p // TODO: fix race condition
+	node.peers.add(addr, &p)
 	node.book.Connected(addr)
 	go p.receive()
 	if node.server {
@@ -460,10 +448,10 @@ func (node *Node) drop(conn net.Conn) {
 // Send method.
 func (node *Node) Send(addr string, msg interface{}) error {
 	node.log.Debugf("sending %T message to %v", msg, addr)
-	peer, ok := node.peers[addr]
-	if !ok {
+	if !node.peers.has(addr) {
 		return errors.New("could not find peer with given address")
 	}
+	peer := node.peers.get(addr)
 	err := peer.send(msg)
 	if err != nil {
 		node.book.Failed(addr)
@@ -475,7 +463,7 @@ func (node *Node) Send(addr string, msg interface{}) error {
 // Broadcast method.
 func (node *Node) Broadcast(msg interface{}) error {
 	node.log.Debugf("broadcasting %T message", msg)
-	for _, peer := range node.peers {
+	for _, peer := range node.peers.slice() {
 		err := peer.send(msg)
 		if err != nil {
 			node.book.Failed(peer.addr)
@@ -487,8 +475,9 @@ func (node *Node) Broadcast(msg interface{}) error {
 
 // Peers method.
 func (node *Node) Peers() []string {
-	addrs := make([]string, 0, len(node.peers))
-	for _, peer := range node.peers {
+	peers := node.peers.slice()
+	addrs := make([]string, 0, len(peers))
+	for _, peer := range peers {
 		addrs = append(addrs, peer.addr)
 	}
 	return addrs
