@@ -36,11 +36,21 @@ var salt = []byte{
 // Store struct.
 type Store struct {
 	root []byte
+	ctx  argon2.Context
 }
 
 // NewStore function.
 func NewStore(seed []byte) (*Store, error) {
-	s := &Store{}
+	s := &Store{
+		ctx: argon2.Context{
+			Iterations:  3,
+			Memory:      1 << 16,
+			Parallelism: 4,
+			HashLen:     96,
+			Mode:        argon2.ModeArgon2i,
+			Version:     argon2.Version13,
+		},
+	}
 	root, err := s.generate(seed, salt)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not generate root key")
@@ -51,15 +61,7 @@ func NewStore(seed []byte) (*Store, error) {
 
 // generate method.
 func (s *Store) generate(input []byte, code []byte) ([]byte, error) {
-	ctx := argon2.Context{
-		Iterations:  3,
-		Memory:      1 << 16,
-		Parallelism: 4,
-		HashLen:     96,
-		Mode:        argon2.ModeArgon2i,
-		Version:     argon2.Version13,
-	}
-	hash, err := argon2.Hash(&ctx, input, code)
+	hash, err := argon2.Hash(&s.ctx, input, code)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not compute hash")
 	}
