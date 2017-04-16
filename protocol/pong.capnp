@@ -16,8 +16,8 @@
 # along with Veltor.  If not, see <http://www.gnu.org/licenses/>.
 
 using Go = import "/go.capnp";
-$Go.package("proto");
-$Go.import("proto");
+$Go.package("protocol");
+$Go.import("protocol");
 
 @0xcf51decd769a7cb5;
 struct Pong {

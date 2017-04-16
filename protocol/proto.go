@@ -15,7 +15,7 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with Veltor.  If not, see <http://www.gnu.org/licenses/>.
 
-package proto
+package protocol
 
 import (
 	"io"

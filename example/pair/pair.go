@@ -25,9 +25,9 @@ import (
 	"syscall"
 	"time"
 
-	logger "github.com/veltor/veltor-go/logger"
-	network "github.com/veltor/veltor-go/network"
-	"github.com/veltor/veltor-go/proto"
+	"github.com/veltor/veltor-go/logger"
+	"github.com/veltor/veltor-go/network"
+	"github.com/veltor/veltor-go/protocol"
 )
 
 func main() {
@@ -36,7 +36,7 @@ func main() {
 	done := make(chan struct{})
 	addr := "127.0.0.1:10000"
 	sub := make(chan interface{})
-	codec := proto.Codec{}
+	codec := protocol.Codec{}
 	log := logger.New()
 	log.SetLevel(logger.Debug)
 	node1 := network.NewNode(

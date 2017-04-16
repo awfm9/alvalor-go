@@ -16,10 +16,9 @@
 # along with Veltor.  If not, see <http://www.gnu.org/licenses/>.
 
 using Go = import "/go.capnp";
-$Go.package("proto");
-$Go.import("proto");
+$Go.package("protocol");
+$Go.import("protocol");
 
-@0xc4411f23835fd9b0;
-struct Ping {
-	nonce @0 :UInt32;
+@0x96fc5818637eebba;
+struct Discover {
 }
