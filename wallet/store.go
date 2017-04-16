@@ -33,24 +33,24 @@ var salt = []byte{
 	0x4d, 0xed, 0x1d, 0x29,
 }
 
-// Wallet struct.
-type Wallet struct {
+// Store struct.
+type Store struct {
 	root []byte
 }
 
-// NewWallet function.
-func NewWallet(seed []byte) (*Wallet, error) {
-	w := &Wallet{}
-	root, err := w.generate(seed, salt)
+// NewStore function.
+func NewStore(seed []byte) (*Store, error) {
+	s := &Store{}
+	root, err := s.generate(seed, salt)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not generate root key")
 	}
-	w.root = root
-	return w, nil
+	s.root = root
+	return s, nil
 }
 
 // generate method.
-func (w *Wallet) generate(input []byte, code []byte) ([]byte, error) {
+func (s *Store) generate(input []byte, code []byte) ([]byte, error) {
 	ctx := argon2.Context{
 		Iterations:  3,
 		Memory:      1 << 16,
@@ -72,9 +72,9 @@ func (w *Wallet) generate(input []byte, code []byte) ([]byte, error) {
 }
 
 // derive method.
-func (w *Wallet) derive(key []byte, index []byte) ([]byte, error) {
+func (s *Store) derive(key []byte, index []byte) ([]byte, error) {
 	data := append(key[:64], index...)
-	key, err := w.generate(data, key[64:])
+	key, err := s.generate(data, key[64:])
 	if err != nil {
 		return nil, errors.Wrap(err, "could not derive level one key")
 	}
@@ -82,11 +82,11 @@ func (w *Wallet) derive(key []byte, index []byte) ([]byte, error) {
 }
 
 // Key method.
-func (w *Wallet) Key(levels [][]byte) ([]byte, error) {
+func (s *Store) Key(levels [][]byte) ([]byte, error) {
 	var err error
-	key := w.root
+	key := s.root
 	for i, level := range levels {
-		key, err = w.derive(key, level)
+		key, err = s.derive(key, level)
 		if err != nil {
 			return nil, errors.Wrapf(err, "could not derive level %v key", i)
 		}
