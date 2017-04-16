@@ -17,8 +17,9 @@
 
 package network
 
-// Handshake enum.
+// Network enum.
 var (
-	CodeSyn = []byte{0x01, 0x03, 0x03, 0x07}
-	CodeAck = []byte{0x07, 0x03, 0x03, 0x01}
+	Odin = []byte{79, 68, 73, 78}
+	Thor = []byte{84, 72, 79, 82}
+	Loki = []byte{76, 79, 75, 73}
 )

@@ -35,6 +35,7 @@ import (
 // Node struct.
 type Node struct {
 	nonce      []byte
+	network    []byte
 	log        Log
 	book       Book
 	codec      Codec
@@ -59,6 +60,7 @@ func NewNode(options ...func(*Config)) *Node {
 	}
 	node := &Node{
 		nonce:      uuid.NewV4().Bytes(),
+		network:    cfg.network,
 		log:        cfg.log,
 		book:       cfg.book,
 		codec:      cfg.codec,
@@ -320,21 +322,21 @@ func (node *Node) handshake(conn net.Conn) {
 	addr := conn.RemoteAddr().String()
 	node.log.Infof("adding outgoing peer on %v", addr)
 	atomic.AddInt32(&node.count, 1)
-	syn := append(CodeSyn, node.nonce...)
+	syn := append(node.network, node.nonce...)
 	_, err := conn.Write(syn)
 	if err != nil {
 		node.drop(conn)
 		return
 	}
-	ack := make([]byte, len(CodeAck)+len(node.nonce))
+	ack := make([]byte, len(syn))
 	_, err = conn.Read(ack)
 	if err != nil {
 		node.drop(conn)
 		return
 	}
-	code := ack[:len(CodeAck)]
-	nonce := ack[len(CodeSyn):]
-	if !bytes.Equal(code, CodeAck) || bytes.Equal(nonce, node.nonce) || node.known(nonce) {
+	code := ack[:len(node.network)]
+	nonce := ack[len(node.network):]
+	if !bytes.Equal(code, node.network) || bytes.Equal(nonce, node.nonce) || node.known(nonce) {
 		node.log.Warningf("dropping invalid outgoing connection to %v", addr)
 		node.drop(conn)
 		return
@@ -347,16 +349,16 @@ func (node *Node) welcome(conn net.Conn) {
 	addr := conn.RemoteAddr().String()
 	node.log.Infof("adding incoming peer on %v", addr)
 	atomic.AddInt32(&node.count, 1)
-	ack := append(CodeAck, node.nonce...)
-	syn := make([]byte, len(CodeSyn)+len(node.nonce))
+	ack := append(node.network, node.nonce...)
+	syn := make([]byte, len(ack))
 	_, err := conn.Read(syn)
 	if err != nil {
 		node.drop(conn)
 		return
 	}
-	code := syn[:len(CodeSyn)]
-	nonce := syn[len(CodeSyn):]
-	if !bytes.Equal(code, CodeSyn) || bytes.Equal(nonce, node.nonce) || node.known(nonce) {
+	code := syn[:len(node.network)]
+	nonce := syn[len(node.network):]
+	if !bytes.Equal(code, node.network) || bytes.Equal(nonce, node.nonce) || node.known(nonce) {
 		node.log.Warningf("dropping invalid incoming connection from %v", addr)
 		node.drop(conn)
 		return

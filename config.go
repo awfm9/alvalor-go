@@ -27,6 +27,7 @@ var DefaultConfig = Config{
 	book:       DefaultBook,
 	codec:      DefaultCodec,
 	subscriber: nil,
+	network:    Odin,
 	server:     false,
 	address:    "",
 	minPeers:   3,
@@ -43,6 +44,7 @@ type Config struct {
 	book       Book
 	codec      Codec
 	subscriber chan<- interface{}
+	network    []byte
 	server     bool
 	address    string
 	minPeers   uint
@@ -78,6 +80,13 @@ func SetCodec(codec Codec) func(*Config) {
 func SetSubscriber(sub chan<- interface{}) func(*Config) {
 	return func(cfg *Config) {
 		cfg.subscriber = sub
+	}
+}
+
+// SetNetwork function.
+func SetNetwork(net []byte) func(*Config) {
+	return func(cfg *Config) {
+		cfg.network = net
 	}
 }
 
