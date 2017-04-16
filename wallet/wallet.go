@@ -82,14 +82,14 @@ func (w *Wallet) derive(key []byte, index []byte) ([]byte, error) {
 }
 
 // Key method.
-func (w *Wallet) Key(first []byte, second []byte) ([]byte, error) {
-	key, err := w.derive(w.root, first)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not derive level one key")
-	}
-	key, err = w.derive(key, second)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not derive level two key")
+func (w *Wallet) Key(levels [][]byte) ([]byte, error) {
+	var err error
+	key := w.root
+	for i, level := range levels {
+		key, err = w.derive(key, level)
+		if err != nil {
+			return nil, errors.Wrapf(err, "could not derive level %v key", i)
+		}
 	}
 	return key, nil
 }
