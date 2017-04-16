@@ -23,7 +23,7 @@ import (
 	"github.com/pkg/errors"
 	capnp "zombiezen.com/go/capnproto2"
 
-	"github.com/veltor/veltor-network/message"
+	"github.com/veltor/veltor-go/message"
 )
 
 // Codec struct.

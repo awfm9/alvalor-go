@@ -23,7 +23,7 @@ import (
 
 	"github.com/pkg/errors"
 
-	"github.com/veltor/veltor-network/message"
+	"github.com/veltor/veltor-go/message"
 )
 
 // Codec interface.

@@ -29,7 +29,7 @@ import (
 	"github.com/pkg/errors"
 	uuid "github.com/satori/go.uuid"
 
-	"github.com/veltor/veltor-network/message"
+	"github.com/veltor/veltor-go/message"
 )
 
 // Node struct.
