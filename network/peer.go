@@ -33,7 +33,7 @@ type peer struct {
 	nonce     []byte
 	r         io.Reader
 	w         io.Writer
-	out       chan *Packet
+	out       chan *Message
 	err       error
 	codec     Codec
 	timeout   time.Duration
@@ -52,11 +52,11 @@ func (p *peer) receive() {
 		}
 		p.hb.Stop()
 		p.hb.Reset(p.heartbeat)
-		pk := Packet{
+		msg := Message{
 			Address: p.addr,
-			Message: i,
+			Value:   i,
 		}
-		p.out <- &pk
+		p.out <- &msg
 	}
 }
 

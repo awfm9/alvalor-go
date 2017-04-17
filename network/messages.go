@@ -17,8 +17,21 @@
 
 package network
 
-// Packet struct.
-type Packet struct {
-	Address string
-	Message interface{}
+// Discover struct.
+type Discover struct {
+}
+
+// Peers struct.
+type Peers struct {
+	Addresses []string
+}
+
+// Ping struct.
+type Ping struct {
+	Nonce uint32
+}
+
+// Pong struct.
+type Pong struct {
+	Nonce uint32
 }

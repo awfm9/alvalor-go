@@ -35,7 +35,7 @@ func main() {
 	signal.Notify(sig, syscall.SIGINT)
 	done := make(chan struct{})
 	var nodes []*network.Node
-	sub := make(chan interface{})
+	sub := make(chan interface{}, 1000)
 	beacon := "127.0.0.1:10000"
 	log := logger.New()
 	log.SetLevel(logger.Debug)
@@ -67,9 +67,16 @@ func main() {
 				if err != nil {
 					log.Warningf("message send failed: %v", err)
 				}
-			case packet := <-sub:
-				msg := packet.(*network.Packet).Message.(string)
-				log.Infof("received message: %v", msg)
+			case event := <-sub:
+				switch e := event.(type) {
+				case *network.Connected:
+					log.Infof("connected to peer: %v", e.Address)
+				case *network.Disconnected:
+					log.Infof("disconnected from peer: %v", e.Address)
+				case *network.Message:
+					txt := e.Value.(string)
+					log.Infof("received message: %v", txt)
+				}
 			}
 		}
 	}()

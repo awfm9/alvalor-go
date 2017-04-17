@@ -28,8 +28,6 @@ import (
 	"github.com/pierrec/lz4"
 	"github.com/pkg/errors"
 	uuid "github.com/satori/go.uuid"
-
-	"github.com/veltor/veltor-go/message"
 )
 
 // Node struct.
@@ -114,9 +112,9 @@ Outer:
 				node.ping(peers[i%len(peers)])
 				continue
 			}
-			pk, ok := val.Interface().(*Packet)
+			msg, ok := val.Interface().(*Message)
 			if ok {
-				node.process(pk)
+				node.process(msg)
 				continue
 			}
 		}
@@ -126,7 +124,7 @@ Outer:
 // ping method.
 func (node *Node) ping(peer *peer) {
 	node.log.Debugf("pinging peer on %v", peer.addr)
-	ping := message.Ping{
+	ping := Ping{
 		Nonce: rand.Uint32(),
 	}
 	err := node.Send(peer.addr, &ping)
@@ -142,36 +140,40 @@ func (node *Node) disconnect(peer *peer) {
 	peer.close()
 	node.book.Dropped(peer.addr)
 	atomic.AddInt32(&node.count, -1)
+	e := Disconnected{
+		Address: peer.addr,
+	}
+	node.event(&e)
 }
 
 // process method.
-func (node *Node) process(pk *Packet) {
-	node.log.Debugf("processing %T message from %v", pk.Message, pk.Address)
+func (node *Node) process(msg *Message) {
+	node.log.Debugf("processing %T message from %v", msg.Value, msg.Address)
 	var err error
-	switch pk.Message.(type) {
-	case *message.Ping:
-		err = node.processPing(pk)
-	case *message.Pong:
-		err = node.processPong(pk)
-	case *message.Discover:
-		err = node.processDiscover(pk)
-	case *message.Peers:
-		err = node.processPeers(pk)
+	switch msg.Value.(type) {
+	case *Ping:
+		err = node.processPing(msg)
+	case *Pong:
+		err = node.processPong(msg)
+	case *Discover:
+		err = node.processDiscover(msg)
+	case *Peers:
+		err = node.processPeers(msg)
 	default:
-		err = node.processCustom(pk)
+		node.event(msg)
 	}
 	if err != nil {
-		node.log.Errorf("could not process %T message: %v", pk.Message, err)
+		node.log.Errorf("could not process %T message: %v", msg.Value, err)
 	}
 }
 
 // processPing method.
-func (node *Node) processPing(pk *Packet) error {
-	ping := pk.Message.(*message.Ping)
-	pong := message.Pong{
+func (node *Node) processPing(msg *Message) error {
+	ping := msg.Value.(*Ping)
+	pong := Pong{
 		Nonce: ping.Nonce,
 	}
-	err := node.Send(pk.Address, &pong)
+	err := node.Send(msg.Address, &pong)
 	if err != nil {
 		return errors.Wrap(err, "could not send ping reply")
 	}
@@ -179,17 +181,17 @@ func (node *Node) processPing(pk *Packet) error {
 }
 
 // processPong method.
-func (node *Node) processPong(pk *Packet) error {
+func (node *Node) processPong(msg *Message) error {
 	return nil
 }
 
 // processDiscover method.
-func (node *Node) processDiscover(pk *Packet) error {
+func (node *Node) processDiscover(msg *Message) error {
 	addrs, err := node.book.Sample()
 	if err != nil {
 		return errors.Wrap(err, "could not get address sample")
 	}
-	err = node.share(pk.Address, addrs)
+	err = node.share(msg.Address, addrs)
 	if err != nil {
 		return errors.Wrap(err, "could not share address sample")
 	}
@@ -197,8 +199,8 @@ func (node *Node) processDiscover(pk *Packet) error {
 }
 
 // processPeers method.
-func (node *Node) processPeers(pk *Packet) error {
-	peers := pk.Message.(*message.Peers)
+func (node *Node) processPeers(msg *Message) error {
+	peers := msg.Value.(*Peers)
 	for _, addr := range peers.Addresses {
 		node.book.Add(addr)
 		if node.peers.has(addr) {
@@ -208,13 +210,12 @@ func (node *Node) processPeers(pk *Packet) error {
 	return nil
 }
 
-// processCustom method.
-func (node *Node) processCustom(pk *Packet) error {
+// event method.
+func (node *Node) event(e interface{}) {
 	select {
-	case node.subscriber <- pk:
-		return nil
+	case node.subscriber <- e:
 	default:
-		return errors.New("subscriber stalling")
+		node.log.Errorf("subscriber stalling on %T", e)
 	}
 }
 
@@ -286,7 +287,7 @@ func (node *Node) discover() {
 		return
 	}
 	node.log.Infof("launching peer discovery")
-	discover := message.Discover{}
+	discover := Discover{}
 	err := node.Broadcast(&discover)
 	if err != nil {
 		node.log.Errorf("could not launch discovery: %v", err)
@@ -377,7 +378,7 @@ func (node *Node) init(conn net.Conn, nonce []byte) {
 	node.log.Infof("finalizing handshake with %v", addr)
 	r := lz4.NewReader(conn)
 	w := lz4.NewWriter(conn)
-	out := make(chan *Packet)
+	out := make(chan *Message)
 	p := peer{
 		conn:      conn,
 		addr:      addr,
@@ -399,11 +400,15 @@ func (node *Node) init(conn net.Conn, nonce []byte) {
 			node.log.Errorf("could not share initial address: %v", err)
 		}
 	}
+	e := Connected{
+		Address: p.addr,
+	}
+	node.event(&e)
 }
 
 // share method.
 func (node *Node) share(addr string, addrs []string) error {
-	peers := message.Peers{
+	peers := Peers{
 		Addresses: addrs,
 	}
 	err := node.Send(addr, &peers)

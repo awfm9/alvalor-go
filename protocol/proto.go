@@ -23,7 +23,7 @@ import (
 	"github.com/pkg/errors"
 	capnp "zombiezen.com/go/capnproto2"
 
-	"github.com/veltor/veltor-go/message"
+	"github.com/veltor/veltor-go/network"
 )
 
 // Codec struct.
@@ -40,26 +40,26 @@ func (c Codec) Encode(w io.Writer, i interface{}) error {
 		return errors.Wrap(err, "could not create proto wrapper")
 	}
 	switch v := i.(type) {
-	case *message.Ping:
+	case *network.Ping:
 		var ping Ping
 		ping, err = z.NewPing()
 		if err != nil {
 			return errors.Wrap(err, "could not create proto ping")
 		}
 		ping.SetNonce(v.Nonce)
-	case *message.Pong:
+	case *network.Pong:
 		var pong Pong
 		pong, err = z.NewPong()
 		if err != nil {
 			return errors.Wrap(err, "could not create proto pong")
 		}
 		pong.SetNonce(v.Nonce)
-	case *message.Discover:
+	case *network.Discover:
 		_, err = z.NewDiscover()
 		if err != nil {
 			return errors.Wrap(err, "could not create proto discover")
 		}
-	case *message.Peers:
+	case *network.Peers:
 		var peers Peers
 		peers, err = z.NewPeers()
 		if err != nil {
@@ -109,7 +109,7 @@ func (c Codec) Decode(r io.Reader) (interface{}, error) {
 		if err != nil {
 			return nil, errors.Wrap(err, "could not read proto ping")
 		}
-		v := message.Ping{
+		v := network.Ping{
 			Nonce: ping.Nonce(),
 		}
 		return &v, nil
@@ -118,19 +118,19 @@ func (c Codec) Decode(r io.Reader) (interface{}, error) {
 		if err != nil {
 			return nil, errors.Wrap(err, "could not read proto pong")
 		}
-		v := message.Pong{
+		v := network.Pong{
 			Nonce: pong.Nonce(),
 		}
 		return &v, nil
 	case Z_Which_discover:
-		v := message.Discover{}
+		v := network.Discover{}
 		return &v, nil
 	case Z_Which_peers:
 		peers, err := z.Peers()
 		if err != nil {
 			return nil, errors.Wrap(err, "could not read proto peers")
 		}
-		v := message.Peers{}
+		v := network.Peers{}
 		addrs, err := peers.Addresses()
 		if err != nil {
 			return nil, errors.Wrap(err, "could not read address list")

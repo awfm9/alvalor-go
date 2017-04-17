@@ -22,8 +22,6 @@ import (
 	"io"
 
 	"github.com/pkg/errors"
-
-	"github.com/veltor/veltor-go/message"
 )
 
 // Codec interface.
@@ -52,13 +50,13 @@ type SimpleCodec struct{}
 func (s SimpleCodec) Encode(w io.Writer, i interface{}) error {
 	code := make([]byte, 1)
 	switch i.(type) {
-	case *message.Ping:
+	case *Ping:
 		code[0] = MsgPing
-	case *message.Pong:
+	case *Pong:
 		code[0] = MsgPong
-	case *message.Discover:
+	case *Discover:
 		code[0] = MsgDiscover
-	case *message.Peers:
+	case *Peers:
 		code[0] = MsgPeers
 	case string:
 		code[0] = MsgString
@@ -90,19 +88,19 @@ func (s SimpleCodec) Decode(r io.Reader) (interface{}, error) {
 	dec := json.NewDecoder(r)
 	switch code[0] {
 	case MsgPing:
-		var ping message.Ping
+		var ping Ping
 		err = dec.Decode(&ping)
 		i = &ping
 	case MsgPong:
-		var pong message.Pong
+		var pong Pong
 		err = dec.Decode(&pong)
 		i = &pong
 	case MsgDiscover:
-		var discover message.Discover
+		var discover Discover
 		err = dec.Decode(&discover)
 		i = &discover
 	case MsgPeers:
-		var peers message.Peers
+		var peers Peers
 		err = dec.Decode(&peers)
 		i = &peers
 	case MsgString:

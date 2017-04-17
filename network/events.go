@@ -15,9 +15,20 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with Veltor.  If not, see <http://www.gnu.org/licenses/>.
 
-package message
+package network
 
-// Pong struct.
-type Pong struct {
-	Nonce uint32
+// Message struct.
+type Message struct {
+	Address string
+	Value   interface{}
+}
+
+// Connected struct.
+type Connected struct {
+	Address string
+}
+
+// Disconnected struct.
+type Disconnected struct {
+	Address string
 }
