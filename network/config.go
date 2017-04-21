@@ -19,11 +19,12 @@ package network
 
 import (
 	"time"
+	"go.uber.org/zap"
 )
 
 // DefaultConfig variable.
 var DefaultConfig = Config{
-	log:        DefaultLog,
+	log:        defaultLogger,
 	book:       DefaultBook,
 	codec:      DefaultCodec,
 	subscriber: nil,
@@ -38,9 +39,11 @@ var DefaultConfig = Config{
 	discovery:  time.Second * 2,
 }
 
+var defaultLogger, _ = zap.NewDevelopment()
+
 // Config struct.
 type Config struct {
-	log        Log
+	log        *zap.Logger
 	book       Book
 	codec      Codec
 	subscriber chan<- interface{}
@@ -56,7 +59,7 @@ type Config struct {
 }
 
 // SetLog function.
-func SetLog(log Log) func(*Config) {
+func SetLog(log *zap.Logger) func(*Config) {
 	return func(cfg *Config) {
 		cfg.log = log
 	}
