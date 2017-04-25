@@ -51,6 +51,18 @@
 			"revisionTime": "2016-06-29T16:38:56Z"
 		},
 		{
+			"checksumSHA1": "DBP6bPuBoFshYv590L5hauiN4VY=",
+			"path": "go.uber.org/zap",
+			"revision": "1550bc05539134bbf8612a35f34a79ab8bf34ee3",
+			"revisionTime": "2017-04-14T05:12:42Z"
+		},
+		{
+			"checksumSHA1": "BZHi2G+U7WdvjszrzA1gXY6/9S0=",
+			"path": "go.uber.org/zap/zapcore",
+			"revision": "1550bc05539134bbf8612a35f34a79ab8bf34ee3",
+			"revisionTime": "2017-04-14T05:12:42Z"
+		},
+		{
 			"checksumSHA1": "KrDsWIDDeafYKOOv6UEPmtQWWb0=",
 			"path": "golang.org/x/crypto/blake2b",
 			"revision": "459e26527287adbc2adcc5d0d49abff9a5f315a7",
