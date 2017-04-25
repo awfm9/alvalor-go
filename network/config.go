@@ -24,7 +24,7 @@ import (
 
 // DefaultConfig variable.
 var DefaultConfig = Config{
-	log:        defaultLogger,
+	log:        DefaultLogger,
 	book:       DefaultBook,
 	codec:      DefaultCodec,
 	subscriber: nil,
@@ -39,7 +39,8 @@ var DefaultConfig = Config{
 	discovery:  time.Second * 2,
 }
 
-var defaultLogger, _ = zap.NewDevelopment()
+// DefaultLogger variable.
+var DefaultLogger, _ = zap.NewDevelopment()
 
 // Config struct.
 type Config struct {
