@@ -28,7 +28,6 @@ import (
 
 	"go.uber.org/zap"
 	"github.com/veltor/veltor-go/network"
-	"go.uber.org/zap/zapcore"
 )
 
 func main() {
@@ -40,7 +39,7 @@ func main() {
 	beacon := "127.0.0.1:10000"
 
 
-    //add github.com/Microsoft/ApplicationInsights-Go/appinsights to import to be able to run the following commented out code
+    //add github.com/Microsoft/ApplicationInsights-Go/appinsights and go.uber.org/zap/zapcore to import to be able to run the following commented out code
 	// client := appinsights.NewTelemetryClient("instrumentation_key")
 
     // logLevelMap := make(map[zapcore.Level]appinsights.SeverityLevel)
