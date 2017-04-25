@@ -28,6 +28,8 @@ import (
 
 	"go.uber.org/zap"
 	"github.com/veltor/veltor-go/network"
+	"go.uber.org/zap/zapcore"
+	"github.com/Microsoft/ApplicationInsights-Go/appinsights"
 )
 
 func main() {
@@ -37,7 +39,22 @@ func main() {
 	var nodes []*network.Node
 	sub := make(chan interface{}, 1000)
 	beacon := "127.0.0.1:10000"
-	log, _ := zap.NewDevelopment()
+
+	client := appinsights.NewTelemetryClient("instrumentation_key")
+
+    logLevelMap := make(map[zapcore.Level]appinsights.SeverityLevel)
+	logLevelMap[zapcore.DebugLevel] = appinsights.Verbose
+	logLevelMap[zapcore.InfoLevel] = appinsights.Information
+	logLevelMap[zapcore.WarnLevel] = appinsights.Warning
+	logLevelMap[zapcore.ErrorLevel] = appinsights.Error
+	logLevelMap[zapcore.DPanicLevel] = appinsights.Critical
+	logLevelMap[zapcore.PanicLevel] = appinsights.Critical
+	logLevelMap[zapcore.FatalLevel] = appinsights.Critical
+
+	log, _ := zap.NewDevelopment(zap.Hooks(func(entry zapcore.Entry) error {
+		client.TrackTraceTelemetry(appinsights.NewTraceTelemetry(entry.Message, logLevelMap[entry.Level]))
+		return nil
+	}))
 	for i := 0; i < 16; i++ {
 		book := network.NewSimpleBook()
 		book.Add(beacon)
