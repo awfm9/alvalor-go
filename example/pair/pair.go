@@ -25,7 +25,7 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/veltor/veltor-go/logger"
+	"go.uber.org/zap"
 	"github.com/veltor/veltor-go/network"
 	"github.com/veltor/veltor-go/protocol"
 )
@@ -37,8 +37,7 @@ func main() {
 	addr := "127.0.0.1:10000"
 	sub := make(chan interface{}, 1000)
 	codec := protocol.Codec{}
-	log := logger.New()
-	log.SetLevel(logger.Debug)
+	log, _ := zap.NewDevelopment()
 	node1 := network.NewNode(
 		network.SetLog(log),
 		network.SetCodec(codec),
@@ -68,17 +67,17 @@ func main() {
 				msg := strconv.FormatUint(uint64(rand.Uint32()), 10)
 				err := node2.Send(addr, msg)
 				if err != nil {
-					log.Warningf("message send failed: %v", err)
+					log.Warn("message send failed", zap.Error(err))
 				}
 			case event := <-sub:
 				switch e := event.(type) {
 				case *network.Connected:
-					log.Infof("connected to peer: %v", e.Address)
+					log.Info("connected to peer on address", zap.String("addr", e.Address))
 				case *network.Disconnected:
-					log.Infof("disconnected from peer: %v", e.Address)
+					log.Info("disconnected from peer on address", zap.String("addr", e.Address))
 				case *network.Message:
 					txt := e.Value.(string)
-					log.Infof("received message: %v", txt)
+					log.Info("received message", zap.String("message", txt))
 				}
 			}
 		}
