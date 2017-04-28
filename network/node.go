@@ -19,6 +19,7 @@ package network
 
 import (
 	"bytes"
+	"fmt"
 	"math/rand"
 	"net"
 	"reflect"
@@ -28,13 +29,14 @@ import (
 	"github.com/pierrec/lz4"
 	"github.com/pkg/errors"
 	uuid "github.com/satori/go.uuid"
+	"go.uber.org/zap"
 )
 
 // Node struct.
 type Node struct {
 	nonce      []byte
 	network    []byte
-	log        Log
+	log        *zap.Logger
 	book       Book
 	codec      Codec
 	subscriber chan<- interface{}
@@ -123,19 +125,19 @@ Outer:
 
 // ping method.
 func (node *Node) ping(peer *peer) {
-	node.log.Debugf("pinging peer on %v", peer.addr)
+	node.log.Debug("pinging peer", zap.String("address", peer.addr))
 	ping := Ping{
 		Nonce: rand.Uint32(),
 	}
 	err := node.Send(peer.addr, &ping)
 	if err != nil {
-		node.log.Errorf("could not send ping to %v: %v", peer.addr, err)
+		node.log.Error("could not send ping", zap.String("address", peer.addr), zap.Error(err))
 	}
 }
 
 // disconnect method.
 func (node *Node) disconnect(peer *peer) {
-	node.log.Infof("disconnecting peer on %v", peer.addr)
+	node.log.Info("disconnecting peer", zap.String("address", peer.addr))
 	node.peers.remove(peer.addr)
 	peer.close()
 	node.book.Dropped(peer.addr)
@@ -148,7 +150,7 @@ func (node *Node) disconnect(peer *peer) {
 
 // process method.
 func (node *Node) process(msg *Message) {
-	node.log.Debugf("processing %T message from %v", msg.Value, msg.Address)
+	node.log.Debug("processing message", zap.String("type", fmt.Sprintf("%T", msg.Value)), zap.String("address", msg.Address))
 	var err error
 	switch msg.Value.(type) {
 	case *Ping:
@@ -163,7 +165,7 @@ func (node *Node) process(msg *Message) {
 		node.event(msg)
 	}
 	if err != nil {
-		node.log.Errorf("could not process %T message: %v", msg.Value, err)
+		node.log.Error("could not process message", zap.String("type", fmt.Sprintf("%T", msg.Value)), zap.Error(err))
 	}
 }
 
@@ -215,7 +217,7 @@ func (node *Node) event(e interface{}) {
 	select {
 	case node.subscriber <- e:
 	default:
-		node.log.Errorf("subscriber stalling on %T", e)
+		node.log.Error("subscriber stalling", zap.String("event", fmt.Sprintf("%T", e)))
 	}
 }
 
@@ -223,22 +225,22 @@ func (node *Node) event(e interface{}) {
 func (node *Node) listen() {
 	_, _, err := net.SplitHostPort(node.address)
 	if err != nil {
-		node.log.Errorf("invalid listen address: %v", err)
+		node.log.Error("invalid listen address", zap.Error(err))
 		return
 	}
 	ln, err := net.Listen("tcp", node.address)
 	if err != nil {
-		node.log.Errorf("could not create listener on %v: %v", node.address, err)
+		node.log.Error("could not create listener", zap.String("address", node.address), zap.Error(err))
 		return
 	}
 	for {
 		conn, err := ln.Accept()
 		if err != nil {
-			node.log.Errorf("could not accept connection: %v", err)
+			node.log.Error("could not accept connection", zap.Error(err))
 			break
 		}
 		if node.peers.count() > int(node.maxPeers) {
-			node.log.Debugf("too many peers, not accepting %v", conn.RemoteAddr())
+			node.log.Debug("too many peers", zap.String("address", conn.RemoteAddr().String()))
 			conn.Close()
 			return
 		}
@@ -268,12 +270,12 @@ func (node *Node) add() {
 		return
 	}
 	if node.peers.has(addr) {
-		node.log.Errorf("already connected to peer %v", addr)
+		node.log.Error("already connected to peer", zap.String("address", addr))
 		return
 	}
 	conn, err := net.Dial("tcp", addr)
 	if err != nil {
-		node.log.Errorf("could not dial peer %v: %v", addr, err)
+		node.log.Error("could not dial peer", zap.String("address", addr), zap.Error(err))
 		return
 	}
 	go node.handshake(conn)
@@ -286,11 +288,11 @@ func (node *Node) discover() {
 	default:
 		return
 	}
-	node.log.Infof("launching peer discovery")
+	node.log.Info("launching peer discovery")
 	discover := Discover{}
 	err := node.Broadcast(&discover)
 	if err != nil {
-		node.log.Errorf("could not launch discovery: %v", err)
+		node.log.Error("could not launch discovery", zap.Error(err))
 	}
 }
 
@@ -321,7 +323,7 @@ func (node *Node) known(nonce []byte) bool {
 // handshake method.
 func (node *Node) handshake(conn net.Conn) {
 	addr := conn.RemoteAddr().String()
-	node.log.Infof("adding outgoing peer on %v", addr)
+	node.log.Info("adding outgoing peer", zap.String("address", addr))
 	atomic.AddInt32(&node.count, 1)
 	syn := append(node.network, node.nonce...)
 	_, err := conn.Write(syn)
@@ -338,7 +340,7 @@ func (node *Node) handshake(conn net.Conn) {
 	code := ack[:len(node.network)]
 	nonce := ack[len(node.network):]
 	if !bytes.Equal(code, node.network) || bytes.Equal(nonce, node.nonce) || node.known(nonce) {
-		node.log.Warningf("dropping invalid outgoing connection to %v", addr)
+		node.log.Warn("dropping invalid outgoing connection", zap.String("address", addr))
 		node.drop(conn)
 		return
 	}
@@ -348,7 +350,7 @@ func (node *Node) handshake(conn net.Conn) {
 // welcome method.
 func (node *Node) welcome(conn net.Conn) {
 	addr := conn.RemoteAddr().String()
-	node.log.Infof("adding incoming peer on %v", addr)
+	node.log.Info("adding incoming peer", zap.String("address", addr))
 	atomic.AddInt32(&node.count, 1)
 	ack := append(node.network, node.nonce...)
 	syn := make([]byte, len(ack))
@@ -360,7 +362,7 @@ func (node *Node) welcome(conn net.Conn) {
 	code := syn[:len(node.network)]
 	nonce := syn[len(node.network):]
 	if !bytes.Equal(code, node.network) || bytes.Equal(nonce, node.nonce) || node.known(nonce) {
-		node.log.Warningf("dropping invalid incoming connection from %v", addr)
+		node.log.Warn("dropping invalid incoming connection", zap.String("address", addr))
 		node.drop(conn)
 		return
 	}
@@ -375,7 +377,7 @@ func (node *Node) welcome(conn net.Conn) {
 // init method.
 func (node *Node) init(conn net.Conn, nonce []byte) {
 	addr := conn.RemoteAddr().String()
-	node.log.Infof("finalizing handshake with %v", addr)
+	node.log.Info("finalizing handshake", zap.String("address", addr))
 	r := lz4.NewReader(conn)
 	w := lz4.NewWriter(conn)
 	out := make(chan *Message)
@@ -397,7 +399,7 @@ func (node *Node) init(conn net.Conn, nonce []byte) {
 	if node.server {
 		err := node.share(addr, []string{node.address})
 		if err != nil {
-			node.log.Errorf("could not share initial address: %v", err)
+			node.log.Error("could not share initial address", zap.Error(err))
 		}
 	}
 	e := Connected{
@@ -421,11 +423,11 @@ func (node *Node) share(addr string, addrs []string) error {
 // drop method.
 func (node *Node) drop(conn net.Conn) {
 	addr := conn.RemoteAddr().String()
-	node.log.Infof("dropping connection to %v", addr)
+	node.log.Info("dropping connection", zap.String("address", addr))
 	atomic.AddInt32(&node.count, -1)
 	err := conn.Close()
 	if err != nil {
-		node.log.Errorf("could not close dropped connection: %v", err)
+		node.log.Error("could not close dropped connection", zap.Error(err))
 	}
 	node.book.Dropped(addr)
 	node.book.Blacklist(addr)
@@ -433,7 +435,7 @@ func (node *Node) drop(conn net.Conn) {
 
 // Send method.
 func (node *Node) Send(addr string, msg interface{}) error {
-	node.log.Debugf("sending %T message to %v", msg, addr)
+	node.log.Debug("sending message", zap.String("type", fmt.Sprintf("%T", msg)), zap.String("address", addr))
 	if !node.peers.has(addr) {
 		return errors.New("could not find peer with given address")
 	}
@@ -448,12 +450,12 @@ func (node *Node) Send(addr string, msg interface{}) error {
 
 // Broadcast method.
 func (node *Node) Broadcast(msg interface{}) error {
-	node.log.Debugf("broadcasting %T message", msg)
+	node.log.Debug("broadcasting message", zap.String("type", fmt.Sprintf("%T", msg)))
 	for _, peer := range node.peers.slice() {
 		err := peer.send(msg)
 		if err != nil {
 			node.book.Failed(peer.addr)
-			return errors.Wrapf(err, "could not broadcast message to peer %v", peer.addr)
+			return errors.Wrapf(err, "could not broadcast message to %v", peer.addr)
 		}
 	}
 	return nil

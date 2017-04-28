@@ -26,7 +26,7 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/veltor/veltor-go/logger"
+	"go.uber.org/zap"
 	"github.com/veltor/veltor-go/network"
 )
 
@@ -37,8 +37,7 @@ func main() {
 	var nodes []*network.Node
 	sub := make(chan interface{}, 1000)
 	beacon := "127.0.0.1:10000"
-	log := logger.New()
-	log.SetLevel(logger.Debug)
+	log, _ := zap.NewDevelopment()
 	for i := 0; i < 16; i++ {
 		book := network.NewSimpleBook()
 		book.Add(beacon)
@@ -65,17 +64,17 @@ func main() {
 				node := nodes[rand.Int()%len(nodes)]
 				err := node.Send(beacon, msg)
 				if err != nil {
-					log.Warningf("message send failed: %v", err)
+					log.Warn("message send failed", zap.Error(err))
 				}
 			case event := <-sub:
 				switch e := event.(type) {
 				case *network.Connected:
-					log.Infof("connected to peer: %v", e.Address)
+					log.Info("connected to peer", zap.String("addr", e.Address))
 				case *network.Disconnected:
-					log.Infof("disconnected from peer: %v", e.Address)
+					log.Info("disconnected from peer", zap.String("addr", e.Address))
 				case *network.Message:
 					txt := e.Value.(string)
-					log.Infof("received message: %v", txt)
+					log.Info("received message", zap.String("message", txt))
 				}
 			}
 		}
