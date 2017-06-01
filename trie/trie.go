@@ -22,12 +22,6 @@ type Trie struct {
 	root node
 }
 
-// pair struct.
-type pair struct {
-	hash []byte
-	data []byte
-}
-
 // New function.
 func New() *Trie {
 	t := &Trie{}
@@ -35,10 +29,9 @@ func New() *Trie {
 }
 
 // Put method.
-func (t *Trie) Put(key []byte, data []byte, force bool) bool {
+func (t *Trie) Put(key []byte, hash []byte, force bool) bool {
 	cur := &t.root
 	path := encode(key)
-	hash := hash(data)
 	for {
 		switch n := (*cur).(type) {
 		case *fullNode:
@@ -151,7 +144,7 @@ func (t *Trie) Del(key []byte) bool {
 			return false
 		case valueNode:
 			*cur = nil
-			// TODO: merge potential previous short nodes together
+			// TODO: compact the tree as needed after removal
 			return true
 		case nil:
 			return false
