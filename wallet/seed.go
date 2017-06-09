@@ -27,7 +27,7 @@ import (
 	bip39 "github.com/tyler-smith/go-bip39"
 )
 
-// NewSeed function.
+// NewSeed creates a new 256-bit random seed to be used for wallet key store initialization.
 func NewSeed() ([]byte, error) {
 	seed := make([]byte, 32)
 	_, err := rand.Read(seed)
@@ -37,7 +37,8 @@ func NewSeed() ([]byte, error) {
 	return seed, nil
 }
 
-// SeedFromMnemonic function.
+// SeedFromMnemonic takes a mnemonic as defined in BIP39 and turns it back into a byte slice used
+// as seed for a wallet key store.
 func SeedFromMnemonic(mnemonic string) ([]byte, error) {
 	seed, err := bip39.MnemonicToByteArray(mnemonic)
 	if err != nil {
@@ -46,7 +47,8 @@ func SeedFromMnemonic(mnemonic string) ([]byte, error) {
 	return seed, nil
 }
 
-// SeedToMnemonic function.
+// SeedToMnemonic takes a random byte slice representing the seed of a wallet key store and turns it
+// into the BIP39 mnemonic representation of words to be used as a offline backup for user wallets.
 func SeedToMnemonic(seed []byte) (string, error) {
 	mnemonic, err := bip39.NewMnemonic(seed)
 	if err != nil {
@@ -55,7 +57,9 @@ func SeedToMnemonic(seed []byte) (string, error) {
 	return mnemonic, nil
 }
 
-// SeedFromEncrypted function.
+// SeedFromEncrypted takes a AES ECB mode encrypted seed and a password and will decode the original
+// seed from the input. The seed should not be more than 256 bits long to avoid issues with the ECB
+// mode application of AES.
 func SeedFromEncrypted(encrypted []byte, password string) ([]byte, error) {
 	hash := sha256.Sum256([]byte(password))
 	cipher, err := aes.NewCipher(hash[:])
@@ -68,7 +72,9 @@ func SeedFromEncrypted(encrypted []byte, password string) ([]byte, error) {
 	return seed, nil
 }
 
-// SeedToEncrypted function.
+// SeedToEncrypted takes a random wallet seed and a password and uses AES ECB mode encryption to
+// get the output that can be written to disk securely. The seed shouldn't be more than 256 bits to
+// avoid ECB mode security concerns.
 func SeedToEncrypted(seed []byte, password string) ([]byte, error) {
 	hash := sha256.Sum256([]byte(password))
 	cipher, err := aes.NewCipher(hash[:])

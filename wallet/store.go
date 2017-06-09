@@ -20,9 +20,9 @@ package wallet
 import (
 	"bytes"
 
+	"github.com/alvalor/alvalor-go/futhark"
 	"github.com/pkg/errors"
 	argon2 "github.com/tvdburgt/go-argon2"
-	"github.com/alvalor/alvalor-go/futhark"
 )
 
 // Salt variable.
@@ -33,13 +33,16 @@ var salt = []byte{
 	0x4d, 0xed, 0x1d, 0x29,
 }
 
-// Store struct.
+// Store represents the key store for a user wallet with a main key used as the root of all key
+// derivations and an argon2 context to parameterize the key derivation algorithm.
 type Store struct {
 	root []byte
 	ctx  argon2.Context
 }
 
-// NewStore function.
+// NewStore initializes a new key store for a wallet from the given seed. The seed should ideally
+// be 256-bit long and will be used to derive the root key of the key store. The preconfigured
+// argon2 context uses 3 iterations, 1 gigabyte of memory, 4 lanes and an output length of 96 bytes.
 func NewStore(seed []byte) (*Store, error) {
 	s := &Store{
 		ctx: argon2.Context{
@@ -59,9 +62,13 @@ func NewStore(seed []byte) (*Store, error) {
 	return s, nil
 }
 
-// generate method.
-func (s *Store) generate(input []byte, code []byte) ([]byte, error) {
-	hash, err := argon2.Hash(&s.ctx, input, code)
+// generate uses some input data and a salt to derive and generate a new futhark private key.
+// First, we create 96 bytes of data by running the data and salt through the argon2 key derivation
+// hash function. We then feed the first 64 bytes of this hash into the futhark key generation
+// function to get our key, while appending the last 32 bytes to the final key as the salt for the
+// derivations starting at this key.
+func (s *Store) generate(data []byte, salt []byte) ([]byte, error) {
+	hash, err := argon2.Hash(&s.ctx, data, salt)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not compute hash")
 	}
@@ -73,7 +80,10 @@ func (s *Store) generate(input []byte, code []byte) ([]byte, error) {
 	return key, nil
 }
 
-// derive method.
+// derive takes a parent key and a derivation index to get the child key of the input key at the
+// given index. The index is given as a byte array to reduce additional copying of data. It uses
+// the first 64 bytes of the parent key concatenated with the index as the input data for the key
+// generation, while using the last 32 bytes of the key as the salt.
 func (s *Store) derive(key []byte, index []byte) ([]byte, error) {
 	data := append(key[:64], index...)
 	key, err := s.generate(data, key[64:])
@@ -83,7 +93,9 @@ func (s *Store) derive(key []byte, index []byte) ([]byte, error) {
 	return key, nil
 }
 
-// Key method.
+// Key takes a list of derivation levels, where the length of the slice represents the total depth
+// we want to derive to, while each byte value corresponds to the index we want to derive to on
+// the corresponding level.
 func (s *Store) Key(levels [][]byte) ([]byte, error) {
 	var err error
 	key := s.root
