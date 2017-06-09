@@ -17,9 +17,10 @@
 
 package blockchain
 
-// Entity defines an entity that offers a unique 256-bit binary ID.
-type Entity interface {
-	ID() []byte
-	Bytes() []byte
-	FromBytes(data []byte) error
+import "io"
+
+// Codec is responsible for serializing and deserializing data for disk storage.
+type Codec interface {
+	Encode(w io.Writer, i interface{}) error
+	Decode(r io.Reader) (interface{}, error)
 }

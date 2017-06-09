@@ -15,7 +15,7 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with Alvalor.  If not, see <http://www.gnu.org/licenses/>.
 
-package protocol
+package codec
 
 import (
 	"io"
@@ -26,11 +26,16 @@ import (
 	"github.com/alvalor/alvalor-go/network"
 )
 
-// Codec struct.
-type Codec struct{}
+// Proto struct.
+type Proto struct{}
+
+// NewProto function.
+func NewProto() Proto {
+	return Proto{}
+}
 
 // Encode method.
-func (c Codec) Encode(w io.Writer, i interface{}) error {
+func (c Proto) Encode(w io.Writer, i interface{}) error {
 	msg, seg, err := capnp.NewMessage(capnp.SingleSegment(nil))
 	if err != nil {
 		return errors.Wrap(err, "could not create proto message")
@@ -94,7 +99,7 @@ func (c Codec) Encode(w io.Writer, i interface{}) error {
 }
 
 // Decode method.
-func (c Codec) Decode(r io.Reader) (interface{}, error) {
+func (c Proto) Decode(r io.Reader) (interface{}, error) {
 	msg, err := capnp.NewDecoder(r).Decode()
 	if err != nil {
 		return nil, errors.Wrap(err, "could not decode proto message")

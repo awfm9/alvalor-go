@@ -30,8 +30,8 @@ type Codec interface {
 	Decode(r io.Reader) (interface{}, error)
 }
 
-// DefaultCodec variable.
-var DefaultCodec = &SimpleCodec{}
+// SimpleCodec struct.
+type SimpleCodec struct{}
 
 // Msg enum.
 const (
@@ -42,9 +42,6 @@ const (
 	MsgString
 	MsgBytes
 )
-
-// SimpleCodec struct.
-type SimpleCodec struct{}
 
 // Encode method.
 func (s SimpleCodec) Encode(w io.Writer, i interface{}) error {

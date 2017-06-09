@@ -19,6 +19,7 @@ package network
 
 import (
 	"time"
+
 	"go.uber.org/zap"
 )
 
@@ -41,6 +42,9 @@ var DefaultConfig = Config{
 
 // DefaultLogger variable.
 var DefaultLogger, _ = zap.NewDevelopment()
+
+// DefaultCodec variable.
+var DefaultCodec = SimpleCodec{}
 
 // Config struct.
 type Config struct {
