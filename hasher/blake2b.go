@@ -15,12 +15,27 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with Alvalor.  If not, see <http://www.gnu.org/licenses/>.
 
-package blockchain
+package hasher
 
 import "golang.org/x/crypto/blake2b"
 
-func hash(data []byte) []byte {
+// Zero256 represents the 256-bit hash of an empty byte array.
+var Zero256 = Sum256(nil)
+
+// Zero512 represents the 512-bit hash of an empty byte array.
+var Zero512 = Sum512(nil)
+
+// Sum256 returns the 256-bit blake2b hash of the input data.
+func Sum256(data []byte) []byte {
 	h, _ := blake2b.New256(nil)
+	h.Write(data)
+	hash := h.Sum(nil)
+	return hash
+}
+
+// Sum512 returns the 512-bit blake2b hash of the input data.
+func Sum512(data []byte) []byte {
+	h, _ := blake2b.New512(nil)
 	h.Write(data)
 	hash := h.Sum(nil)
 	return hash

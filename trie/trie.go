@@ -17,18 +17,24 @@
 
 package trie
 
-// Trie struct.
+import "github.com/alvalor/alvalor-go/hasher"
+
+// Trie represents our own implementation of the patricia merkle trie as specified in the Ethereum
+// yellow paper, with a few simplications due to the simpler structure of the Alvalor blockchain.
 type Trie struct {
 	root node
 }
 
-// New function.
+// New creates a new empty trie with no state.
 func New() *Trie {
 	t := &Trie{}
 	return t
 }
 
-// Put method.
+// Put will insert the given hash at the path provided by the given key. If force is true, it will
+// never fail and overwrite any possible hash already located at that key location. Otherwise, the
+// function will not modify the trie and return false if there is already a hash located at the
+// given key.
 func (t *Trie) Put(key []byte, hash []byte, force bool) bool {
 	cur := &t.root
 	path := encode(key)
@@ -88,7 +94,8 @@ func (t *Trie) Put(key []byte, hash []byte, force bool) bool {
 	}
 }
 
-// Get method.
+// Get will retrieve the hash located at the path provided by the given key. If the path doesn't
+// exist or there is no hash at the given location, it returns a nil slice and false.
 func (t *Trie) Get(key []byte) ([]byte, bool) {
 	cur := &t.root
 	path := encode(key)
@@ -119,7 +126,8 @@ func (t *Trie) Get(key []byte) ([]byte, bool) {
 	}
 }
 
-// Del method.
+// Del will try to delete the hash located at the path provided by the given key. If no hash is
+// found at the given location, it returns false.
 func (t *Trie) Del(key []byte) bool {
 	cur := &t.root
 	path := encode(key)
@@ -152,7 +160,13 @@ func (t *Trie) Del(key []byte) bool {
 	}
 }
 
-// Hash method.
+// Hash will return the hash that represents the trie in its entirety by returning the hash of the
+// root node. Currently, it does not do any caching and recomputes the hash from the leafs up. If
+// the root is not initialized, it will return the hash of an empty byte array to uniquely represent
+// a trie without state.
 func (t *Trie) Hash() []byte {
+	if t.root == nil {
+		return hasher.Zero256
+	}
 	return t.root.Hash()
 }
