@@ -26,15 +26,11 @@ import (
 	"github.com/alvalor/alvalor-go/network"
 )
 
-// Proto struct.
+// Proto represents the capnproto serialization module.
 type Proto struct{}
 
-// NewProto function.
-func NewProto() Proto {
-	return Proto{}
-}
-
-// Encode method.
+// Encode will serialize the provided entity by writing the binary format into the provided writer.
+// It will fail if the entity type is unknown.
 func (c Proto) Encode(w io.Writer, i interface{}) error {
 	msg, seg, err := capnp.NewMessage(capnp.SingleSegment(nil))
 	if err != nil {
@@ -98,7 +94,7 @@ func (c Proto) Encode(w io.Writer, i interface{}) error {
 	return nil
 }
 
-// Decode method.
+// Decode will decode the binary data of the given reader into the original entity.
 func (c Proto) Decode(r io.Reader) (interface{}, error) {
 	msg, err := capnp.NewDecoder(r).Decode()
 	if err != nil {

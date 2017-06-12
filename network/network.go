@@ -17,7 +17,8 @@
 
 package network
 
-// Network enum.
+// Enumeration of different networks available. A node configured with one network will only
+// successfully connect to nodes of the same network. To be used for testing & iteration.
 var (
 	Odin = []byte{79, 68, 73, 78}
 	Thor = []byte{84, 72, 79, 82}

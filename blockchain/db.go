@@ -27,7 +27,7 @@ import (
 	"github.com/alvalor/alvalor-go/trie"
 )
 
-// DB is a blockchain database that syncs the trie with the hard disk persistence store.
+// DB is a blockchain database that syncs the trie with the persistent key-value store on disk.
 type DB struct {
 	kv *badger.KV
 	tr *trie.Trie
@@ -52,7 +52,8 @@ func NewDB(kv *badger.KV) (*DB, error) {
 	return db, nil
 }
 
-// Insert will insert a new entity into the trie.
+// Insert will insert a new key and hash into the trie after storing the related hash and data on
+// disk.
 func (db *DB) Insert(id []byte, entity interface{}) error {
 	buf := &bytes.Buffer{}
 	err := db.cd.Encode(buf, entity)
@@ -72,7 +73,8 @@ func (db *DB) Insert(id []byte, entity interface{}) error {
 	return nil
 }
 
-// Retrieve will retrieve an entity from the trie.
+// Retrieve will retrieve an entity from the key-value store by looking up the associated hash in
+// the trie.
 func (db *DB) Retrieve(id []byte) (interface{}, error) {
 	hash, ok := db.tr.Get(id)
 	if !ok {

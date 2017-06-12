@@ -25,7 +25,7 @@ import (
 	"sync"
 )
 
-// Book interface.
+// Book represents an address book interface to handle known peer addresses on the alvalor network.
 type Book interface {
 	Add(addr string)
 	Whitelist(addr string)
@@ -38,14 +38,15 @@ type Book interface {
 	Sample() ([]string, error)
 }
 
-// DefaultBook variable.
+// DefaultBook defines the book used by default for the initialization of a network node.
 var DefaultBook = &SimpleBook{
 	blacklist:  make(map[string]struct{}),
 	entries:    make(map[string]*entry),
 	sampleSize: 10,
 }
 
-// entry struct.
+// entry represents an entry in the simple address book, containing the address, whether the peer is
+// currently active and how many successes/failures we had on the connection.
 type entry struct {
 	addr    string
 	active  bool
@@ -53,7 +54,9 @@ type entry struct {
 	failure int
 }
 
-// score method.
+// score returns the score used for sorting entries by priority. The score of entries that have
+// never failed is always one. For entries that failed, the score is the ratio between successes
+// and failures.
 func (e entry) score() float64 {
 	if e.failure == 0 {
 		return 1
@@ -62,14 +65,16 @@ func (e entry) score() float64 {
 	return math.Max(score/100, 1)
 }
 
-// error variables.
+// enumeration of different errors that we can return from address book functions.
 var (
 	errAddrInvalid = errors.New("invalid address")
 	errAddrUnknown = errors.New("unknown address")
 	errBookEmpty   = errors.New("book empty")
 )
 
-// SimpleBook struct.
+// SimpleBook represents an address book that uses naive algorithms to manage peer addresses. It has
+// an explicit blacklist, a registry of peers and defines a sample size of how many addresses to
+// return on its random sample. It uses a mutex to be thread-safe.
 type SimpleBook struct {
 	mutex      sync.Mutex
 	blacklist  map[string]struct{}
@@ -77,7 +82,7 @@ type SimpleBook struct {
 	sampleSize int
 }
 
-// NewSimpleBook function.
+// NewSimpleBook creates a new default initialized instance of a simple address book.
 func NewSimpleBook() *SimpleBook {
 	return &SimpleBook{
 		blacklist:  make(map[string]struct{}),
@@ -86,7 +91,8 @@ func NewSimpleBook() *SimpleBook {
 	}
 }
 
-// Whitelist method.
+// Whitelist will remove an address from the blacklist and set it's score to one by resetting
+// failures and setting success count to one.
 func (s *SimpleBook) Whitelist(addr string) {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
@@ -99,7 +105,8 @@ func (s *SimpleBook) Whitelist(addr string) {
 	peer.success = 1
 }
 
-// Blacklist method.
+// Blacklist will delete an entry from the registry and put it in the blacklist so further adding
+// is no longer possible.
 func (s *SimpleBook) Blacklist(addr string) {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
@@ -107,7 +114,7 @@ func (s *SimpleBook) Blacklist(addr string) {
 	s.blacklist[addr] = struct{}{}
 }
 
-// Add method.
+// Add will add an address to the list of available peer addresses, unless it is blacklisted.
 func (s *SimpleBook) Add(addr string) {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
@@ -118,7 +125,9 @@ func (s *SimpleBook) Add(addr string) {
 	s.entries[addr] = &entry{addr: addr}
 }
 
-// Connected method.
+// Connected should be called by consumers whenever a successful connection to the peer with the
+// given address was established. It is used to keep track of the active status and to increase the
+// success count of the peer.
 func (s *SimpleBook) Connected(addr string) {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
@@ -130,7 +139,8 @@ func (s *SimpleBook) Connected(addr string) {
 	e.success++
 }
 
-// Disconnected method.
+// Disconnected should be called by consumers whenever a peer was disconnected in a clean way. It is
+// used to keep track of the active status.
 func (s *SimpleBook) Disconnected(addr string) {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
@@ -141,7 +151,8 @@ func (s *SimpleBook) Disconnected(addr string) {
 	e.active = false
 }
 
-// Dropped method.
+// Dropped should be called by consumers whenever a we decided to drop a peer due to errors in the
+// connection. It is used to keep track of the failure & active status of a peer.
 func (s *SimpleBook) Dropped(addr string) {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
@@ -153,7 +164,8 @@ func (s *SimpleBook) Dropped(addr string) {
 	e.failure++
 }
 
-// Failed method.
+// Failed should be called whenever connection to a peer failed. It is used to keep track of the
+// failure & active status of a peer.
 func (s *SimpleBook) Failed(addr string) {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
@@ -165,7 +177,8 @@ func (s *SimpleBook) Failed(addr string) {
 	e.failure++
 }
 
-// Get method.
+// Get will return the top priority peer out of all peers that are currently not active. It should
+// represent the peer that is most likely to allow us to connect successfully.
 func (s *SimpleBook) Get() (string, error) {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
@@ -179,7 +192,8 @@ func (s *SimpleBook) Get() (string, error) {
 	return e.addr, nil
 }
 
-// Sample method.
+// Sample will return a random sample of peers that can be used to exchange peer addresses with
+// other peers and allow discovery in the peer-to-peer network.
 func (s *SimpleBook) Sample() ([]string, error) {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
@@ -213,20 +227,20 @@ func (s *SimpleBook) slice(active bool) []*entry {
 	return entries
 }
 
-// byPriority type.
+// byPriority helps us sort peer entries by priority.
 type byPriority []*entry
 
-// Len method.
+// Len returns the count of peer entries..
 func (b byPriority) Len() int {
 	return len(b)
 }
 
-// Less method.
+// Less checks whether the score of the first peer is lower than the score of the second peer.
 func (b byPriority) Less(i int, j int) bool {
 	return b[i].score() < b[j].score()
 }
 
-// Swap method.
+// Swap will switch two peer entry positions in the list.
 func (b byPriority) Swap(i int, j int) {
 	b[i], b[j] = b[j], b[i]
 }

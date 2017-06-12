@@ -17,21 +17,21 @@
 
 package network
 
-// Discover struct.
+// Discover represents a discovery message sent on the network.
 type Discover struct {
 }
 
-// Peers struct.
+// Peers represents a list of peer addresses shared on the network.
 type Peers struct {
 	Addresses []string
 }
 
-// Ping struct.
+// Ping represents an outgoing heartbeat message sent on the network.
 type Ping struct {
 	Nonce uint32
 }
 
-// Pong struct.
+// Pong represents a heartbeat response sent on the network.
 type Pong struct {
 	Nonce uint32
 }

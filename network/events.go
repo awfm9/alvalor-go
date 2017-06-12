@@ -17,18 +17,18 @@
 
 package network
 
-// Message struct.
+// Message represents a message event bubbled up to the node subscriber.
 type Message struct {
 	Address string
 	Value   interface{}
 }
 
-// Connected struct.
+// Connected represents a connection event bubbled up to the node subscriber.
 type Connected struct {
 	Address string
 }
 
-// Disconnected struct.
+// Disconnected represents a disconnection event bubbled up to the node subscriber.
 type Disconnected struct {
 	Address string
 }
