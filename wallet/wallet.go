@@ -15,13 +15,8 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with Alvalor.  If not, see <http://www.gnu.org/licenses/>.
 
-package blockchain
-
-import "golang.org/x/crypto/blake2b"
-
-func hash(data []byte) []byte {
-	h, _ := blake2b.New256(nil)
-	h.Write(data)
-	hash := h.Sum(nil)
-	return hash
-}
+// Package wallet implements functions to support portable and flexible user wallets to manage and
+// generate keys. It includes a key store which uses deterministic hierarchical key derivation to
+// create the same groups and series of keys for a specific seed, as well as a number of helper
+// functions to write the seed to disk, read it from disk and back it up offline using a mnemonic.
+package wallet

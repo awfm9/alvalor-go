@@ -32,7 +32,9 @@ import (
 	"go.uber.org/zap"
 )
 
-// Node struct.
+// Node represents our own node on the peer-to-peer network. It manages the peers we are connected
+// to, as well as all the network parameters. Finally, it allows a subscriber to receive & process
+// all messages that are not internally handled by the network library.
 type Node struct {
 	nonce      []byte
 	network    []byte
@@ -52,7 +54,11 @@ type Node struct {
 	peers      *registry
 }
 
-// NewNode function.
+// NewNode creates a new node to connect to the peer-to-peer network. Without parameters, it will
+// use the default configuration, but it takes a variadic list of configuration functions to
+// punctually change desired parameters and dependencies. It launches a go routine for balancing the
+// number of peers, for managing incoming messages and (if enabled) for the server listening for
+// incoming connections.
 func NewNode(options ...func(*Config)) *Node {
 	cfg := DefaultConfig
 	for _, option := range options {
@@ -84,7 +90,9 @@ func NewNode(options ...func(*Config)) *Node {
 	return node
 }
 
-// manage method.
+// manage will build a list of two incoming channels per peer: one for the heartbeating and one for
+// incoming messages. It will then keep receiving these messages and processing them accordingly,
+// unless a channel is closed and we need to remove a peer from the list of cases.
 func (node *Node) manage() {
 Outer:
 	for {
@@ -123,7 +131,7 @@ Outer:
 	}
 }
 
-// ping method.
+// ping will send a ping message to the given peer.
 func (node *Node) ping(peer *peer) {
 	node.log.Debug("pinging peer", zap.String("address", peer.addr))
 	ping := Ping{
@@ -135,7 +143,8 @@ func (node *Node) ping(peer *peer) {
 	}
 }
 
-// disconnect method.
+// disconnect will disconnect from the given peer and notify the subscriber that we are no longer
+// connected to it.
 func (node *Node) disconnect(peer *peer) {
 	node.log.Info("disconnecting peer", zap.String("address", peer.addr))
 	node.peers.remove(peer.addr)
@@ -148,7 +157,8 @@ func (node *Node) disconnect(peer *peer) {
 	node.event(&e)
 }
 
-// process method.
+// process will process a given incoming message according to the message type. If it is not handled
+// explicitly by our library, we send it up the stack to the subscriber.
 func (node *Node) process(msg *Message) {
 	node.log.Debug("processing message", zap.String("type", fmt.Sprintf("%T", msg.Value)), zap.String("address", msg.Address))
 	var err error
@@ -169,7 +179,7 @@ func (node *Node) process(msg *Message) {
 	}
 }
 
-// processPing method.
+// processPing will process a ping message received on the network by replying with a pong.
 func (node *Node) processPing(msg *Message) error {
 	ping := msg.Value.(*Ping)
 	pong := Pong{
@@ -182,12 +192,12 @@ func (node *Node) processPing(msg *Message) error {
 	return nil
 }
 
-// processPong method.
+// processPong does nothing, as it signals a successfully completed heartbeat.
 func (node *Node) processPong(msg *Message) error {
 	return nil
 }
 
-// processDiscover method.
+// processDiscover responds to a discover message by sending a sample of peers that are known to us.
 func (node *Node) processDiscover(msg *Message) error {
 	addrs, err := node.book.Sample()
 	if err != nil {
@@ -200,7 +210,7 @@ func (node *Node) processDiscover(msg *Message) error {
 	return nil
 }
 
-// processPeers method.
+// processPeers will process a received list of peer addresses by adding them to our address book.
 func (node *Node) processPeers(msg *Message) error {
 	peers := msg.Value.(*Peers)
 	for _, addr := range peers.Addresses {
@@ -212,7 +222,8 @@ func (node *Node) processPeers(msg *Message) error {
 	return nil
 }
 
-// event method.
+// event is called when something happens that is not processed by our network library. It will
+// send the message to the subscriber to handle on a higher stack.
 func (node *Node) event(e interface{}) {
 	select {
 	case node.subscriber <- e:
@@ -221,7 +232,8 @@ func (node *Node) event(e interface{}) {
 	}
 }
 
-// listen method.
+// listen will start a listener on the configured network address and hand over incoming network
+// connections to the welcome handshake function.
 func (node *Node) listen() {
 	_, _, err := net.SplitHostPort(node.address)
 	if err != nil {
@@ -248,7 +260,8 @@ func (node *Node) listen() {
 	}
 }
 
-// check method.
+// check will see if we are below minimum or above maximum peer count and add or remove peers as
+// needed.
 func (node *Node) check() {
 	for {
 		count := uint(atomic.LoadInt32(&node.count))
@@ -262,7 +275,8 @@ func (node *Node) check() {
 	}
 }
 
-// add method.
+// add will try to initialize a new outgoing connection and hand over to the outgoing handshake
+// function on success.
 func (node *Node) add() {
 	addr, err := node.book.Get()
 	if err != nil {
@@ -281,7 +295,7 @@ func (node *Node) add() {
 	go node.handshake(conn)
 }
 
-// discover method.
+// discover will launch an attempt to discover new peers on the network, with a build-in timeout.
 func (node *Node) discover() {
 	select {
 	case <-node.discovery.C:
@@ -296,7 +310,7 @@ func (node *Node) discover() {
 	}
 }
 
-// remove method.
+// remove will drop one of the current peers.
 func (node *Node) remove() {
 	index := 0
 	goal := rand.Int() % node.peers.count()
@@ -310,7 +324,7 @@ func (node *Node) remove() {
 	}
 }
 
-// known method.
+// known checks whether we already know a peer with the given nonce.
 func (node *Node) known(nonce []byte) bool {
 	for _, peer := range node.peers.slice() {
 		if bytes.Equal(nonce, peer.nonce) {
@@ -320,7 +334,8 @@ func (node *Node) known(nonce []byte) bool {
 	return false
 }
 
-// handshake method.
+// handshake starts an outgoing handshake by sending the network ID and our node nonce, then
+// comparing the reply against our initial message.
 func (node *Node) handshake(conn net.Conn) {
 	addr := conn.RemoteAddr().String()
 	node.log.Info("adding outgoing peer", zap.String("address", addr))
@@ -347,7 +362,8 @@ func (node *Node) handshake(conn net.Conn) {
 	node.init(conn, nonce)
 }
 
-// welcome method.
+// welcome starts an incoming handshake by waiting for the peer's node nonce and network ID and
+// comparing it against what we are expecting, then sending our response.
 func (node *Node) welcome(conn net.Conn) {
 	addr := conn.RemoteAddr().String()
 	node.log.Info("adding incoming peer", zap.String("address", addr))
@@ -374,7 +390,9 @@ func (node *Node) welcome(conn net.Conn) {
 	node.init(conn, nonce)
 }
 
-// init method.
+// init will initialize a new peer and add it to our registry after a successful handshake. It
+// launches the required receiving go routine and does the initial sharing of our own peer address.
+// Finally, it notifies the subscriber that a new connection was established.
 func (node *Node) init(conn net.Conn, nonce []byte) {
 	addr := conn.RemoteAddr().String()
 	node.log.Info("finalizing handshake", zap.String("address", addr))
@@ -408,7 +426,7 @@ func (node *Node) init(conn net.Conn, nonce []byte) {
 	node.event(&e)
 }
 
-// share method.
+// share will share the given addresses with the peer of the given address.
 func (node *Node) share(addr string, addrs []string) error {
 	peers := Peers{
 		Addresses: addrs,
@@ -420,7 +438,7 @@ func (node *Node) share(addr string, addrs []string) error {
 	return nil
 }
 
-// drop method.
+// drop will disconnect a peer by closing the connection.
 func (node *Node) drop(conn net.Conn) {
 	addr := conn.RemoteAddr().String()
 	node.log.Info("dropping connection", zap.String("address", addr))
@@ -433,7 +451,7 @@ func (node *Node) drop(conn net.Conn) {
 	node.book.Blacklist(addr)
 }
 
-// Send method.
+// Send is used to send the given message to the peer with the given address.
 func (node *Node) Send(addr string, msg interface{}) error {
 	node.log.Debug("sending message", zap.String("type", fmt.Sprintf("%T", msg)), zap.String("address", addr))
 	if !node.peers.has(addr) {
@@ -448,7 +466,7 @@ func (node *Node) Send(addr string, msg interface{}) error {
 	return nil
 }
 
-// Broadcast method.
+// Broadcast is used to broadcast a message to all peers we are connected to.
 func (node *Node) Broadcast(msg interface{}) error {
 	node.log.Debug("broadcasting message", zap.String("type", fmt.Sprintf("%T", msg)))
 	for _, peer := range node.peers.slice() {
@@ -461,7 +479,7 @@ func (node *Node) Broadcast(msg interface{}) error {
 	return nil
 }
 
-// Peers method.
+// Peers returns a list of peer addresses that we are connected to.
 func (node *Node) Peers() []string {
 	peers := node.peers.slice()
 	addrs := make([]string, 0, len(peers))

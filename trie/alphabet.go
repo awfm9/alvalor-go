@@ -17,7 +17,9 @@
 
 package trie
 
-// encode function.
+// encode takes a byte slice and turns it into a slice with twice the length, from bytes with 256
+// possible values each, to twice the number of nibbles with 16 possible values each. This can then
+// be used to traverse down our patricia merkle trie with 16 children per node.
 func encode(key []byte) []byte {
 	path := make([]byte, 0, len(key)*2)
 	for _, b := range key {

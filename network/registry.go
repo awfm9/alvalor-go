@@ -19,13 +19,13 @@ package network
 
 import "sync"
 
-// registry struct.
+// registry represents a simple map of peers that is safe for concurrent access.
 type registry struct {
 	mutex sync.RWMutex
 	peers map[string]*peer
 }
 
-// slice method.
+// slice returns a copied slice of all registered peers.
 func (reg *registry) slice() []*peer {
 	reg.mutex.RLock()
 	defer reg.mutex.RUnlock()
@@ -36,7 +36,7 @@ func (reg *registry) slice() []*peer {
 	return peers
 }
 
-// has method.
+// has returns true if we know a peer with the given address.
 func (reg *registry) has(addr string) bool {
 	reg.mutex.RLock()
 	defer reg.mutex.RUnlock()
@@ -44,28 +44,28 @@ func (reg *registry) has(addr string) bool {
 	return ok
 }
 
-// remove method.
+// remove will remove the peer with the given address from the registry.
 func (reg *registry) remove(addr string) {
 	reg.mutex.Lock()
 	defer reg.mutex.Unlock()
 	delete(reg.peers, addr)
 }
 
-// add method.
+// add will add the given peer with the given address to the registry.
 func (reg *registry) add(addr string, peer *peer) {
 	reg.mutex.Lock()
 	defer reg.mutex.Unlock()
 	reg.peers[addr] = peer
 }
 
-// count method.
+// count will return the number of peers currently in the registry.
 func (reg *registry) count() int {
 	reg.mutex.RLock()
 	defer reg.mutex.RUnlock()
 	return len(reg.peers)
 }
 
-// get method.
+// get will return the peer with the given address.
 func (reg *registry) get(addr string) *peer {
 	reg.mutex.RLock()
 	defer reg.mutex.RUnlock()

@@ -26,6 +26,8 @@ import (
 	"github.com/pkg/errors"
 )
 
+// peer represents one node of the peer-to-peer network that we are connected to. It keeps track of
+// the different peer parameters and the input/output channels to communicate with it.
 type peer struct {
 	mutex     sync.Mutex
 	conn      net.Conn
@@ -41,6 +43,9 @@ type peer struct {
 	hb        *time.Timer
 }
 
+// receive should be called with a go routine and will keep reading on the given connection. It
+// manages heartbeat timeouts and submits the received & decoded message to our node through the
+// defined output channel.
 func (p *peer) receive() {
 	for {
 		p.conn.SetReadDeadline(time.Now().Add(p.timeout))
@@ -60,6 +65,8 @@ func (p *peer) receive() {
 	}
 }
 
+// send will attempt to encode the given message and send it on the outgoing network connection
+// direction.
 func (p *peer) send(i interface{}) error {
 	p.mutex.Lock()
 	defer p.mutex.Unlock()
@@ -70,6 +77,7 @@ func (p *peer) send(i interface{}) error {
 	return nil
 }
 
+// close will shut down the connection underlying this peer.
 func (p *peer) close() error {
 	return p.conn.Close()
 }

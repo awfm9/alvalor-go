@@ -29,14 +29,13 @@ func TestAll(t *testing.T) {
 	trie := New()
 	for i := 0; i < 1000; i++ {
 		key := make([]byte, 32)
-		data := make([]byte, 1024*1024)
+		hash := make([]byte, 32)
 		_, _ = rand.Read(key)
-		_, _ = rand.Read(data)
-		ok := trie.Put(key, data, false)
+		_, _ = rand.Read(hash)
+		ok := trie.Put(key, hash, false)
 		if !ok {
 			t.Fatalf("could not put: %x", key)
 		}
-		hash := hash(data)
 		out, ok := trie.Get(key)
 		if !ok {
 			t.Fatalf("could not get: %x", key)

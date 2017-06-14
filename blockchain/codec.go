@@ -15,23 +15,12 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with Alvalor.  If not, see <http://www.gnu.org/licenses/>.
 
-package network
+package blockchain
 
-// Discover represents a discovery message sent on the network.
-type Discover struct {
-}
+import "io"
 
-// Peers represents a list of peer addresses shared on the network.
-type Peers struct {
-	Addresses []string
-}
-
-// Ping represents an outgoing heartbeat message sent on the network.
-type Ping struct {
-	Nonce uint32
-}
-
-// Pong represents a heartbeat response sent on the network.
-type Pong struct {
-	Nonce uint32
+// Codec is responsible for serializing and deserializing data for disk storage.
+type Codec interface {
+	Encode(w io.Writer, i interface{}) error
+	Decode(r io.Reader) (interface{}, error)
 }

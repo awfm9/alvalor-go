@@ -18,15 +18,20 @@
 package blockchain
 
 import (
-	"github.com/alvalor/alvalor-go/trie"
+	"bytes"
+
 	"github.com/dgraph-io/badger/badger"
 	"github.com/pkg/errors"
+
+	"github.com/alvalor/alvalor-go/hasher"
+	"github.com/alvalor/alvalor-go/trie"
 )
 
-// DB is a blockchain database that syncs the trie with the hard disk persistence store.
+// DB is a blockchain database that syncs the trie with the persistent key-value store on disk.
 type DB struct {
 	kv *badger.KV
 	tr *trie.Trie
+	cd Codec
 }
 
 // NewDB creates a new blockchain DB on the disk.
@@ -47,37 +52,43 @@ func NewDB(kv *badger.KV) (*DB, error) {
 	return db, nil
 }
 
-// Insert will insert a new entity into the trie.
-func (db *DB) Insert(entity Entity) error {
-	data := entity.Bytes()
-	hash := hash(data)
-	err := db.kv.Set(hash, data)
+// Insert will insert a new key and hash into the trie after storing the related hash and data on
+// disk.
+func (db *DB) Insert(id []byte, entity interface{}) error {
+	buf := &bytes.Buffer{}
+	err := db.cd.Encode(buf, entity)
+	if err != nil {
+		return errors.Wrap(err, "could not serialize entity")
+	}
+	data := buf.Bytes()
+	hash := hasher.Sum256(data)
+	err = db.kv.Set(hash, data)
 	if err != nil {
 		return errors.Wrap(err, "could not save entity on disk")
 	}
-	id := entity.ID()
 	ok := db.tr.Put(id, hash, false)
 	if !ok {
-		return errors.Errorf("could not insert entity %x into trie", entity.ID())
+		return errors.Errorf("could not insert entity %x into trie", id)
 	}
 	return nil
 }
 
-// Retrieve will retrieve an entity from the trie.
-func (db *DB) Retrieve(id []byte, entity Entity) error {
+// Retrieve will retrieve an entity from the key-value store by looking up the associated hash in
+// the trie.
+func (db *DB) Retrieve(id []byte) (interface{}, error) {
 	hash, ok := db.tr.Get(id)
 	if !ok {
-		return errors.Errorf("could not find entity %x in trie", id)
+		return nil, errors.Errorf("could not find entity %x in trie", id)
 	}
 	var kv badger.KVItem
 	err := db.kv.Get(hash, &kv)
 	if err != nil {
-		return errors.Wrap(err, "could not retrieve entity from disk")
+		return nil, errors.Wrap(err, "could not retrieve entity from disk")
 	}
-	data := kv.Value()
-	err = entity.FromBytes(data)
+	buf := bytes.NewBuffer(kv.Value())
+	entity, err := db.cd.Decode(buf)
 	if err != nil {
-		return errors.Wrap(err, "could not decode entity")
+		return nil, errors.Wrap(err, "could not deserialize entity")
 	}
-	return nil
+	return entity, nil
 }

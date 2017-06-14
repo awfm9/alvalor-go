@@ -15,7 +15,7 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with Alvalor.  If not, see <http://www.gnu.org/licenses/>.
 
-package protocol
+package codec
 
 import (
 	"io"
@@ -26,11 +26,12 @@ import (
 	"github.com/alvalor/alvalor-go/network"
 )
 
-// Codec struct.
-type Codec struct{}
+// Proto represents the capnproto serialization module.
+type Proto struct{}
 
-// Encode method.
-func (c Codec) Encode(w io.Writer, i interface{}) error {
+// Encode will serialize the provided entity by writing the binary format into the provided writer.
+// It will fail if the entity type is unknown.
+func (c Proto) Encode(w io.Writer, i interface{}) error {
 	msg, seg, err := capnp.NewMessage(capnp.SingleSegment(nil))
 	if err != nil {
 		return errors.Wrap(err, "could not create proto message")
@@ -93,8 +94,8 @@ func (c Codec) Encode(w io.Writer, i interface{}) error {
 	return nil
 }
 
-// Decode method.
-func (c Codec) Decode(r io.Reader) (interface{}, error) {
+// Decode will decode the binary data of the given reader into the original entity.
+func (c Proto) Decode(r io.Reader) (interface{}, error) {
 	msg, err := capnp.NewDecoder(r).Decode()
 	if err != nil {
 		return nil, errors.Wrap(err, "could not decode proto message")

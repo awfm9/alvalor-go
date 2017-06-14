@@ -24,16 +24,17 @@ import (
 	"github.com/pkg/errors"
 )
 
-// Codec interface.
+// Codec is used to serialize and write entities to the network peers.
 type Codec interface {
 	Encode(w io.Writer, i interface{}) error
 	Decode(r io.Reader) (interface{}, error)
 }
 
-// DefaultCodec variable.
-var DefaultCodec = &SimpleCodec{}
+// SimpleCodec represents a simple implementation of a codec, using JSON and a type byte for
+// encoding/decoding entities from/to the network.
+type SimpleCodec struct{}
 
-// Msg enum.
+// Enumeration of different entity types that we use to select the entity for decoding.
 const (
 	MsgPing = iota
 	MsgPong
@@ -43,10 +44,8 @@ const (
 	MsgBytes
 )
 
-// SimpleCodec struct.
-type SimpleCodec struct{}
-
-// Encode method.
+// Encode will write the type byte of the given entity to the writer, followed by its JSON encoding.
+// It will fail for unknown entities.
 func (s SimpleCodec) Encode(w io.Writer, i interface{}) error {
 	code := make([]byte, 1)
 	switch i.(type) {
@@ -77,7 +76,7 @@ func (s SimpleCodec) Encode(w io.Writer, i interface{}) error {
 	return nil
 }
 
-// Decode method.
+// Decode will use the type byte to initialize the correct entity and then decode the JSON into it.
 func (s SimpleCodec) Decode(r io.Reader) (interface{}, error) {
 	code := make([]byte, 1)
 	_, err := r.Read(code)
