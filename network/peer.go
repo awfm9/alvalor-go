@@ -35,7 +35,8 @@ type peer struct {
 	nonce     []byte
 	r         io.Reader
 	w         io.Writer
-	out       chan *Message
+	incoming  chan interface{}
+	outgoing  chan interface{}
 	err       error
 	codec     Codec
 	timeout   time.Duration
@@ -52,29 +53,29 @@ func (p *peer) receive() {
 		i, err := p.codec.Decode(p.r)
 		if err != nil {
 			p.err = errors.Wrap(err, "could not decode message")
-			close(p.out)
+			close(p.incoming)
 			break
 		}
 		p.hb.Stop()
 		p.hb.Reset(p.heartbeat)
-		msg := Message{
-			Address: p.addr,
-			Value:   i,
-		}
-		p.out <- &msg
+		p.incoming <- i
 	}
 }
 
-// send will attempt to encode the given message and send it on the outgoing network connection
-// direction.
-func (p *peer) send(i interface{}) error {
-	p.mutex.Lock()
-	defer p.mutex.Unlock()
-	err := p.codec.Encode(p.w, i)
-	if err != nil {
-		return errors.Wrap(err, "could not encode message")
+// process should be called with a go routine and will keep reading the outgoing message channel,
+// writing them to the outgoing network connection.
+func (p *peer) send() {
+	for i := range p.outgoing {
+		p.conn.SetReadDeadline(time.Now().Add(p.timeout))
+		err := p.codec.Encode(p.w, i)
+		if err != nil {
+			p.err = errors.Wrap(err, "could not encode message")
+			close(p.outgoing)
+			break
+		}
+		p.hb.Stop()
+		p.hb.Reset(p.heartbeat)
 	}
-	return nil
 }
 
 // close will shut down the connection underlying this peer.
