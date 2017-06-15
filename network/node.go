@@ -100,7 +100,7 @@ Outer:
 		var cases []reflect.SelectCase
 		for _, peer := range peers {
 			peers = append(peers, peer)
-			submitter := reflect.SelectCase{Dir: reflect.SelectRecv, Chan: reflect.ValueOf(peer.out)}
+			submitter := reflect.SelectCase{Dir: reflect.SelectRecv, Chan: reflect.ValueOf(peer.incoming)}
 			cases = append(cases, submitter)
 		}
 		for _, peer := range peers {
@@ -112,21 +112,27 @@ Outer:
 			continue
 		}
 		for {
+
+			// if a channel was closed, we should disconnect that peer
 			i, val, ok := reflect.Select(cases)
 			if !ok {
 				node.disconnect(peers[i])
 				continue Outer
 			}
+
+			// if we received a time struct, we should send a heartbeat
 			_, ok = val.Interface().(time.Time)
 			if ok {
 				node.ping(peers[i%len(peers)])
 				continue
 			}
-			msg, ok := val.Interface().(*Message)
-			if ok {
-				node.process(msg)
-				continue
+
+			// otherwise, we should process a received network message
+			msg := Message{
+				Address: peers[i].addr,
+				Value:   i,
 			}
+			node.process(&msg)
 		}
 	}
 }
@@ -398,14 +404,16 @@ func (node *Node) init(conn net.Conn, nonce []byte) {
 	node.log.Info("finalizing handshake", zap.String("address", addr))
 	r := lz4.NewReader(conn)
 	w := lz4.NewWriter(conn)
-	out := make(chan *Message)
+	outgoing := make(chan interface{}, 16)
+	incoming := make(chan interface{}, 16)
 	p := peer{
 		conn:      conn,
 		addr:      addr,
 		nonce:     nonce,
 		r:         r,
 		w:         w,
-		out:       out,
+		outgoing:  outgoing,
+		incoming:  incoming,
 		codec:     node.codec,
 		heartbeat: node.heartbeat,
 		timeout:   node.timeout,
@@ -458,22 +466,27 @@ func (node *Node) Send(addr string, msg interface{}) error {
 		return errors.New("could not find peer with given address")
 	}
 	peer := node.peers.get(addr)
-	err := peer.send(msg)
-	if err != nil {
+	select {
+	case peer.outgoing <- msg:
+		return nil
+	default:
 		node.book.Failed(addr)
-		return errors.Wrap(err, "could not send message to peer")
+		node.disconnect(peer)
+		return errors.New("could not send message, peer stalling")
 	}
-	return nil
 }
 
 // Broadcast is used to broadcast a message to all peers we are connected to.
 func (node *Node) Broadcast(msg interface{}) error {
 	node.log.Debug("broadcasting message", zap.String("type", fmt.Sprintf("%T", msg)))
 	for _, peer := range node.peers.slice() {
-		err := peer.send(msg)
-		if err != nil {
+		select {
+		case peer.outgoing <- msg:
+			continue
+		default:
 			node.book.Failed(peer.addr)
-			return errors.Wrapf(err, "could not broadcast message to %v", peer.addr)
+			node.disconnect(peer)
+			return errors.Errorf("could not broadcast message to %v, peer stalling", peer.addr)
 		}
 	}
 	return nil
