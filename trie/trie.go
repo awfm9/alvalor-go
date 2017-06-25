@@ -129,14 +129,18 @@ func (t *Trie) Get(key []byte) ([]byte, bool) {
 // Del will try to delete the hash located at the path provided by the given key. If no hash is
 // found at the given location, it returns false.
 func (t *Trie) Del(key []byte) bool {
+	var visited []*node
 	cur := &t.root
 	path := encode(key)
+Remove:
 	for {
 		switch n := (*cur).(type) {
 		case *fullNode:
+			visited = append(visited, cur)
 			cur = &n.children[path[0]]
 			path = path[1:]
 		case *shortNode:
+			visited = append(visited, cur)
 			var common []byte
 			for i := 0; i < len(n.key); i++ {
 				if path[i] != n.key[i] {
@@ -152,12 +156,55 @@ func (t *Trie) Del(key []byte) bool {
 			return false
 		case valueNode:
 			*cur = nil
-			// TODO: compact the tree as needed after removal
-			return true
+			break Remove
 		case nil:
 			return false
 		}
 	}
+Compact:
+	for len(visited) > 0 {
+		cur = visited[len(visited)-1]
+		switch n := (*cur).(type) {
+		case *shortNode:
+			*cur = nil
+			visited = visited[:len(visited)-1]
+			continue Compact
+		case *fullNode:
+			var index int
+			var child node
+			count := 0
+			for i, c := range n.children {
+				if c != nil {
+					index = i
+					child = c
+					count++
+				}
+			}
+			if count > 1 {
+				break Compact
+			}
+			short := shortNode{
+				key:   []byte{byte(index)},
+				child: child,
+			}
+			c, ok := child.(*shortNode)
+			if ok {
+				short.key = append(short.key, c.key...)
+				short.child = c.child
+			}
+			*cur = &short
+			if len(visited) > 1 {
+				parent := visited[len(visited)-2]
+				p, ok := (*parent).(*shortNode)
+				if ok {
+					p.key = append(p.key, short.key...)
+					p.child = short.child
+				}
+			}
+			break Compact
+		}
+	}
+	return true
 }
 
 // Hash will return the hash that represents the trie in its entirety by returning the hash of the

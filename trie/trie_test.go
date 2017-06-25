@@ -22,9 +22,11 @@ import (
 	"math/rand"
 	"testing"
 	"time"
+
+	"github.com/alvalor/alvalor-go/hasher"
 )
 
-func TestAll(t *testing.T) {
+func TestSingle(t *testing.T) {
 	rand.Seed(time.Now().UnixNano())
 	trie := New()
 	for i := 0; i < 1000; i++ {
@@ -51,5 +53,46 @@ func TestAll(t *testing.T) {
 		if ok {
 			t.Fatalf("should not get: %x", key)
 		}
+	}
+}
+
+func TestBatch(t *testing.T) {
+	rand.Seed(time.Now().UnixNano())
+	trie := New()
+	keys := make([][]byte, 0, 1000)
+	hashes := make([][]byte, 0, 1000)
+	for i := 0; i < 1000; i++ {
+		key := make([]byte, 32)
+		hash := make([]byte, 32)
+		_, _ = rand.Read(key)
+		_, _ = rand.Read(hash)
+		keys = append(keys, key)
+		hashes = append(hashes, hash)
+	}
+	for i, key := range keys {
+		hash := hashes[i]
+		ok := trie.Put(key, hash, false)
+		if !ok {
+			t.Fatalf("could not put %v: %x", i, key)
+		}
+	}
+	for i, key := range keys {
+		out, ok := trie.Get(key)
+		if !ok {
+			t.Fatalf("could not get %v: %x", i, key)
+		}
+		hash := hashes[i]
+		if !bytes.Equal(out, hash) {
+			t.Errorf("wrong hash: %x != %x", out, hash)
+		}
+	}
+	for i, key := range keys {
+		ok := trie.Del(key)
+		if !ok {
+			t.Fatalf("could not del %v: %x", i, key)
+		}
+	}
+	if !bytes.Equal(trie.Hash(), hasher.Zero256) {
+		t.Fatalf("root hash not zero: %x", trie.Hash())
 	}
 }
