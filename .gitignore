@@ -1,4 +1,5 @@
 example/many/many
 example/pair/pair
-<<<<<<< 8da8eb25d618ef26a8f898808ffc131332a1aab3
 *.exe
+/.vscode
+debug.test
