@@ -18,202 +18,202 @@
 package network
 
 import (
-	"testing"
-	"fmt"
-	"math/rand"
+    "testing"
+    "fmt"
+    "math/rand"
 )
 
 func TestAddSavesPeer(t *testing.T) {
-	book := NewSimpleBook()
-	addr := "192.168.4.52"
-	book.Add(addr)
+    book := NewSimpleBook()
+    addr := "192.168.4.52"
+    book.Add(addr)
 
-	entry, _ := book.Get()
+    entry, _ := book.Get()
 
-	if entry != addr {
-		t.Fatalf("Entry %s was not found in book", addr)
-	}
+    if entry != addr {
+        t.Fatalf("Entry %s was not found in book", addr)
+    }
 }
 
 func TestGetReturnsErrBookEmpty(t *testing.T) {
-	book := NewSimpleBook()
+    book := NewSimpleBook()
 
-	_, err := book.Get()
+    _, err := book.Get()
 
-	if err != errBookEmpty {
-		t.Fatalf("Get should return error in case book is empty")
-	}
+    if err != errBookEmpty {
+        t.Fatalf("Get should return error in case book is empty")
+    }
 }
 
 func TestAddDoesNotSavePeerIfBlacklisted(t *testing.T) {
-	book := NewSimpleBook()
-	addr := "125.192.78.113"
+    book := NewSimpleBook()
+    addr := "125.192.78.113"
 
-	book.Blacklist(addr)
-	book.Add(addr)
+    book.Blacklist(addr)
+    book.Add(addr)
 
-	_, err := book.Get()
+    _, err := book.Get()
 
-	if err != errBookEmpty {
-		t.Fatalf("Add should not save address in case it is blacklisted")
-	}
+    if err != errBookEmpty {
+        t.Fatalf("Add should not save address in case it is blacklisted")
+    }
 }
 
 func TestAddSavesPeerIfBlacklistedAndWhitelistedLater(t *testing.T) {
-	book := NewSimpleBook()
-	addr := "125.192.78.113"
+    book := NewSimpleBook()
+    addr := "125.192.78.113"
 
-	book.Blacklist(addr)
-	book.Whitelist(addr)
-	book.Add(addr)
+    book.Blacklist(addr)
+    book.Whitelist(addr)
+    book.Add(addr)
 
-	entry, _ := book.Get()
+    entry, _ := book.Get()
 
-	if entry != addr {
-		t.Fatalf("Address should be saved after whitelisting")
-	}
+    if entry != addr {
+        t.Fatalf("Address should be saved after whitelisting")
+    }
 }
 
 func TestGetReturnsAddressWithHighestScoreWhenOtherConnectionsDropped(t *testing.T) {
-	book := NewSimpleBook()
-	addr1 := "127.54.51.66"
-	addr2 := "120.55.58.86"
-	addr3 := "156.23.41.24"
+    book := NewSimpleBook()
+    addr1 := "127.54.51.66"
+    addr2 := "120.55.58.86"
+    addr3 := "156.23.41.24"
 
-	book.Add(addr1)
-	book.Add(addr2)
-	book.Add(addr3)
+    book.Add(addr1)
+    book.Add(addr2)
+    book.Add(addr3)
 
     book.Connected(addr1)
-	book.Dropped(addr1)
+    book.Dropped(addr1)
 
     book.Connected(addr2)
-	book.Dropped(addr2)
-	book.Connected(addr2)
-	book.Dropped(addr2)
+    book.Dropped(addr2)
+    book.Connected(addr2)
+    book.Dropped(addr2)
 
-	book.Connected(addr3)
-	book.Disconnected(addr3)
-	book.Connected(addr3)
-	book.Disconnected(addr3)
+    book.Connected(addr3)
+    book.Disconnected(addr3)
+    book.Connected(addr3)
+    book.Disconnected(addr3)
 
-	entry, _ := book.Get()
+    entry, _ := book.Get()
 
-	if entry != addr3 {
-		t.Fatalf("Address %s with highest score is expected. Actual address %s", addr3, entry)
-	}
+    if entry != addr3 {
+        t.Fatalf("Address %s with highest score is expected. Actual address %s", addr3, entry)
+    }
 }
 
 func TestGetReturnsAddressWithHighestScoreWhenOtherConnectionsFailed(t *testing.T) {
-	book := NewSimpleBook()
-	addr1 := "127.54.51.66"
-	addr2 := "120.55.58.86"
-	addr3 := "156.23.41.24"
+    book := NewSimpleBook()
+    addr1 := "127.54.51.66"
+    addr2 := "120.55.58.86"
+    addr3 := "156.23.41.24"
 
-	book.Add(addr1)
-	book.Add(addr2)
-	book.Add(addr3)
+    book.Add(addr1)
+    book.Add(addr2)
+    book.Add(addr3)
 
-	book.Failed(addr1)
-	book.Failed(addr1)
-	book.Failed(addr1)
+    book.Failed(addr1)
+    book.Failed(addr1)
+    book.Failed(addr1)
 
-	book.Failed(addr2)
-	book.Failed(addr2)
-	book.Failed(addr2)
+    book.Failed(addr2)
+    book.Failed(addr2)
+    book.Failed(addr2)
 
-	book.Connected(addr3)
-	book.Disconnected(addr3)
+    book.Connected(addr3)
+    book.Disconnected(addr3)
 
-	entry, _ := book.Get()
+    entry, _ := book.Get()
 
-	if entry != addr3 {
-		t.Fatalf("Address %s with highest score is expected. Actual address %s", addr3, entry)
-	}
+    if entry != addr3 {
+        t.Fatalf("Address %s with highest score is expected. Actual address %s", addr3, entry)
+    }
 }
 
 func TestSampleReturnsErrorIfNoPeersAdded(t *testing.T) {
-	book := NewSimpleBook()
+    book := NewSimpleBook()
 
-	_, err := book.Sample()
+    _, err := book.Sample()
 
-	if err == nil {
-		t.Fail()
-	}
+    if err == nil {
+        t.Fail()
+    }
 }
 
 func TestSampleReturnsErrorIfOnlyNonActivePeersAdded(t *testing.T) {
-	book := NewSimpleBook()
-	addr1 := "127.54.51.66"
-	addr2 := "120.55.58.86"
-	addr3 := "156.23.41.24"
+    book := NewSimpleBook()
+    addr1 := "127.54.51.66"
+    addr2 := "120.55.58.86"
+    addr3 := "156.23.41.24"
 
-	book.Add(addr1)
-	book.Add(addr2)
-	book.Add(addr3)
+    book.Add(addr1)
+    book.Add(addr2)
+    book.Add(addr3)
 
-	_, err := book.Sample()
+    _, err := book.Sample()
 
-	if err == nil {
-		t.Fail()
-	}
+    if err == nil {
+        t.Fail()
+    }
 }
 
 func TestSampleReturnsAddedPeers(t *testing.T) {
-	book := NewSimpleBook()
-	addrsLen := book.sampleSize
-	addrs := make([]string, 0, addrsLen)
-	for i := 0; i < addrsLen; i++ {
-		addr := randomAddr()
-		addrs = append(addrs, addr)
-		book.Add(addr)
-		book.Connected(addr)
-	}
+    book := NewSimpleBook()
+    addrsLen := book.sampleSize
+    addrs := make([]string, 0, addrsLen)
+    for i := 0; i < addrsLen; i++ {
+        addr := randomAddr()
+        addrs = append(addrs, addr)
+        book.Add(addr)
+        book.Connected(addr)
+    }
 
-	sample, _ := book.Sample()
+    sample, _ := book.Sample()
     
-	intersectionCount := countIntersection(addrs, sample)
-	expected := len(addrs)
+    intersectionCount := countIntersection(addrs, sample)
+    expected := addrsLen
 
-	if intersectionCount == 0 || intersectionCount != len(addrs) {
-		t.Fatalf("Expected to get %d intersections. Actual number is %d", expected, intersectionCount)
-	}
+    if intersectionCount == 0 || intersectionCount != len(addrs) {
+        t.Fatalf("Expected to get %d intersections. Actual number is %d", expected, intersectionCount)
+    }
 }
 
 func TestSampleReturnsSubsetOfAddedPeers(t *testing.T) {
-	book := NewSimpleBook()
-	addrsLen := 50
-	addrs := make([]string, 0, addrsLen)
-	for i := 0; i < addrsLen; i++ {
-		addr := randomAddr()
-		addrs = append(addrs, addr)
-		book.Add(addr)
-		book.Connected(addr)
-	}
+    book := NewSimpleBook()
+    addrsLen := 50
+    addrs := make([]string, 0, addrsLen)
+    for i := 0; i < addrsLen; i++ {
+        addr := randomAddr()
+        addrs = append(addrs, addr)
+        book.Add(addr)
+        book.Connected(addr)
+    }
 
-	sample, _ := book.Sample()
+    sample, _ := book.Sample()
     
-	intersectionCount := countIntersection(addrs, sample)
-	expected := book.sampleSize
+    intersectionCount := countIntersection(addrs, sample)
+    expected := book.sampleSize
 
-	if intersectionCount == 0 || intersectionCount != expected {
-		t.Fatalf("Expected to get %d intersections. Actual number is %d", expected, intersectionCount)
-	}
+    if intersectionCount == 0 || intersectionCount != expected {
+        t.Fatalf("Expected to get %d intersections. Actual number is %d", expected, intersectionCount)
+    }
 }
 
 
 func randomAddr() (string) {
-	return fmt.Sprintf("%d.%d.%d.%d", rand.Intn(150), rand.Intn(150), rand.Intn(150), rand.Intn(150))
+    return fmt.Sprintf("%d.%d.%d.%d", rand.Intn(150), rand.Intn(150), rand.Intn(150), rand.Intn(150))
 }
 
 func countIntersection(addrs1 []string, addrs2 []string) (int) {
-	count := 0
-	for i := 0; i < len(addrs1); i++ {
-		for j := 0; j < len(addrs2); j++ {
-			if addrs1[i] == addrs2[j] {
-				count++
-			}
-		}
-	}
-	return count
+    count := 0
+    for i := 0; i < len(addrs1); i++ {
+        for j := 0; j < len(addrs2); j++ {
+            if addrs1[i] == addrs2[j] {
+                count++
+            }
+        }
+    }
+    return count
 }
