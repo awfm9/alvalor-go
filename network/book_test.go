@@ -94,7 +94,6 @@ func TestGetReturnsAddressWithHighestScoreWhenOtherConnectionsDropped(t *testing
 	book.Disconnected(addr3)
 	book.Connected(addr3)
 	book.Disconnected(addr3)
-	book.Connected(addr3)
 
 	entry, _ := book.Get()
 
@@ -122,6 +121,7 @@ func TestGetReturnsAddressWithHighestScoreWhenOtherConnectionsFailed(t *testing.
 	book.Failed(addr2)
 
 	book.Connected(addr3)
+	book.Disconnected(addr3)
 
 	entry, _ := book.Get()
 
