@@ -24,7 +24,7 @@ import (
 )
 
 func TestAddSavesPeer(t *testing.T) {
-	book := DefaultBook
+	book := NewSimpleBook()
 	addr := "192.168.4.52"
 	book.Add(addr)
 
@@ -36,7 +36,7 @@ func TestAddSavesPeer(t *testing.T) {
 }
 
 func TestGetReturnsErrBookEmpty(t *testing.T) {
-	book := DefaultBook
+	book := NewSimpleBook()
 
 	_, err := book.Get()
 
@@ -46,7 +46,7 @@ func TestGetReturnsErrBookEmpty(t *testing.T) {
 }
 
 func TestAddDoesNotSavePeerIfBlacklisted(t *testing.T) {
-	book := DefaultBook
+	book := NewSimpleBook()
 	addr := "125.192.78.113"
 
 	book.Blacklist(addr)
@@ -60,7 +60,7 @@ func TestAddDoesNotSavePeerIfBlacklisted(t *testing.T) {
 }
 
 func TestAddSavesPeerIfBlacklistedAndWhitelistedLater(t *testing.T) {
-	book := DefaultBook
+	book := NewSimpleBook()
 	addr := "125.192.78.113"
 
 	book.Blacklist(addr)
@@ -75,7 +75,7 @@ func TestAddSavesPeerIfBlacklistedAndWhitelistedLater(t *testing.T) {
 }
 
 func TestGetReturnsAddressWithHighestScoreWhenOtherConnectionsDropped(t *testing.T) {
-	book := DefaultBook
+	book := NewSimpleBook()
 	addr1 := "127.54.51.66"
 	addr2 := "120.55.58.86"
 	addr3 := "156.23.41.24"
@@ -105,7 +105,7 @@ func TestGetReturnsAddressWithHighestScoreWhenOtherConnectionsDropped(t *testing
 }
 
 func TestGetReturnsAddressWithHighestScoreWhenOtherConnectionsFailed(t *testing.T) {
-	book := DefaultBook
+	book := NewSimpleBook()
 	addr1 := "127.54.51.66"
 	addr2 := "120.55.58.86"
 	addr3 := "156.23.41.24"
@@ -133,7 +133,7 @@ func TestGetReturnsAddressWithHighestScoreWhenOtherConnectionsFailed(t *testing.
 }
 
 func TestSampleReturnsErrorIfNoPeersAdded(t *testing.T) {
-	book := DefaultBook
+	book := NewSimpleBook()
 
 	_, err := book.Sample()
 
@@ -143,7 +143,7 @@ func TestSampleReturnsErrorIfNoPeersAdded(t *testing.T) {
 }
 
 func TestSampleReturnsErrorIfOnlyNonActivePeersAdded(t *testing.T) {
-	book := DefaultBook
+	book := NewSimpleBook()
 	addr1 := "127.54.51.66"
 	addr2 := "120.55.58.86"
 	addr3 := "156.23.41.24"
@@ -160,10 +160,11 @@ func TestSampleReturnsErrorIfOnlyNonActivePeersAdded(t *testing.T) {
 }
 
 func TestSampleReturnsAddedPeers(t *testing.T) {
-	book := DefaultBook
-	addrs := make([]string, 0, book.sampleSize)
-	for i := 0; i < book.sampleSize; i++ {
-		addr := fmt.Sprintf("%d.%d.%d.%d", rand.Intn(150), rand.Intn(150), rand.Intn(150), rand.Intn(150))
+	book := NewSimpleBook()
+	addrsLen := book.sampleSize
+	addrs := make([]string, 0, addrsLen)
+	for i := 0; i < addrsLen; i++ {
+		addr := randomAddr()
 		addrs = append(addrs, addr)
 		book.Add(addr)
 		book.Connected(addr)
@@ -172,10 +173,37 @@ func TestSampleReturnsAddedPeers(t *testing.T) {
 	sample, _ := book.Sample()
     
 	intersectionCount := countIntersection(addrs, sample)
+	expected := len(addrs)
 
 	if intersectionCount == 0 || intersectionCount != len(addrs) {
-		t.Fatalf("Expected to get %d intersections. Actual number is %d", intersectionCount, len(addrs))
+		t.Fatalf("Expected to get %d intersections. Actual number is %d", expected, intersectionCount)
 	}
+}
+
+func TestSampleReturnsSubsetOfAddedPeers(t *testing.T) {
+	book := NewSimpleBook()
+	addrsLen := 50
+	addrs := make([]string, 0, addrsLen)
+	for i := 0; i < addrsLen; i++ {
+		addr := randomAddr()
+		addrs = append(addrs, addr)
+		book.Add(addr)
+		book.Connected(addr)
+	}
+
+	sample, _ := book.Sample()
+    
+	intersectionCount := countIntersection(addrs, sample)
+	expected := book.sampleSize
+
+	if intersectionCount == 0 || intersectionCount != expected {
+		t.Fatalf("Expected to get %d intersections. Actual number is %d", expected, intersectionCount)
+	}
+}
+
+
+func randomAddr() (string) {
+	return fmt.Sprintf("%d.%d.%d.%d", rand.Intn(150), rand.Intn(150), rand.Intn(150), rand.Intn(150))
 }
 
 func countIntersection(addrs1 []string, addrs2 []string) (int) {
