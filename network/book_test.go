@@ -72,27 +72,55 @@ func TestAddSavesPeerIfBlacklistedAndWhitelistedLater(t *testing.T) {
 	}
 }
 
-func TestGetReturnsAddressWithHighestScore(t *testing.T) {
+func TestGetReturnsAddressWithHighestScoreWhenOtherConnectionsDropped(t *testing.T) {
 	book := DefaultBook
 	addr1 := "127.54.51.66"
 	addr2 := "120.55.58.86"
 	addr3 := "156.23.41.24"
 
 	book.Add(addr1)
+	book.Add(addr2)
+	book.Add(addr3)
+
     book.Connected(addr1)
 	book.Dropped(addr1)
 
-	book.Add(addr2)
     book.Connected(addr2)
 	book.Dropped(addr2)
 	book.Connected(addr2)
 	book.Dropped(addr2)
 
+	book.Connected(addr3)
+	book.Disconnected(addr3)
+	book.Connected(addr3)
+	book.Disconnected(addr3)
+	book.Connected(addr3)
+
+	entry, _ := book.Get()
+
+	if entry != addr3 {
+		t.Fatalf("Address %s with highest score is expected. Actual address %s", addr3, entry)
+	}
+}
+
+func TestGetReturnsAddressWithHighestScoreWhenOtherConnectionsFailed(t *testing.T) {
+	book := DefaultBook
+	addr1 := "127.54.51.66"
+	addr2 := "120.55.58.86"
+	addr3 := "156.23.41.24"
+
+	book.Add(addr1)
+	book.Add(addr2)
 	book.Add(addr3)
-	book.Connected(addr3)
-	book.Disconnected(addr3)
-	book.Connected(addr3)
-	book.Disconnected(addr3)
+
+	book.Failed(addr1)
+	book.Failed(addr1)
+	book.Failed(addr1)
+
+	book.Failed(addr2)
+	book.Failed(addr2)
+	book.Failed(addr2)
+
 	book.Connected(addr3)
 
 	entry, _ := book.Get()
