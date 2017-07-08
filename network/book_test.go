@@ -19,6 +19,8 @@ package network
 
 import (
 	"testing"
+	"fmt"
+	"math/rand"
 )
 
 func TestAddSavesPeer(t *testing.T) {
@@ -128,4 +130,62 @@ func TestGetReturnsAddressWithHighestScoreWhenOtherConnectionsFailed(t *testing.
 	if entry != addr3 {
 		t.Fatalf("Address %s with highest score is expected. Actual address %s", addr3, entry)
 	}
+}
+
+func TestSampleReturnsErrorIfNoPeersAdded(t *testing.T) {
+	book := DefaultBook
+
+	_, err := book.Sample()
+
+	if err == nil {
+		t.Fail()
+	}
+}
+
+func TestSampleReturnsErrorIfOnlyNonActivePeersAdded(t *testing.T) {
+	book := DefaultBook
+	addr1 := "127.54.51.66"
+	addr2 := "120.55.58.86"
+	addr3 := "156.23.41.24"
+
+	book.Add(addr1)
+	book.Add(addr2)
+	book.Add(addr3)
+
+	_, err := book.Sample()
+
+	if err == nil {
+		t.Fail()
+	}
+}
+
+func TestSampleReturnsAddedPeers(t *testing.T) {
+	book := DefaultBook
+	addrs := make([]string, 0, book.sampleSize)
+	for i := 0; i < book.sampleSize; i++ {
+		addr := fmt.Sprintf("%d.%d.%d.%d", rand.Intn(150), rand.Intn(150), rand.Intn(150), rand.Intn(150))
+		addrs = append(addrs, addr)
+		book.Add(addr)
+		book.Connected(addr)
+	}
+
+	sample, _ := book.Sample()
+    
+	intersectionCount := countIntersection(addrs, sample)
+
+	if intersectionCount == 0 || intersectionCount != len(addrs) {
+		t.Fatalf("Expected to get %d intersections. Actual number is %d", intersectionCount, len(addrs))
+	}
+}
+
+func countIntersection(addrs1 []string, addrs2 []string) (int) {
+	count := 0
+	for i := 0; i < len(addrs1); i++ {
+		for j := 0; j < len(addrs2); j++ {
+			if addrs1[i] == addrs2[j] {
+				count++
+			}
+		}
+	}
+	return count
 }
