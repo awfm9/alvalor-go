@@ -184,13 +184,10 @@ func TestSetTimeout(t *testing.T) {
 
 type DummyCodec struct{}
 
-// Encode will write the type byte of the given entity to the writer, followed by its JSON encoding.
-// It will fail for unknown entities.
 func (s DummyCodec) Encode(w io.Writer, i interface{}) error {
 	return nil
 }
 
-// Decode will use the type byte to initialize the correct entity and then decode the JSON into it.
 func (s DummyCodec) Decode(r io.Reader) (interface{}, error) {
 	return 1, nil
 }
