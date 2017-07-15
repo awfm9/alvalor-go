@@ -21,6 +21,7 @@ import (
     "testing"
     "fmt"
     "math/rand"
+    "github.com/stretchr/testify/assert"
 )
 
 func TestAddSavesPeer(t *testing.T) {
@@ -30,9 +31,7 @@ func TestAddSavesPeer(t *testing.T) {
 
     entry, _ := book.Get()
 
-    if entry != addr {
-        t.Fatalf("Entry %s was not found in book", addr)
-    }
+    assert.Equal(t, addr, entry, "Entry %s was not found in book", addr)
 }
 
 func TestGetReturnsErrBookEmpty(t *testing.T) {
@@ -40,9 +39,7 @@ func TestGetReturnsErrBookEmpty(t *testing.T) {
 
     _, err := book.Get()
 
-    if err != errBookEmpty {
-        t.Fatalf("Get should return error in case book is empty")
-    }
+    assert.Equal(t, errBookEmpty, err, "Get should return error in case book is empty")
 }
 
 func TestAddDoesNotSavePeerIfBlacklisted(t *testing.T) {
@@ -54,9 +51,7 @@ func TestAddDoesNotSavePeerIfBlacklisted(t *testing.T) {
 
     _, err := book.Get()
 
-    if err != errBookEmpty {
-        t.Fatalf("Add should not save address in case it is blacklisted")
-    }
+    assert.Equal(t, errBookEmpty, err, "Add should not save address in case it is blacklisted")
 }
 
 func TestAddSavesPeerIfBlacklistedAndWhitelistedLater(t *testing.T) {
@@ -69,9 +64,7 @@ func TestAddSavesPeerIfBlacklistedAndWhitelistedLater(t *testing.T) {
 
     entry, _ := book.Get()
 
-    if entry != addr {
-        t.Fatalf("Address should be saved after whitelisting")
-    }
+    assert.Equal(t, addr, entry, "Address should be saved after whitelisting")
 }
 
 func TestGetReturnsAddressWithHighestScoreWhenOtherConnectionsDropped(t *testing.T) {
@@ -99,9 +92,7 @@ func TestGetReturnsAddressWithHighestScoreWhenOtherConnectionsDropped(t *testing
 
     entry, _ := book.Get()
 
-    if entry != addr3 {
-        t.Fatalf("Address %s with highest score is expected. Actual address %s", addr3, entry)
-    }
+    assert.Equal(t, addr3, entry, "Address %s with highest score is expected. Actual address %s", addr3, entry)
 }
 
 func TestGetReturnsAddressWithHighestScoreWhenOtherConnectionsFailed(t *testing.T) {
@@ -127,9 +118,7 @@ func TestGetReturnsAddressWithHighestScoreWhenOtherConnectionsFailed(t *testing.
 
     entry, _ := book.Get()
 
-    if entry != addr3 {
-        t.Fatalf("Address %s with highest score is expected. Actual address %s", addr3, entry)
-    }
+    assert.Equal(t, addr3, entry, "Address %s with highest score is expected. Actual address %s", addr3, entry)
 }
 
 func TestSampleReturnsErrorIfNoPeersAdded(t *testing.T) {
@@ -137,9 +126,7 @@ func TestSampleReturnsErrorIfNoPeersAdded(t *testing.T) {
 
     _, err := book.Sample()
 
-    if err == nil {
-        t.Fail()
-    }
+    assert.NotNil(t, err)
 }
 
 func TestSampleReturnsErrorIfOnlyNonActivePeersAdded(t *testing.T) {
@@ -154,9 +141,7 @@ func TestSampleReturnsErrorIfOnlyNonActivePeersAdded(t *testing.T) {
 
     _, err := book.Sample()
 
-    if err == nil {
-        t.Fail()
-    }
+    assert.NotNil(t, err)
 }
 
 func TestSampleReturnsAddedPeers(t *testing.T) {
@@ -171,13 +156,8 @@ func TestSampleReturnsAddedPeers(t *testing.T) {
     }
 
     sample, _ := book.Sample()
-    
-    intersectionCount := countIntersection(addrs, sample)
-    expected := addrsLen
 
-    if intersectionCount == 0 || intersectionCount != len(addrs) {
-        t.Fatalf("Expected to get %d intersections. Actual number is %d", expected, intersectionCount)
-    }
+    assert.Subset(t, addrs, sample, "Expected sample to be a subset of addrs")
 }
 
 func TestSampleReturnsSubsetOfAddedPeers(t *testing.T) {
@@ -192,28 +172,11 @@ func TestSampleReturnsSubsetOfAddedPeers(t *testing.T) {
     }
 
     sample, _ := book.Sample()
-    
-    intersectionCount := countIntersection(addrs, sample)
-    expected := book.sampleSize
 
-    if intersectionCount == 0 || intersectionCount != expected {
-        t.Fatalf("Expected to get %d intersections. Actual number is %d", expected, intersectionCount)
-    }
+    assert.Subset(t, addrs, sample, "Expected sample to be a subset of addrs")
 }
 
 
 func randomAddr() (string) {
     return fmt.Sprintf("%d.%d.%d.%d", rand.Intn(150), rand.Intn(150), rand.Intn(150), rand.Intn(150))
-}
-
-func countIntersection(addrs1 []string, addrs2 []string) (int) {
-    count := 0
-    for i := 0; i < len(addrs1); i++ {
-        for j := 0; j < len(addrs2); j++ {
-            if addrs1[i] == addrs2[j] {
-                count++
-            }
-        }
-    }
-    return count
 }
