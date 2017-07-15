@@ -21,6 +21,7 @@ import (
     "testing"
     "bytes"
     "math/rand"
+    "github.com/stretchr/testify/assert"
 )
 
 func TestEncodeUnknownType(t *testing.T) {
@@ -30,9 +31,7 @@ func TestEncodeUnknownType(t *testing.T) {
     msg := 1
     err := codec.Encode(buf, msg)
 
-    if err == nil {
-        t.Fatal("Expected to receive error in case message type is unknown")
-    }
+    assert.NotNil(t, err, "Expected to receive error in case message type is unknown")
 }
 
 func TestDecodeUnknownCode(t *testing.T) {
@@ -43,9 +42,7 @@ func TestDecodeUnknownCode(t *testing.T) {
     reader := bytes.NewReader(buf)
     _, err := codec.Decode(reader)
 
-    if err == nil {
-        t.Fatal("Expected to receive error in case message type is unknown")
-    }
+    assert.NotNil(t, err, "Expected to receive error in case message type is unknown")
 }
 
 func TestEncodePing(t *testing.T) {
@@ -60,13 +57,8 @@ func TestEncodePing(t *testing.T) {
 
     decodedMsg, ok := decoded.(*Ping)
 
-    if !ok {
-        t.Fatal("Decoded type is other than expected")
-    }
-
-    if msg.Nonce != decodedMsg.Nonce {
-        t.Fatalf("Expected: %+v. Actual: %+v.", msg, decoded)
-    }
+    assert.True(t, ok, "Decoded type is other than expected")
+    assert.Equal(t, msg.Nonce, decodedMsg.Nonce)
 }
 
 func TestEncodePong(t *testing.T) {
@@ -81,13 +73,8 @@ func TestEncodePong(t *testing.T) {
 
     decodedMsg, ok := decoded.(*Pong)
 
-    if !ok {
-        t.Fatal("Decoded type is other than expected")
-    }
-
-    if msg.Nonce != decodedMsg.Nonce {
-        t.Fatalf("Expected: %+v. Actual: %+v.", msg, decoded)
-    }
+    assert.True(t, ok, "Decoded type is other than expected")
+    assert.Equal(t, msg.Nonce, decodedMsg.Nonce)
 }
 
 func TestEncodeDiscover(t *testing.T) {
@@ -102,9 +89,7 @@ func TestEncodeDiscover(t *testing.T) {
 
     _, ok := decoded.(*Discover)
 
-    if !ok {
-        t.Fatal("Decoded type is other than expected")
-    }
+    assert.True(t, ok, "Decoded type is other than expected")
 }
 
 func TestEncodePeers(t *testing.T) {
@@ -122,15 +107,8 @@ func TestEncodePeers(t *testing.T) {
 
     decodedMsg, ok := decoded.(*Peers)
 
-    if !ok {
-        t.Fatal("Decoded type is other than expected")
-    }
-
-    for i := 0; i < len(msg.Addresses); i++ {
-         if msg.Addresses[i] != decodedMsg.Addresses[i] {
-             t.Fatalf("Expected: %+v. Actual: %+v.", msg, decoded)
-        }
-    }
+    assert.True(t, ok, "Decoded type is other than expected")
+    assert.EqualValues(t, msg.Addresses, decodedMsg.Addresses)
 }
 
 func TestEncodeString(t *testing.T) {
@@ -145,13 +123,8 @@ func TestEncodeString(t *testing.T) {
 
     decodedMsg, ok := decoded.(string)
 
-    if !ok {
-        t.Fatal("Decoded type is other than expected")
-    }
-
-    if msg != decodedMsg {
-        t.Fatalf("Expected: %+v. Actual: %+v.", msg, decodedMsg)
-    }
+    assert.True(t, ok, "Decoded type is other than expected")
+    assert.Equal(t, msg, decodedMsg)
 }
 
 func TestEncodeBytes(t *testing.T) {
@@ -168,13 +141,6 @@ func TestEncodeBytes(t *testing.T) {
 
     decodedMsg, ok := decoded.([]byte)
 
-    if !ok {
-        t.Fatal("Decoded type is other than expected")
-    }
-
-    for i := 0; i < len(msg); i++ {
-         if msg[i] != decodedMsg[i] {
-             t.Fatalf("Expected: %+v. Actual: %+v.", msg, decodedMsg)
-        }
-    }
+    assert.True(t, ok, "Decoded type is other than expected")
+    assert.EqualValues(t, msg, decodedMsg)
 }
