@@ -219,7 +219,7 @@ func (s *SimpleBook) Sample() ([]string, error) {
 func (s *SimpleBook) slice(active bool) []*entry {
 	entries := make([]*entry, 0)
 	for _, e := range s.entries {
-		if !active && e.active {
+		if e.active != active {
 			continue
 		}
 		entries = append(entries, e)
