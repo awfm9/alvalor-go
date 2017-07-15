@@ -62,7 +62,7 @@ func (e entry) score() float64 {
 		return 1
 	}
 	score := float64(e.success) / float64(e.failure)
-	return math.Max(score/100, 1)
+	return math.Min(score/100, 1)
 }
 
 // enumeration of different errors that we can return from address book functions.
@@ -186,7 +186,7 @@ func (s *SimpleBook) Get() (string, error) {
 	if len(entries) == 0 {
 		return "", errBookEmpty
 	}
-	sort.Sort(byPriority(entries))
+	sort.Sort(sort.Reverse(byPriority(entries)))
 	e := entries[0]
 	e.active = true
 	return e.addr, nil
