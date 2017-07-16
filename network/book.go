@@ -187,11 +187,15 @@ func (s *SimpleBook) OrderedSample(params ...int) ([]string, error) {
 		return nil, errBookEmpty
 	}
 	sort.Sort(byPriority(entries))
-	
+
 	sampleSize := s.sampleSize
 	if len(params) > 0 {
 		sampleSize = params[0]
 	}
+	if len(entries) > sampleSize {
+	    entries = entries[:sampleSize]
+	}
+	
 	addrs := s.getAddresses(entries, sampleSize)
 	return addrs, nil
 }

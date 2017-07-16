@@ -126,6 +126,22 @@ func TestOrderedSampleReturnsAddressWithHighestScoreWhenOtherConnectionsFailed(t
 	assert.Equal(t, addr1, entries[1])
 }
 
+func TestOrderedSampleLimitsByParam(t *testing.T) {
+	book := NewSimpleBook()
+	addr1 := "127.54.51.66"
+	addr2 := "120.55.58.86"
+	addr3 := "156.23.41.24"
+	sampleSize := 2
+
+	book.Add(addr1)
+	book.Add(addr2)
+	book.Add(addr3)
+
+	entries, _ := book.OrderedSample(sampleSize)
+
+	assert.Len(t, entries, sampleSize);
+}
+
 func TestRandomSampleReturnsErrorIfNoPeersAdded(t *testing.T) {
 	book := NewSimpleBook()
 
@@ -164,6 +180,22 @@ func TestRandomSampleReturnsSubsetOfAddedPeers(t *testing.T) {
 	sample, _ := book.RandomSample()
 
 	assert.Subset(t, addrs, sample, "Expected sample to be a subset of addrs")
+}
+
+func TestRandomSampleLimitsByParam(t *testing.T) {
+	book := NewSimpleBook()
+	addr1 := "127.54.51.66"
+	addr2 := "120.55.58.86"
+	addr3 := "156.23.41.24"
+	sampleSize := 2
+
+	book.Add(addr1)
+	book.Add(addr2)
+	book.Add(addr3)
+
+	entries, _ := book.RandomSample(sampleSize)
+
+	assert.Len(t, entries, sampleSize);
 }
 
 func randomAddr() string {
