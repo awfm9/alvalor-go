@@ -62,7 +62,7 @@ func (e entry) score() float64 {
 		return 1
 	}
 	score := float64(e.success) / float64(e.failure)
-	return math.Max(score/100, 1)
+	return math.Min(score/100, 1)
 }
 
 // enumeration of different errors that we can return from address book functions.
@@ -216,10 +216,10 @@ func (s *SimpleBook) Sample() ([]string, error) {
 }
 
 // slice method.
-func (s *SimpleBook) slice(active bool) []*entry {
+func (s *SimpleBook) slice(includeActive bool) []*entry {
 	entries := make([]*entry, 0)
 	for _, e := range s.entries {
-		if !active && e.active {
+		if !includeActive && e.active {
 			continue
 		}
 		entries = append(entries, e)
@@ -237,7 +237,7 @@ func (b byPriority) Len() int {
 
 // Less checks whether the score of the first peer is lower than the score of the second peer.
 func (b byPriority) Less(i int, j int) bool {
-	return b[i].score() < b[j].score()
+	return b[i].score() > b[j].score()
 }
 
 // Swap will switch two peer entry positions in the list.
