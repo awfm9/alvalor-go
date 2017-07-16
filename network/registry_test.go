@@ -18,62 +18,64 @@
 package network
 
 import (
-    "testing"
-    "github.com/stretchr/testify/assert"
+	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestAddSavesPeer(t *testing.T) {
-    reg := registry{ peers : make(map[string]*peer)}
-    addr := "127.0.0.1"
+	reg := registry{peers: make(map[string]*peer)}
+	addr := "127.0.0.1"
 
-    reg.add(addr, &peer{})
+	reg.add(addr, &peer{addr: addr})
 
-    assert.True(t, reg.has(addr))
+	assert.True(t, reg.has(addr))
 }
 
 func TestRemovesPeer(t *testing.T) {
-    reg := registry{ peers : make(map[string]*peer)}
-    addr := "127.0.0.1"
-    reg.add(addr, &peer{})
+	reg := registry{peers: make(map[string]*peer)}
+	addr := "127.0.0.1"
+	reg.add(addr, &peer{addr: addr})
 
-    reg.remove(addr)
+	reg.remove(addr)
 
-    assert.False(t, reg.has(addr))
+	assert.False(t, reg.has(addr))
 }
 
 func TestCountsPeers(t *testing.T) {
-    reg := registry{ peers : make(map[string]*peer)}
+	reg := registry{peers: make(map[string]*peer)}
 
-    reg.add("127.0.0.1", &peer{})
-    reg.add("192.168.4.62", &peer{})
-    reg.add("192.168.77.55", &peer{})
+	reg.add("62.63.77.53", &peer{addr: "62.63.77.53"})
+	reg.add("25.35.55.53", &peer{addr: "25.35.55.53"})
+	reg.add("15.23.37.53", &peer{addr: "15.23.37.53"})
 
-    count := reg.count()
+	count := reg.count()
 
-    assert.Equal(t, 3, count)
+	assert.Equal(t, 3, count)
 }
 
 func TestGetsPeer(t *testing.T) {
-    reg := registry{ peers : make(map[string]*peer)}
-    addr := "127.0.0.1"
-    peerToAdd := &peer{}
-    reg.add(addr, peerToAdd)
+	reg := registry{peers: make(map[string]*peer)}
+	addr := "127.0.0.1"
+	peerToAdd := &peer{addr: addr}
+	reg.add(addr, peerToAdd)
 
-    peer := reg.get(addr)
+	peer := reg.get(addr)
 
-    assert.Equal(t, peerToAdd, peer)
+	assert.Equal(t, peerToAdd, peer)
 }
 
 func TestSlice(t *testing.T) {
-    reg := registry{ peers : make(map[string]*peer)}
-    peers := make([]*peer, 2)
-    peers[0] = &peer{}
-    peers[1] = &peer{}
+	reg := registry{peers: make(map[string]*peer)}
+	peers := make([]*peer, 2)
+	peers[0] = &peer{addr: "192.168.66.22"}
+	peers[1] = &peer{addr: "192.168.46.84"}
 
-    reg.add("192.168.66.22", peers[0])
-    reg.add("192.168.46.84", peers[1])
+	reg.add("192.168.66.22", peers[0])
+	reg.add("192.168.46.84", peers[1])
 
-    slice := reg.slice()
+	slice := reg.slice()
 
-    assert.EqualValues(t, peers, slice)
+	assert.Len(t, slice, 2)
+	assert.Subset(t, peers, slice)
 }
