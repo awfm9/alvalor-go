@@ -37,10 +37,9 @@ func TestSetAddress(t *testing.T) {
 
 func TestSetBalance(t *testing.T) {
     config := DefaultConfig
-    balance := time.Duration(5)
+    balance := time.Duration(5 * time.Second)
     
-    setFunc := SetBalance(balance)
-    setFunc(&config)
+    SetBalance(balance)(&config)
 
     assert.Equal(t, balance, config.balance)
 }
@@ -49,8 +48,7 @@ func TestSetBook(t *testing.T) {
     config := DefaultConfig
     book := NewSimpleBook()
     
-    setFunc := SetBook(book)
-    setFunc(&config)
+    SetBook(book)(&config)
 
     assert.Equal(t, book, config.book)
 }
@@ -59,28 +57,25 @@ func TestSetCodec(t *testing.T) {
     config := DefaultConfig
     codec := DummyCodec{}
     
-    setFunc := SetCodec(codec)
-    setFunc(&config)
+    SetCodec(codec)(&config)
 
     assert.Equal(t, codec, config.codec)
 }
 
 func TestSetDiscovery(t *testing.T) {
     config := DefaultConfig
-    discovery := time.Duration(5)
+    discovery := time.Duration(5 * time.Second)
     
-    setFunc := SetDiscovery(discovery)
-    setFunc(&config)
+    SetDiscovery(discovery)(&config)
 
     assert.Equal(t, discovery, config.discovery)
 }
 
 func TestSetHeartbeat(t *testing.T) {
     config := DefaultConfig
-    heartbeat := time.Duration(5)
+    heartbeat := time.Duration(5 * time.Second)
     
-    setFunc := SetHeartbeat(heartbeat)
-    setFunc(&config)
+    SetHeartbeat(heartbeat)(&config)
 
     assert.Equal(t, heartbeat, config.heartbeat)
 }
@@ -89,8 +84,7 @@ func TestSetLog(t *testing.T) {
     config := DefaultConfig
     log, _ := zap.NewDevelopment()
     
-    setFunc := SetLog(log)
-    setFunc(&config)
+    SetLog(log)(&config)
 
     assert.Equal(t, log, config.log)
 }
@@ -99,8 +93,7 @@ func TestSetMaxPeers(t *testing.T) {
     config := DefaultConfig
     maxPeers := uint(15)
     
-    setFunc := SetMaxPeers(maxPeers)
-    setFunc(&config)
+    SetMaxPeers(maxPeers)(&config)
 
     assert.Equal(t, maxPeers, config.maxPeers)
 }
@@ -109,20 +102,16 @@ func TestSetMinPeers(t *testing.T) {
     config := DefaultConfig
     minPeers := uint(5)
     
-    setFunc := SetMinPeers(minPeers)
-    setFunc(&config)
+    SetMinPeers(minPeers)(&config)
 
     assert.Equal(t, minPeers, config.minPeers)
 }
 
 func TestSetNetwork(t *testing.T) {
     config := DefaultConfig
-    network := make([]byte, 2)
-    network[0] = 5
-    network[1] = 10
+    network := []byte{5, 10}
     
-    setFunc := SetNetwork(network)
-    setFunc(&config)
+    SetNetwork(network)(&config)
 
     assert.EqualValues(t, network, config.network)
 }
@@ -131,8 +120,7 @@ func TestSetServer(t *testing.T) {
     config := DefaultConfig
     server := true
     
-    setFunc := SetServer(server)
-    setFunc(&config)
+    SetServer(server)(&config)
 
     assert.Equal(t, server, config.server)
 }
@@ -141,18 +129,16 @@ func TestSetSubscriber(t *testing.T) {
     config := DefaultConfig
     subscriber := make(chan interface{})
     
-    setFunc := SetSubscriber(subscriber)
-    setFunc(&config)
+    SetSubscriber(subscriber)(&config)
 
     assert.ObjectsAreEqual(subscriber, config.subscriber)
 }
 
 func TestSetTimeout(t *testing.T) {
     config := DefaultConfig
-    timeout := time.Duration(5)
+    timeout := time.Duration(5 * time.Second)
     
-    setFunc := SetTimeout(timeout)
-    setFunc(&config)
+    SetTimeout(timeout)(&config)
 
     assert.Equal(t, timeout, config.timeout)
 }
