@@ -163,5 +163,5 @@ func TestSampleReturnsSubsetOfAddedPeers(t *testing.T) {
 }
 
 func randomAddr() string {
-	return fmt.Sprintf("%d.%d.%d.%d", rand.Intn(150), rand.Intn(150), rand.Intn(150), rand.Intn(150))
+	return fmt.Sprintf("%d.%d.%d.%d", rand.Intn(255), rand.Intn(255), rand.Intn(255), rand.Intn(255))
 }
