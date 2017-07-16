@@ -1,5 +1,3 @@
 example/many/many
 example/pair/pair
 *.exe
-/.vscode
-debug.test
