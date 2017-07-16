@@ -186,7 +186,7 @@ func (s *SimpleBook) Get() (string, error) {
 	if len(entries) == 0 {
 		return "", errBookEmpty
 	}
-	sort.Sort(sort.Reverse(byPriority(entries)))
+	sort.Sort(byPriority(entries))
 	e := entries[0]
 	e.active = true
 	return e.addr, nil
@@ -237,7 +237,7 @@ func (b byPriority) Len() int {
 
 // Less checks whether the score of the first peer is lower than the score of the second peer.
 func (b byPriority) Less(i int, j int) bool {
-	return b[i].score() < b[j].score()
+	return b[i].score() > b[j].score()
 }
 
 // Swap will switch two peer entry positions in the list.
