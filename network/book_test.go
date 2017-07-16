@@ -130,21 +130,6 @@ func TestSampleReturnsErrorIfNoPeersAdded(t *testing.T) {
 	assert.NotNil(t, err)
 }
 
-func TestSampleReturnsErrorIfOnlyNonActivePeersAdded(t *testing.T) {
-	book := NewSimpleBook()
-	addr1 := "127.54.51.66"
-	addr2 := "120.55.58.86"
-	addr3 := "156.23.41.24"
-
-	book.Add(addr1)
-	book.Add(addr2)
-	book.Add(addr3)
-
-	_, err := book.Sample()
-
-	assert.NotNil(t, err)
-}
-
 func TestSampleReturnsAddedPeers(t *testing.T) {
 	book := NewSimpleBook()
 	addrsLen := book.sampleSize
