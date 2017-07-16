@@ -25,7 +25,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestAddSavesPeer(t *testing.T) {
+func TestAddSavesAndGetsPeer(t *testing.T) {
 	book := NewSimpleBook()
 	addr := "192.168.4.52"
 	book.Add(addr)
