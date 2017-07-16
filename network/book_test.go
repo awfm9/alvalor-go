@@ -30,15 +30,15 @@ func TestAddSavesAndGetsPeer(t *testing.T) {
 	addr := "192.168.4.52"
 	book.Add(addr)
 
-	entry, _ := book.Get()
+	entries, _ := book.OrderedSample()
 
-	assert.Equal(t, addr, entry, "Entry %s was not found in book", addr)
+	assert.Equal(t, addr, entries[0], "Entry %s was not found in book", addr)
 }
 
-func TestGetReturnsErr(t *testing.T) {
+func TestOrderedSampleReturnsErr(t *testing.T) {
 	book := NewSimpleBook()
 
-	_, err := book.Get()
+	_, err := book.OrderedSample()
 
 	assert.NotNil(t, err, "Get should return error in case book is empty")
 }
@@ -50,7 +50,7 @@ func TestAddDoesNotSavePeerIfBlacklisted(t *testing.T) {
 	book.Blacklist(addr)
 	book.Add(addr)
 
-	_, err := book.Get()
+	_, err := book.OrderedSample()
 
 	assert.NotNil(t, err, "Add should not save address in case it is blacklisted")
 }
@@ -63,12 +63,12 @@ func TestAddSavesPeerIfBlacklistedAndWhitelistedLater(t *testing.T) {
 	book.Whitelist(addr)
 	book.Add(addr)
 
-	entry, _ := book.Get()
+	entries, _ := book.OrderedSample()
 
-	assert.Equal(t, addr, entry, "Address should be saved after whitelisting")
+	assert.Equal(t, addr, entries[0], "Address should be saved after whitelisting")
 }
 
-func TestGetReturnsAddressWithHighestScoreWhenOtherConnectionsDropped(t *testing.T) {
+func TestOrderedSampleReturnsAddressWithHighestScoreWhenOtherConnectionsDropped(t *testing.T) {
 	book := NewSimpleBook()
 	addr1 := "127.54.51.66"
 	addr2 := "120.55.58.86"
@@ -91,12 +91,14 @@ func TestGetReturnsAddressWithHighestScoreWhenOtherConnectionsDropped(t *testing
 	book.Connected(addr3)
 	book.Disconnected(addr3)
 
-	entry, _ := book.Get()
+	entries, _ := book.OrderedSample()
 
-	assert.Equal(t, addr3, entry, "Address %s with highest score is expected. Actual address %s", addr3, entry)
+	assert.Equal(t, addr3, entries[0], "Address %s with highest score is expected. Actual address %s", addr3, entries[0])
+	assert.Equal(t, addr2, entries[2])
+	assert.Equal(t, addr1, entries[1])
 }
 
-func TestGetReturnsAddressWithHighestScoreWhenOtherConnectionsFailed(t *testing.T) {
+func TestOrderedSampleReturnsAddressWithHighestScoreWhenOtherConnectionsFailed(t *testing.T) {
 	book := NewSimpleBook()
 	addr1 := "127.54.51.66"
 	addr2 := "120.55.58.86"
@@ -117,20 +119,22 @@ func TestGetReturnsAddressWithHighestScoreWhenOtherConnectionsFailed(t *testing.
 	book.Connected(addr3)
 	book.Disconnected(addr3)
 
-	entry, _ := book.Get()
+	entries, _ := book.OrderedSample()
 
-	assert.Equal(t, addr3, entry, "Address %s with highest score is expected. Actual address %s", addr3, entry)
+	assert.Equal(t, addr3, entries[0], "Address %s with highest score is expected. Actual address %s", addr3, entries[0])
+	assert.Equal(t, addr2, entries[2])
+	assert.Equal(t, addr1, entries[1])
 }
 
-func TestSampleReturnsErrorIfNoPeersAdded(t *testing.T) {
+func TestRandomSampleReturnsErrorIfNoPeersAdded(t *testing.T) {
 	book := NewSimpleBook()
 
-	_, err := book.Sample()
+	_, err := book.RandomSample()
 
 	assert.NotNil(t, err)
 }
 
-func TestSampleReturnsAddedPeers(t *testing.T) {
+func TestRandomSampleReturnsAddedPeers(t *testing.T) {
 	book := NewSimpleBook()
 	addrsLen := book.sampleSize
 	addrs := make([]string, 0, addrsLen)
@@ -141,12 +145,12 @@ func TestSampleReturnsAddedPeers(t *testing.T) {
 		book.Connected(addr)
 	}
 
-	sample, _ := book.Sample()
+	sample, _ := book.RandomSample()
 
 	assert.Subset(t, addrs, sample, "Expected sample to be a subset of addrs")
 }
 
-func TestSampleReturnsSubsetOfAddedPeers(t *testing.T) {
+func TestRandomSampleReturnsSubsetOfAddedPeers(t *testing.T) {
 	book := NewSimpleBook()
 	addrsLen := 50
 	addrs := make([]string, 0, addrsLen)
@@ -157,7 +161,7 @@ func TestSampleReturnsSubsetOfAddedPeers(t *testing.T) {
 		book.Connected(addr)
 	}
 
-	sample, _ := book.Sample()
+	sample, _ := book.RandomSample()
 
 	assert.Subset(t, addrs, sample, "Expected sample to be a subset of addrs")
 }

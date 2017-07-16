@@ -34,8 +34,8 @@ type Book interface {
 	Disconnected(addr string)
 	Dropped(addr string)
 	Failed(addr string)
-	Get() (string, error)
-	Sample() ([]string, error)
+	OrderedSample(params ...int) ([]string, error)
+	RandomSample(params ...int) ([]string, error)
 }
 
 // DefaultBook defines the book used by default for the initialization of a network node.
@@ -177,42 +177,57 @@ func (s *SimpleBook) Failed(addr string) {
 	e.failure++
 }
 
-// Get will return the top priority peer out of all peers that are currently not active. It should
+// OrderedSample will return the top priority peer out of all peers that are currently not active. It should
 // represent the peer that is most likely to allow us to connect successfully.
-func (s *SimpleBook) Get() (string, error) {
+func (s *SimpleBook) OrderedSample(params ...int) ([]string, error) {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 	entries := s.slice(false)
 	if len(entries) == 0 {
-		return "", errBookEmpty
+		return nil, errBookEmpty
 	}
 	sort.Sort(byPriority(entries))
-	e := entries[0]
-	e.active = true
-	return e.addr, nil
+	
+	sampleSize := s.sampleSize
+	if len(params) > 0 {
+		sampleSize = params[0]
+	}
+	addrs := s.getAddresses(entries, sampleSize)
+	return addrs, nil
 }
 
-// Sample will return a random sample of peers that can be used to exchange peer addresses with
+// RandomSample will return a random sample of peers that can be used to exchange peer addresses with
 // other peers and allow discovery in the peer-to-peer network.
-func (s *SimpleBook) Sample() ([]string, error) {
+func (s *SimpleBook) RandomSample(params ...int) ([]string, error) {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 	entries := s.slice(true)
+
+	sampleSize := s.sampleSize
+	if len(params) > 0 {
+		sampleSize = params[0]
+	}
+	
 	if len(entries) == 0 {
 		return nil, errors.New("no valid addresses")
 	}
-	if len(entries) > s.sampleSize {
+	if len(entries) > sampleSize {
 		for i := 0; i < len(entries); i++ {
 			j := rand.Intn(i + 1)
 			entries[i], entries[j] = entries[j], entries[i]
 		}
-		entries = entries[:s.sampleSize]
+		entries = entries[:sampleSize]
 	}
-	addrs := make([]string, 0, s.sampleSize)
+	addrs := s.getAddresses(entries, sampleSize)
+	return addrs, nil
+}
+
+func (s *SimpleBook) getAddresses(entries []*entry, sampleSize int) ([]string) {
+	addrs := make([]string, 0, sampleSize)
 	for _, e := range entries {
 		addrs = append(addrs, e.addr)
 	}
-	return addrs, nil
+	return addrs
 }
 
 // slice method.
