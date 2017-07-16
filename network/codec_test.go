@@ -27,7 +27,7 @@ import (
 func TestEncodeUnknownType(t *testing.T) {
     codec := SimpleCodec{}
 
-    buf := bytes.NewBuffer(make([]byte, 0))    
+    buf := &bytes.Buffer{}   
     msg := 1
     err := codec.Encode(buf, msg)
 
@@ -48,12 +48,11 @@ func TestDecodeUnknownCode(t *testing.T) {
 func TestEncodePing(t *testing.T) {
     codec := SimpleCodec{}
 
-    buf := bytes.NewBuffer(make([]byte, 0))    
+    buf := &bytes.Buffer{}   
     msg := &Ping{ Nonce : rand.Uint32()}
     codec.Encode(buf, msg)
 
-    reader := bytes.NewReader(buf.Bytes())
-    decoded, _ := codec.Decode(reader)
+    decoded, _ := codec.Decode(buf)
 
     decodedMsg, ok := decoded.(*Ping)
 
@@ -64,12 +63,11 @@ func TestEncodePing(t *testing.T) {
 func TestEncodePong(t *testing.T) {
     codec := SimpleCodec{}
 
-    buf := bytes.NewBuffer(make([]byte, 0))    
+    buf := &bytes.Buffer{}   
     msg := &Pong{ Nonce : rand.Uint32()}
     codec.Encode(buf, msg)
 
-    reader := bytes.NewReader(buf.Bytes())
-    decoded, _ := codec.Decode(reader)
+    decoded, _ := codec.Decode(buf)
 
     decodedMsg, ok := decoded.(*Pong)
 
@@ -80,12 +78,11 @@ func TestEncodePong(t *testing.T) {
 func TestEncodeDiscover(t *testing.T) {
     codec := SimpleCodec{}
 
-    buf := bytes.NewBuffer(make([]byte, 0))    
+    buf := &bytes.Buffer{}   
     msg := &Discover{}
     codec.Encode(buf, msg)
 
-    reader := bytes.NewReader(buf.Bytes())
-    decoded, _ := codec.Decode(reader)
+    decoded, _ := codec.Decode(buf)
 
     _, ok := decoded.(*Discover)
 
@@ -102,8 +99,7 @@ func TestEncodePeers(t *testing.T) {
     msg := &Peers{ Addresses: addrs}
     codec.Encode(buf, msg)
 
-    reader := bytes.NewReader(buf.Bytes())
-    decoded, _ := codec.Decode(reader)
+    decoded, _ := codec.Decode(buf)
 
     decodedMsg, ok := decoded.(*Peers)
 
@@ -114,12 +110,11 @@ func TestEncodePeers(t *testing.T) {
 func TestEncodeString(t *testing.T) {
     codec := SimpleCodec{}
 
-    buf := bytes.NewBuffer(make([]byte, 0))    
+    buf := &bytes.Buffer{}   
     msg := "hello"
     codec.Encode(buf, msg)
 
-    reader := bytes.NewReader(buf.Bytes())
-    decoded, _ := codec.Decode(reader)
+    decoded, _ := codec.Decode(buf)
 
     decodedMsg, ok := decoded.(string)
 
@@ -130,14 +125,13 @@ func TestEncodeString(t *testing.T) {
 func TestEncodeBytes(t *testing.T) {
     codec := SimpleCodec{}
 
-    buf := bytes.NewBuffer(make([]byte, 0))    
+    buf := &bytes.Buffer{}   
     msg := make([]byte, 2)
     msg[0] = 1
     msg[1] = 55
     codec.Encode(buf, msg)
 
-    reader := bytes.NewReader(buf.Bytes())
-    decoded, _ := codec.Decode(reader)
+    decoded, _ := codec.Decode(buf)
 
     decodedMsg, ok := decoded.([]byte)
 
