@@ -26,7 +26,7 @@ import (
 )
 
 func TestSetAddress(t *testing.T) {
-    config := DefaultConfig
+    config := Config{}
     addr := "192.168.4.62"
     
     setFunc := SetAddress("192.168.4.62")
@@ -36,7 +36,7 @@ func TestSetAddress(t *testing.T) {
 }
 
 func TestSetBalance(t *testing.T) {
-    config := DefaultConfig
+    config := Config{}
     balance := time.Duration(5 * time.Second)
     
     SetBalance(balance)(&config)
@@ -45,7 +45,7 @@ func TestSetBalance(t *testing.T) {
 }
 
 func TestSetBook(t *testing.T) {
-    config := DefaultConfig
+    config := Config{}
     book := NewSimpleBook()
     
     SetBook(book)(&config)
@@ -54,7 +54,7 @@ func TestSetBook(t *testing.T) {
 }
 
 func TestSetCodec(t *testing.T) {
-    config := DefaultConfig
+    config := Config{}
     codec := DummyCodec{}
     
     SetCodec(codec)(&config)
@@ -63,7 +63,7 @@ func TestSetCodec(t *testing.T) {
 }
 
 func TestSetDiscovery(t *testing.T) {
-    config := DefaultConfig
+    config := Config{}
     discovery := time.Duration(5 * time.Second)
     
     SetDiscovery(discovery)(&config)
@@ -72,7 +72,7 @@ func TestSetDiscovery(t *testing.T) {
 }
 
 func TestSetHeartbeat(t *testing.T) {
-    config := DefaultConfig
+    config := Config{}
     heartbeat := time.Duration(5 * time.Second)
     
     SetHeartbeat(heartbeat)(&config)
@@ -81,7 +81,7 @@ func TestSetHeartbeat(t *testing.T) {
 }
 
 func TestSetLog(t *testing.T) {
-    config := DefaultConfig
+    config := Config{}
     log, _ := zap.NewDevelopment()
     
     SetLog(log)(&config)
@@ -90,7 +90,7 @@ func TestSetLog(t *testing.T) {
 }
 
 func TestSetMaxPeers(t *testing.T) {
-    config := DefaultConfig
+    config := Config{}
     maxPeers := uint(15)
     
     SetMaxPeers(maxPeers)(&config)
@@ -99,7 +99,7 @@ func TestSetMaxPeers(t *testing.T) {
 }
 
 func TestSetMinPeers(t *testing.T) {
-    config := DefaultConfig
+    config := Config{}
     minPeers := uint(5)
     
     SetMinPeers(minPeers)(&config)
@@ -108,7 +108,7 @@ func TestSetMinPeers(t *testing.T) {
 }
 
 func TestSetNetwork(t *testing.T) {
-    config := DefaultConfig
+    config := Config{}
     network := []byte{5, 10}
     
     SetNetwork(network)(&config)
@@ -117,7 +117,7 @@ func TestSetNetwork(t *testing.T) {
 }
 
 func TestSetServer(t *testing.T) {
-    config := DefaultConfig
+    config := Config{}
     server := true
     
     SetServer(server)(&config)
@@ -126,7 +126,7 @@ func TestSetServer(t *testing.T) {
 }
 
 func TestSetSubscriber(t *testing.T) {
-    config := DefaultConfig
+    config := Config{}
     subscriber := make(chan interface{})
     
     SetSubscriber(subscriber)(&config)
@@ -135,7 +135,7 @@ func TestSetSubscriber(t *testing.T) {
 }
 
 func TestSetTimeout(t *testing.T) {
-    config := DefaultConfig
+    config := Config{}
     timeout := time.Duration(5 * time.Second)
     
     SetTimeout(timeout)(&config)
