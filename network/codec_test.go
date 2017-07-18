@@ -27,9 +27,9 @@ import (
 func TestEncodeUnknownType(t *testing.T) {
     codec := SimpleCodec{}
 
-    buf := &bytes.Buffer{}   
+    data := &bytes.Buffer{}   
     msg := 1
-    err := codec.Encode(buf, msg)
+    err := codec.Encode(data, msg)
 
     assert.NotNil(t, err, "Expected to receive error in case message type is unknown")
 }
@@ -37,9 +37,8 @@ func TestEncodeUnknownType(t *testing.T) {
 func TestDecodeUnknownCode(t *testing.T) {
     codec := SimpleCodec{}
 
-    buf := make([]byte, 1)
-    buf[0] = 77
-    reader := bytes.NewReader(buf)
+    data := []byte{77}
+    reader := bytes.NewReader(data)
     _, err := codec.Decode(reader)
 
     assert.NotNil(t, err, "Expected to receive error in case message type is unknown")
@@ -48,11 +47,11 @@ func TestDecodeUnknownCode(t *testing.T) {
 func TestEncodePing(t *testing.T) {
     codec := SimpleCodec{}
 
-    buf := &bytes.Buffer{}   
+    data := &bytes.Buffer{}   
     msg := &Ping{ Nonce : rand.Uint32()}
-    codec.Encode(buf, msg)
+    codec.Encode(data, msg)
 
-    decoded, _ := codec.Decode(buf)
+    decoded, _ := codec.Decode(data)
 
     decodedMsg, ok := decoded.(*Ping)
 
@@ -63,11 +62,11 @@ func TestEncodePing(t *testing.T) {
 func TestEncodePong(t *testing.T) {
     codec := SimpleCodec{}
 
-    buf := &bytes.Buffer{}   
+    data := &bytes.Buffer{}   
     msg := &Pong{ Nonce : rand.Uint32()}
-    codec.Encode(buf, msg)
+    codec.Encode(data, msg)
 
-    decoded, _ := codec.Decode(buf)
+    decoded, _ := codec.Decode(data)
 
     decodedMsg, ok := decoded.(*Pong)
 
@@ -78,11 +77,11 @@ func TestEncodePong(t *testing.T) {
 func TestEncodeDiscover(t *testing.T) {
     codec := SimpleCodec{}
 
-    buf := &bytes.Buffer{}   
+    data := &bytes.Buffer{}   
     msg := &Discover{}
-    codec.Encode(buf, msg)
+    codec.Encode(data, msg)
 
-    decoded, _ := codec.Decode(buf)
+    decoded, _ := codec.Decode(data)
 
     _, ok := decoded.(*Discover)
 
@@ -92,14 +91,12 @@ func TestEncodeDiscover(t *testing.T) {
 func TestEncodePeers(t *testing.T) {
     codec := SimpleCodec{}
 
-    buf := bytes.NewBuffer(make([]byte, 0))
-    addrs := make([]string, 2)
-    addrs[0] = "127.0.0.1"
-    addrs[1] = "192.168.4.62"
+    data := bytes.NewBuffer(make([]byte, 0))
+    addrs := []string{"127.0.0.1", "192.168.4.62"}
     msg := &Peers{ Addresses: addrs}
-    codec.Encode(buf, msg)
+    codec.Encode(data, msg)
 
-    decoded, _ := codec.Decode(buf)
+    decoded, _ := codec.Decode(data)
 
     decodedMsg, ok := decoded.(*Peers)
 
@@ -110,11 +107,11 @@ func TestEncodePeers(t *testing.T) {
 func TestEncodeString(t *testing.T) {
     codec := SimpleCodec{}
 
-    buf := &bytes.Buffer{}   
+    data := &bytes.Buffer{}   
     msg := "hello"
-    codec.Encode(buf, msg)
+    codec.Encode(data, msg)
 
-    decoded, _ := codec.Decode(buf)
+    decoded, _ := codec.Decode(data)
 
     decodedMsg, ok := decoded.(string)
 
@@ -125,13 +122,11 @@ func TestEncodeString(t *testing.T) {
 func TestEncodeBytes(t *testing.T) {
     codec := SimpleCodec{}
 
-    buf := &bytes.Buffer{}   
-    msg := make([]byte, 2)
-    msg[0] = 1
-    msg[1] = 55
-    codec.Encode(buf, msg)
+    data := &bytes.Buffer{}   
+    msg := []byte{1,55}
+    codec.Encode(data, msg)
 
-    decoded, _ := codec.Decode(buf)
+    decoded, _ := codec.Decode(data)
 
     decodedMsg, ok := decoded.([]byte)
 
