@@ -34,20 +34,18 @@ type Book interface {
 	Disconnected(addr string)
 	Dropped(addr string)
 	Failed(addr string)
-	OrderedSample(params ...int) ([]string, error)
-	RandomSample(params ...int) ([]string, error)
+	Sample(count int, filter func(*Entry) bool, sort func([]*Entry) []*Entry) ([]string, error)
 }
 
 // DefaultBook defines the book used by default for the initialization of a network node.
 var DefaultBook = &SimpleBook{
 	blacklist:  make(map[string]struct{}),
-	entries:    make(map[string]*entry),
-	sampleSize: 10,
+	entries:    make(map[string]*Entry),
 }
 
-// entry represents an entry in the simple address book, containing the address, whether the peer is
+// Entry represents an entry in the simple address book, containing the address, whether the peer is
 // currently active and how many successes/failures we had on the connection.
-type entry struct {
+type Entry struct {
 	addr    string
 	active  bool
 	success int
@@ -57,7 +55,7 @@ type entry struct {
 // score returns the score used for sorting entries by priority. The score of entries that have
 // never failed is always one. For entries that failed, the score is the ratio between successes
 // and failures.
-func (e entry) score() float64 {
+func (e Entry) score() float64 {
 	if e.failure == 0 {
 		return 1
 	}
@@ -78,16 +76,47 @@ var (
 type SimpleBook struct {
 	mutex      sync.Mutex
 	blacklist  map[string]struct{}
-	entries    map[string]*entry
-	sampleSize int
+	entries    map[string]*Entry
 }
 
 // NewSimpleBook creates a new default initialized instance of a simple address book.
 func NewSimpleBook() *SimpleBook {
 	return &SimpleBook{
 		blacklist:  make(map[string]struct{}),
-		entries:    make(map[string]*entry),
-		sampleSize: 10,
+		entries:    make(map[string]*Entry),
+	}
+}
+
+// IsActive represents filter to select active/inactive entries in Sample method
+func IsActive(active bool) func(e *Entry) bool {
+	return func(e *Entry) bool {
+        return e.active == active
+	}
+}
+
+// Any reperesents filter to select any entries in Sample method
+func Any() func(e *Entry) bool {
+	return func(e *Entry) bool {
+        return true
+	}
+}
+
+// ByPrioritySort represents an order by priority which is calculated based on score. It can be used to sort entries in Sample method
+func ByPrioritySort() func([]*Entry) []*Entry {
+	return func (entries []*Entry) []*Entry {
+		sort.Sort(byPriority(entries))
+		return entries
+	}
+}
+
+// RandomSort represents a random order. It can be used to sort entries in Sample method
+func RandomSort() func([]*Entry) []*Entry {
+	return func (entries []*Entry) []*Entry {
+		for i := 0; i < len(entries); i++ {
+			j := rand.Intn(i + 1)
+			entries[i], entries[j] = entries[j], entries[i]
+		}
+		return entries
 	}
 }
 
@@ -122,7 +151,7 @@ func (s *SimpleBook) Add(addr string) {
 	if ok {
 		return
 	}
-	s.entries[addr] = &entry{addr: addr}
+	s.entries[addr] = &Entry{addr: addr}
 }
 
 // Connected should be called by consumers whenever a successful connection to the peer with the
@@ -177,68 +206,34 @@ func (s *SimpleBook) Failed(addr string) {
 	e.failure++
 }
 
-// OrderedSample will return the top priority peer out of all peers that are currently not active. It should
-// represent the peer that is most likely to allow us to connect successfully.
-func (s *SimpleBook) OrderedSample(params ...int) ([]string, error) {
+// Sample will return entries limited by count, filtered by specified filter function and sorted by specified sort function
+func (s *SimpleBook) Sample(count int, filter func(*Entry) bool, sort func([]*Entry) []*Entry) ([]string, error) {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
-	entries := s.slice(false)
+	entries := s.slice(filter)
+
 	if len(entries) == 0 {
 		return nil, errBookEmpty
 	}
-	sort.Sort(byPriority(entries))
 
-	sampleSize := s.sampleSize
-	if len(params) > 0 {
-		sampleSize = params[0]
-	}
-	if len(entries) > sampleSize {
-	    entries = entries[:sampleSize]
-	}
-	
-	addrs := s.getAddresses(entries, sampleSize)
-	return addrs, nil
-}
+	entries = sort(entries)
 
-// RandomSample will return a random sample of peers that can be used to exchange peer addresses with
-// other peers and allow discovery in the peer-to-peer network.
-func (s *SimpleBook) RandomSample(params ...int) ([]string, error) {
-	s.mutex.Lock()
-	defer s.mutex.Unlock()
-	entries := s.slice(true)
+	if len(entries) > count {
+	    entries = entries[:count]
+	}
 
-	sampleSize := s.sampleSize
-	if len(params) > 0 {
-		sampleSize = params[0]
-	}
-	
-	if len(entries) == 0 {
-		return nil, errors.New("no valid addresses")
-	}
-	if len(entries) > sampleSize {
-		for i := 0; i < len(entries); i++ {
-			j := rand.Intn(i + 1)
-			entries[i], entries[j] = entries[j], entries[i]
-		}
-		entries = entries[:sampleSize]
-	}
-	addrs := s.getAddresses(entries, sampleSize)
-	return addrs, nil
-}
-
-func (s *SimpleBook) getAddresses(entries []*entry, sampleSize int) ([]string) {
-	addrs := make([]string, 0, sampleSize)
+	addrs := make([]string, 0, count)
 	for _, e := range entries {
 		addrs = append(addrs, e.addr)
 	}
-	return addrs
+	return addrs, nil
 }
 
 // slice method.
-func (s *SimpleBook) slice(includeActive bool) []*entry {
-	entries := make([]*entry, 0)
+func (s *SimpleBook) slice(filter func(*Entry) bool) []*Entry {
+	entries := make([]*Entry, 0)
 	for _, e := range s.entries {
-		if !includeActive && e.active {
+		if !filter(e) {
 			continue
 		}
 		entries = append(entries, e)
@@ -247,7 +242,7 @@ func (s *SimpleBook) slice(includeActive bool) []*entry {
 }
 
 // byPriority helps us sort peer entries by priority.
-type byPriority []*entry
+type byPriority []*Entry
 
 // Len returns the count of peer entries..
 func (b byPriority) Len() int {

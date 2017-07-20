@@ -30,7 +30,7 @@ func TestAddSavesAndGetsPeer(t *testing.T) {
 	addr := "192.168.4.52"
 	book.Add(addr)
 
-	entries, _ := book.OrderedSample()
+	entries, _ := book.Sample(1, IsActive(false), ByPrioritySort())
 
 	assert.Equal(t, addr, entries[0], "Entry %s was not found in book", addr)
 }
@@ -38,7 +38,7 @@ func TestAddSavesAndGetsPeer(t *testing.T) {
 func TestOrderedSampleReturnsErr(t *testing.T) {
 	book := NewSimpleBook()
 
-	_, err := book.OrderedSample()
+	_, err := book.Sample(1, IsActive(false), ByPrioritySort())
 
 	assert.NotNil(t, err, "Get should return error in case book is empty")
 }
@@ -50,7 +50,7 @@ func TestAddDoesNotSavePeerIfBlacklisted(t *testing.T) {
 	book.Blacklist(addr)
 	book.Add(addr)
 
-	_, err := book.OrderedSample()
+	_, err := book.Sample(1, IsActive(false), ByPrioritySort())
 
 	assert.NotNil(t, err, "Add should not save address in case it is blacklisted")
 }
@@ -63,7 +63,7 @@ func TestAddSavesPeerIfBlacklistedAndWhitelistedLater(t *testing.T) {
 	book.Whitelist(addr)
 	book.Add(addr)
 
-	entries, _ := book.OrderedSample()
+	entries, _ := book.Sample(1, IsActive(false), ByPrioritySort())
 
 	assert.Equal(t, addr, entries[0], "Address should be saved after whitelisting")
 }
@@ -79,6 +79,8 @@ func TestOrderedSampleReturnsAddressWithHighestScoreWhenOtherConnectionsDropped(
 	book.Add(addr3)
 
 	book.Connected(addr1)
+	book.Disconnected(addr1)
+	book.Connected(addr1)
 	book.Dropped(addr1)
 
 	book.Connected(addr2)
@@ -91,7 +93,7 @@ func TestOrderedSampleReturnsAddressWithHighestScoreWhenOtherConnectionsDropped(
 	book.Connected(addr3)
 	book.Disconnected(addr3)
 
-	entries, _ := book.OrderedSample()
+	entries, _ := book.Sample(10, IsActive(false), ByPrioritySort())
 
 	assert.Equal(t, addr3, entries[0], "Address %s with highest score is expected. Actual address %s", addr3, entries[0])
 	assert.Equal(t, addr2, entries[2])
@@ -119,7 +121,7 @@ func TestOrderedSampleReturnsAddressWithHighestScoreWhenOtherConnectionsFailed(t
 	book.Connected(addr3)
 	book.Disconnected(addr3)
 
-	entries, _ := book.OrderedSample()
+	entries, _ := book.Sample(10, IsActive(false), ByPrioritySort())
 
 	assert.Equal(t, addr3, entries[0], "Address %s with highest score is expected. Actual address %s", addr3, entries[0])
 	assert.Equal(t, addr2, entries[2])
@@ -137,7 +139,7 @@ func TestOrderedSampleLimitsByParam(t *testing.T) {
 	book.Add(addr2)
 	book.Add(addr3)
 
-	entries, _ := book.OrderedSample(sampleSize)
+	entries, _ := book.Sample(sampleSize, IsActive(false), ByPrioritySort())
 
 	assert.Len(t, entries, sampleSize);
 }
@@ -145,39 +147,39 @@ func TestOrderedSampleLimitsByParam(t *testing.T) {
 func TestRandomSampleReturnsErrorIfNoPeersAdded(t *testing.T) {
 	book := NewSimpleBook()
 
-	_, err := book.RandomSample()
+	_, err := book.Sample(1, Any(), RandomSort())
 
 	assert.NotNil(t, err)
 }
 
 func TestRandomSampleReturnsAddedPeers(t *testing.T) {
 	book := NewSimpleBook()
-	addrsLen := book.sampleSize
-	addrs := make([]string, 0, addrsLen)
-	for i := 0; i < addrsLen; i++ {
+	count := 10
+	addrs := make([]string, 0, count)
+	for i := 0; i < count; i++ {
 		addr := randomAddr()
 		addrs = append(addrs, addr)
 		book.Add(addr)
 		book.Connected(addr)
 	}
 
-	sample, _ := book.RandomSample()
+	sample, _ := book.Sample(count, Any(), RandomSort())
 
 	assert.Subset(t, addrs, sample, "Expected sample to be a subset of addrs")
 }
 
 func TestRandomSampleReturnsSubsetOfAddedPeers(t *testing.T) {
 	book := NewSimpleBook()
-	addrsLen := 50
-	addrs := make([]string, 0, addrsLen)
-	for i := 0; i < addrsLen; i++ {
+	count := 50
+	addrs := make([]string, 0, count)
+	for i := 0; i < count; i++ {
 		addr := randomAddr()
 		addrs = append(addrs, addr)
 		book.Add(addr)
 		book.Connected(addr)
 	}
 
-	sample, _ := book.RandomSample()
+	sample, _ := book.Sample(count, Any(), RandomSort())
 
 	assert.Subset(t, addrs, sample, "Expected sample to be a subset of addrs")
 }
@@ -187,15 +189,15 @@ func TestRandomSampleLimitsByParam(t *testing.T) {
 	addr1 := "127.54.51.66"
 	addr2 := "120.55.58.86"
 	addr3 := "156.23.41.24"
-	sampleSize := 2
+	count := 2
 
 	book.Add(addr1)
 	book.Add(addr2)
 	book.Add(addr3)
 
-	entries, _ := book.RandomSample(sampleSize)
+	entries, _ := book.Sample(count, Any(), RandomSort())
 
-	assert.Len(t, entries, sampleSize);
+	assert.Len(t, entries, count);
 }
 
 func randomAddr() string {
