@@ -37,7 +37,7 @@ func TestSetAddress(t *testing.T) {
 
 func TestSetBalance(t *testing.T) {
     config := Config{}
-    balance := time.Duration(5 * time.Second)
+    balance := 5 * time.Second
     
     SetBalance(balance)(&config)
 
@@ -64,7 +64,7 @@ func TestSetCodec(t *testing.T) {
 
 func TestSetDiscovery(t *testing.T) {
     config := Config{}
-    discovery := time.Duration(5 * time.Second)
+    discovery := 5 * time.Second
     
     SetDiscovery(discovery)(&config)
 
@@ -73,7 +73,7 @@ func TestSetDiscovery(t *testing.T) {
 
 func TestSetHeartbeat(t *testing.T) {
     config := Config{}
-    heartbeat := time.Duration(5 * time.Second)
+    heartbeat := 5 * time.Second
     
     SetHeartbeat(heartbeat)(&config)
 
@@ -136,7 +136,7 @@ func TestSetSubscriber(t *testing.T) {
 
 func TestSetTimeout(t *testing.T) {
     config := Config{}
-    timeout := time.Duration(5 * time.Second)
+    timeout := 5 * time.Second
     
     SetTimeout(timeout)(&config)
 
