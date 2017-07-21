@@ -76,10 +76,10 @@ func (t *Trie) Put(key []byte, hash []byte, force bool) bool {
 				cur = &next
 			}
 		case valueNode:
-			if force {
-				*cur = nil
+			if !force {
+				return false
 			}
-			continue
+			*cur = nil
 		case nil:
 			if len(path) > 0 {
 				short := &shortNode{key: path}

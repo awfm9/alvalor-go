@@ -26,10 +26,12 @@ import (
 	"github.com/alvalor/alvalor-go/hasher"
 )
 
+const TestLength = 1000000
+
 func TestSingle(t *testing.T) {
 	rand.Seed(time.Now().UnixNano())
 	trie := New()
-	for i := 0; i < 1000; i++ {
+	for i := 0; i < TestLength; i++ {
 		key := make([]byte, 32)
 		hash := make([]byte, 32)
 		_, _ = rand.Read(key)
@@ -59,9 +61,9 @@ func TestSingle(t *testing.T) {
 func TestBatch(t *testing.T) {
 	rand.Seed(time.Now().UnixNano())
 	trie := New()
-	keys := make([][]byte, 0, 1000)
-	hashes := make([][]byte, 0, 1000)
-	for i := 0; i < 1000; i++ {
+	keys := make([][]byte, 0, TestLength)
+	hashes := make([][]byte, 0, TestLength)
+	for i := 0; i < TestLength; i++ {
 		key := make([]byte, 32)
 		hash := make([]byte, 32)
 		_, _ = rand.Read(key)
