@@ -205,7 +205,7 @@ func (node *Node) processPong(msg *Message) error {
 
 // processDiscover responds to a discover message by sending a sample of peers that are known to us.
 func (node *Node) processDiscover(msg *Message) error {
-	addrs, err := node.book.Sample()
+	addrs, err := node.book.Sample(10, Any(), RandomSort())
 	if err != nil {
 		return errors.Wrap(err, "could not get address sample")
 	}
@@ -284,11 +284,12 @@ func (node *Node) check() {
 // add will try to initialize a new outgoing connection and hand over to the outgoing handshake
 // function on success.
 func (node *Node) add() {
-	addr, err := node.book.Get()
+	entries, err := node.book.Sample(1, IsActive(false), ByPrioritySort())
 	if err != nil {
 		node.discover()
 		return
 	}
+	addr := entries[0]
 	if node.peers.has(addr) {
 		node.log.Error("already connected to peer", zap.String("address", addr))
 		return
