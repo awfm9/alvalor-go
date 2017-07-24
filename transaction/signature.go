@@ -19,8 +19,8 @@ package transaction
 
 // Signature represents a multisig wrapper for transactions.
 type Signature struct {
-	Action Action   // the underlying action to be executed
-	Sigs1  [][]byte // the signatures that should correspond to the origin of the action
-	Fee    Fee      // the attached fee transaction
-	Sigs2  [][]byte // the signatures that should correspond to the origin of the fees
+	Action     Action   // the underlying action to be executed
+	ActionSigs [][]byte // the signatures that should correspond to the origin of the action
+	Fee        Fee      // the attached fee transaction
+	FeeSigs    [][]byte // the signatures that should correspond to the origin of the fees
 }
