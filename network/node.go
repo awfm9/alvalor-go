@@ -64,8 +64,9 @@ func NewNode(options ...func(*Config)) *Node {
 	for _, option := range options {
 		option(&cfg)
 	}
+	nonce := uuid.NewV4().Bytes()
 	node := &Node{
-		nonce:      uuid.NewV4().Bytes(),
+		nonce:      nonce,
 		network:    cfg.network,
 		log:        cfg.log,
 		book:       cfg.book,
@@ -81,13 +82,44 @@ func NewNode(options ...func(*Config)) *Node {
 		discovery:  time.NewTicker(cfg.discovery),
 		peers:      &registry{peers: make(map[string]*peer)},
 	}
+
+	incoming := &Incoming{
+		address:   cfg.address,
+		codec:     cfg.codec,
+		heartbeat: cfg.heartbeat,
+		log:       cfg.log,
+		network:   cfg.network,
+		nonce:     nonce,
+		timeout:   cfg.timeout,
+	}
 	node.book.Blacklist(cfg.address)
 	if cfg.server {
-		go node.listen()
+		go incoming.listen(func(p peer) { node.onConnected(p) }, func() { node.onConnecting() },
+			func(nonce []byte) bool { return node.peers.count() > int(node.maxPeers) && !node.known(nonce) }, func(conn net.Conn) { node.drop(conn) })
 	}
 	go node.check()
 	go node.manage()
 	return node
+}
+
+func (node *Node) onConnected(p peer) {
+	node.peers.add(p.addr, &p)
+	node.book.Connected(p.addr)
+	go p.receive()
+	if node.server {
+		err := node.share(p.addr, []string{node.address})
+		if err != nil {
+			node.log.Error("could not share initial address", zap.Error(err))
+		}
+	}
+	e := Connected{
+		Address: p.addr,
+	}
+	node.event(&e)
+}
+
+func (node *Node) onConnecting() {
+	atomic.AddInt32(&node.count, 1)
 }
 
 // manage will build a list of two incoming channels per peer: one for the heartbeating and one for
@@ -238,34 +270,6 @@ func (node *Node) event(e interface{}) {
 	}
 }
 
-// listen will start a listener on the configured network address and hand over incoming network
-// connections to the welcome handshake function.
-func (node *Node) listen() {
-	_, _, err := net.SplitHostPort(node.address)
-	if err != nil {
-		node.log.Error("invalid listen address", zap.Error(err))
-		return
-	}
-	ln, err := net.Listen("tcp", node.address)
-	if err != nil {
-		node.log.Error("could not create listener", zap.String("address", node.address), zap.Error(err))
-		return
-	}
-	for {
-		conn, err := ln.Accept()
-		if err != nil {
-			node.log.Error("could not accept connection", zap.Error(err))
-			break
-		}
-		if node.peers.count() > int(node.maxPeers) {
-			node.log.Debug("too many peers", zap.String("address", conn.RemoteAddr().String()))
-			conn.Close()
-			return
-		}
-		go node.welcome(conn)
-	}
-}
-
 // check will see if we are below minimum or above maximum peer count and add or remove peers as
 // needed.
 func (node *Node) check() {
@@ -363,34 +367,6 @@ func (node *Node) handshake(conn net.Conn) {
 	nonce := ack[len(node.network):]
 	if !bytes.Equal(code, node.network) || bytes.Equal(nonce, node.nonce) || node.known(nonce) {
 		node.log.Warn("dropping invalid outgoing connection", zap.String("address", addr))
-		node.drop(conn)
-		return
-	}
-	node.init(conn, nonce)
-}
-
-// welcome starts an incoming handshake by waiting for the peer's node nonce and network ID and
-// comparing it against what we are expecting, then sending our response.
-func (node *Node) welcome(conn net.Conn) {
-	addr := conn.RemoteAddr().String()
-	node.log.Info("adding incoming peer", zap.String("address", addr))
-	atomic.AddInt32(&node.count, 1)
-	ack := append(node.network, node.nonce...)
-	syn := make([]byte, len(ack))
-	_, err := conn.Read(syn)
-	if err != nil {
-		node.drop(conn)
-		return
-	}
-	code := syn[:len(node.network)]
-	nonce := syn[len(node.network):]
-	if !bytes.Equal(code, node.network) || bytes.Equal(nonce, node.nonce) || node.known(nonce) {
-		node.log.Warn("dropping invalid incoming connection", zap.String("address", addr))
-		node.drop(conn)
-		return
-	}
-	_, err = conn.Write(ack)
-	if err != nil {
 		node.drop(conn)
 		return
 	}
