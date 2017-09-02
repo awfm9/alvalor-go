@@ -30,67 +30,67 @@ type Incoming struct {
 	nonce            []byte
 	log              *zap.Logger
 	peerFactory      *PeerFactory
-	onConnected      func(peer)
-	onConnecting     func()
 	acceptConnection func([]byte) bool
+	onConnecting     func()
+	onConnected      func(peer)
 	onError          func(conn net.Conn)
 }
 
 // listen will start a listener on the configured network address and hand over incoming network
 // connections to the welcome handshake function.
-func (node *Incoming) listen() {
-	_, _, err := net.SplitHostPort(node.address)
+func (incoming *Incoming) listen() {
+	_, _, err := net.SplitHostPort(incoming.address)
 	if err != nil {
-		node.log.Error("invalid listen address", zap.Error(err))
+		incoming.log.Error("invalid listen address", zap.Error(err))
 		return
 	}
-	ln, err := net.Listen("tcp", node.address)
+	ln, err := net.Listen("tcp", incoming.address)
 	if err != nil {
-		node.log.Error("could not create listener", zap.String("address", node.address), zap.Error(err))
+		incoming.log.Error("could not create listener", zap.String("address", incoming.address), zap.Error(err))
 		return
 	}
 	for {
 		conn, err := ln.Accept()
 		if err != nil {
-			node.log.Error("could not accept connection", zap.Error(err))
+			incoming.log.Error("could not accept connection", zap.Error(err))
 			break
 		}
-		if !node.acceptConnection([]byte{}) {
-			node.log.Debug("too many peers", zap.String("address", conn.RemoteAddr().String()))
+		if !incoming.acceptConnection([]byte{}) {
+			incoming.log.Debug("too many peers", zap.String("address", conn.RemoteAddr().String()))
 			conn.Close()
 			return
 		}
-		go node.welcome(conn)
+		go incoming.welcome(conn)
 	}
 }
 
 // welcome starts an incoming handshake by waiting for the peer's node nonce and network ID and
 // comparing it against what we are expecting, then sending our response.
-func (node *Incoming) welcome(conn net.Conn) {
+func (incoming *Incoming) welcome(conn net.Conn) {
 	addr := conn.RemoteAddr().String()
-	node.log.Info("adding incoming peer", zap.String("address", addr))
-	node.onConnecting()
-	ack := append(node.network, node.nonce...)
+	incoming.log.Info("adding incoming peer", zap.String("address", addr))
+	incoming.onConnecting()
+	ack := append(incoming.network, incoming.nonce...)
 	syn := make([]byte, len(ack))
 	_, err := conn.Read(syn)
 	if err != nil {
-		node.onError(conn)
+		incoming.onError(conn)
 		return
 	}
-	code := syn[:len(node.network)]
-	nonce := syn[len(node.network):]
-	if !bytes.Equal(code, node.network) || bytes.Equal(nonce, node.nonce) || !node.acceptConnection(nonce) {
-		node.log.Warn("dropping invalid incoming connection", zap.String("address", addr))
-		node.onError(conn)
+	code := syn[:len(incoming.network)]
+	nonce := syn[len(incoming.network):]
+	if !bytes.Equal(code, incoming.network) || bytes.Equal(nonce, incoming.nonce) || !incoming.acceptConnection(nonce) {
+		incoming.log.Warn("dropping invalid incoming connection", zap.String("address", addr))
+		incoming.onError(conn)
 		return
 	}
 	_, err = conn.Write(ack)
 	if err != nil {
-		node.onError(conn)
+		incoming.onError(conn)
 		return
 	}
 
-	node.log.Info("finalizing handshake", zap.String("address", addr))
-	p := node.peerFactory.create(conn, nonce)
-	node.onConnected(p)
+	incoming.log.Info("finalizing handshake", zap.String("address", addr))
+	p := incoming.peerFactory.create(conn, nonce)
+	incoming.onConnected(p)
 }

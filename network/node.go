@@ -94,47 +94,23 @@ func NewNode(options ...func(*Config)) *Node {
 		nonce:            nonce,
 		peerFactory:      peerFactory,
 		log:              cfg.log,
-		onConnected:      func(p peer) { node.onIncomingConnected(p) },
-		onConnecting:     func() { node.onConnecting() },
 		acceptConnection: func(nonce []byte) bool { return node.peers.count() > int(node.maxPeers) && !node.known(nonce) },
+		onConnecting:     func() { node.onConnecting() },
+		onConnected:      func(p peer) { node.onIncomingConnected(p) },
 		onError:          func(conn net.Conn) { node.drop(conn) },
 	}
 
 	outgoing := &Outgoing{
-		network:     cfg.network,
-		nonce:       nonce,
-		log:         cfg.log,
-		peerFactory: peerFactory,
-		nextConnectionFactory: func() string {
-			count := uint(atomic.LoadInt32(&node.count))
-			if count < node.minPeers {
-				return ""
-			}
-
-			entries, err := node.book.Sample(1, IsActive(false), ByPrioritySort())
-			if err != nil {
-				node.discover()
-				return ""
-			}
-
-			addr := entries[0]
-			if node.peers.has(addr) {
-				node.log.Error("already connected to peer", zap.String("address", addr))
-				return ""
-			}
-
-			return addr
-		},
-		onConnecting: func() {
-			atomic.AddInt32(&node.count, 1)
-		},
-		onConnected: func(p peer) { node.onOutgoingConnected(p) },
-		onError: func(conn net.Conn) {
-			node.drop(conn)
-		},
-		acceptConnection: func(nonce []byte) bool {
-			return !node.known(nonce)
-		},
+		balance:           cfg.balance,
+		network:           cfg.network,
+		nonce:             nonce,
+		log:               cfg.log,
+		peerFactory:       peerFactory,
+		nextAddrToConnect: func() string { return node.nextAddrToConnect() },
+		onConnecting:      func() { node.onConnecting() },
+		acceptConnection:  func(nonce []byte) bool { return !node.known(nonce) },
+		onConnected:       func(p peer) { node.onOutgoingConnected(p) },
+		onError:           func(conn net.Conn) { node.drop(conn) },
 	}
 
 	node.book.Blacklist(cfg.address)
@@ -144,6 +120,27 @@ func NewNode(options ...func(*Config)) *Node {
 	go outgoing.connect()
 	go node.manage()
 	return node
+}
+
+func (node *Node) nextAddrToConnect() string {
+	count := uint(atomic.LoadInt32(&node.count))
+	if count < node.minPeers {
+		return ""
+	}
+
+	entries, err := node.book.Sample(1, IsActive(false), ByPrioritySort())
+	if err != nil {
+		node.discover()
+		return ""
+	}
+
+	addr := entries[0]
+	if node.peers.has(addr) {
+		node.log.Error("already connected to peer", zap.String("address", addr))
+		return ""
+	}
+
+	return addr
 }
 
 func (node *Node) onOutgoingConnected(p peer) {

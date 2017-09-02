@@ -26,72 +26,72 @@ import (
 )
 
 type Outgoing struct {
-	nextConnectionFactory func() string
-	onConnecting          func()
-	acceptConnection      func([]byte) bool
-	onConnected           func(peer)
-	onError               func(conn net.Conn)
-	log                   *zap.Logger
-	network               []byte
-	nonce                 []byte
-	peerFactory           *PeerFactory
-	balance               time.Duration
+	network           []byte
+	nonce             []byte
+	log               *zap.Logger
+	peerFactory       *PeerFactory
+	nextAddrToConnect func() string
+	onConnecting      func()
+	acceptConnection  func([]byte) bool
+	onConnected       func(peer)
+	onError           func(conn net.Conn)
+	balance           time.Duration
 }
 
 // check will see if we are below minimum or above maximum peer count and add or remove peers as
 // needed.
-func (node *Outgoing) connect() {
+func (outgoing *Outgoing) connect() {
 	for {
-		next := node.nextConnectionFactory()
+		next := outgoing.nextAddrToConnect()
 		if next != "" {
-			node.add(next)
+			outgoing.add(next)
 		}
 		//TODO: Not sure how count can become > than node.maxPeers
 
 		// if count > node.maxPeers {
 		// 	node.remove()
 		// }
-		time.Sleep(node.balance)
+		time.Sleep(outgoing.balance)
 	}
 }
 
 // add will try to initialize a new outgoing connection and hand over to the outgoing handshake
 // function on success.
-func (node *Outgoing) add(addr string) {
+func (outgoing *Outgoing) add(addr string) {
 	conn, err := net.Dial("tcp", addr)
 	if err != nil {
-		node.log.Error("could not dial peer", zap.String("address", addr), zap.Error(err))
+		outgoing.log.Error("could not dial peer", zap.String("address", addr), zap.Error(err))
 		return
 	}
-	go node.handshake(conn)
+	go outgoing.handshake(conn)
 }
 
 // handshake starts an outgoing handshake by sending the network ID and our node nonce, then
 // comparing the reply against our initial message.
-func (node *Outgoing) handshake(conn net.Conn) {
+func (outgoing *Outgoing) handshake(conn net.Conn) {
 	addr := conn.RemoteAddr().String()
-	node.log.Info("adding outgoing peer", zap.String("address", addr))
-	node.onConnecting()
-	syn := append(node.network, node.nonce...)
+	outgoing.log.Info("adding outgoing peer", zap.String("address", addr))
+	outgoing.onConnecting()
+	syn := append(outgoing.network, outgoing.nonce...)
 	_, err := conn.Write(syn)
 	if err != nil {
-		node.onError(conn)
+		outgoing.onError(conn)
 		return
 	}
 	ack := make([]byte, len(syn))
 	_, err = conn.Read(ack)
 	if err != nil {
-		node.onError(conn)
+		outgoing.onError(conn)
 		return
 	}
-	code := ack[:len(node.network)]
-	nonce := ack[len(node.network):]
-	if !bytes.Equal(code, node.network) || bytes.Equal(nonce, node.nonce) || node.acceptConnection(nonce) {
-		node.log.Warn("dropping invalid outgoing connection", zap.String("address", addr))
-		node.onError(conn)
+	code := ack[:len(outgoing.network)]
+	nonce := ack[len(outgoing.network):]
+	if !bytes.Equal(code, outgoing.network) || bytes.Equal(nonce, outgoing.nonce) || outgoing.acceptConnection(nonce) {
+		outgoing.log.Warn("dropping invalid outgoing connection", zap.String("address", addr))
+		outgoing.onError(conn)
 		return
 	}
-	node.log.Info("finalizing handshake", zap.String("address", addr))
-	p := node.peerFactory.create(conn, nonce)
-	node.onConnected(p)
+	outgoing.log.Info("finalizing handshake", zap.String("address", addr))
+	p := outgoing.peerFactory.create(conn, nonce)
+	outgoing.onConnected(p)
 }
