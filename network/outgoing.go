@@ -22,7 +22,6 @@ import (
 	"net"
 	"time"
 
-	"github.com/pierrec/lz4"
 	"go.uber.org/zap"
 )
 
@@ -35,9 +34,7 @@ type Outgoing struct {
 	log                   *zap.Logger
 	network               []byte
 	nonce                 []byte
-	codec                 Codec
-	heartbeat             time.Duration
-	timeout               time.Duration
+	peerFactory           *PeerFactory
 	balance               time.Duration
 }
 
@@ -94,31 +91,7 @@ func (node *Outgoing) handshake(conn net.Conn) {
 		node.onError(conn)
 		return
 	}
-	node.init(conn, nonce)
-}
-
-// init will initialize a new peer and add it to our registry after a successful handshake. It
-// launches the required receiving go routine and does the initial sharing of our own peer address.
-// Finally, it notifies the subscriber that a new connection was established.
-func (node *Outgoing) init(conn net.Conn, nonce []byte) {
-	addr := conn.RemoteAddr().String()
 	node.log.Info("finalizing handshake", zap.String("address", addr))
-	r := lz4.NewReader(conn)
-	w := lz4.NewWriter(conn)
-	outgoing := make(chan interface{}, 16)
-	incoming := make(chan interface{}, 16)
-	p := peer{
-		conn:      conn,
-		addr:      addr,
-		nonce:     nonce,
-		r:         r,
-		w:         w,
-		outgoing:  outgoing,
-		incoming:  incoming,
-		codec:     node.codec,
-		heartbeat: node.heartbeat,
-		timeout:   node.timeout,
-		hb:        time.NewTimer(node.heartbeat),
-	}
+	p := node.peerFactory.create(conn, nonce)
 	node.onConnected(p)
 }
