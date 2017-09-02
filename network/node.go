@@ -82,14 +82,18 @@ func NewNode(options ...func(*Config)) *Node {
 		peers:      &registry{peers: make(map[string]*peer)},
 	}
 
+	peerFactory := &PeerFactory{
+		codec:     cfg.codec,
+		heartbeat: cfg.heartbeat,
+		timeout:   cfg.timeout,
+	}
+
 	incoming := &Incoming{
 		address:          cfg.address,
-		codec:            cfg.codec,
-		heartbeat:        cfg.heartbeat,
-		log:              cfg.log,
 		network:          cfg.network,
 		nonce:            nonce,
-		timeout:          cfg.timeout,
+		peerFactory:      peerFactory,
+		log:              cfg.log,
 		onConnected:      func(p peer) { node.onIncomingConnected(p) },
 		onConnecting:     func() { node.onConnecting() },
 		acceptConnection: func(nonce []byte) bool { return node.peers.count() > int(node.maxPeers) && !node.known(nonce) },
@@ -97,12 +101,10 @@ func NewNode(options ...func(*Config)) *Node {
 	}
 
 	outgoing := &Outgoing{
-		codec:     cfg.codec,
-		heartbeat: cfg.heartbeat,
-		log:       cfg.log,
-		network:   cfg.network,
-		nonce:     nonce,
-		timeout:   cfg.timeout,
+		network:     cfg.network,
+		nonce:       nonce,
+		log:         cfg.log,
+		peerFactory: peerFactory,
 		nextConnectionFactory: func() string {
 			count := uint(atomic.LoadInt32(&node.count))
 			if count < node.minPeers {
