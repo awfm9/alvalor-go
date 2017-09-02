@@ -26,7 +26,6 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/pierrec/lz4"
 	"github.com/pkg/errors"
 	uuid "github.com/satori/go.uuid"
 	"go.uber.org/zap"
@@ -84,36 +83,86 @@ func NewNode(options ...func(*Config)) *Node {
 	}
 
 	incoming := &Incoming{
-		address:   cfg.address,
+		address:          cfg.address,
+		codec:            cfg.codec,
+		heartbeat:        cfg.heartbeat,
+		log:              cfg.log,
+		network:          cfg.network,
+		nonce:            nonce,
+		timeout:          cfg.timeout,
+		onConnected:      func(p peer) { node.onIncomingConnected(p) },
+		onConnecting:     func() { node.onConnecting() },
+		acceptConnection: func(nonce []byte) bool { return node.peers.count() > int(node.maxPeers) && !node.known(nonce) },
+		onError:          func(conn net.Conn) { node.drop(conn) },
+	}
+
+	outgoing := &Outgoing{
 		codec:     cfg.codec,
 		heartbeat: cfg.heartbeat,
 		log:       cfg.log,
 		network:   cfg.network,
 		nonce:     nonce,
 		timeout:   cfg.timeout,
-		onConnected: func(p peer) { node.onConnected(p) },
-        onConnecting: func() { node.onConnecting() },
-        acceptConnection: func(nonce []byte) bool { return node.peers.count() > int(node.maxPeers) && !node.known(nonce) },
-        onError: func(conn net.Conn) { node.drop(conn) },
+		nextConnectionFactory: func() string {
+			count := uint(atomic.LoadInt32(&node.count))
+			if count < node.minPeers {
+				return ""
+			}
+
+			entries, err := node.book.Sample(1, IsActive(false), ByPrioritySort())
+			if err != nil {
+				node.discover()
+				return ""
+			}
+
+			addr := entries[0]
+			if node.peers.has(addr) {
+				node.log.Error("already connected to peer", zap.String("address", addr))
+				return ""
+			}
+
+			return addr
+		},
+		onConnecting: func() {
+			atomic.AddInt32(&node.count, 1)
+		},
+		onConnected: func(p peer) { node.onOutgoingConnected(p) },
+		onError: func(conn net.Conn) {
+			node.drop(conn)
+		},
+		acceptConnection: func(nonce []byte) bool {
+			return !node.known(nonce)
+		},
 	}
+
 	node.book.Blacklist(cfg.address)
 	if cfg.server {
 		go incoming.listen()
 	}
-	go node.check()
+	go outgoing.connect()
 	go node.manage()
 	return node
 }
 
-func (node *Node) onConnected(p peer) {
+func (node *Node) onOutgoingConnected(p peer) {
+
 	node.peers.add(p.addr, &p)
 	node.book.Connected(p.addr)
 	go p.receive()
-	if node.server {
-		err := node.share(p.addr, []string{node.address})
-		if err != nil {
-			node.log.Error("could not share initial address", zap.Error(err))
-		}
+	e := Connected{
+		Address: p.addr,
+	}
+	node.event(&e)
+}
+
+func (node *Node) onIncomingConnected(p peer) {
+
+	node.peers.add(p.addr, &p)
+	node.book.Connected(p.addr)
+	go p.receive()
+	err := node.share(p.addr, []string{node.address})
+	if err != nil {
+		node.log.Error("could not share initial address", zap.Error(err))
 	}
 	e := Connected{
 		Address: p.addr,
@@ -273,42 +322,6 @@ func (node *Node) event(e interface{}) {
 	}
 }
 
-// check will see if we are below minimum or above maximum peer count and add or remove peers as
-// needed.
-func (node *Node) check() {
-	for {
-		count := uint(atomic.LoadInt32(&node.count))
-		if count < node.minPeers {
-			node.add()
-		}
-		if count > node.maxPeers {
-			node.remove()
-		}
-		time.Sleep(node.balance)
-	}
-}
-
-// add will try to initialize a new outgoing connection and hand over to the outgoing handshake
-// function on success.
-func (node *Node) add() {
-	entries, err := node.book.Sample(1, IsActive(false), ByPrioritySort())
-	if err != nil {
-		node.discover()
-		return
-	}
-	addr := entries[0]
-	if node.peers.has(addr) {
-		node.log.Error("already connected to peer", zap.String("address", addr))
-		return
-	}
-	conn, err := net.Dial("tcp", addr)
-	if err != nil {
-		node.log.Error("could not dial peer", zap.String("address", addr), zap.Error(err))
-		return
-	}
-	go node.handshake(conn)
-}
-
 // discover will launch an attempt to discover new peers on the network, with a build-in timeout.
 func (node *Node) discover() {
 	select {
@@ -346,72 +359,6 @@ func (node *Node) known(nonce []byte) bool {
 		}
 	}
 	return false
-}
-
-// handshake starts an outgoing handshake by sending the network ID and our node nonce, then
-// comparing the reply against our initial message.
-func (node *Node) handshake(conn net.Conn) {
-	addr := conn.RemoteAddr().String()
-	node.log.Info("adding outgoing peer", zap.String("address", addr))
-	atomic.AddInt32(&node.count, 1)
-	syn := append(node.network, node.nonce...)
-	_, err := conn.Write(syn)
-	if err != nil {
-		node.drop(conn)
-		return
-	}
-	ack := make([]byte, len(syn))
-	_, err = conn.Read(ack)
-	if err != nil {
-		node.drop(conn)
-		return
-	}
-	code := ack[:len(node.network)]
-	nonce := ack[len(node.network):]
-	if !bytes.Equal(code, node.network) || bytes.Equal(nonce, node.nonce) || node.known(nonce) {
-		node.log.Warn("dropping invalid outgoing connection", zap.String("address", addr))
-		node.drop(conn)
-		return
-	}
-	node.init(conn, nonce)
-}
-
-// init will initialize a new peer and add it to our registry after a successful handshake. It
-// launches the required receiving go routine and does the initial sharing of our own peer address.
-// Finally, it notifies the subscriber that a new connection was established.
-func (node *Node) init(conn net.Conn, nonce []byte) {
-	addr := conn.RemoteAddr().String()
-	node.log.Info("finalizing handshake", zap.String("address", addr))
-	r := lz4.NewReader(conn)
-	w := lz4.NewWriter(conn)
-	outgoing := make(chan interface{}, 16)
-	incoming := make(chan interface{}, 16)
-	p := peer{
-		conn:      conn,
-		addr:      addr,
-		nonce:     nonce,
-		r:         r,
-		w:         w,
-		outgoing:  outgoing,
-		incoming:  incoming,
-		codec:     node.codec,
-		heartbeat: node.heartbeat,
-		timeout:   node.timeout,
-		hb:        time.NewTimer(node.heartbeat),
-	}
-	node.peers.add(addr, &p)
-	node.book.Connected(addr)
-	go p.receive()
-	if node.server {
-		err := node.share(addr, []string{node.address})
-		if err != nil {
-			node.log.Error("could not share initial address", zap.Error(err))
-		}
-	}
-	e := Connected{
-		Address: p.addr,
-	}
-	node.event(&e)
 }
 
 // share will share the given addresses with the peer of the given address.
