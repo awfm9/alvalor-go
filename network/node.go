@@ -91,11 +91,14 @@ func NewNode(options ...func(*Config)) *Node {
 		network:   cfg.network,
 		nonce:     nonce,
 		timeout:   cfg.timeout,
+		onConnected: func(p peer) { node.onConnected(p) },
+        onConnecting: func() { node.onConnecting() },
+        acceptConnection: func(nonce []byte) bool { return node.peers.count() > int(node.maxPeers) && !node.known(nonce) },
+        onError: func(conn net.Conn) { node.drop(conn) },
 	}
 	node.book.Blacklist(cfg.address)
 	if cfg.server {
-		go incoming.listen(func(p peer) { node.onConnected(p) }, func() { node.onConnecting() },
-			func(nonce []byte) bool { return node.peers.count() > int(node.maxPeers) && !node.known(nonce) }, func(conn net.Conn) { node.drop(conn) })
+		go incoming.listen()
 	}
 	go node.check()
 	go node.manage()

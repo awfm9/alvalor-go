@@ -34,11 +34,15 @@ type Incoming struct {
 	codec     Codec
 	heartbeat time.Duration
 	timeout   time.Duration
+	onConnected func(peer)
+	onConnecting func()
+	acceptConnection func([]byte) bool
+	onError func(conn net.Conn)
 }
 
 // listen will start a listener on the configured network address and hand over incoming network
 // connections to the welcome handshake function.
-func (node *Incoming) listen(onConnected func(peer), onConnecting func(), acceptConnection func([]byte) bool, onError func(conn net.Conn)) {
+func (node *Incoming) listen() {
 	_, _, err := net.SplitHostPort(node.address)
 	if err != nil {
 		node.log.Error("invalid listen address", zap.Error(err))
@@ -55,47 +59,47 @@ func (node *Incoming) listen(onConnected func(peer), onConnecting func(), accept
 			node.log.Error("could not accept connection", zap.Error(err))
 			break
 		}
-		if !acceptConnection([]byte{}) {
+		if !node.acceptConnection([]byte{}) {
 			node.log.Debug("too many peers", zap.String("address", conn.RemoteAddr().String()))
 			conn.Close()
 			return
 		}
-		go node.welcome(conn, onConnected, onConnecting, acceptConnection, onError)
+		go node.welcome(conn)
 	}
 }
 
 // welcome starts an incoming handshake by waiting for the peer's node nonce and network ID and
 // comparing it against what we are expecting, then sending our response.
-func (node *Incoming) welcome(conn net.Conn, onConnected func(peer), onConnecting func(), acceptConnection func([]byte) bool, onError func(conn net.Conn)) {
+func (node *Incoming) welcome(conn net.Conn) {
 	addr := conn.RemoteAddr().String()
 	node.log.Info("adding incoming peer", zap.String("address", addr))
-	onConnecting()
+	node.onConnecting()
 	ack := append(node.network, node.nonce...)
 	syn := make([]byte, len(ack))
 	_, err := conn.Read(syn)
 	if err != nil {
-		onError(conn)
+		node.onError(conn)
 		return
 	}
 	code := syn[:len(node.network)]
 	nonce := syn[len(node.network):]
-	if !bytes.Equal(code, node.network) || bytes.Equal(nonce, node.nonce) || !acceptConnection(nonce) {
+	if !bytes.Equal(code, node.network) || bytes.Equal(nonce, node.nonce) || !node.acceptConnection(nonce) {
 		node.log.Warn("dropping invalid incoming connection", zap.String("address", addr))
-		onError(conn)
+		node.onError(conn)
 		return
 	}
 	_, err = conn.Write(ack)
 	if err != nil {
-		onError(conn)
+		node.onError(conn)
 		return
 	}
-	node.init(conn, nonce, onConnected)
+	node.init(conn, nonce)
 }
 
 // init will initialize a new peer and add it to our registry after a successful handshake. It
 // launches the required receiving go routine and does the initial sharing of our own peer address.
 // Finally, it notifies the subscriber that a new connection was established.
-func (node *Incoming) init(conn net.Conn, nonce []byte, onConnected func(peer)) {
+func (node *Incoming) init(conn net.Conn, nonce []byte) {
 	addr := conn.RemoteAddr().String()
 	node.log.Info("finalizing handshake", zap.String("address", addr))
 	r := lz4.NewReader(conn)
@@ -115,5 +119,5 @@ func (node *Incoming) init(conn net.Conn, nonce []byte, onConnected func(peer)) 
 		timeout:   node.timeout,
 		hb:        time.NewTimer(node.heartbeat),
 	}
-	onConnected(p)
+	node.onConnected(p)
 }
