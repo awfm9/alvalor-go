@@ -23,10 +23,10 @@ for review. Once approved, your contribution will become part of the source code
 for the Alvalor Go client. If this is all new to you, please don't hesitate to
 get in touch, we will gladly help you out.
 
-* Code must follow the official Go [formatting]
-(https://golang.org/doc/effective_go.html#formatting) guidelines.
-* Code must be documented according to the official Go [commentary]
-(https://golang.org/doc/effective_go.html#commentary) guidelines.
+* Code must follow the official Go
+[formatting](https://golang.org/doc/effective_go.html#formatting) guidelines.
+* Code must be documented according to the official Go
+[commentary](https://golang.org/doc/effective_go.html#commentary) guidelines.
 
 Please note that you will also have to digitally sign the Contributor License
 Agreement. This will allow us to be sure that we don't run into any licensing
@@ -34,9 +34,9 @@ issues in the future.
 
 ## License
 
-The source code of the Alvalor Go client is licensed under the [GNU Affero
-General Public License v3.0](https://www.gnu.org/licenses/gpl-3.0.en.html), also
-included in our repository in the `LICENSE` file.
+The source code of the Alvalor Go client is licensed under the
+[GNU Affero General Public License v3.0](https://www.gnu.org/licenses/gpl-3.0.en.html),
+also included in our repository in the `LICENSE` file.
 
 In the light of encouraging wide adoption and enterprise usage, we are
 considering to move to a more permissive license, such as the MIT license, in
