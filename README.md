@@ -14,8 +14,8 @@ we would be more than happy to hear from you. We are always willing to reward
 contributions of high quality in one way or another. The best way to start is to
 get in touch with us directly on Slack or Telegram:
 
-* [Alvalor Slack](https://slackpass.io/alvalor)
-* [Alvalor Telegram](https://t.me/alvalor)
+* [Alvalor on Slack](https://slackpass.io/alvalor)
+* [Alvalor on Telegram](https://t.me/alvalor)
 
 We use a workflow  where you fork the repository on Github, implement your
 changes in a branch on your repository and create a pull request to submit them
