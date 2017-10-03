@@ -112,7 +112,7 @@ func (node *Node) onOutgoingConnected(p *peer) {
 	node.peers.add(p.addr, p)
 	node.book.Connected(p.addr)
 	go p.receive()
-	e := Connected{
+	e := Connection{
 		Address: p.addr,
 	}
 	node.event(&e)
@@ -127,7 +127,7 @@ func (node *Node) onIncomingConnected(p *peer) {
 	if err != nil {
 		node.log.Error("could not share initial address", zap.Error(err))
 	}
-	e := Connected{
+	e := Connection{
 		Address: p.addr,
 	}
 	node.event(&e)
@@ -204,7 +204,7 @@ func (node *Node) disconnect(peer *peer) {
 	peer.close()
 	node.book.Dropped(peer.addr)
 	atomic.AddInt32(&node.count, -1)
-	e := Disconnected{
+	e := Disconnection{
 		Address: peer.addr,
 	}
 	node.event(&e)

@@ -76,7 +76,7 @@ func (client *Client) dial() {
 		_, _, err := net.SplitHostPort(address)
 		if err != nil {
 			client.log.Error("invalid outgoing address", zap.String("address", address), zap.Error(err))
-			client.events <- Invalid{Address: address}
+			client.events <- Violation{Address: address}
 			continue
 		}
 		conn, err := net.Dial("tcp", address)
@@ -105,14 +105,14 @@ func (client *Client) dial() {
 		if !bytes.Equal(network, client.network) {
 			client.log.Warn("dropping invalid network peer", zap.String("address", address), zap.ByteString("network", network))
 			conn.Close()
-			client.events <- Invalid{Address: address}
+			client.events <- Violation{Address: address}
 			continue
 		}
 		nonce := syn[len(client.network):]
 		if bytes.Equal(nonce, client.nonce) {
 			client.log.Warn("dropping connection to self", zap.String("address", address))
 			conn.Close()
-			client.events <- Invalid{Address: address}
+			client.events <- Violation{Address: address}
 			continue
 		}
 		client.connections <- conn

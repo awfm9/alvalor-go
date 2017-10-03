@@ -17,33 +17,35 @@
 
 package network
 
-// Failure represents a connection failure event on a given address.
-type Failure struct {
-	Address string
+import "go.uber.org/zap"
+
+// Processor represents a manager for events, executing the respective actions we
+// want depending on the events.
+type Processor struct {
+	log    *zap.Logger
+	events <-chan interface{}
 }
 
-// Violation represents an invalid peer on a given address.
-type Violation struct {
-	Address string
+// NewProcessor creates a new manager of network events.
+func NewProcessor(log *zap.Logger, events <-chan interface{}) *Processor {
+	pro := &Processor{
+		log:    log,
+		events: events,
+	}
+	return pro
 }
 
-// Error represens a messaging error on a given address.
-type Error struct {
-	Address string
-}
-
-// Message represents a message event on a given address.
-type Message struct {
-	Address string
-	Value   interface{}
-}
-
-// Connection represents a connection event on a given address.
-type Connection struct {
-	Address string
-}
-
-// Disconnection represents a disconnection event on a given address.
-type Disconnection struct {
-	Address string
+// Process will launch the processing of the processor.
+func (pro *Processor) Process() {
+	for event := range pro.events {
+		switch e := event.(type) {
+		case Connection:
+			_ = e
+		case Disconnection:
+		case Failure:
+		case Violation:
+		case Message:
+		default:
+		}
+	}
 }

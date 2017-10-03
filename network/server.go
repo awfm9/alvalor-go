@@ -121,14 +121,14 @@ func (server *Server) Listen() {
 		if !bytes.Equal(network, server.network) {
 			server.log.Warn("dropping invalid network peer", zap.String("address", address), zap.ByteString("network", network))
 			conn.Close()
-			server.events <- Invalid{Address: address}
+			server.events <- Violation{Address: address}
 			continue
 		}
 		nonce := syn[len(server.network):]
 		if bytes.Equal(nonce, server.nonce) {
 			server.log.Warn("dropping connection to self", zap.String("address", address))
 			conn.Close()
-			server.events <- Invalid{Address: address}
+			server.events <- Violation{Address: address}
 			continue
 		}
 		_, err = conn.Write(ack)
