@@ -53,8 +53,6 @@ func NewServer(log *zap.Logger, full func() bool, connections chan<- net.Conn, o
 	for _, option := range options {
 		option(server)
 	}
-	// NOTE: should we launch this in our constructors or in the main file?
-	go server.listen()
 	return server
 }
 
@@ -66,25 +64,25 @@ func SetAddress(address string) func(*Server) {
 	}
 }
 
-// SetNetwork allows us to set the network to use during the initial connection
+// SetServerNetwork allows us to set the network to use during the initial connection
 // handshake.
-func SetNetwork(network []byte) func(*Server) {
+func SetServerNetwork(network []byte) func(*Server) {
 	return func(server *Server) {
 		server.network = network
 	}
 }
 
-// SetNonce allows us to set our node nonce to make sure we never connect to
+// SetServerNonce allows us to set our node nonce to make sure we never connect to
 // ourselves.
-func SetNonce(nonce []byte) func(*Server) {
+func SetServerNonce(nonce []byte) func(*Server) {
 	return func(server *Server) {
 		server.nonce = nonce
 	}
 }
 
-// listen will start a listener on the configured network address and do the
-// welcome handshake, forwarding only valid peer connections.
-func (server *Server) listen() {
+// Listen will start a listener on the configured network address and do the
+// welcome handshake, forwarding valid peer connections.
+func (server *Server) Listen() {
 	_, _, err := net.SplitHostPort(server.address)
 	if err != nil {
 		server.log.Error("invalid listen address, aborting", zap.String("address", server.address), zap.Error(err))
