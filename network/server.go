@@ -20,7 +20,6 @@ package network
 import (
 	"bytes"
 	"net"
-	"time"
 
 	uuid "github.com/satori/go.uuid"
 	"go.uber.org/zap"
@@ -31,8 +30,8 @@ import (
 // peer of our configured Alvalor network.
 type Server struct {
 	log         *zap.Logger
-	book        Book
-	full        func() bool
+	addresses   <-chan string
+	events      chan<- Event
 	connections chan<- net.Conn
 	address     string
 	network     []byte
@@ -42,11 +41,11 @@ type Server struct {
 // NewServer will create a new server to listen for incoming peers and handling
 // the handshake up to having a valid network connection for the given Alvalor
 // network.
-func NewServer(log *zap.Logger, book Book, full func() bool, connections chan<- net.Conn, options ...func(*Server)) *Server {
+func NewServer(log *zap.Logger, addresses <-chan string, events chan<- Event, connections chan<- net.Conn, options ...func(*Server)) *Server {
 	server := &Server{
 		log:         log,
-		book:        book,
-		full:        full,
+		addresses:   addresses,
+		events:      events,
 		connections: connections,
 		address:     "",
 		network:     []byte{0, 0, 0, 0},
@@ -87,12 +86,12 @@ func SetServerNonce(nonce []byte) func(*Server) {
 func (server *Server) Listen() {
 	_, _, err := net.SplitHostPort(server.address)
 	if err != nil {
-		server.log.Error("invalid listen address, aborting", zap.String("address", server.address), zap.Error(err))
+		server.log.Error("invalid listen address", zap.String("server.address", server.address), zap.Error(err))
 		return
 	}
 	ln, err := net.Listen("tcp", server.address)
 	if err != nil {
-		server.log.Error("could not create listener, aborting", zap.String("address", server.address), zap.Error(err))
+		server.log.Error("could not create listener", zap.String("server.address", server.address), zap.Error(err))
 		return
 	}
 	for {
@@ -102,8 +101,10 @@ func (server *Server) Listen() {
 			continue
 		}
 		address := conn.RemoteAddr().String()
-		if server.full() {
-			server.log.Info("node full, dropping connection", zap.String("address", address))
+		select {
+		case <-server.addresses:
+		default:
+			server.log.Info("no available connection slots", zap.String("address", address))
 			conn.Close()
 			continue
 		}
@@ -113,37 +114,30 @@ func (server *Server) Listen() {
 		if err != nil {
 			server.log.Error("could not read syn packet", zap.Error(err))
 			conn.Close()
-			server.book.Failed(address)
+			server.events <- Event{Address: address, Type: EventFailed}
 			continue
 		}
 		network := syn[:len(server.network)]
 		if !bytes.Equal(network, server.network) {
 			server.log.Warn("dropping invalid network peer", zap.String("address", address), zap.ByteString("network", network))
 			conn.Close()
-			server.book.Blacklist(address)
+			server.events <- Event{Address: address, Type: EventInvalid}
 			continue
 		}
 		nonce := syn[len(server.network):]
 		if bytes.Equal(nonce, server.nonce) {
 			server.log.Warn("dropping connection to self", zap.String("address", address))
 			conn.Close()
-			server.book.Blacklist(address)
+			server.events <- Event{Address: address, Type: EventInvalid}
 			continue
 		}
 		_, err = conn.Write(ack)
 		if err != nil {
 			server.log.Error("could not write ack packet", zap.Error(err))
 			conn.Close()
-			server.book.Failed(address)
+			server.events <- Event{Address: address, Type: EventFailed}
 			continue
 		}
-		select {
-		case server.connections <- conn:
-			server.log.Info("submitted new incoming connection", zap.String("address", address))
-		case <-time.After(time.Second):
-			server.log.Error("incoming connection submission timed out", zap.String("address", address))
-			conn.Close()
-			continue
-		}
+		server.connections <- conn
 	}
 }

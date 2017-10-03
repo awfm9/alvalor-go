@@ -39,8 +39,8 @@ type Book interface {
 
 // DefaultBook defines the book used by default for the initialization of a network node.
 var DefaultBook = &SimpleBook{
-	blacklist:  make(map[string]struct{}),
-	entries:    make(map[string]*Entry),
+	blacklist: make(map[string]struct{}),
+	entries:   make(map[string]*Entry),
 }
 
 // Entry represents an entry in the simple address book, containing the address, whether the peer is
@@ -74,36 +74,36 @@ var (
 // an explicit blacklist, a registry of peers and defines a sample size of how many addresses to
 // return on its random sample. It uses a mutex to be thread-safe.
 type SimpleBook struct {
-	mutex      sync.Mutex
-	blacklist  map[string]struct{}
-	entries    map[string]*Entry
+	mutex     sync.Mutex
+	blacklist map[string]struct{}
+	entries   map[string]*Entry
 }
 
 // NewSimpleBook creates a new default initialized instance of a simple address book.
 func NewSimpleBook() *SimpleBook {
 	return &SimpleBook{
-		blacklist:  make(map[string]struct{}),
-		entries:    make(map[string]*Entry),
+		blacklist: make(map[string]struct{}),
+		entries:   make(map[string]*Entry),
 	}
 }
 
 // IsActive represents filter to select active/inactive entries in Sample method
 func IsActive(active bool) func(e *Entry) bool {
 	return func(e *Entry) bool {
-        return e.active == active
+		return e.active == active
 	}
 }
 
 // Any reperesents filter to select any entries in Sample method
 func Any() func(e *Entry) bool {
 	return func(e *Entry) bool {
-        return true
+		return true
 	}
 }
 
 // ByPrioritySort represents an order by priority which is calculated based on score. It can be used to sort entries in Sample method
 func ByPrioritySort() func([]*Entry) []*Entry {
-	return func (entries []*Entry) []*Entry {
+	return func(entries []*Entry) []*Entry {
 		sort.Sort(byPriority(entries))
 		return entries
 	}
@@ -111,7 +111,7 @@ func ByPrioritySort() func([]*Entry) []*Entry {
 
 // RandomSort represents a random order. It can be used to sort entries in Sample method
 func RandomSort() func([]*Entry) []*Entry {
-	return func (entries []*Entry) []*Entry {
+	return func(entries []*Entry) []*Entry {
 		for i := 0; i < len(entries); i++ {
 			j := rand.Intn(i + 1)
 			entries[i], entries[j] = entries[j], entries[i]
@@ -219,7 +219,7 @@ func (s *SimpleBook) Sample(count int, filter func(*Entry) bool, sort func([]*En
 	entries = sort(entries)
 
 	if len(entries) > count {
-	    entries = entries[:count]
+		entries = entries[:count]
 	}
 
 	addrs := make([]string, 0, count)

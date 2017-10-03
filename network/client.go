@@ -20,7 +20,6 @@ package network
 import (
 	"bytes"
 	"net"
-	"time"
 
 	uuid "github.com/satori/go.uuid"
 
@@ -31,19 +30,19 @@ import (
 // connections and forwards valid connections.
 type Client struct {
 	log         *zap.Logger
-	book        Book
-	full        func() bool
+	addresses   <-chan string
+	events      chan<- Event
 	connections chan<- net.Conn
 	network     []byte
 	nonce       []byte
 }
 
 // NewClient creates a new client who manages outgoing network connections.
-func NewClient(log *zap.Logger, book Book, full func() bool, connections chan<- net.Conn, options ...func(*Client)) *Client {
+func NewClient(log *zap.Logger, addresses <-chan string, events chan<- Event, connections chan<- net.Conn, options ...func(*Client)) *Client {
 	client := &Client{
 		log:         log,
-		book:        book,
-		full:        full,
+		addresses:   addresses,
+		events:      events,
 		connections: connections,
 		network:     []byte{0, 0, 0, 0},
 		nonce:       uuid.UUID{}.Bytes(),
@@ -73,30 +72,17 @@ func SetClientNonce(nonce []byte) func(*Client) {
 // add will try to initialize a new outgoing connection and hand over to the outgoing handshake
 // function on success.
 func (client *Client) dial() {
-	for {
-		if client.full() {
-			client.log.Info("node full, not initializing connection")
-			time.Sleep(time.Second)
-			continue
-		}
-		addresses, err := client.book.Sample(1, IsActive(false), ByPrioritySort())
+	for address := range client.addresses {
+		_, _, err := net.SplitHostPort(address)
 		if err != nil {
-			client.log.Error("could not get address from book", zap.Error(err))
-			time.Sleep(time.Second)
-			continue
-		}
-		address := addresses[0]
-		_, _, err = net.SplitHostPort(address)
-		if err != nil {
-			client.log.Error("invalid outgoing address, aborting", zap.String("address", address), zap.Error(err))
-			client.book.Blacklist(address)
-			time.Sleep(time.Second)
+			client.log.Error("invalid outgoing address", zap.String("address", address), zap.Error(err))
+			client.events <- Event{Address: address, Type: EventInvalid}
 			continue
 		}
 		conn, err := net.Dial("tcp", address)
 		if err != nil {
-			client.log.Error("could not dial peer", zap.String("address", address), zap.Error(err))
-			client.book.Failed(address)
+			client.log.Error("could not dial address", zap.String("address", address), zap.Error(err))
+			client.events <- Event{Address: address, Type: EventFailed}
 			continue
 		}
 		syn := append(client.network, client.nonce...)
@@ -104,7 +90,7 @@ func (client *Client) dial() {
 		if err != nil {
 			client.log.Error("could not write syn packet", zap.String("address", address), zap.Error(err))
 			conn.Close()
-			client.book.Failed(address)
+			client.events <- Event{Address: address, Type: EventFailed}
 			continue
 		}
 		ack := make([]byte, len(syn))
@@ -112,31 +98,23 @@ func (client *Client) dial() {
 		if err != nil {
 			client.log.Error("could not read ack packet", zap.String("address", address), zap.Error(err))
 			conn.Close()
-			client.book.Failed(address)
+			client.events <- Event{Address: address, Type: EventFailed}
 			continue
 		}
 		network := syn[:len(client.network)]
 		if !bytes.Equal(network, client.network) {
 			client.log.Warn("dropping invalid network peer", zap.String("address", address), zap.ByteString("network", network))
 			conn.Close()
-			client.book.Blacklist(address)
+			client.events <- Event{Address: address, Type: EventInvalid}
 			continue
 		}
 		nonce := syn[len(client.network):]
 		if bytes.Equal(nonce, client.nonce) {
 			client.log.Warn("dropping connection to self", zap.String("address", address))
 			conn.Close()
-			client.book.Blacklist(address)
+			client.events <- Event{Address: address, Type: EventInvalid}
 			continue
 		}
-		select {
-		case client.connections <- conn:
-			client.log.Info("submitted new outgoing connection", zap.String("address", address))
-			client.book.Connected(address)
-		case <-time.After(time.Second):
-			client.log.Error("outgoing connection submission timed out", zap.String("address", address))
-			conn.Close()
-			continue
-		}
+		client.connections <- conn
 	}
 }
