@@ -17,18 +17,33 @@
 
 package network
 
-// Message represents a message event bubbled up to the node subscriber.
+// Failure represents a connection failure event on a given address.
+type Failure struct {
+	Address string
+}
+
+// Invalid represents an invalid peer on a given address.
+type Invalid struct {
+	Address string
+}
+
+// Error represens a messaging error on a given address.
+type Error struct {
+	Address string
+}
+
+// Message represents a message event on a given address.
 type Message struct {
 	Address string
 	Value   interface{}
 }
 
-// Connected represents a connection event bubbled up to the node subscriber.
+// Connected represents a connection event on a given address.
 type Connected struct {
 	Address string
 }
 
-// Disconnected represents a disconnection event bubbled up to the node subscriber.
+// Disconnected represents a disconnection event on a given address.
 type Disconnected struct {
 	Address string
 }

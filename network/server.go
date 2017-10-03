@@ -31,7 +31,7 @@ import (
 type Server struct {
 	log         *zap.Logger
 	addresses   <-chan string
-	events      chan<- Event
+	events      chan<- interface{}
 	connections chan<- net.Conn
 	address     string
 	network     []byte
@@ -41,7 +41,7 @@ type Server struct {
 // NewServer will create a new server to listen for incoming peers and handling
 // the handshake up to having a valid network connection for the given Alvalor
 // network.
-func NewServer(log *zap.Logger, addresses <-chan string, events chan<- Event, connections chan<- net.Conn, options ...func(*Server)) *Server {
+func NewServer(log *zap.Logger, addresses <-chan string, events chan<- interface{}, connections chan<- net.Conn, options ...func(*Server)) *Server {
 	server := &Server{
 		log:         log,
 		addresses:   addresses,
@@ -114,28 +114,28 @@ func (server *Server) Listen() {
 		if err != nil {
 			server.log.Error("could not read syn packet", zap.Error(err))
 			conn.Close()
-			server.events <- Event{Address: address, Type: EventFailed}
+			server.events <- Failure{Address: address}
 			continue
 		}
 		network := syn[:len(server.network)]
 		if !bytes.Equal(network, server.network) {
 			server.log.Warn("dropping invalid network peer", zap.String("address", address), zap.ByteString("network", network))
 			conn.Close()
-			server.events <- Event{Address: address, Type: EventInvalid}
+			server.events <- Invalid{Address: address}
 			continue
 		}
 		nonce := syn[len(server.network):]
 		if bytes.Equal(nonce, server.nonce) {
 			server.log.Warn("dropping connection to self", zap.String("address", address))
 			conn.Close()
-			server.events <- Event{Address: address, Type: EventInvalid}
+			server.events <- Invalid{Address: address}
 			continue
 		}
 		_, err = conn.Write(ack)
 		if err != nil {
 			server.log.Error("could not write ack packet", zap.Error(err))
 			conn.Close()
-			server.events <- Event{Address: address, Type: EventFailed}
+			server.events <- Failure{Address: address}
 			continue
 		}
 		server.connections <- conn

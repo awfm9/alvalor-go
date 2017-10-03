@@ -31,14 +31,14 @@ import (
 type Client struct {
 	log         *zap.Logger
 	addresses   <-chan string
-	events      chan<- Event
+	events      chan<- interface{}
 	connections chan<- net.Conn
 	network     []byte
 	nonce       []byte
 }
 
 // NewClient creates a new client who manages outgoing network connections.
-func NewClient(log *zap.Logger, addresses <-chan string, events chan<- Event, connections chan<- net.Conn, options ...func(*Client)) *Client {
+func NewClient(log *zap.Logger, addresses <-chan string, events chan<- interface{}, connections chan<- net.Conn, options ...func(*Client)) *Client {
 	client := &Client{
 		log:         log,
 		addresses:   addresses,
@@ -76,13 +76,13 @@ func (client *Client) dial() {
 		_, _, err := net.SplitHostPort(address)
 		if err != nil {
 			client.log.Error("invalid outgoing address", zap.String("address", address), zap.Error(err))
-			client.events <- Event{Address: address, Type: EventInvalid}
+			client.events <- Invalid{Address: address}
 			continue
 		}
 		conn, err := net.Dial("tcp", address)
 		if err != nil {
 			client.log.Error("could not dial address", zap.String("address", address), zap.Error(err))
-			client.events <- Event{Address: address, Type: EventFailed}
+			client.events <- Failure{Address: address}
 			continue
 		}
 		syn := append(client.network, client.nonce...)
@@ -90,7 +90,7 @@ func (client *Client) dial() {
 		if err != nil {
 			client.log.Error("could not write syn packet", zap.String("address", address), zap.Error(err))
 			conn.Close()
-			client.events <- Event{Address: address, Type: EventFailed}
+			client.events <- Failure{Address: address}
 			continue
 		}
 		ack := make([]byte, len(syn))
@@ -98,21 +98,21 @@ func (client *Client) dial() {
 		if err != nil {
 			client.log.Error("could not read ack packet", zap.String("address", address), zap.Error(err))
 			conn.Close()
-			client.events <- Event{Address: address, Type: EventFailed}
+			client.events <- Failure{Address: address}
 			continue
 		}
 		network := syn[:len(client.network)]
 		if !bytes.Equal(network, client.network) {
 			client.log.Warn("dropping invalid network peer", zap.String("address", address), zap.ByteString("network", network))
 			conn.Close()
-			client.events <- Event{Address: address, Type: EventInvalid}
+			client.events <- Invalid{Address: address}
 			continue
 		}
 		nonce := syn[len(client.network):]
 		if bytes.Equal(nonce, client.nonce) {
 			client.log.Warn("dropping connection to self", zap.String("address", address))
 			conn.Close()
-			client.events <- Event{Address: address, Type: EventInvalid}
+			client.events <- Invalid{Address: address}
 			continue
 		}
 		client.connections <- conn
