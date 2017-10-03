@@ -18,129 +18,102 @@
 package network
 
 import (
-    "testing"
-    "time"
-    "go.uber.org/zap"
-    "io"
-    "github.com/stretchr/testify/assert"
+	"io"
+	"testing"
+	"time"
+
+	"github.com/stretchr/testify/assert"
+	"go.uber.org/zap"
 )
 
-func TestSetAddress(t *testing.T) {
-    config := Config{}
-    addr := "192.168.4.62"
-    
-    setFunc := SetAddress("192.168.4.62")
-    setFunc(&config)
-
-    assert.Equal(t, addr, config.address)
-}
-
 func TestSetBalance(t *testing.T) {
-    config := Config{}
-    balance := 5 * time.Second
-    
-    SetBalance(balance)(&config)
+	config := Config{}
+	balance := 5 * time.Second
 
-    assert.Equal(t, balance, config.balance)
+	SetBalance(balance)(&config)
+
+	assert.Equal(t, balance, config.balance)
 }
 
 func TestSetBook(t *testing.T) {
-    config := Config{}
-    book := NewSimpleBook()
-    
-    SetBook(book)(&config)
+	config := Config{}
+	book := NewSimpleBook()
 
-    assert.Equal(t, book, config.book)
+	SetBook(book)(&config)
+
+	assert.Equal(t, book, config.book)
 }
 
 func TestSetCodec(t *testing.T) {
-    config := Config{}
-    codec := DummyCodec{}
-    
-    SetCodec(codec)(&config)
+	config := Config{}
+	codec := DummyCodec{}
 
-    assert.Equal(t, codec, config.codec)
+	SetCodec(codec)(&config)
+
+	assert.Equal(t, codec, config.codec)
 }
 
 func TestSetDiscovery(t *testing.T) {
-    config := Config{}
-    discovery := 5 * time.Second
-    
-    SetDiscovery(discovery)(&config)
+	config := Config{}
+	discovery := 5 * time.Second
 
-    assert.Equal(t, discovery, config.discovery)
+	SetDiscovery(discovery)(&config)
+
+	assert.Equal(t, discovery, config.discovery)
 }
 
 func TestSetHeartbeat(t *testing.T) {
-    config := Config{}
-    heartbeat := 5 * time.Second
-    
-    SetHeartbeat(heartbeat)(&config)
+	config := Config{}
+	heartbeat := 5 * time.Second
 
-    assert.Equal(t, heartbeat, config.heartbeat)
+	SetHeartbeat(heartbeat)(&config)
+
+	assert.Equal(t, heartbeat, config.heartbeat)
 }
 
 func TestSetLog(t *testing.T) {
-    config := Config{}
-    log, _ := zap.NewDevelopment()
-    
-    SetLog(log)(&config)
+	config := Config{}
+	log, _ := zap.NewDevelopment()
 
-    assert.Equal(t, log, config.log)
+	SetLog(log)(&config)
+
+	assert.Equal(t, log, config.log)
 }
 
 func TestSetMaxPeers(t *testing.T) {
-    config := Config{}
-    maxPeers := uint(15)
-    
-    SetMaxPeers(maxPeers)(&config)
+	config := Config{}
+	maxPeers := uint(15)
 
-    assert.Equal(t, maxPeers, config.maxPeers)
+	SetMaxPeers(maxPeers)(&config)
+
+	assert.Equal(t, maxPeers, config.maxPeers)
 }
 
 func TestSetMinPeers(t *testing.T) {
-    config := Config{}
-    minPeers := uint(5)
-    
-    SetMinPeers(minPeers)(&config)
+	config := Config{}
+	minPeers := uint(5)
 
-    assert.Equal(t, minPeers, config.minPeers)
-}
+	SetMinPeers(minPeers)(&config)
 
-func TestSetNetwork(t *testing.T) {
-    config := Config{}
-    network := []byte{5, 10}
-    
-    SetNetwork(network)(&config)
-
-    assert.EqualValues(t, network, config.network)
-}
-
-func TestSetServer(t *testing.T) {
-    config := Config{}
-    server := true
-    
-    SetServer(server)(&config)
-
-    assert.Equal(t, server, config.server)
+	assert.Equal(t, minPeers, config.minPeers)
 }
 
 func TestSetSubscriber(t *testing.T) {
-    config := Config{}
-    subscriber := make(chan interface{})
-    
-    SetSubscriber(subscriber)(&config)
+	config := Config{}
+	subscriber := make(chan interface{})
 
-    assert.ObjectsAreEqual(subscriber, config.subscriber)
+	SetSubscriber(subscriber)(&config)
+
+	assert.ObjectsAreEqual(subscriber, config.subscriber)
 }
 
 func TestSetTimeout(t *testing.T) {
-    config := Config{}
-    timeout := 5 * time.Second
-    
-    SetTimeout(timeout)(&config)
+	config := Config{}
+	timeout := 5 * time.Second
 
-    assert.Equal(t, timeout, config.timeout)
+	SetTimeout(timeout)(&config)
+
+	assert.Equal(t, timeout, config.timeout)
 }
 
 type DummyCodec struct{}

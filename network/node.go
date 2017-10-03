@@ -82,27 +82,7 @@ func NewNode(options ...func(*Config)) *Node {
 		peers:      &registry{peers: make(map[string]*peer)},
 	}
 
-	peerFactory := &PeerFactory{
-		codec:     cfg.codec,
-		heartbeat: cfg.heartbeat,
-		timeout:   cfg.timeout,
-	}
-
-	outgoing := &Outgoing{
-		balance:           cfg.balance,
-		network:           cfg.network,
-		nonce:             nonce,
-		log:               cfg.log,
-		peerFactory:       peerFactory,
-		nextAddrToConnect: func() string { return node.nextAddrToConnect() },
-		onConnecting:      func() { node.onConnecting() },
-		acceptConnection:  func(nonce []byte) bool { return !node.known(nonce) },
-		onError:           func(conn net.Conn) { node.drop(conn) },
-	}
-
 	node.book.Blacklist(cfg.address)
-	go outgoing.connect()
-	go node.manage()
 	return node
 }
 
@@ -127,9 +107,9 @@ func (node *Node) nextAddrToConnect() string {
 	return addr
 }
 
-func (node *Node) onOutgoingConnected(p peer) {
+func (node *Node) onOutgoingConnected(p *peer) {
 
-	node.peers.add(p.addr, &p)
+	node.peers.add(p.addr, p)
 	node.book.Connected(p.addr)
 	go p.receive()
 	e := Connected{
@@ -138,9 +118,9 @@ func (node *Node) onOutgoingConnected(p peer) {
 	node.event(&e)
 }
 
-func (node *Node) onIncomingConnected(p peer) {
+func (node *Node) onIncomingConnected(p *peer) {
 
-	node.peers.add(p.addr, &p)
+	node.peers.add(p.addr, p)
 	node.book.Connected(p.addr)
 	go p.receive()
 	err := node.share(p.addr, []string{node.address})

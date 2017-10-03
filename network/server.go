@@ -31,6 +31,7 @@ import (
 // peer of our configured Alvalor network.
 type Server struct {
 	log         *zap.Logger
+	book        Book
 	full        func() bool
 	connections chan<- net.Conn
 	address     string
@@ -41,9 +42,10 @@ type Server struct {
 // NewServer will create a new server to listen for incoming peers and handling
 // the handshake up to having a valid network connection for the given Alvalor
 // network.
-func NewServer(log *zap.Logger, full func() bool, connections chan<- net.Conn, options ...func(*Server)) *Server {
+func NewServer(log *zap.Logger, book Book, full func() bool, connections chan<- net.Conn, options ...func(*Server)) *Server {
 	server := &Server{
 		log:         log,
+		book:        book,
 		full:        full,
 		connections: connections,
 		address:     "",
@@ -111,24 +113,28 @@ func (server *Server) Listen() {
 		if err != nil {
 			server.log.Error("could not read syn packet", zap.Error(err))
 			conn.Close()
+			server.book.Failed(address)
 			continue
 		}
 		network := syn[:len(server.network)]
 		if !bytes.Equal(network, server.network) {
 			server.log.Warn("dropping invalid network peer", zap.String("address", address), zap.ByteString("network", network))
 			conn.Close()
+			server.book.Blacklist(address)
 			continue
 		}
 		nonce := syn[len(server.network):]
 		if bytes.Equal(nonce, server.nonce) {
 			server.log.Warn("dropping connection to self", zap.String("address", address))
 			conn.Close()
+			server.book.Blacklist(address)
 			continue
 		}
 		_, err = conn.Write(ack)
 		if err != nil {
 			server.log.Error("could not write ack packet", zap.Error(err))
 			conn.Close()
+			server.book.Failed(address)
 			continue
 		}
 		select {

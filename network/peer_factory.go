@@ -24,19 +24,20 @@ import (
 	"github.com/pierrec/lz4"
 )
 
+// PeerFactory struct.
 type PeerFactory struct {
 	codec     Codec
 	heartbeat time.Duration
 	timeout   time.Duration
 }
 
-func (factory *PeerFactory) create(conn net.Conn, nonce []byte) peer {
+func (factory *PeerFactory) create(conn net.Conn, nonce []byte) *peer {
 	addr := conn.RemoteAddr().String()
 	r := lz4.NewReader(conn)
 	w := lz4.NewWriter(conn)
 	outgoing := make(chan interface{}, 16)
 	incoming := make(chan interface{}, 16)
-	p := peer{
+	p := &peer{
 		conn:      conn,
 		addr:      addr,
 		nonce:     nonce,
