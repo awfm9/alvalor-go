@@ -88,18 +88,6 @@ func NewNode(options ...func(*Config)) *Node {
 		timeout:   cfg.timeout,
 	}
 
-	incoming := &Incoming{
-		address:          cfg.address,
-		network:          cfg.network,
-		nonce:            nonce,
-		peerFactory:      peerFactory,
-		log:              cfg.log,
-		acceptConnection: func(nonce []byte) bool { return node.peers.count() > int(node.maxPeers) && !node.known(nonce) },
-		onConnecting:     func() { node.onConnecting() },
-		onConnected:      func(p peer) { node.onIncomingConnected(p) },
-		onError:          func(conn net.Conn) { node.drop(conn) },
-	}
-
 	outgoing := &Outgoing{
 		balance:           cfg.balance,
 		network:           cfg.network,
@@ -109,14 +97,10 @@ func NewNode(options ...func(*Config)) *Node {
 		nextAddrToConnect: func() string { return node.nextAddrToConnect() },
 		onConnecting:      func() { node.onConnecting() },
 		acceptConnection:  func(nonce []byte) bool { return !node.known(nonce) },
-		onConnected:       func(p peer) { node.onOutgoingConnected(p) },
 		onError:           func(conn net.Conn) { node.drop(conn) },
 	}
 
 	node.book.Blacklist(cfg.address)
-	if cfg.server {
-		go incoming.listen()
-	}
 	go outgoing.connect()
 	go node.manage()
 	return node

@@ -93,30 +93,6 @@ func SetSubscriber(sub chan<- interface{}) func(*Config) {
 	}
 }
 
-// SetNetwork allow us to define the unique identifier of our network (for example test network
-// versus production network).
-func SetNetwork(net []byte) func(*Config) {
-	return func(cfg *Config) {
-		cfg.network = net
-	}
-}
-
-// SetServer is a configuration function that lets us enable listening for incoming connections as
-// a server. Otherwise, we will just establish outgoing connections.
-func SetServer(server bool) func(*Config) {
-	return func(cfg *Config) {
-		cfg.server = server
-	}
-}
-
-// SetAddress is a configuration function that lets us set the address that we want to listen on for
-// incoming connections.
-func SetAddress(address string) func(*Config) {
-	return func(cfg *Config) {
-		cfg.address = address
-	}
-}
-
 // SetMinPeers allows us to set the minimum number of peers we want to be connected to. If the node
 // falls below this threshold, it will try to create more outgoing connections.
 func SetMinPeers(minPeers uint) func(*Config) {
