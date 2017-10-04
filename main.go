@@ -19,19 +19,56 @@ package main
 
 import (
 	"os"
+	"os/signal"
+	"sync"
 
 	"github.com/alvalor/alvalor-go/network"
 	"go.uber.org/zap"
 )
 
 func main() {
+
+	// catch signals
+	c := make(chan os.Signal)
+	signal.Notify(c, os.Interrupt)
+
+	// initialize the structured & highly efficient zap logger
+	// NOTE: it's super hard to abstract a typed structured logger into an
+	// interface, so we just inject the concrete type everywhere
 	log, err := zap.NewProduction()
 	if err != nil {
 		os.Exit(1)
 	}
+
+	// initialize the channels we use to plug the network modules together
 	events := make(chan interface{})
+	addresses := make(chan string, 16)
 	subscriber := make(chan interface{})
+
+	// initialize waitgroup for the network modules
+	wg := &sync.WaitGroup{}
+	wg.Add(3)
+
+	// initialize the network modules
 	book := &network.SimpleBook{}
-	mgr := network.NewManager(log, book, events, subscriber)
-	mgr.Process()
+	network.NewManager(log, wg, book, events, addresses, subscriber)
+	network.NewClient(log, wg, addresses, events)
+	network.NewServer(log, wg, addresses, events)
+
+	// initialize drivers
+	bal := network.NewBalancer(events)
+
+	// launch the drivers
+	go bal.Start()
+
+	// TODO: stopping logic
+	<-c
+
+	// stop the drivers
+	bal.Close()
+
+	// shut down the network modules
+	// NOTE: closing the event channel should cascade through all modules
+	close(events)
+	wg.Wait()
 }

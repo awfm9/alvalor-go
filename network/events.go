@@ -19,6 +19,12 @@ package network
 
 import "net"
 
+// Balance represents a request to add or remove peers.
+type Balance struct {
+	Min int
+	Max int
+}
+
 // Failure represents a connection failure event on a given address.
 type Failure struct {
 	Address string

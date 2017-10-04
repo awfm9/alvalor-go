@@ -20,6 +20,7 @@ package network
 import (
 	"bytes"
 	"net"
+	"sync"
 
 	uuid "github.com/satori/go.uuid"
 	"go.uber.org/zap"
@@ -30,6 +31,7 @@ import (
 // peer of our configured Alvalor network.
 type Server struct {
 	log       *zap.Logger
+	wg        *sync.WaitGroup
 	addresses <-chan string
 	events    chan<- interface{}
 	address   string
@@ -40,9 +42,10 @@ type Server struct {
 // NewServer will create a new server to listen for incoming peers and handling
 // the handshake up to having a valid network connection for the given Alvalor
 // network.
-func NewServer(log *zap.Logger, addresses <-chan string, events chan<- interface{}, options ...func(*Server)) *Server {
+func NewServer(log *zap.Logger, wg *sync.WaitGroup, addresses <-chan string, events chan<- interface{}, options ...func(*Server)) *Server {
 	server := &Server{
 		log:       log,
+		wg:        wg,
 		addresses: addresses,
 		events:    events,
 		address:   "",
@@ -52,6 +55,7 @@ func NewServer(log *zap.Logger, addresses <-chan string, events chan<- interface
 	for _, option := range options {
 		option(server)
 	}
+	go server.listen()
 	return server
 }
 
@@ -81,7 +85,7 @@ func SetServerNonce(nonce []byte) func(*Server) {
 
 // Listen will start a listener on the configured network address and do the
 // welcome handshake, forwarding valid peer connections.
-func (server *Server) Listen() {
+func (server *Server) listen() {
 	_, _, err := net.SplitHostPort(server.address)
 	if err != nil {
 		server.log.Error("invalid listen address", zap.String("server.address", server.address), zap.Error(err))
@@ -92,11 +96,12 @@ func (server *Server) Listen() {
 		server.log.Error("could not create listener", zap.String("server.address", server.address), zap.Error(err))
 		return
 	}
+	// TODO: find clean way to break loop when addresses channel is closed
 	for {
 		conn, err := ln.Accept()
 		if err != nil {
 			server.log.Error("could not accept connection", zap.Error(err))
-			continue
+			break
 		}
 		address := conn.RemoteAddr().String()
 		select {
@@ -138,4 +143,5 @@ func (server *Server) Listen() {
 		}
 		server.events <- Connection{Address: address, Conn: conn, Nonce: nonce}
 	}
+	server.wg.Done()
 }

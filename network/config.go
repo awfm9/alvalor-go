@@ -93,23 +93,6 @@ func SetSubscriber(sub chan<- interface{}) func(*Config) {
 	}
 }
 
-// SetMinPeers allows us to set the minimum number of peers we want to be connected to. If the node
-// falls below this threshold, it will try to create more outgoing connections.
-func SetMinPeers(minPeers uint) func(*Config) {
-	return func(cfg *Config) {
-		cfg.minPeers = minPeers
-	}
-}
-
-// SetMaxPeers allows us to define the maximum number of peers we want to be connected to. If the
-// node goes beyond this threshold, it will start dropping connections. Once this number is reached,
-// we do not accept incoming connections anymore.
-func SetMaxPeers(maxPeers uint) func(*Config) {
-	return func(cfg *Config) {
-		cfg.maxPeers = maxPeers
-	}
-}
-
 // SetBalance allows us to set the frequency at which we will check whether we are above or below
 // the defined peer thresholds.
 func SetBalance(balance time.Duration) func(*Config) {

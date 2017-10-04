@@ -19,6 +19,7 @@ package network
 
 import (
 	"fmt"
+	"sync"
 
 	"go.uber.org/zap"
 )
@@ -27,27 +28,45 @@ import (
 // want depending on the events.
 type Manager struct {
 	log        *zap.Logger
+	wg         *sync.WaitGroup
 	book       Book
 	node       Node
 	reg        Registry
 	events     <-chan interface{}
+	addresses  chan<- string
 	subscriber chan<- interface{}
+	minPeers   uint
+	maxPeers   uint
 }
 
 // NewManager creates a new manager of network events.
-func NewManager(log *zap.Logger, book Book, events <-chan interface{}, subscriber chan<- interface{}) *Manager {
+func NewManager(log *zap.Logger, wg *sync.WaitGroup, book Book, events <-chan interface{}, addresses chan<- string, subscriber chan<- interface{}, options ...func(*Manager)) *Manager {
 	mgr := &Manager{
 		log:    log,
+		wg:     wg,
 		book:   book,
 		events: events,
 	}
+	for _, option := range options {
+		option(mgr)
+	}
+	go mgr.process()
 	return mgr
 }
 
-// Process will launch the processing of the processor.
-func (mgr *Manager) Process() {
+// process will launch the processing of the processor.
+func (mgr *Manager) process() {
 	for event := range mgr.events {
 		switch e := event.(type) {
+		case Balance:
+			add := e.Max - mgr.reg.count()
+			addresses, err := mgr.book.Sample(add, IsActive(false), ByPrioritySort())
+			if err != nil {
+				mgr.log.Info("not enough addresses in book", zap.Error(err))
+			}
+			for _, address := range addresses {
+				mgr.addresses <- address
+			}
 		case Disconnection:
 			mgr.book.Disconnected(e.Address)
 			mgr.reg.remove(e.Address)
@@ -66,4 +85,7 @@ func (mgr *Manager) Process() {
 			mgr.log.Error("invalid network event", zap.String("type", fmt.Sprintf("%T", e)))
 		}
 	}
+	close(mgr.addresses)
+	close(mgr.subscriber)
+	mgr.wg.Done()
 }

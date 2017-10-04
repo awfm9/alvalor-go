@@ -80,24 +80,6 @@ func TestSetLog(t *testing.T) {
 	assert.Equal(t, log, config.log)
 }
 
-func TestSetMaxPeers(t *testing.T) {
-	config := Config{}
-	maxPeers := uint(15)
-
-	SetMaxPeers(maxPeers)(&config)
-
-	assert.Equal(t, maxPeers, config.maxPeers)
-}
-
-func TestSetMinPeers(t *testing.T) {
-	config := Config{}
-	minPeers := uint(5)
-
-	SetMinPeers(minPeers)(&config)
-
-	assert.Equal(t, minPeers, config.minPeers)
-}
-
 func TestSetSubscriber(t *testing.T) {
 	config := Config{}
 	subscriber := make(chan interface{})

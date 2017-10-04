@@ -107,10 +107,6 @@ func (node *Node) nextAddrToConnect() string {
 	return addr
 }
 
-func (node *Node) onConnecting() {
-	atomic.AddInt32(&node.count, 1)
-}
-
 // manage will build a list of two incoming channels per peer: one for the heartbeating and one for
 // incoming messages. It will then keep receiving these messages and processing them accordingly,
 // unless a channel is closed and we need to remove a peer from the list of cases.

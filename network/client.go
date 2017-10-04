@@ -20,6 +20,7 @@ package network
 import (
 	"bytes"
 	"net"
+	"sync"
 
 	uuid "github.com/satori/go.uuid"
 
@@ -30,6 +31,7 @@ import (
 // connections and forwards valid connections.
 type Client struct {
 	log       *zap.Logger
+	wg        *sync.WaitGroup
 	addresses <-chan string
 	events    chan<- interface{}
 	network   []byte
@@ -37,9 +39,10 @@ type Client struct {
 }
 
 // NewClient creates a new client who manages outgoing network connections.
-func NewClient(log *zap.Logger, addresses <-chan string, events chan<- interface{}, options ...func(*Client)) *Client {
+func NewClient(log *zap.Logger, wg *sync.WaitGroup, addresses <-chan string, events chan<- interface{}, options ...func(*Client)) *Client {
 	client := &Client{
 		log:       log,
+		wg:        wg,
 		addresses: addresses,
 		events:    events,
 		network:   []byte{0, 0, 0, 0},
@@ -48,6 +51,7 @@ func NewClient(log *zap.Logger, addresses <-chan string, events chan<- interface
 	for _, option := range options {
 		option(client)
 	}
+	go client.dial()
 	return client
 }
 
@@ -67,7 +71,7 @@ func SetClientNonce(nonce []byte) func(*Client) {
 	}
 }
 
-// add will try to initialize a new outgoing connection and hand over to the outgoing handshake
+// dial will try to initialize a new outgoing connection and hand over to the outgoing handshake
 // function on success.
 func (client *Client) dial() {
 	for address := range client.addresses {
@@ -115,4 +119,5 @@ func (client *Client) dial() {
 		}
 		client.events <- Connection{Address: address, Conn: conn, Nonce: nonce}
 	}
+	client.wg.Done()
 }
