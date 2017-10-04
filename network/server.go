@@ -29,27 +29,25 @@ import (
 // and performing the initial handshake to make sure we are dealing with a valid
 // peer of our configured Alvalor network.
 type Server struct {
-	log         *zap.Logger
-	addresses   <-chan string
-	events      chan<- interface{}
-	connections chan<- net.Conn
-	address     string
-	network     []byte
-	nonce       []byte
+	log       *zap.Logger
+	addresses <-chan string
+	events    chan<- interface{}
+	address   string
+	network   []byte
+	nonce     []byte
 }
 
 // NewServer will create a new server to listen for incoming peers and handling
 // the handshake up to having a valid network connection for the given Alvalor
 // network.
-func NewServer(log *zap.Logger, addresses <-chan string, events chan<- interface{}, connections chan<- net.Conn, options ...func(*Server)) *Server {
+func NewServer(log *zap.Logger, addresses <-chan string, events chan<- interface{}, options ...func(*Server)) *Server {
 	server := &Server{
-		log:         log,
-		addresses:   addresses,
-		events:      events,
-		connections: connections,
-		address:     "",
-		network:     []byte{0, 0, 0, 0},
-		nonce:       uuid.UUID{}.Bytes(),
+		log:       log,
+		addresses: addresses,
+		events:    events,
+		address:   "",
+		network:   []byte{0, 0, 0, 0},
+		nonce:     uuid.UUID{}.Bytes(),
 	}
 	for _, option := range options {
 		option(server)
@@ -138,6 +136,6 @@ func (server *Server) Listen() {
 			server.events <- Failure{Address: address}
 			continue
 		}
-		server.connections <- conn
+		server.events <- Connection{Address: address, Conn: conn, Nonce: nonce}
 	}
 }

@@ -17,6 +17,8 @@
 
 package network
 
+import "net"
+
 // Failure represents a connection failure event on a given address.
 type Failure struct {
 	Address string
@@ -41,6 +43,8 @@ type Message struct {
 // Connection represents a connection event on a given address.
 type Connection struct {
 	Address string
+	Conn    net.Conn
+	Nonce   []byte
 }
 
 // Disconnection represents a disconnection event on a given address.

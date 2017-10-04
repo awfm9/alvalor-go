@@ -29,23 +29,21 @@ import (
 // Client represents our local network client who reaches out to create new peer
 // connections and forwards valid connections.
 type Client struct {
-	log         *zap.Logger
-	addresses   <-chan string
-	events      chan<- interface{}
-	connections chan<- net.Conn
-	network     []byte
-	nonce       []byte
+	log       *zap.Logger
+	addresses <-chan string
+	events    chan<- interface{}
+	network   []byte
+	nonce     []byte
 }
 
 // NewClient creates a new client who manages outgoing network connections.
-func NewClient(log *zap.Logger, addresses <-chan string, events chan<- interface{}, connections chan<- net.Conn, options ...func(*Client)) *Client {
+func NewClient(log *zap.Logger, addresses <-chan string, events chan<- interface{}, options ...func(*Client)) *Client {
 	client := &Client{
-		log:         log,
-		addresses:   addresses,
-		events:      events,
-		connections: connections,
-		network:     []byte{0, 0, 0, 0},
-		nonce:       uuid.UUID{}.Bytes(),
+		log:       log,
+		addresses: addresses,
+		events:    events,
+		network:   []byte{0, 0, 0, 0},
+		nonce:     uuid.UUID{}.Bytes(),
 	}
 	for _, option := range options {
 		option(client)
@@ -115,6 +113,6 @@ func (client *Client) dial() {
 			client.events <- Violation{Address: address}
 			continue
 		}
-		client.connections <- conn
+		client.events <- Connection{Address: address, Conn: conn, Nonce: nonce}
 	}
 }
