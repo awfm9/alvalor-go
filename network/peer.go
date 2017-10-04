@@ -31,7 +31,7 @@ import (
 type peer struct {
 	mutex     sync.Mutex
 	conn      net.Conn
-	addr      string
+	address   string
 	nonce     []byte
 	r         io.Reader
 	w         io.Writer

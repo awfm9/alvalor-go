@@ -19,9 +19,7 @@ package network
 
 import (
 	"fmt"
-	"time"
 
-	"github.com/pierrec/lz4"
 	"go.uber.org/zap"
 )
 
@@ -31,6 +29,7 @@ type Manager struct {
 	log        *zap.Logger
 	book       Book
 	node       Node
+	reg        Registry
 	events     <-chan interface{}
 	subscriber chan<- interface{}
 }
@@ -51,6 +50,7 @@ func (mgr *Manager) Process() {
 		switch e := event.(type) {
 		case Disconnection:
 			mgr.book.Disconnected(e.Address)
+			mgr.reg.remove(e.Address)
 			mgr.subscriber <- e
 		case Failure:
 			mgr.book.Failed(e.Address)
@@ -60,24 +60,7 @@ func (mgr *Manager) Process() {
 			mgr.subscriber <- e
 		case Connection:
 			mgr.book.Connected(e.Address)
-			r := lz4.NewReader(e.Conn)
-			w := lz4.NewWriter(e.Conn)
-			outgoing := make(chan interface{}, 16)
-			incoming := make(chan interface{}, 16)
-			p := &peer{
-				conn:      e.Conn,
-				addr:      e.Address,
-				nonce:     e.Nonce,
-				r:         r,
-				w:         w,
-				outgoing:  outgoing,
-				incoming:  incoming,
-				codec:     DefaultCodec,
-				heartbeat: DefaultConfig.heartbeat,
-				timeout:   DefaultConfig.timeout,
-				hb:        time.NewTimer(DefaultConfig.heartbeat),
-			}
-			_ = p
+			mgr.reg.add(e.Address, e.Conn, e.Nonce)
 			mgr.subscriber <- e
 		default:
 			mgr.log.Error("invalid network event", zap.String("type", fmt.Sprintf("%T", e)))

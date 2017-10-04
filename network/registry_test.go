@@ -24,18 +24,18 @@ import (
 )
 
 func TestAddSavesPeer(t *testing.T) {
-	reg := registry{peers: make(map[string]*peer)}
+	reg := Registry{peers: make(map[string]*peer)}
 	addr := "127.0.0.1"
 
-	reg.add(addr, &peer{addr: addr})
+	reg.add(addr, nil, []byte{})
 
 	assert.True(t, reg.has(addr))
 }
 
 func TestRemovesPeer(t *testing.T) {
-	reg := registry{peers: make(map[string]*peer)}
+	reg := Registry{peers: make(map[string]*peer)}
 	addr := "127.0.0.1"
-	reg.add(addr, &peer{addr: addr})
+	reg.add(addr, nil, []byte{})
 
 	reg.remove(addr)
 
@@ -43,11 +43,11 @@ func TestRemovesPeer(t *testing.T) {
 }
 
 func TestCountsPeers(t *testing.T) {
-	reg := registry{peers: make(map[string]*peer)}
+	reg := Registry{peers: make(map[string]*peer)}
 
-	reg.add("62.63.77.53", &peer{addr: "62.63.77.53"})
-	reg.add("25.35.55.53", &peer{addr: "25.35.55.53"})
-	reg.add("15.23.37.53", &peer{addr: "15.23.37.53"})
+	reg.add("62.63.77.53", nil, []byte{})
+	reg.add("25.35.55.53", nil, []byte{})
+	reg.add("15.23.37.53", nil, []byte{})
 
 	count := reg.count()
 
@@ -55,24 +55,23 @@ func TestCountsPeers(t *testing.T) {
 }
 
 func TestGetsPeer(t *testing.T) {
-	reg := registry{peers: make(map[string]*peer)}
+	reg := Registry{peers: make(map[string]*peer)}
 	addr := "127.0.0.1"
-	peerToAdd := &peer{addr: addr}
-	reg.add(addr, peerToAdd)
+	reg.add(addr, nil, []byte{})
 
 	peer := reg.get(addr)
 
-	assert.Equal(t, peerToAdd, peer)
+	assert.Equal(t, peer.address, addr)
 }
 
 func TestSlice(t *testing.T) {
-	reg := registry{peers: make(map[string]*peer)}
+	reg := Registry{peers: make(map[string]*peer)}
 	peers := make([]*peer, 2)
-	peers[0] = &peer{addr: "192.168.66.22"}
-	peers[1] = &peer{addr: "192.168.46.84"}
+	peers[0] = &peer{address: "192.168.66.22"}
+	peers[1] = &peer{address: "192.168.46.84"}
 
-	reg.add("192.168.66.22", peers[0])
-	reg.add("192.168.46.84", peers[1])
+	reg.add("192.168.66.22", nil, []byte{})
+	reg.add("192.168.46.84", nil, []byte{})
 
 	slice := reg.slice()
 

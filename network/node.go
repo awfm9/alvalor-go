@@ -50,7 +50,7 @@ type Node struct {
 	timeout    time.Duration
 	discovery  *time.Ticker
 	count      int32
-	peers      *registry
+	peers      *Registry
 }
 
 // NewNode creates a new node to connect to the peer-to-peer network. Without parameters, it will
@@ -79,7 +79,7 @@ func NewNode(options ...func(*Config)) *Node {
 		heartbeat:  cfg.heartbeat,
 		timeout:    cfg.timeout,
 		discovery:  time.NewTicker(cfg.discovery),
-		peers:      &registry{peers: make(map[string]*peer)},
+		peers:      &Registry{peers: make(map[string]*peer)},
 	}
 
 	node.book.Blacklist(cfg.address)
@@ -105,32 +105,6 @@ func (node *Node) nextAddrToConnect() string {
 	}
 
 	return addr
-}
-
-func (node *Node) onOutgoingConnected(p *peer) {
-
-	node.peers.add(p.addr, p)
-	node.book.Connected(p.addr)
-	go p.receive()
-	e := Connection{
-		Address: p.addr,
-	}
-	node.event(&e)
-}
-
-func (node *Node) onIncomingConnected(p *peer) {
-
-	node.peers.add(p.addr, p)
-	node.book.Connected(p.addr)
-	go p.receive()
-	err := node.share(p.addr, []string{node.address})
-	if err != nil {
-		node.log.Error("could not share initial address", zap.Error(err))
-	}
-	e := Connection{
-		Address: p.addr,
-	}
-	node.event(&e)
 }
 
 func (node *Node) onConnecting() {
@@ -176,7 +150,7 @@ Outer:
 
 			// otherwise, we should process a received network message
 			msg := Message{
-				Address: peers[i].addr,
+				Address: peers[i].address,
 				Value:   i,
 			}
 			node.process(&msg)
@@ -186,26 +160,26 @@ Outer:
 
 // ping will send a ping message to the given peer.
 func (node *Node) ping(peer *peer) {
-	node.log.Debug("pinging peer", zap.String("address", peer.addr))
+	node.log.Debug("pinging peer", zap.String("address", peer.address))
 	ping := Ping{
 		Nonce: rand.Uint32(),
 	}
-	err := node.Send(peer.addr, &ping)
+	err := node.Send(peer.address, &ping)
 	if err != nil {
-		node.log.Error("could not send ping", zap.String("address", peer.addr), zap.Error(err))
+		node.log.Error("could not send ping", zap.String("address", peer.address), zap.Error(err))
 	}
 }
 
 // disconnect will disconnect from the given peer and notify the subscriber that we are no longer
 // connected to it.
 func (node *Node) disconnect(peer *peer) {
-	node.log.Info("disconnecting peer", zap.String("address", peer.addr))
-	node.peers.remove(peer.addr)
+	node.log.Info("disconnecting peer", zap.String("address", peer.address))
+	node.peers.remove(peer.address)
 	peer.close()
-	node.book.Dropped(peer.addr)
+	node.book.Dropped(peer.address)
 	atomic.AddInt32(&node.count, -1)
 	e := Disconnection{
-		Address: peer.addr,
+		Address: peer.address,
 	}
 	node.event(&e)
 }
@@ -374,9 +348,9 @@ func (node *Node) Broadcast(msg interface{}) error {
 		case peer.outgoing <- msg:
 			continue
 		default:
-			node.book.Failed(peer.addr)
+			node.book.Failed(peer.address)
 			node.disconnect(peer)
-			return errors.Errorf("could not broadcast message to %v, peer stalling", peer.addr)
+			return errors.Errorf("could not broadcast message to %v, peer stalling", peer.address)
 		}
 	}
 	return nil
@@ -387,7 +361,7 @@ func (node *Node) Peers() []string {
 	peers := node.peers.slice()
 	addrs := make([]string, 0, len(peers))
 	for _, peer := range peers {
-		addrs = append(addrs, peer.addr)
+		addrs = append(addrs, peer.address)
 	}
 	return addrs
 }
