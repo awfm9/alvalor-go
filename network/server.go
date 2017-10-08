@@ -21,6 +21,7 @@ import (
 	"bytes"
 	"net"
 	"sync"
+	"time"
 
 	uuid "github.com/satori/go.uuid"
 	"go.uber.org/zap"
@@ -96,16 +97,25 @@ func (server *Server) listen() {
 		server.log.Error("could not create listener", zap.String("server.address", server.address), zap.Error(err))
 		return
 	}
-	// TODO: find clean way to break loop when addresses channel is closed
+Loop:
 	for {
+		tcpLn := ln.(*net.TCPListener)
+		tcpLn.SetDeadline(time.Now().Add(1 * time.Second))
 		conn, err := ln.Accept()
+		netErr, ok := err.(*net.OpError)
+		if ok && netErr.Timeout() {
+			continue
+		}
 		if err != nil {
 			server.log.Error("could not accept connection", zap.Error(err))
 			break
 		}
 		address := conn.RemoteAddr().String()
 		select {
-		case <-server.addresses:
+		case _, ok := <-server.addresses:
+			if !ok {
+				break Loop
+			}
 		default:
 			server.log.Info("no available connection slots", zap.String("address", address))
 			conn.Close()
