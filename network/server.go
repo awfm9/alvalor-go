@@ -21,6 +21,7 @@ import (
 	"bytes"
 	"net"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	uuid "github.com/satori/go.uuid"
@@ -35,6 +36,7 @@ type Server struct {
 	wg        *sync.WaitGroup
 	addresses <-chan string
 	events    chan<- interface{}
+	running   uint32
 	address   string
 	network   []byte
 	nonce     []byte
@@ -44,114 +46,140 @@ type Server struct {
 // the handshake up to having a valid network connection for the given Alvalor
 // network.
 func NewServer(log *zap.Logger, wg *sync.WaitGroup, addresses <-chan string, events chan<- interface{}, options ...func(*Server)) *Server {
-	server := &Server{
+	svr := &Server{
 		log:       log,
 		wg:        wg,
 		addresses: addresses,
 		events:    events,
+		running:   1,
 		address:   "",
 		network:   []byte{0, 0, 0, 0},
 		nonce:     uuid.UUID{}.Bytes(),
 	}
 	for _, option := range options {
-		option(server)
+		option(svr)
 	}
-	go server.listen()
-	return server
+	wg.Add(1)
+	go svr.listen()
+	return svr
 }
 
 // SetAddress allows us to define the local address we want to listen on with
-// the server.
+// the svr.
 func SetAddress(address string) func(*Server) {
-	return func(server *Server) {
-		server.address = address
+	return func(svr *Server) {
+		svr.address = address
 	}
 }
 
 // SetServerNetwork allows us to set the network to use during the initial connection
 // handshake.
 func SetServerNetwork(network []byte) func(*Server) {
-	return func(server *Server) {
-		server.network = network
+	return func(svr *Server) {
+		svr.network = network
 	}
 }
 
 // SetServerNonce allows us to set our node nonce to make sure we never connect to
 // ourselves.
 func SetServerNonce(nonce []byte) func(*Server) {
-	return func(server *Server) {
-		server.nonce = nonce
+	return func(svr *Server) {
+		svr.nonce = nonce
 	}
 }
 
 // Listen will start a listener on the configured network address and do the
 // welcome handshake, forwarding valid peer connections.
-func (server *Server) listen() {
-	_, _, err := net.SplitHostPort(server.address)
+func (svr *Server) listen() {
+
+	// we parse / try to resolve the TCP address to make sure it's valid
+	addr, err := net.ResolveTCPAddr("tcp", svr.address)
 	if err != nil {
-		server.log.Error("invalid listen address", zap.String("server.address", server.address), zap.Error(err))
+		svr.log.Error("invalid listen address", zap.String("svr.address", svr.address), zap.Error(err))
 		return
 	}
-	ln, err := net.Listen("tcp", server.address)
+
+	// we use a TCP listener here so that we can set deadlines, which avoid having
+	// to block on calls to accept and makes it possible to shutdown cleanly
+	ln, err := net.ListenTCP("tcp", addr)
 	if err != nil {
-		server.log.Error("could not create listener", zap.String("server.address", server.address), zap.Error(err))
+		svr.log.Error("could not create listener", zap.String("svr.address", svr.address), zap.Error(err))
 		return
 	}
+
 Loop:
-	for {
-		tcpLn := ln.(*net.TCPListener)
-		tcpLn.SetDeadline(time.Now().Add(1 * time.Second))
+	for atomic.LoadUint32(&svr.running) > 0 {
+
+		// each second, we check if we have a new connection; if we don't, we have
+		// a timeout error and we can just go into a new iteration of the loop,
+		// which will check if we still want to be running
+		ln.SetDeadline(time.Now().Add(100 * time.Millisecond))
 		conn, err := ln.Accept()
-		netErr, ok := err.(*net.OpError)
-		if ok && netErr.Timeout() {
+		if netErr, ok := err.(*net.OpError); ok && netErr.Timeout() {
 			continue
 		}
 		if err != nil {
-			server.log.Error("could not accept connection", zap.Error(err))
-			break
-		}
-		address := conn.RemoteAddr().String()
-		select {
-		case _, ok := <-server.addresses:
-			if !ok {
-				break Loop
-			}
-		default:
-			server.log.Info("no available connection slots", zap.String("address", address))
-			conn.Close()
+			svr.log.Error("could not accept connection", zap.Error(err))
 			continue
 		}
-		ack := append(server.network, server.nonce...)
+
+		// at this point we have a valid incoming TCP connection, and we want to
+		// make sure there is still an open slot for peers; we don't really charge
+		// about the address we take from the channel, as that is only used for
+		// the outgoing attempts
+		address := conn.RemoteAddr().String()
+		select {
+		case <-svr.addresses:
+		default:
+			svr.log.Info("no available connection slots", zap.String("address", address))
+			conn.Close()
+			continue Loop
+		}
+
+		// now that we have taken an available peer slot, we can execute the
+		// handshake and make sure we are on the same network and nonces are valid
+		ack := append(svr.network, svr.nonce...)
 		syn := make([]byte, len(ack))
 		_, err = conn.Read(syn)
 		if err != nil {
-			server.log.Error("could not read syn packet", zap.Error(err))
+			svr.log.Error("could not read syn packet", zap.Error(err))
 			conn.Close()
-			server.events <- Failure{Address: address}
+			svr.events <- Failure{Address: address}
 			continue
 		}
-		network := syn[:len(server.network)]
-		if !bytes.Equal(network, server.network) {
-			server.log.Warn("dropping invalid network peer", zap.String("address", address), zap.ByteString("network", network))
+		network := syn[:len(svr.network)]
+		if !bytes.Equal(network, svr.network) {
+			svr.log.Warn("dropping invalid network peer", zap.String("address", address), zap.ByteString("network", network))
 			conn.Close()
-			server.events <- Violation{Address: address}
+			svr.events <- Violation{Address: address}
 			continue
 		}
-		nonce := syn[len(server.network):]
-		if bytes.Equal(nonce, server.nonce) {
-			server.log.Warn("dropping connection to self", zap.String("address", address))
+		nonce := syn[len(svr.network):]
+		if bytes.Equal(nonce, svr.nonce) {
+			svr.log.Warn("dropping connection to self", zap.String("address", address))
 			conn.Close()
-			server.events <- Violation{Address: address}
+			svr.events <- Violation{Address: address}
 			continue
 		}
 		_, err = conn.Write(ack)
 		if err != nil {
-			server.log.Error("could not write ack packet", zap.Error(err))
+			svr.log.Error("could not write ack packet", zap.Error(err))
 			conn.Close()
-			server.events <- Failure{Address: address}
+			svr.events <- Failure{Address: address}
 			continue
 		}
-		server.events <- Connection{Address: address, Conn: conn, Nonce: nonce}
+
+		// with the handshake completed, we now have a new connection event for a
+		// valid peer with known nonce and address
+		svr.events <- Connection{Address: address, Conn: conn, Nonce: nonce}
 	}
-	server.wg.Done()
+
+	// once we break this loop, we want to let the waitgroup know this component
+	// is done shutting down
+	svr.wg.Done()
+}
+
+// Close will stop the execution of the server component.
+func (svr *Server) Close() {
+	atomic.StoreUint32(&svr.running, 0)
 }

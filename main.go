@@ -47,7 +47,6 @@ func main() {
 
 	// initialize waitgroup for the network modules
 	wg := &sync.WaitGroup{}
-	wg.Add(3)
 
 	// initialize the network modules
 	book := &network.SimpleBook{}

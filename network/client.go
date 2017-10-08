@@ -21,6 +21,8 @@ import (
 	"bytes"
 	"net"
 	"sync"
+	"sync/atomic"
+	"time"
 
 	uuid "github.com/satori/go.uuid"
 
@@ -34,90 +36,118 @@ type Client struct {
 	wg        *sync.WaitGroup
 	addresses <-chan string
 	events    chan<- interface{}
+	running   uint32
 	network   []byte
 	nonce     []byte
 }
 
 // NewClient creates a new client who manages outgoing network connections.
 func NewClient(log *zap.Logger, wg *sync.WaitGroup, addresses <-chan string, events chan<- interface{}, options ...func(*Client)) *Client {
-	client := &Client{
+	cli := &Client{
 		log:       log,
 		wg:        wg,
 		addresses: addresses,
 		events:    events,
+		running:   1,
 		network:   []byte{0, 0, 0, 0},
 		nonce:     uuid.UUID{}.Bytes(),
 	}
 	for _, option := range options {
-		option(client)
+		option(cli)
 	}
-	go client.dial()
-	return client
+	wg.Add(1)
+	go cli.dial()
+	return cli
 }
 
 // SetClientNetwork allows us to set the network to use during the initial connection
 // handshake.
 func SetClientNetwork(network []byte) func(*Client) {
-	return func(client *Client) {
-		client.network = network
+	return func(cli *Client) {
+		cli.network = network
 	}
 }
 
 // SetClientNonce allows us to set our node nonce to make sure we never connect to
 // ourselves.
 func SetClientNonce(nonce []byte) func(*Client) {
-	return func(client *Client) {
-		client.nonce = nonce
+	return func(cli *Client) {
+		cli.nonce = nonce
 	}
 }
 
 // dial will try to initialize a new outgoing connection and hand over to the outgoing handshake
 // function on success.
-func (client *Client) dial() {
-	for address := range client.addresses {
-		_, _, err := net.SplitHostPort(address)
+func (cli *Client) dial() {
+
+Loop:
+	for atomic.LoadUint32(&cli.running) > 0 {
+
+		// make sure we check for shutdown at least once a second
+		var address string
+		select {
+		case address = <-cli.addresses:
+		case <-time.After(100 * time.Millisecond):
+			continue Loop
+		}
+
+		// we will check if the address is valid before dialing
+		addr, err := net.ResolveTCPAddr("tcp", address)
 		if err != nil {
-			client.log.Error("invalid outgoing address", zap.String("address", address), zap.Error(err))
-			client.events <- Violation{Address: address}
+			cli.log.Error("invalid outgoing address", zap.String("address", address), zap.Error(err))
+			cli.events <- Violation{Address: address}
 			continue
 		}
-		conn, err := net.Dial("tcp", address)
+
+		// once we have a valid address, we dial with automatic local address
+		conn, err := net.DialTCP("tcp", nil, addr)
 		if err != nil {
-			client.log.Error("could not dial address", zap.String("address", address), zap.Error(err))
-			client.events <- Failure{Address: address}
+			cli.log.Error("could not dial address", zap.String("address", address), zap.Error(err))
+			cli.events <- Failure{Address: address}
 			continue
 		}
-		syn := append(client.network, client.nonce...)
+
+		// at this point we have a valid network connection and do the handshake
+		syn := append(cli.network, cli.nonce...)
 		_, err = conn.Write(syn)
 		if err != nil {
-			client.log.Error("could not write syn packet", zap.String("address", address), zap.Error(err))
+			cli.log.Error("could not write syn packet", zap.String("address", address), zap.Error(err))
 			conn.Close()
-			client.events <- Failure{Address: address}
+			cli.events <- Failure{Address: address}
 			continue
 		}
 		ack := make([]byte, len(syn))
 		_, err = conn.Read(ack)
 		if err != nil {
-			client.log.Error("could not read ack packet", zap.String("address", address), zap.Error(err))
+			cli.log.Error("could not read ack packet", zap.String("address", address), zap.Error(err))
 			conn.Close()
-			client.events <- Failure{Address: address}
+			cli.events <- Failure{Address: address}
 			continue
 		}
-		network := syn[:len(client.network)]
-		if !bytes.Equal(network, client.network) {
-			client.log.Warn("dropping invalid network peer", zap.String("address", address), zap.ByteString("network", network))
+		network := syn[:len(cli.network)]
+		if !bytes.Equal(network, cli.network) {
+			cli.log.Warn("dropping invalid network peer", zap.String("address", address), zap.ByteString("network", network))
 			conn.Close()
-			client.events <- Violation{Address: address}
+			cli.events <- Violation{Address: address}
 			continue
 		}
-		nonce := syn[len(client.network):]
-		if bytes.Equal(nonce, client.nonce) {
-			client.log.Warn("dropping connection to self", zap.String("address", address))
+		nonce := syn[len(cli.network):]
+		if bytes.Equal(nonce, cli.nonce) {
+			cli.log.Warn("dropping connection to self", zap.String("address", address))
 			conn.Close()
-			client.events <- Violation{Address: address}
+			cli.events <- Violation{Address: address}
 			continue
 		}
-		client.events <- Connection{Address: address, Conn: conn, Nonce: nonce}
+
+		// after the handshake, we have a valid peer with known address & nonce
+		cli.events <- Connection{Address: address, Conn: conn, Nonce: nonce}
 	}
-	client.wg.Done()
+
+	// let the waitgroup know we have shut down
+	cli.wg.Done()
+}
+
+// Close will shut down the dialing to add outgoing peers.
+func (cli *Client) Close() {
+	atomic.StoreUint32(&cli.running, 0)
 }

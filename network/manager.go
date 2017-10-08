@@ -20,6 +20,8 @@ package network
 import (
 	"fmt"
 	"sync"
+	"sync/atomic"
+	"time"
 
 	"go.uber.org/zap"
 )
@@ -35,6 +37,7 @@ type Manager struct {
 	events     <-chan interface{}
 	addresses  chan<- string
 	subscriber chan<- interface{}
+	running    uint32
 	minPeers   uint
 	maxPeers   uint
 }
@@ -42,21 +45,39 @@ type Manager struct {
 // NewManager creates a new manager of network events.
 func NewManager(log *zap.Logger, wg *sync.WaitGroup, book Book, events <-chan interface{}, addresses chan<- string, subscriber chan<- interface{}, options ...func(*Manager)) *Manager {
 	mgr := &Manager{
-		log:    log,
-		wg:     wg,
-		book:   book,
-		events: events,
+		log:        log,
+		wg:         wg,
+		book:       book,
+		events:     events,
+		addresses:  addresses,
+		subscriber: subscriber,
+		running:    1,
+		minPeers:   4,
+		maxPeers:   8,
 	}
 	for _, option := range options {
 		option(mgr)
 	}
+	wg.Add(1)
 	go mgr.process()
 	return mgr
 }
 
 // process will launch the processing of the processor.
 func (mgr *Manager) process() {
-	for event := range mgr.events {
+
+Loop:
+	for atomic.LoadUint32(&mgr.running) > 0 {
+
+		// make sure we re-enter the loop every second to check for shutdown
+		var event interface{}
+		select {
+		case event = <-mgr.events:
+		case <-time.After(100 * time.Millisecond):
+			continue Loop
+		}
+
+		// depending on the event, execute related actions
 		switch e := event.(type) {
 		case Balance:
 			add := e.Max - mgr.reg.count()
@@ -85,7 +106,16 @@ func (mgr *Manager) process() {
 			mgr.log.Error("invalid network event", zap.String("type", fmt.Sprintf("%T", e)))
 		}
 	}
+
+	// before finishing shutdown, close the channels we are producing for
 	close(mgr.addresses)
 	close(mgr.subscriber)
+
+	// let the waitgroup know we are done
 	mgr.wg.Done()
+}
+
+// Close will shut down the manager.
+func (mgr *Manager) Close() {
+	mgr.running = 0
 }
