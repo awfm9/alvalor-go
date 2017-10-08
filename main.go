@@ -57,9 +57,6 @@ func main() {
 	// initialize drivers
 	bal := network.NewBalancer(events)
 
-	// launch the drivers
-	go bal.Start()
-
 	// TODO: stopping logic
 	<-c
 

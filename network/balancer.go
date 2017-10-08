@@ -42,11 +42,12 @@ func NewBalancer(events chan<- interface{}, options ...func(*Balancer)) *Balance
 	for _, option := range options {
 		option(bal)
 	}
+	go bal.start()
 	return bal
 }
 
-// Start will start the balancing impulses.
-func (bal *Balancer) Start() {
+// start will start the balancing impulses.
+func (bal *Balancer) start() {
 	ticker := time.NewTicker(bal.interval)
 Loop:
 	for {
