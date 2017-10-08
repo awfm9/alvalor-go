@@ -50,9 +50,9 @@ func main() {
 
 	// initialize the network modules
 	book := &network.SimpleBook{}
-	network.NewManager(log, wg, book, events, addresses, subscriber)
-	network.NewClient(log, wg, addresses, events)
-	network.NewServer(log, wg, addresses, events)
+	mgr := network.NewManager(log, wg, book, events, addresses, subscriber)
+	cli := network.NewClient(log, wg, addresses, events)
+	svr := network.NewServer(log, wg, addresses, events)
 
 	// initialize drivers
 	bal := network.NewBalancer(events)
@@ -66,8 +66,12 @@ func main() {
 	// stop the drivers
 	bal.Close()
 
-	// shut down the network modules
-	// NOTE: closing the event channel should cascade through all modules
-	close(events)
+	// stop the network components
+	mgr.Close()
+	cli.Close()
+	svr.Close()
+
+	// wait for all modules to shut down
 	wg.Wait()
+	close(events)
 }
