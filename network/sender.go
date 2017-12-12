@@ -18,22 +18,26 @@
 package network
 
 import (
-	"io"
 	"net"
 
 	"github.com/pierrec/lz4"
 	"github.com/pkg/errors"
+	"github.com/rs/zerolog"
 )
 
 // Sender manages all the output channels to send messages to peers.
 type Sender struct {
-	outputs map[string]chan<- interface{}
+	log        zerolog.Logger
+	outputs    map[string]chan<- interface{}
+	bufferSize uint
 }
 
 // NewSender creates a new sender responsible for sending messages to peers.
-func NewSender() *Sender {
+func NewSender(log zerolog.Logger) *Sender {
 	return &Sender{
-		outputs: make(map[string]chan<- interface{}),
+		log:        log,
+		outputs:    make(map[string]chan<- interface{}),
+		bufferSize: 16,
 	}
 }
 
@@ -42,10 +46,9 @@ func (s *Sender) addOutput(address string, codec Codec, conn net.Conn) error {
 	if ok {
 		return errors.Errorf("output already exists: %v", address)
 	}
-	writer := lz4.NewWriter(conn)
-	output := make(chan interface{})
+	output := make(chan interface{}, s.bufferSize)
 	s.outputs[address] = output
-	go handleOutgoing(output, codec, writer)
+	go handleSending(s.log, output, codec, conn)
 	return nil
 }
 
@@ -73,12 +76,14 @@ func (s *Sender) Send(address string, message interface{}) error {
 	}
 }
 
-func handleOutgoing(output <-chan interface{}, codec Codec, writer io.Writer) {
+func handleSending(log zerolog.Logger, output <-chan interface{}, codec Codec, conn net.Conn) {
+	address := conn.RemoteAddr().String()
+	writer := lz4.NewWriter(conn)
 	for msg := range output {
 		err := codec.Encode(writer, msg)
 		if err != nil {
-			// TODO: handle the error somehow
-			break
+			log.Error().Str("address", address).Err(err).Msg("could not write message")
+			continue
 		}
 	}
 }

@@ -23,18 +23,21 @@ import (
 
 	"github.com/pierrec/lz4"
 	"github.com/pkg/errors"
+	"github.com/rs/zerolog"
 )
 
 // Receiver is responsible for receiving and multiplexing all message.
 type Receiver struct {
+	log    zerolog.Logger
 	input  chan<- interface{}
 	inputs map[string]net.Conn
 }
 
 // NewReceiver creates a new receiver with the given input channel as feed for
 // new received messages.
-func NewReceiver(input chan<- interface{}) *Receiver {
+func NewReceiver(log zerolog.Logger, input chan<- interface{}) *Receiver {
 	return &Receiver{
+		log:    log,
 		input:  input,
 		inputs: make(map[string]net.Conn),
 	}
@@ -45,9 +48,8 @@ func (r *Receiver) addInput(address string, codec Codec, conn net.Conn) error {
 	if ok {
 		return errors.Errorf("input already exists: %v", address)
 	}
-	reader := lz4.NewReader(conn)
 	r.inputs[address] = conn
-	go handleInput(reader, codec, r.input)
+	go handleReceiving(r.log, codec, conn, r.input)
 	return nil
 }
 
@@ -56,6 +58,7 @@ func (r *Receiver) removeInput(address string) error {
 	if !ok {
 		return errors.Errorf("input not found: %v", address)
 	}
+	defer delete(r.inputs, address)
 	err := conn.Close()
 	if err != nil {
 		return errors.Wrap(err, "could not close connection")
@@ -63,15 +66,18 @@ func (r *Receiver) removeInput(address string) error {
 	return nil
 }
 
-func handleInput(reader io.Reader, codec Codec, input chan<- interface{}) {
+func handleReceiving(log zerolog.Logger, codec Codec, conn net.Conn, input chan<- interface{}) {
+	address := conn.RemoteAddr().String()
+	reader := lz4.NewReader(conn)
 	for {
 		msg, err := codec.Decode(reader)
 		if err != nil && err == io.EOF {
+			log.Info().Str("address", address).Msg("network connection closed")
 			break
 		}
 		if err != nil {
-			// TODO: handle error
-			break
+			log.Error().Str("address", address).Err(err).Msg("reading message failed")
+			continue
 		}
 		input <- msg
 	}

@@ -30,7 +30,7 @@ type Manager struct {
 	events <-chan interface{}
 }
 
-// NewManager creates a new manager of network events.
+// NewManager creathes a new manager of network events.
 func NewManager(log zerolog.Logger, events <-chan interface{}) *Manager {
 	mgr := &Manager{
 		log:    log,
