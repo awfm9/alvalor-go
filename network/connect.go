@@ -24,8 +24,22 @@ import (
 	"github.com/rs/zerolog"
 )
 
-// Listen will start a listener on the configured network address and do the
-// welcome handshake, forwarding valid peer connections.
+func dial(log zerolog.Logger, addresses <-chan string, connections chan<- net.Conn) {
+	for address := range addresses {
+		addr, err := net.ResolveTCPAddr("tcp", address)
+		if err != nil {
+			log.Error().Err(err).Str("address", address).Msg("could not resolve address")
+			continue
+		}
+		conn, err := net.DialTCP("tcp", nil, addr)
+		if err != nil {
+			log.Error().Err(err).Str("address", address).Msg("could not dial address")
+			continue
+		}
+		connections <- conn
+	}
+}
+
 func listen(log zerolog.Logger, address string, stop <-chan struct{}, connections chan<- net.Conn) {
 	addr, err := net.ResolveTCPAddr("tcp", address)
 	if err != nil {
