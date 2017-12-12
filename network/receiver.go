@@ -18,10 +18,8 @@
 package network
 
 import (
-	"io"
 	"net"
 
-	"github.com/pierrec/lz4"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
 )
@@ -46,7 +44,7 @@ func NewReceiver(log zerolog.Logger, input chan<- interface{}) *Receiver {
 func (r *Receiver) addInput(address string, codec Codec, conn net.Conn) error {
 	_, ok := r.inputs[address]
 	if ok {
-		return errors.Errorf("input already exists: %v", address)
+		return errors.Errorf("input already exists (%v)", address)
 	}
 	r.inputs[address] = conn
 	go handleReceiving(r.log, codec, conn, r.input)
@@ -56,29 +54,15 @@ func (r *Receiver) addInput(address string, codec Codec, conn net.Conn) error {
 func (r *Receiver) removeInput(address string) error {
 	conn, ok := r.inputs[address]
 	if !ok {
-		return errors.Errorf("input not found: %v", address)
+		return errors.Errorf("input not found (%v)", address)
 	}
-	defer delete(r.inputs, address)
-	err := conn.Close()
-	if err != nil {
-		return errors.Wrap(err, "could not close connection")
-	}
+	conn.Close()
+	delete(r.inputs, address)
 	return nil
 }
 
-func handleReceiving(log zerolog.Logger, codec Codec, conn net.Conn, input chan<- interface{}) {
-	address := conn.RemoteAddr().String()
-	reader := lz4.NewReader(conn)
-	for {
-		msg, err := codec.Decode(reader)
-		if err != nil && err == io.EOF {
-			log.Info().Str("address", address).Msg("network connection closed")
-			break
-		}
-		if err != nil {
-			log.Error().Str("address", address).Err(err).Msg("reading message failed")
-			continue
-		}
-		input <- msg
+func (r *Receiver) stop() {
+	for _, conn := range r.inputs {
+		conn.Close()
 	}
 }

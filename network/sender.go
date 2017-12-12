@@ -20,7 +20,6 @@ package network
 import (
 	"net"
 
-	"github.com/pierrec/lz4"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
 )
@@ -55,7 +54,7 @@ func (s *Sender) addOutput(address string, codec Codec, conn net.Conn) error {
 func (s *Sender) removeOutput(address string) error {
 	output, ok := s.outputs[address]
 	if !ok {
-		return errors.Errorf("output not found: %v", address)
+		return errors.Errorf("output not found (%v)", address)
 	}
 	close(output)
 	delete(s.outputs, address)
@@ -64,26 +63,20 @@ func (s *Sender) removeOutput(address string) error {
 
 // Send will try to deliver the message to the peer with the address.
 func (s *Sender) Send(address string, message interface{}) error {
-	c, ok := s.outputs[address]
+	output, ok := s.outputs[address]
 	if !ok {
-		return errors.Errorf("output doesn't exist: %v", address)
+		return errors.Errorf("output doesn't exist (%v)", address)
 	}
 	select {
-	case c <- message:
+	case output <- message:
 		return nil
 	default:
-		return errors.Errorf("output timed out: %v", address)
+		return errors.Errorf("output timed out (%v)", address)
 	}
 }
 
-func handleSending(log zerolog.Logger, output <-chan interface{}, codec Codec, conn net.Conn) {
-	address := conn.RemoteAddr().String()
-	writer := lz4.NewWriter(conn)
-	for msg := range output {
-		err := codec.Encode(writer, msg)
-		if err != nil {
-			log.Error().Str("address", address).Err(err).Msg("could not write message")
-			continue
-		}
+func (s *Sender) stop() {
+	for _, output := range s.outputs {
+		close(output)
 	}
 }

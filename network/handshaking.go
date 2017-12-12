@@ -20,15 +20,17 @@ package network
 import (
 	"bytes"
 	"net"
+	"sync"
 
 	"github.com/rs/zerolog"
 )
 
-func handleIncoming(log zerolog.Logger, network []byte, nonce []byte, input <-chan net.Conn, output chan<- net.Conn) {
+func handleIncoming(log zerolog.Logger, wg *sync.WaitGroup, network []byte, nonce []byte, input <-chan net.Conn, output chan<- net.Conn) {
+	defer wg.Done()
+	ack := append(network, nonce...)
+	syn := make([]byte, len(ack))
 	for conn := range input {
 		address := conn.RemoteAddr().String()
-		ack := append(network, nonce...)
-		syn := make([]byte, len(ack))
 		_, err := conn.Read(syn)
 		if err != nil {
 			log.Error().Str("address", address).Err(err).Msg("could not read syn packet")
@@ -57,17 +59,18 @@ func handleIncoming(log zerolog.Logger, network []byte, nonce []byte, input <-ch
 	}
 }
 
-func handleOutgoing(log zerolog.Logger, network []byte, nonce []byte, input <-chan net.Conn, output chan<- net.Conn) {
+func handleOutgoing(log zerolog.Logger, wg *sync.WaitGroup, network []byte, nonce []byte, input <-chan net.Conn, output chan<- net.Conn) {
+	defer wg.Done()
+	syn := append(network, nonce...)
+	ack := make([]byte, len(syn))
 	for conn := range input {
 		address := conn.RemoteAddr().String()
-		syn := append(network, nonce...)
 		_, err := conn.Write(syn)
 		if err != nil {
 			log.Error().Str("address", address).Err(err).Msg("could not write syn packet")
 			conn.Close()
 			continue
 		}
-		ack := make([]byte, len(syn))
 		_, err = conn.Read(ack)
 		if err != nil {
 			log.Error().Str("address", address).Err(err).Msg("could not read ack packet")

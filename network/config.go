@@ -17,108 +17,47 @@
 
 package network
 
-import (
-	"time"
-
-	"go.uber.org/zap"
-)
-
-// DefaultConfig represents the default configuration of a node.
-var DefaultConfig = Config{
-	log:        DefaultLogger,
-	book:       DefaultBook,
-	codec:      DefaultCodec,
-	subscriber: nil,
-	network:    Odin,
-	server:     false,
-	address:    "",
-	minPeers:   3,
-	maxPeers:   10,
-	balance:    time.Millisecond * 100,
-	heartbeat:  time.Second * 1,
-	timeout:    time.Second * 3,
-	discovery:  time.Second * 2,
-}
-
-// DefaultLogger represents the default logger we use for our node.
-var DefaultLogger, _ = zap.NewDevelopment()
-
-// DefaultCodec represents the default codec we use for our serialization.
-var DefaultCodec = SimpleCodec{}
-
-// Config represents the configuration parameters available to configure a node on the peer-to-peer
-// network.
+// Config represents the configuration parameters available to configure a node
+// on the peer-to-peer network.
 type Config struct {
-	log        *zap.Logger
-	book       Book
-	codec      Codec
-	subscriber chan<- interface{}
-	network    []byte
-	server     bool
-	address    string
-	minPeers   uint
-	maxPeers   uint
-	balance    time.Duration
-	heartbeat  time.Duration
-	timeout    time.Duration
-	discovery  time.Duration
+	network  []byte
+	server   bool
+	address  string
+	minPeers uint
+	maxPeers uint
 }
 
-// SetLog is a configuration function that allows us to change the logger instance.
-func SetLog(log *zap.Logger) func(*Config) {
+// SetNetwork allows us to configure a custom network ID.
+func SetNetwork(network []byte) func(*Config) {
 	return func(cfg *Config) {
-		cfg.log = log
+		cfg.network = network
 	}
 }
 
-// SetBook is a configuration function that allows us to change the address book implementation.
-func SetBook(book Book) func(*Config) {
+// SetServer allows us to configure a custom server status.
+func SetServer(server bool) func(*Config) {
 	return func(cfg *Config) {
-		cfg.book = book
+		cfg.server = server
 	}
 }
 
-// SetCodec is a configuration function that allows us to change the serialization codec.
-func SetCodec(codec Codec) func(*Config) {
+// SetAddress allows us to configure a custom listen address.
+func SetAddress(address string) func(*Config) {
 	return func(cfg *Config) {
-		cfg.codec = codec
+		cfg.address = address
 	}
 }
 
-// SetSubscriber is a configuration function that lets us define a subscriber to listen to all
-// network messages & events not handled internally by the network library.
-func SetSubscriber(sub chan<- interface{}) func(*Config) {
+// SetMinPeers allows us to configure a custom number for minimum peers.
+func SetMinPeers(minPeers uint) func(*Config) {
 	return func(cfg *Config) {
-		cfg.subscriber = sub
+		cfg.minPeers = minPeers
 	}
 }
 
-// SetBalance allows us to set the frequency at which we will check whether we are above or below
-// the defined peer thresholds.
-func SetBalance(balance time.Duration) func(*Config) {
+// SetMaxPeers allows us to configure a custom number for maximum peers.
+func SetMaxPeers(maxPeers uint) func(*Config) {
 	return func(cfg *Config) {
-		cfg.balance = balance
-	}
-}
-
-// SetHeartbeat allows us to set the frequency at which we will send heartbeats to inactive peers.
-func SetHeartbeat(heartbeat time.Duration) func(*Config) {
-	return func(cfg *Config) {
-		cfg.heartbeat = heartbeat
-	}
-}
-
-// SetTimeout allows us to define the timeout at which we consider a peer unresponsive and drop it.
-func SetTimeout(timeout time.Duration) func(*Config) {
-	return func(cfg *Config) {
-		cfg.timeout = timeout
-	}
-}
-
-// SetDiscovery allows us to define how often we want to launch discovery requests on the network to
-// find additional peer addresses.
-func SetDiscovery(discovery time.Duration) func(*Config) {
-	return func(cfg *Config) {
-		cfg.discovery = discovery
+		cfg.maxPeers = maxPeers
 	}
 }

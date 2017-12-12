@@ -23,52 +23,25 @@ import (
 	"sync"
 
 	"github.com/alvalor/alvalor-go/network"
-	"go.uber.org/zap"
+	"github.com/rs/zerolog"
 )
 
 func main() {
 
-	// catch signals
 	c := make(chan os.Signal)
 	signal.Notify(c, os.Interrupt)
 
-	// initialize the structured & highly efficient zap logger
-	// NOTE: it's super hard to abstract a typed structured logger into an
-	// interface, so we just inject the concrete type everywhere
-	log, err := zap.NewProduction()
+	log, err := zerolog.New()
 	if err != nil {
 		os.Exit(1)
 	}
 
-	// initialize the channels we use to plug the network modules together
-	events := make(chan interface{})
-	addresses := make(chan string, 16)
-	subscriber := make(chan interface{})
-
-	// initialize waitgroup for the network modules
 	wg := &sync.WaitGroup{}
+	network.New(log, wg)
 
-	// initialize the network modules
-	book := &network.SimpleBook{}
-	mgr := network.NewManager(log, wg, book, events, addresses, subscriber)
-	cli := network.NewClient(log, wg, addresses, events)
-	svr := network.NewServer(log, wg, addresses, events)
-
-	// initialize drivers
-	bal := network.NewBalancer(events)
-
-	// TODO: stopping logic
 	<-c
 
-	// stop the drivers
-	bal.Close()
+	net.Close()
 
-	// stop the network components
-	mgr.Close()
-	cli.Close()
-	svr.Close()
-
-	// wait for all modules to shut down
 	wg.Wait()
-	close(events)
 }

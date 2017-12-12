@@ -48,26 +48,7 @@ func (mgr *Manager) process(wg *sync.WaitGroup) {
 		mgr.log.Debug().Interface("event", event).Msg("processing event")
 		switch event.(type) {
 		case Tick:
-			// process tick
-			//
-			// tick -> rebalance peers
-		case Command:
-			// process command
-			//
-			// send -> send message to desired peer
-		case Network:
-			// process network
-			//
-			// connect -> perform handshake
-			// handshaked -> log in book, add to registry, bubble up
-			// disconnect -> log in book, remove from registry, bubble up event
-			// failed -> log in book
-			// error -> log in book
-			// message -> handle message
-			//   ping -> pong
-			//   discover -> peers
-			//   pong -> noop
-			//   peers -> (add to book)
+
 		}
 	}
 

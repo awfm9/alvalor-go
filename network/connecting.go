@@ -19,12 +19,14 @@ package network
 
 import (
 	"net"
+	"sync"
 	"time"
 
 	"github.com/rs/zerolog"
 )
 
-func dial(log zerolog.Logger, addresses <-chan string, connections chan<- net.Conn) {
+func handleDialing(log zerolog.Logger, wg *sync.WaitGroup, addresses <-chan string, connections chan<- net.Conn) {
+	defer wg.Done()
 	for address := range addresses {
 		addr, err := net.ResolveTCPAddr("tcp", address)
 		if err != nil {
@@ -40,7 +42,8 @@ func dial(log zerolog.Logger, addresses <-chan string, connections chan<- net.Co
 	}
 }
 
-func listen(log zerolog.Logger, address string, stop <-chan struct{}, connections chan<- net.Conn) {
+func handleListening(log zerolog.Logger, wg *sync.WaitGroup, address string, stop <-chan struct{}, connections chan<- net.Conn) {
+	defer wg.Done()
 	addr, err := net.ResolveTCPAddr("tcp", address)
 	if err != nil {
 		log.Error().Err(err).Str("address", address).Msg("could not resolve listen address")

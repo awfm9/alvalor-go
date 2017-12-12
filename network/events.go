@@ -32,8 +32,8 @@ type Command struct {
 	Value  interface{}
 }
 
-// Network is a type of event that describes a networking event.
-type Network struct {
+// Networking is a type of event that describes a networking event.
+type Networking struct {
 	Address string
 	Value   interface{}
 }
