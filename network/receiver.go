@@ -27,25 +27,48 @@ import (
 
 // Receiver is responsible for receiving and multiplexing all message.
 type Receiver struct {
-	inputs map[string]<-chan interface{}
+	input  chan<- interface{}
+	inputs map[string]net.Conn
 }
 
-// addInput adds a new input to the receiver to read messages from.
+// NewReceiver creates a new receiver with the given input channel as feed for
+// new received messages.
+func NewReceiver(input chan<- interface{}) *Receiver {
+	return &Receiver{
+		input:  input,
+		inputs: make(map[string]net.Conn),
+	}
+}
+
 func (r *Receiver) addInput(address string, codec Codec, conn net.Conn) error {
 	_, ok := r.inputs[address]
 	if ok {
 		return errors.Errorf("input already exists: %v", address)
 	}
 	reader := lz4.NewReader(conn)
-	input := make(chan interface{})
-	r.inputs[address] = input
-	go handleInput(reader, codec, input)
+	r.inputs[address] = conn
+	go handleInput(reader, codec, r.input)
+	return nil
+}
+
+func (r *Receiver) removeInput(address string) error {
+	conn, ok := r.inputs[address]
+	if !ok {
+		return errors.Errorf("input not found: %v", address)
+	}
+	err := conn.Close()
+	if err != nil {
+		return errors.Wrap(err, "could not close connection")
+	}
 	return nil
 }
 
 func handleInput(reader io.Reader, codec Codec, input chan<- interface{}) {
 	for {
 		msg, err := codec.Decode(reader)
+		if err != nil && err == io.EOF {
+			break
+		}
 		if err != nil {
 			// TODO: handle error
 			break

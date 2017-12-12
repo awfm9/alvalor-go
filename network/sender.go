@@ -30,6 +30,13 @@ type Sender struct {
 	outputs map[string]chan<- interface{}
 }
 
+// NewSender creates a new sender responsible for sending messages to peers.
+func NewSender() *Sender {
+	return &Sender{
+		outputs: make(map[string]chan<- interface{}),
+	}
+}
+
 func (s *Sender) addOutput(address string, codec Codec, conn net.Conn) error {
 	_, ok := s.outputs[address]
 	if ok {
@@ -39,6 +46,16 @@ func (s *Sender) addOutput(address string, codec Codec, conn net.Conn) error {
 	output := make(chan interface{})
 	s.outputs[address] = output
 	go handleOutgoing(output, codec, writer)
+	return nil
+}
+
+func (s *Sender) removeOutput(address string) error {
+	output, ok := s.outputs[address]
+	if !ok {
+		return errors.Errorf("output not found: %v", address)
+	}
+	close(output)
+	delete(s.outputs, address)
 	return nil
 }
 
