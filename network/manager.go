@@ -18,104 +18,58 @@
 package network
 
 import (
-	"fmt"
 	"sync"
-	"sync/atomic"
-	"time"
 
-	"go.uber.org/zap"
+	"github.com/rs/zerolog"
 )
 
 // Manager represents a manager for events, executing the respective actions we
 // want depending on the events.
 type Manager struct {
-	log        *zap.Logger
-	wg         *sync.WaitGroup
-	book       Book
-	node       Node
-	reg        Registry
-	events     <-chan interface{}
-	addresses  chan<- string
-	subscriber chan<- interface{}
-	running    uint32
-	minPeers   uint
-	maxPeers   uint
+	log    zerolog.Logger
+	events <-chan interface{}
 }
 
 // NewManager creates a new manager of network events.
-func NewManager(log *zap.Logger, wg *sync.WaitGroup, book Book, events <-chan interface{}, addresses chan<- string, subscriber chan<- interface{}, options ...func(*Manager)) *Manager {
+func NewManager(log zerolog.Logger, events <-chan interface{}) *Manager {
 	mgr := &Manager{
-		log:        log,
-		wg:         wg,
-		book:       book,
-		events:     events,
-		addresses:  addresses,
-		subscriber: subscriber,
-		running:    1,
-		minPeers:   4,
-		maxPeers:   8,
+		log:    log,
+		events: events,
 	}
-	for _, option := range options {
-		option(mgr)
-	}
-	wg.Add(1)
-	go mgr.process()
 	return mgr
 }
 
 // process will launch the processing of the processor.
-func (mgr *Manager) process() {
+func (mgr *Manager) process(wg *sync.WaitGroup) {
 
-Loop:
-	for atomic.LoadUint32(&mgr.running) > 0 {
+	wg.Add(1)
 
-		// make sure we re-enter the loop every second to check for shutdown
-		var event interface{}
-		select {
-		case event = <-mgr.events:
-		case <-time.After(100 * time.Millisecond):
-			continue Loop
-		}
-
-		// depending on the event, execute related actions
-		switch e := event.(type) {
-		case Balance:
-			add := e.Max - mgr.reg.count()
-			addresses, err := mgr.book.Sample(add, IsActive(false), ByPrioritySort())
-			if err != nil {
-				mgr.log.Info("not enough addresses in book", zap.Error(err))
-			}
-			for _, address := range addresses {
-				mgr.addresses <- address
-			}
-		case Disconnection:
-			mgr.book.Disconnected(e.Address)
-			mgr.reg.remove(e.Address)
-			mgr.subscriber <- e
-		case Failure:
-			mgr.book.Failed(e.Address)
-		case Violation:
-			mgr.book.Blacklist(e.Address)
-		case Message:
-			mgr.subscriber <- e
-		case Connection:
-			mgr.book.Connected(e.Address)
-			mgr.reg.add(e.Address, e.Conn, e.Nonce)
-			mgr.subscriber <- e
-		default:
-			mgr.log.Error("invalid network event", zap.String("type", fmt.Sprintf("%T", e)))
+	for event := range mgr.events {
+		mgr.log.Debug().Interface("event", event).Msg("processing event")
+		switch event.(type) {
+		case Tick:
+			// process tick
+			//
+			// tick -> rebalance peers
+		case Command:
+			// process command
+			//
+			// send -> send message to desired peer
+		case Network:
+			// process network
+			//
+			// connect -> perform handshake
+			// handshaked -> log in book, add to registry, bubble up
+			// disconnect -> log in book, remove from registry, bubble up event
+			// failed -> log in book
+			// error -> log in book
+			// message -> handle message
+			//   ping -> pong
+			//   discover -> peers
+			//   pong -> noop
+			//   peers -> (add to book)
 		}
 	}
 
-	// before finishing shutdown, close the channels we are producing for
-	close(mgr.addresses)
-	close(mgr.subscriber)
-
-	// let the waitgroup know we are done
-	mgr.wg.Done()
-}
-
-// Close will shut down the manager.
-func (mgr *Manager) Close() {
-	mgr.running = 0
+	wg.Done()
 }

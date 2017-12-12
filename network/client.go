@@ -83,7 +83,7 @@ func (cli *Client) dial() {
 Loop:
 	for atomic.LoadUint32(&cli.running) > 0 {
 
-		// make sure we check for shutdown at least once a second
+		// make sure we check for shutdown regularly
 		var address string
 		select {
 		case address = <-cli.addresses:

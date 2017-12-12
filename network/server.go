@@ -99,8 +99,9 @@ func (svr *Server) listen() {
 		return
 	}
 
-	// we use a TCP listener here so that we can set deadlines, which avoid having
-	// to block on calls to accept and makes it possible to shutdown cleanly
+	// we use a TCP listener here so that we can set deadlines, which avoids
+	// having to block on calls to accept and makes it possible to shutdown
+	// cleanly
 	ln, err := net.ListenTCP("tcp", addr)
 	if err != nil {
 		svr.log.Error("could not create listener", zap.String("svr.address", svr.address), zap.Error(err))
@@ -124,9 +125,9 @@ Loop:
 		}
 
 		// at this point we have a valid incoming TCP connection, and we want to
-		// make sure there is still an open slot for peers; we don't really charge
+		// make sure there is still an open slot for peers; we don't really care
 		// about the address we take from the channel, as that is only used for
-		// the outgoing attempts
+		// outgoing connection attempts
 		address := conn.RemoteAddr().String()
 		select {
 		case <-svr.addresses:
