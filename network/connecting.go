@@ -27,6 +27,9 @@ import (
 
 func handleDialing(log zerolog.Logger, wg *sync.WaitGroup, addresses <-chan string, connections chan<- net.Conn) {
 	defer wg.Done()
+	log = log.With().Str("component", "dialer").Logger()
+	log.Info().Msg("connection dialing routine started")
+	defer log.Info().Msg("connection dialing routine stopped")
 	for address := range addresses {
 		addr, err := net.ResolveTCPAddr("tcp", address)
 		if err != nil {
@@ -42,16 +45,19 @@ func handleDialing(log zerolog.Logger, wg *sync.WaitGroup, addresses <-chan stri
 	}
 }
 
-func handleListening(log zerolog.Logger, wg *sync.WaitGroup, address string, stop <-chan struct{}, connections chan<- net.Conn) {
+func handleListening(log zerolog.Logger, wg *sync.WaitGroup, listen string, stop <-chan struct{}, connections chan<- net.Conn) {
 	defer wg.Done()
-	addr, err := net.ResolveTCPAddr("tcp", address)
+	log = log.With().Str("component", "listener").Str("listen", listen).Logger()
+	log.Info().Msg("connection listening routine started")
+	defer log.Info().Msg("connection listening routine stopped")
+	addr, err := net.ResolveTCPAddr("tcp", listen)
 	if err != nil {
-		log.Error().Err(err).Str("address", address).Msg("could not resolve listen address")
+		log.Error().Err(err).Msg("could not resolve listen address")
 		return
 	}
 	ln, err := net.ListenTCP("tcp", addr)
 	if err != nil {
-		log.Error().Err(err).Str("address", address).Msg("could not listen on address")
+		log.Error().Err(err).Msg("could not listen on address")
 		return
 	}
 Loop:

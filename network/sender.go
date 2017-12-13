@@ -19,6 +19,7 @@ package network
 
 import (
 	"net"
+	"sync"
 
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
@@ -29,6 +30,7 @@ type Sender struct {
 	log        zerolog.Logger
 	outputs    map[string]chan<- interface{}
 	bufferSize uint
+	wg         *sync.WaitGroup
 }
 
 // NewSender creates a new sender responsible for sending messages to peers.
@@ -37,6 +39,7 @@ func NewSender(log zerolog.Logger) *Sender {
 		log:        log,
 		outputs:    make(map[string]chan<- interface{}),
 		bufferSize: 16,
+		wg:         &sync.WaitGroup{},
 	}
 }
 
@@ -47,7 +50,8 @@ func (s *Sender) addOutput(address string, codec Codec, conn net.Conn) error {
 	}
 	output := make(chan interface{}, s.bufferSize)
 	s.outputs[address] = output
-	go handleSending(s.log, output, codec, conn)
+	s.wg.Add(1)
+	go handleSending(s.log, s.wg, output, codec, conn)
 	return nil
 }
 
@@ -79,4 +83,5 @@ func (s *Sender) stop() {
 	for _, output := range s.outputs {
 		close(output)
 	}
+	s.wg.Wait()
 }

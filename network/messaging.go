@@ -20,34 +20,43 @@ package network
 import (
 	"io"
 	"net"
+	"sync"
 
 	"github.com/pierrec/lz4"
 	"github.com/rs/zerolog"
 )
 
-func handleSending(log zerolog.Logger, output <-chan interface{}, codec Codec, conn net.Conn) {
+func handleSending(log zerolog.Logger, wg *sync.WaitGroup, output <-chan interface{}, codec Codec, conn net.Conn) {
+	defer wg.Done()
 	address := conn.RemoteAddr().String()
+	log = log.With().Str("component", "sender").Str("address", address).Logger()
+	log.Info().Msg("message sending routine started")
+	defer log.Info().Msg("message sending routine stopped")
 	writer := lz4.NewWriter(conn)
 	for msg := range output {
 		err := codec.Encode(writer, msg)
 		if err != nil {
-			log.Error().Str("address", address).Err(err).Msg("could not write message")
+			log.Error().Err(err).Msg("could not write message")
 			continue
 		}
 	}
 }
 
-func handleReceiving(log zerolog.Logger, codec Codec, conn net.Conn, input chan<- interface{}) {
+func handleReceiving(log zerolog.Logger, wg *sync.WaitGroup, codec Codec, conn net.Conn, input chan<- interface{}) {
+	defer wg.Done()
 	address := conn.RemoteAddr().String()
+	log = log.With().Str("component", "receiver").Str("address", address).Logger()
+	log.Info().Msg("message receiving routine started")
+	defer log.Info().Msg("message receiving routine closed")
 	reader := lz4.NewReader(conn)
 	for {
 		msg, err := codec.Decode(reader)
 		if err != nil && err == io.EOF {
-			log.Info().Str("address", address).Msg("network connection closed")
+			log.Info().Msg("network connection closed")
 			break
 		}
 		if err != nil {
-			log.Error().Str("address", address).Err(err).Msg("reading message failed")
+			log.Error().Err(err).Msg("reading message failed")
 			continue
 		}
 		input <- msg

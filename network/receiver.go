@@ -19,6 +19,7 @@ package network
 
 import (
 	"net"
+	"sync"
 
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
@@ -29,6 +30,7 @@ type Receiver struct {
 	log    zerolog.Logger
 	input  chan<- interface{}
 	inputs map[string]net.Conn
+	wg     *sync.WaitGroup
 }
 
 // NewReceiver creates a new receiver with the given input channel as feed for
@@ -38,6 +40,7 @@ func NewReceiver(log zerolog.Logger, input chan<- interface{}) *Receiver {
 		log:    log,
 		input:  input,
 		inputs: make(map[string]net.Conn),
+		wg:     &sync.WaitGroup{},
 	}
 }
 
@@ -47,7 +50,8 @@ func (r *Receiver) addInput(address string, codec Codec, conn net.Conn) error {
 		return errors.Errorf("input already exists (%v)", address)
 	}
 	r.inputs[address] = conn
-	go handleReceiving(r.log, codec, conn, r.input)
+	r.wg.Add(1)
+	go handleReceiving(r.log, r.wg, codec, conn, r.input)
 	return nil
 }
 
@@ -65,4 +69,5 @@ func (r *Receiver) stop() {
 	for _, conn := range r.inputs {
 		conn.Close()
 	}
+	r.wg.Wait()
 }

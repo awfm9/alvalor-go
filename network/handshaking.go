@@ -27,6 +27,9 @@ import (
 
 func handleIncoming(log zerolog.Logger, wg *sync.WaitGroup, network []byte, nonce []byte, input <-chan net.Conn, output chan<- net.Conn) {
 	defer wg.Done()
+	log = log.With().Str("component", "incoming").Logger()
+	log.Info().Msg("incoming handshake routine started")
+	defer log.Info().Msg("incoming handshake routine stopped")
 	ack := append(network, nonce...)
 	syn := make([]byte, len(ack))
 	for conn := range input {
@@ -61,6 +64,9 @@ func handleIncoming(log zerolog.Logger, wg *sync.WaitGroup, network []byte, nonc
 
 func handleOutgoing(log zerolog.Logger, wg *sync.WaitGroup, network []byte, nonce []byte, input <-chan net.Conn, output chan<- net.Conn) {
 	defer wg.Done()
+	log = log.With().Str("component", "outgoing").Logger()
+	log.Info().Msg("outgoing handshake routine started")
+	defer log.Info().Msg("outgoing handshake routine stopped")
 	syn := append(network, nonce...)
 	ack := make([]byte, len(syn))
 	for conn := range input {
