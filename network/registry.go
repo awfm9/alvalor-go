@@ -15,27 +15,16 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with Alvalor.  If not, see <http://www.gnu.org/licenses/>.
 
-package event
+package network
 
-import "net"
-
-// Enum of possible events on network connections.
-const (
-	ConnectionIncoming = iota
-	ConnectionOutgoing
-	ConnectionEstablished
-	ConnectionError
-	ConnectionFailed
-)
-
-// Connection describes an event that can happen on network connections.
-type Connection struct {
-	Type uint8
-	Conn net.Conn
-	Err  error
+// Registry represents a registry for all peers with their current states.
+type Registry struct {
+	peers map[string]struct{}
 }
 
-// Address returns the string address of the underlying connection.
-func (c Connection) Address() string {
-	return c.Conn.RemoteAddr().String()
+// NewRegistry creates a new initialized peer registry.
+func NewRegistry() *Registry {
+	return &Registry{
+		peers: make(map[string]struct{}),
+	}
 }

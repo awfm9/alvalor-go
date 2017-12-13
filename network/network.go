@@ -18,11 +18,12 @@
 package network
 
 import (
-	"net"
+	"math/rand"
 	"sync"
+	"time"
 
+	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
-	uuid "github.com/satori/go.uuid"
 )
 
 // Enumeration of different networks available. A node configured with one
@@ -34,17 +35,22 @@ var (
 	Loki = []byte{76, 79, 75, 73}
 )
 
-// Network represents all the entry points for the network module.
+// Network represents the manager of all network components.
 type Network struct {
-	cfg          *Config
-	stopClient   func()
-	stopServer   func()
-	stopSender   func()
-	stopReceiver func()
+	cfg *Config
+	wg  *sync.WaitGroup
+	reg *Registry
+	snd *Sender
+	rcv *Receiver
 }
 
-// New will initialize the network component with the given parameters.
-func New(log zerolog.Logger, wg *sync.WaitGroup, options ...func(*Config)) *Network {
+// New will initialize the completely wired up networking dependencies.
+func New(log zerolog.Logger, options ...func(*Config)) *Network {
+
+	// add the package information to the top package level logger
+	log = log.With().Str("package", "network").Logger()
+
+	// initialize the default configuration and apply custom options
 	cfg := &Config{
 		network:  Odin,
 		server:   false,
@@ -55,35 +61,45 @@ func New(log zerolog.Logger, wg *sync.WaitGroup, options ...func(*Config)) *Netw
 	for _, option := range options {
 		option(cfg)
 	}
-	nonce := uuid.NewV4().Bytes()
-	input := make(chan net.Conn)
-	output := make(chan net.Conn)
-	stop := make(chan struct{})
-	connections := make(chan net.Conn)
-	addresses := make(chan string)
-	messages := make(chan interface{})
-	sender := NewSender(log)
-	receiver := NewReceiver(log, messages)
-	go handleIncoming(log, wg, cfg.network, nonce, input, output)
-	go handleOutgoing(log, wg, cfg.network, nonce, input, output)
-	if cfg.server {
-		wg.Add(1)
-		go handleListening(log, wg, cfg.address, stop, connections)
+
+	// initialize the package-wide waitgroup
+	wg := &sync.WaitGroup{}
+
+	// initialize the network component with all state
+	net := &Network{
+		cfg: cfg,
+		wg:  wg,
+		reg: NewRegistry(),
+		snd: NewSender(log),
+		rcv: NewReceiver(log, nil),
 	}
-	go handleDialing(log, wg, addresses, connections)
-	return &Network{
-		cfg:          cfg,
-		stopServer:   func() { close(stop) },
-		stopClient:   func() { close(addresses) },
-		stopSender:   sender.stop,
-		stopReceiver: receiver.stop,
-	}
+
+	// initialize the dropper who will drop random connections when too many
+	go handleDropping(log, wg, time.NewTicker(time.Second).C, cfg.maxPeers, net.PeerCount, net.DropPeer)
+
+	return net
 }
 
-// Stop will shut down all network related activity.
-func (net *Network) Stop() {
-	net.stopServer()
-	net.stopClient()
-	net.stopSender()
-	net.stopReceiver()
+// DropPeer will drop a random peer from our connections.
+func (net *Network) DropPeer() error {
+	addresses := make([]string, 0, len(net.reg.peers))
+	for address := range net.reg.peers {
+		addresses = append(addresses, address)
+	}
+	address := addresses[rand.Int()%len(addresses)]
+	err := net.snd.removeOutput(address)
+	if err != nil {
+		return errors.Wrap(err, "could not remove peer output")
+	}
+	err = net.rcv.removeInput(address)
+	if err != nil {
+		return errors.Wrap(err, "could not remove peer input")
+	}
+	delete(net.reg.peers, address)
+	return nil
+}
+
+// PeerCount returns the number of successfully connected to peers.
+func (net *Network) PeerCount() uint {
+	return uint(len(net.reg.peers))
 }

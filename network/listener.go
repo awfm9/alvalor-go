@@ -18,6 +18,7 @@
 package network
 
 import (
+	"bytes"
 	"net"
 	"sync"
 	"time"
@@ -25,27 +26,7 @@ import (
 	"github.com/rs/zerolog"
 )
 
-func handleDialing(log zerolog.Logger, wg *sync.WaitGroup, addresses <-chan string, connections chan<- net.Conn) {
-	defer wg.Done()
-	log = log.With().Str("component", "dialer").Logger()
-	log.Info().Msg("connection dialing routine started")
-	defer log.Info().Msg("connection dialing routine stopped")
-	for address := range addresses {
-		addr, err := net.ResolveTCPAddr("tcp", address)
-		if err != nil {
-			log.Error().Err(err).Str("address", address).Msg("could not resolve address")
-			continue
-		}
-		conn, err := net.DialTCP("tcp", nil, addr)
-		if err != nil {
-			log.Error().Err(err).Str("address", address).Msg("could not dial address")
-			continue
-		}
-		connections <- conn
-	}
-}
-
-func handleListening(log zerolog.Logger, wg *sync.WaitGroup, listen string, stop <-chan struct{}, connections chan<- net.Conn) {
+func handleListening(log zerolog.Logger, wg *sync.WaitGroup, listen string, network []byte, nonce []byte, stop <-chan struct{}, connections chan<- net.Conn) {
 	defer wg.Done()
 	log = log.With().Str("component", "listener").Str("listen", listen).Logger()
 	log.Info().Msg("connection listening routine started")
@@ -76,6 +57,33 @@ Loop:
 		if err != nil {
 			log.Error().Err(err).Msg("could not accept connection")
 			break
+		}
+		syn := append(network, nonce...)
+		ack := make([]byte, len(syn))
+		address := conn.RemoteAddr().String()
+		_, err = conn.Write(syn)
+		if err != nil {
+			log.Error().Str("address", address).Err(err).Msg("could not write syn packet")
+			conn.Close()
+			continue
+		}
+		_, err = conn.Read(ack)
+		if err != nil {
+			log.Error().Str("address", address).Err(err).Msg("could not read ack packet")
+			conn.Close()
+			continue
+		}
+		networkIn := syn[:len(network)]
+		if !bytes.Equal(networkIn, network) {
+			log.Error().Str("address", address).Bytes("network", network).Bytes("network_in", networkIn).Msg("network mismatch")
+			conn.Close()
+			continue
+		}
+		nonceIn := syn[len(network):]
+		if bytes.Equal(nonceIn, nonce) {
+			log.Error().Str("address", address).Bytes("nonce", nonce).Msg("identical nonce")
+			conn.Close()
+			continue
 		}
 		connections <- conn
 	}

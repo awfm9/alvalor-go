@@ -18,9 +18,11 @@
 package network
 
 import (
+	"io"
 	"net"
 	"sync"
 
+	"github.com/pierrec/lz4"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
 )
@@ -66,8 +68,30 @@ func (r *Receiver) removeInput(address string) error {
 }
 
 func (r *Receiver) stop() {
-	for _, conn := range r.inputs {
+	for address, conn := range r.inputs {
 		conn.Close()
+		delete(r.inputs, address)
 	}
 	r.wg.Wait()
+}
+
+func handleReceiving(log zerolog.Logger, wg *sync.WaitGroup, codec Codec, conn net.Conn, input chan<- interface{}) {
+	defer wg.Done()
+	address := conn.RemoteAddr().String()
+	log = log.With().Str("component", "receiver").Str("address", address).Logger()
+	log.Info().Msg("message receiving routine started")
+	defer log.Info().Msg("message receiving routine closed")
+	reader := lz4.NewReader(conn)
+	for {
+		msg, err := codec.Decode(reader)
+		if err != nil && err == io.EOF {
+			log.Info().Msg("network connection closed")
+			break
+		}
+		if err != nil {
+			log.Error().Err(err).Msg("reading message failed")
+			continue
+		}
+		input <- msg
+	}
 }

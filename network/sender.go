@@ -21,6 +21,7 @@ import (
 	"net"
 	"sync"
 
+	"github.com/pierrec/lz4"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
 )
@@ -80,8 +81,25 @@ func (s *Sender) Send(address string, message interface{}) error {
 }
 
 func (s *Sender) stop() {
-	for _, output := range s.outputs {
+	for address, output := range s.outputs {
 		close(output)
+		delete(s.outputs, address)
 	}
 	s.wg.Wait()
+}
+
+func handleSending(log zerolog.Logger, wg *sync.WaitGroup, output <-chan interface{}, codec Codec, conn net.Conn) {
+	defer wg.Done()
+	address := conn.RemoteAddr().String()
+	log = log.With().Str("component", "sender").Str("address", address).Logger()
+	log.Info().Msg("message sending routine started")
+	defer log.Info().Msg("message sending routine stopped")
+	writer := lz4.NewWriter(conn)
+	for msg := range output {
+		err := codec.Encode(writer, msg)
+		if err != nil {
+			log.Error().Err(err).Msg("could not write message")
+			continue
+		}
+	}
 }

@@ -17,40 +17,7 @@
 
 package network
 
-import (
-	"sync"
-
-	"github.com/rs/zerolog"
-)
-
-// Manager represents a manager for events, executing the respective actions we
-// want depending on the events.
-type Manager struct {
-	log    zerolog.Logger
-	events <-chan interface{}
-}
-
-// NewManager creathes a new manager of network events.
-func NewManager(log zerolog.Logger, events <-chan interface{}) *Manager {
-	mgr := &Manager{
-		log:    log,
-		events: events,
-	}
-	return mgr
-}
-
-// process will launch the processing of the processor.
-func (mgr *Manager) process(wg *sync.WaitGroup) {
-
-	wg.Add(1)
-
-	for event := range mgr.events {
-		mgr.log.Debug().Interface("event", event).Msg("processing event")
-		switch event.(type) {
-		case Tick:
-
-		}
-	}
-
-	wg.Done()
-}
+type voidFunc func()
+type errorFunc func() error
+type intFunc func() int
+type uintFunc func() uint
