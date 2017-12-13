@@ -86,6 +86,7 @@ func NewManager(log zerolog.Logger, options ...func(*Config)) *Manager {
 
 	// create the universal stop channel
 	stop := make(chan struct{})
+	messages := make(chan Message)
 
 	// initialize the dropper who will drop random connections when there are too
 	// many
@@ -96,6 +97,11 @@ func NewManager(log zerolog.Logger, options ...func(*Config)) *Manager {
 	// connected to enough peers
 	wg.Add(1)
 	go handleDialing(log, wg, cfg, mgr, stop)
+
+	// initialize the processor who will process all incoming messages according
+	// to the rules of the protocol
+	wg.Add(1)
+	go handleProcessing(log, wg, cfg, mgr, messages)
 
 	return mgr
 }
@@ -165,3 +171,37 @@ func (mgr *Manager) AddPeer(conn net.Conn) error {
 	mgr.reg.peers[address] = Peer{Address: address}
 	return nil
 }
+
+// Peer returns the peer with the given address.
+func (mgr *Manager) Peer(address string) (Peer, error) {
+	peer, ok := mgr.reg.peers[address]
+	if !ok {
+		return Peer{}, errors.New("peer not found")
+	}
+	return peer, nil
+}
+
+// Protocol returns the protocol of the given version.
+func (mgr *Manager) Protocol(version string) (Protocol, error) {
+	return VersionOne{}, nil
+}
+
+// Send will send a message to the given peer.
+func (mgr *Manager) Send(address string, message interface{}) error {
+	return mgr.snd.Send(address, message)
+}
+
+// State returns the current local state.
+func (mgr *Manager) State() (State, error) {
+	return State{}, nil
+}
+
+// TODO: how to really do the processing of the messages by the protocol;
+// the structure could be quite a bit better maybe
+
+// TODO: how to connect the very rich blockchain state to the local small state
+// variable as we modeled it now
+
+// TODO: when injecting dependencies, sometimes manager just proxies, how can
+// we improve this? would be cool to have composition or filtering such as in
+// functional languages :<

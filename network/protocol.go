@@ -17,10 +17,16 @@
 
 package network
 
-// Parameters describes all parameters for the networking component.
-type Parameters struct {
-	NetworkID []byte
-	MinPeers  uint
-	MaxPeers  uint
-	Server    bool
+// Protocol represents a number of rules on how to handle messages.
+type Protocol interface {
+	Process(Message, State, Peer) ([]Message, []string, error)
+}
+
+// VersionOne represents the first version of the network protocol.
+type VersionOne struct {
+}
+
+// Process processes a message with this protocol version.
+func (v VersionOne) Process(msg Message, state State, peer Peer) ([]Message, []string, error) {
+	return nil, nil, nil
 }

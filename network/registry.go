@@ -20,6 +20,7 @@ package network
 // Peer contains all the information related to a peer.
 type Peer struct {
 	Address string
+	Version string
 }
 
 // Registry represents a registry for all peers with their current states.

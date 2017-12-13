@@ -17,30 +17,5 @@
 
 package network
 
-import "time"
-
-// Message describes a message received on the network.
-type Message struct {
-	Address   string
-	Timestamp time.Time
-	Value     interface{}
-}
-
-// Ping represents an outgoing heartbeat message sent on the network.
-type Ping struct {
-	Nonce uint32
-}
-
-// Pong represents a heartbeat response sent on the network.
-type Pong struct {
-	Nonce uint32
-}
-
-// Discover represents a discovery message sent on the network.
-type Discover struct {
-}
-
-// Peers represents a list of peer addresses shared on the network.
-type Peers struct {
-	Addresses []string
-}
+// State represents our local node state.
+type State struct{}
