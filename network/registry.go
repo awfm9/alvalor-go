@@ -17,14 +17,20 @@
 
 package network
 
+// Peer contains all the information related to a peer.
+type Peer struct {
+	Address string
+}
+
 // Registry represents a registry for all peers with their current states.
 type Registry struct {
-	peers map[string]struct{}
+	peers   map[string]Peer
+	pending uint
 }
 
 // NewRegistry creates a new initialized peer registry.
 func NewRegistry() *Registry {
 	return &Registry{
-		peers: make(map[string]struct{}),
+		peers: make(map[string]Peer),
 	}
 }

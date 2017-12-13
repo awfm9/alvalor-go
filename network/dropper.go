@@ -24,17 +24,29 @@ import (
 	"github.com/rs/zerolog"
 )
 
-func handleDropping(log zerolog.Logger, wg *sync.WaitGroup, ticker <-chan time.Time, maxPeers uint, peerCount uintFunc, dropPeer errorFunc) {
+// Dropper are the dependencies dropping routines need.
+type Dropper interface {
+	PeerCount() uint
+	DropPeer() error
+}
+
+func handleDropping(log zerolog.Logger, wg *sync.WaitGroup, cfg *Config, mgr Dropper, stop <-chan struct{}) {
 	defer wg.Done()
 	log = log.With().Str("component", "dropper").Logger()
-	log.Info().Msg("peer dropping routine started")
-	defer log.Info().Msg("peer dropping routine stopped")
-	for _ = range ticker {
-		numPeers := peerCount()
-		if numPeers > maxPeers {
-			err := dropPeer()
+	log.Info().Msg("dropping routine started")
+	defer log.Info().Msg("dropping routine stopped")
+	ticker := time.NewTicker(cfg.interval)
+	for {
+		select {
+		case <-stop:
+			ticker.Stop()
+			return
+		case <-ticker.C:
+		}
+		if mgr.PeerCount() > cfg.maxPeers {
+			err := mgr.DropPeer()
 			if err != nil {
-				log.Info().Err(err).Msg("could not drop peer")
+				log.Error().Err(err).Msg("could not drop peer")
 				continue
 			}
 		}

@@ -46,7 +46,8 @@ func NewReceiver(log zerolog.Logger, input chan<- interface{}) *Receiver {
 	}
 }
 
-func (r *Receiver) addInput(address string, codec Codec, conn net.Conn) error {
+func (r *Receiver) addInput(conn net.Conn, codec Codec) error {
+	address := conn.RemoteAddr().String()
 	_, ok := r.inputs[address]
 	if ok {
 		return errors.Errorf("input already exists (%v)", address)
@@ -79,8 +80,8 @@ func handleReceiving(log zerolog.Logger, wg *sync.WaitGroup, codec Codec, conn n
 	defer wg.Done()
 	address := conn.RemoteAddr().String()
 	log = log.With().Str("component", "receiver").Str("address", address).Logger()
-	log.Info().Msg("message receiving routine started")
-	defer log.Info().Msg("message receiving routine closed")
+	log.Info().Msg("receiving routine started")
+	defer log.Info().Msg("receiving routine closed")
 	reader := lz4.NewReader(conn)
 	for {
 		msg, err := codec.Decode(reader)

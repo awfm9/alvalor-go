@@ -17,14 +17,18 @@
 
 package network
 
+import "time"
+
 // Config represents the configuration parameters available to configure a node
 // on the peer-to-peer network.
 type Config struct {
 	network  []byte
+	nonce    []byte
 	server   bool
 	address  string
 	minPeers uint
 	maxPeers uint
+	interval time.Duration
 }
 
 // SetNetwork allows us to configure a custom network ID.

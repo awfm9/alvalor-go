@@ -44,7 +44,8 @@ func NewSender(log zerolog.Logger) *Sender {
 	}
 }
 
-func (s *Sender) addOutput(address string, codec Codec, conn net.Conn) error {
+func (s *Sender) addOutput(conn net.Conn, codec Codec) error {
+	address := conn.RemoteAddr().String()
 	_, ok := s.outputs[address]
 	if ok {
 		return errors.Errorf("output already exists: %v", address)
@@ -92,8 +93,8 @@ func handleSending(log zerolog.Logger, wg *sync.WaitGroup, output <-chan interfa
 	defer wg.Done()
 	address := conn.RemoteAddr().String()
 	log = log.With().Str("component", "sender").Str("address", address).Logger()
-	log.Info().Msg("message sending routine started")
-	defer log.Info().Msg("message sending routine stopped")
+	log.Info().Msg("sending routine started")
+	defer log.Info().Msg("sending routine stopped")
 	writer := lz4.NewWriter(conn)
 	for msg := range output {
 		err := codec.Encode(writer, msg)

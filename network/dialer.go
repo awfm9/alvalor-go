@@ -18,56 +18,43 @@
 package network
 
 import (
-	"bytes"
-	"net"
 	"sync"
+	"time"
 
 	"github.com/rs/zerolog"
 )
 
-func handleDialing(log zerolog.Logger, wg *sync.WaitGroup, network []byte, nonce []byte, addresses <-chan string, connections chan<- net.Conn) {
+type pendingCountFunc func() uint
+type dialConnFunc func() error
+
+// Dialer are the dependencies dialing routines need.
+type Dialer interface {
+	PeerCount() uint
+	PendingCount() uint
+	DialConn() error
+}
+
+func handleDialing(log zerolog.Logger, wg *sync.WaitGroup, cfg *Config, mgr Dialer, stop <-chan struct{}) {
 	defer wg.Done()
 	log = log.With().Str("component", "dialer").Logger()
-	log.Info().Msg("connection dialing routine started")
-	defer log.Info().Msg("connection dialing routine stopped")
-	for address := range addresses {
-		addr, err := net.ResolveTCPAddr("tcp", address)
-		if err != nil {
-			log.Error().Err(err).Str("address", address).Msg("could not resolve address")
-			continue
+	log.Info().Msg("dialing routine started")
+	defer log.Info().Msg("dialing routine stopped")
+	ticker := time.NewTicker(cfg.interval)
+	for {
+		select {
+		case <-stop:
+			ticker.Stop()
+			return
+		case <-ticker.C:
 		}
-		conn, err := net.DialTCP("tcp", nil, addr)
-		if err != nil {
-			log.Error().Err(err).Str("address", address).Msg("could not dial address")
-			continue
+		peerCount := mgr.PeerCount()
+		pendingCount := mgr.PendingCount()
+		if peerCount < cfg.minPeers && peerCount+pendingCount < cfg.maxPeers {
+			err := mgr.DialConn()
+			if err != nil {
+				log.Error().Err(err).Msg("could not dial connection")
+				continue
+			}
 		}
-		ack := append(network, nonce...)
-		syn := make([]byte, len(ack))
-		address := conn.RemoteAddr().String()
-		_, err = conn.Read(syn)
-		if err != nil {
-			log.Error().Str("address", address).Err(err).Msg("could not read syn packet")
-			conn.Close()
-			continue
-		}
-		networkIn := syn[:len(network)]
-		if !bytes.Equal(networkIn, network) {
-			log.Error().Str("address", address).Bytes("network", network).Bytes("network_in", networkIn).Msg("network mismatch")
-			conn.Close()
-			continue
-		}
-		nonceIn := syn[len(network):]
-		if bytes.Equal(nonceIn, nonce) {
-			log.Error().Str("address", address).Bytes("nonce", nonce).Msg("identical nonce")
-			conn.Close()
-			continue
-		}
-		_, err = conn.Write(ack)
-		if err != nil {
-			log.Error().Str("address", address).Err(err).Msg("could not write ack packet")
-			conn.Close()
-			continue
-		}
-		connections <- conn
 	}
 }
