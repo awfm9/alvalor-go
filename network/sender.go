@@ -77,10 +77,18 @@ func (s *Sender) stop() {
 
 func handleSending(log zerolog.Logger, wg *sync.WaitGroup, output <-chan interface{}, codec Codec, conn net.Conn) {
 	defer wg.Done()
-	address := conn.RemoteAddr().String()
+
+	// extract configuration parameters
+	var (
+		address = conn.RemoteAddr().String()
+	)
+
+	// configure logger and add stop/start messages
 	log = log.With().Str("component", "sender").Str("address", address).Logger()
 	log.Info().Msg("sending routine started")
 	defer log.Info().Msg("sending routine stopped")
+
+	// read messages from output channel and write to connection
 	writer := lz4.NewWriter(conn)
 	for msg := range output {
 		err := codec.Encode(writer, msg)

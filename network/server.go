@@ -65,7 +65,7 @@ Loop:
 				continue Loop
 			}
 			running = true
-		} else if running {
+		} else if peerCount >= maxPeers && running {
 			close(done)
 			running = false
 		}

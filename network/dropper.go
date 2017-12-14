@@ -32,10 +32,20 @@ type Dropper interface {
 
 func handleDropping(log zerolog.Logger, wg *sync.WaitGroup, cfg *Config, mgr Dropper, stop <-chan struct{}) {
 	defer wg.Done()
+
+	// extract desired configuration parameters
+	var (
+		interval = cfg.interval
+		maxPeers = cfg.maxPeers
+	)
+
+	// configure logger and add start/stop messages
 	log = log.With().Str("component", "dropper").Logger()
 	log.Info().Msg("dropping routine started")
 	defer log.Info().Msg("dropping routine stopped")
-	ticker := time.NewTicker(cfg.interval)
+
+	// each tick, check if we have too many peers and if yes, drop one
+	ticker := time.NewTicker(interval)
 	for {
 		select {
 		case <-stop:
@@ -43,7 +53,7 @@ func handleDropping(log zerolog.Logger, wg *sync.WaitGroup, cfg *Config, mgr Dro
 			return
 		case <-ticker.C:
 		}
-		if mgr.PeerCount() > cfg.maxPeers {
+		if mgr.PeerCount() > maxPeers {
 			err := mgr.DropPeer()
 			if err != nil {
 				log.Error().Err(err).Msg("could not drop peer")

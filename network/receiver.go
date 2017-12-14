@@ -79,10 +79,18 @@ func (r *Receiver) stop() {
 
 func handleReceiving(log zerolog.Logger, wg *sync.WaitGroup, codec Codec, conn net.Conn, input chan<- interface{}) {
 	defer wg.Done()
-	address := conn.RemoteAddr().String()
+
+	// extract configuration as needed
+	var (
+		address = conn.RemoteAddr().String()
+	)
+
+	// configure logger and add start/stop messages
 	log = log.With().Str("component", "receiver").Str("address", address).Logger()
 	log.Info().Msg("receiving routine started")
 	defer log.Info().Msg("receiving routine closed")
+
+	// read all messages from connetion and forward on channel
 	reader := lz4.NewReader(conn)
 	for {
 		msg, err := codec.Decode(reader)

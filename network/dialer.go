@@ -36,10 +36,22 @@ type Dialer interface {
 
 func handleDialing(log zerolog.Logger, wg *sync.WaitGroup, cfg *Config, mgr Dialer, stop <-chan struct{}) {
 	defer wg.Done()
+
+	// extract needed configuration parameters
+	var (
+		interval = cfg.interval
+		minPeers = cfg.minPeers
+		maxPeers = cfg.maxPeers
+	)
+
+	// configure logger and add start/stop messages
 	log = log.With().Str("component", "dialer").Logger()
 	log.Info().Msg("dialing routine started")
 	defer log.Info().Msg("dialing routine stopped")
-	ticker := time.NewTicker(cfg.interval)
+
+	// on each tick, check if we are below minimum peers and should have free
+	// connection slots, then start a new dialer
+	ticker := time.NewTicker(interval)
 	for {
 		select {
 		case <-stop:
@@ -49,7 +61,7 @@ func handleDialing(log zerolog.Logger, wg *sync.WaitGroup, cfg *Config, mgr Dial
 		}
 		peerCount := mgr.PeerCount()
 		pendingCount := mgr.PendingCount()
-		if peerCount < cfg.minPeers && peerCount+pendingCount < cfg.maxPeers {
+		if peerCount < minPeers && peerCount+pendingCount < maxPeers {
 			err := mgr.StartConnector()
 			if err != nil {
 				log.Error().Err(err).Msg("could not dial connection")

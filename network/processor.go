@@ -29,9 +29,16 @@ type Processor interface {
 
 func handleProcessing(log zerolog.Logger, wg *sync.WaitGroup, cfg *Config, mgr Processor, address string, input <-chan interface{}, output chan<- interface{}, subscriber chan<- interface{}) {
 	defer wg.Done()
+
+	// configuration parameters
+	var ()
+
+	// configure logger and add start/stop messages
 	log = log.With().Str("component", "processor").Str("address", address).Logger()
 	log.Info().Msg("processing routine started")
 	defer log.Info().Msg("processing routine stopped")
+
+	// for each message, handle it as adequate
 	for message := range input {
 		switch msg := message.(type) {
 		case *Ping:

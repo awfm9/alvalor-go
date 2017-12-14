@@ -136,17 +136,6 @@ func (mgr *Manager) PendingCount() uint {
 	return mgr.reg.pending
 }
 
-// StartConnector will try to launch a new connection attempt.
-func (mgr *Manager) StartConnector() error {
-	addresses, err := mgr.book.Sample(1, IsActive(false), RandomSort())
-	if err != nil {
-		return errors.Wrap(err, "could not get address")
-	}
-	mgr.wg.Add(1)
-	go handleConnecting(mgr.log, mgr.wg, mgr.cfg, mgr, addresses[0])
-	return nil
-}
-
 // ClaimSlot claims one pending connection slot.
 func (mgr *Manager) ClaimSlot() error {
 	mgr.reg.pending++
@@ -158,14 +147,27 @@ func (mgr *Manager) ReleaseSlot() {
 	mgr.reg.pending--
 }
 
+// StartConnector will try to launch a new connection attempt.
+func (mgr *Manager) StartConnector() error {
+	addresses, err := mgr.book.Sample(1, IsActive(false), RandomSort())
+	if err != nil {
+		return errors.Wrap(err, "could not get address")
+	}
+	mgr.wg.Add(1)
+	go handleConnecting(mgr.log, mgr.wg, mgr.cfg, mgr, addresses[0])
+	return nil
+}
+
 // StartListener will start a listener on a given port.
 func (mgr *Manager) StartListener(stop <-chan struct{}) error {
+	mgr.wg.Add(1)
 	go handleListening(mgr.log, mgr.wg, mgr.cfg, mgr, stop)
 	return nil
 }
 
 // StartAcceptor will start accepting an incoming connection.
 func (mgr *Manager) StartAcceptor(conn net.Conn) error {
+	mgr.wg.Add(1)
 	go handleAccepting(mgr.log, mgr.wg, mgr.cfg, mgr, conn)
 	return nil
 }
@@ -181,7 +183,10 @@ func (mgr *Manager) StartProcessor(conn net.Conn) error {
 	if err != nil {
 		return errors.Wrap(err, "could not add output")
 	}
+	mgr.wg.Add(1)
 	go handleProcessing(mgr.log, mgr.wg, mgr.cfg, mgr, address, input, output, mgr.subscriber)
 	mgr.reg.peers[address] = &Peer{Address: address, Conn: conn}
 	return nil
 }
+
+// TODO: add sender and receiver to manager, remove their state

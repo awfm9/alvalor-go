@@ -97,7 +97,7 @@ func handleConnecting(log zerolog.Logger, wg *sync.WaitGroup, cfg *Config, mgr C
 	// create the peer for the valid connection
 	err = mgr.StartProcessor(conn)
 	if err != nil {
-		log.Error().Err(err).Msg("could not add peer")
+		log.Error().Err(err).Msg("could not start processor")
 		conn.Close()
 		return
 	}
