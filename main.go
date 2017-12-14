@@ -18,9 +18,13 @@
 package main
 
 import (
+	"flag"
+	"fmt"
+	"math/rand"
 	"os"
 	"os/signal"
 	"sync"
+	"time"
 
 	"github.com/alvalor/alvalor-go/network"
 	"github.com/rs/zerolog"
@@ -28,20 +32,25 @@ import (
 
 func main() {
 
+	rand.Seed(time.Now().UnixNano())
+
 	c := make(chan os.Signal)
 	signal.Notify(c, os.Interrupt)
 
-	log, err := zerolog.New()
-	if err != nil {
-		os.Exit(1)
-	}
+	log := zerolog.New(os.Stderr)
+
+	port := flag.Int("port", 31337, "server port number")
+	flag.Parse()
 
 	wg := &sync.WaitGroup{}
-	network.New(log, wg)
+	mgr := network.NewManager(log,
+		network.SetListen(true),
+		network.SetAddress(fmt.Sprintf("127.0.0.1:%v", *port)),
+	)
 
 	<-c
 
-	net.Close()
+	mgr.Stop()
 
 	wg.Wait()
 }

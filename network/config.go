@@ -24,7 +24,7 @@ import "time"
 type Config struct {
 	network  []byte
 	nonce    []byte
-	server   bool
+	listen   bool
 	address  string
 	minPeers uint
 	maxPeers uint
@@ -38,10 +38,10 @@ func SetNetwork(network []byte) func(*Config) {
 	}
 }
 
-// SetServer allows us to configure a custom server status.
-func SetServer(server bool) func(*Config) {
+// SetListen allows us to configure a custom server status.
+func SetListen(listen bool) func(*Config) {
 	return func(cfg *Config) {
-		cfg.server = server
+		cfg.listen = listen
 	}
 }
 

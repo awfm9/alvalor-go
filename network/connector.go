@@ -62,34 +62,34 @@ func handleConnecting(log zerolog.Logger, wg *sync.WaitGroup, cfg *Config, mgr C
 	}
 	conn, err := net.DialTCP("tcp", nil, addr)
 	if err != nil {
-		log.Error().Err(err).Msg("could not dial address")
+		log.Debug().Err(err).Msg("could not dial address")
 		return
 	}
 
 	// execute the network handshake
-	ack := append(network, nonce...)
-	syn := make([]byte, len(ack))
-	_, err = conn.Read(syn)
+	syn := append(network, nonce...)
+	ack := make([]byte, len(syn))
+	_, err = conn.Write(syn)
 	if err != nil {
-		log.Error().Err(err).Msg("could not read syn packet")
+		log.Error().Err(err).Msg("could not write syn packet")
 		conn.Close()
 		return
 	}
-	networkIn := syn[:len(network)]
+	_, err = conn.Read(ack)
+	if err != nil {
+		log.Error().Err(err).Msg("could not read ack packet")
+		conn.Close()
+		return
+	}
+	networkIn := ack[:len(network)]
 	if !bytes.Equal(networkIn, network) {
 		log.Error().Bytes("network", network).Bytes("network_in", networkIn).Msg("network mismatch")
 		conn.Close()
 		return
 	}
-	nonceIn := syn[len(network):]
+	nonceIn := ack[len(network):]
 	if bytes.Equal(nonceIn, nonce) {
 		log.Error().Bytes("nonce", nonce).Msg("identical nonce")
-		conn.Close()
-		return
-	}
-	_, err = conn.Write(ack)
-	if err != nil {
-		log.Error().Err(err).Msg("could not write ack packet")
 		conn.Close()
 		return
 	}

@@ -35,6 +35,7 @@ func handleServing(log zerolog.Logger, wg *sync.WaitGroup, cfg *Config, mgr Serv
 
 	// extract the configuration parameters we are interested in
 	var (
+		listen   = cfg.listen
 		interval = cfg.interval
 		maxPeers = cfg.maxPeers
 	)
@@ -57,7 +58,7 @@ Loop:
 		case <-ticker.C:
 		}
 		peerCount := mgr.PeerCount()
-		if peerCount < maxPeers && !running {
+		if peerCount < maxPeers && !running && listen {
 			done = make(chan struct{})
 			err := mgr.StartListener(done)
 			if err != nil {

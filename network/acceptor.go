@@ -57,17 +57,11 @@ func handleAccepting(log zerolog.Logger, wg *sync.WaitGroup, cfg *Config, mgr Ac
 	defer mgr.ReleaseSlot()
 
 	// execute the handshake on the incoming connection
-	syn := append(network, nonce...)
-	ack := make([]byte, len(syn))
-	_, err = conn.Write(syn)
+	ack := append(network, nonce...)
+	syn := make([]byte, len(ack))
+	_, err = conn.Read(syn)
 	if err != nil {
-		log.Error().Err(err).Msg("could not write syn packet")
-		conn.Close()
-		return
-	}
-	_, err = conn.Read(ack)
-	if err != nil {
-		log.Error().Err(err).Msg("could not read ack packet")
+		log.Error().Err(err).Msg("could not read syn packet")
 		conn.Close()
 		return
 	}
@@ -80,6 +74,12 @@ func handleAccepting(log zerolog.Logger, wg *sync.WaitGroup, cfg *Config, mgr Ac
 	nonceIn := syn[len(network):]
 	if bytes.Equal(nonceIn, nonce) {
 		log.Error().Bytes("nonce", nonce).Msg("identical nonce")
+		conn.Close()
+		return
+	}
+	_, err = conn.Write(ack)
+	if err != nil {
+		log.Error().Err(err).Msg("could not write ack packet")
 		conn.Close()
 		return
 	}

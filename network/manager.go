@@ -48,6 +48,7 @@ type Manager struct {
 	book       Book
 	codec      Codec
 	subscriber chan<- interface{}
+	stop       chan<- struct{}
 }
 
 // NewManager will initialize the completely wired up networking dependencies.
@@ -62,12 +63,12 @@ func NewManager(log zerolog.Logger, options ...func(*Config)) *Manager {
 	// initialize the default configuration and apply custom options
 	cfg := &Config{
 		network:  Odin,
-		server:   false,
+		listen:   false,
 		address:  "0.0.0.0:31337",
 		minPeers: 3,
 		maxPeers: 10,
 		nonce:    uuid.NewV4().Bytes(),
-		interval: time.Second,
+		interval: time.Second * 1,
 	}
 	for _, option := range options {
 		option(cfg)
@@ -76,6 +77,7 @@ func NewManager(log zerolog.Logger, options ...func(*Config)) *Manager {
 	// TODO: validate the configuration parameters
 
 	// initialize the network component with all state
+	stop := make(chan struct{})
 	mgr := &Manager{
 		log:   log,
 		wg:    wg,
@@ -83,12 +85,13 @@ func NewManager(log zerolog.Logger, options ...func(*Config)) *Manager {
 		reg:   NewRegistry(),
 		snd:   NewSender(log),
 		rcv:   NewReceiver(log),
-		book:  &SimpleBook{},
+		book:  NewSimpleBook(),
 		codec: &SimpleCodec{},
+		stop:  stop,
 	}
 
-	// create the universal stop channel
-	stop := make(chan struct{})
+	// blacklist our own address
+	mgr.book.Blacklist(cfg.address)
 
 	// initialize the dropper who will drop random connections when there are too
 	// many
@@ -105,6 +108,12 @@ func NewManager(log zerolog.Logger, options ...func(*Config)) *Manager {
 	go handleServing(log, wg, cfg, mgr, stop)
 
 	return mgr
+}
+
+// Stop will shut down all routines and wait for them to end.
+func (mgr *Manager) Stop() {
+	close(mgr.stop)
+	mgr.wg.Wait()
 }
 
 // DropPeer will drop a random peer from our connections.
