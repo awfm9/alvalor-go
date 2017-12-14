@@ -25,53 +25,49 @@ import (
 	"github.com/rs/zerolog"
 )
 
-// Connector are the dependencies connecting routines need.
-type Connector interface {
+// Acceptor contains all the dependencies needed to accept a connection.
+type Acceptor interface {
 	ClaimSlot() error
 	ReleaseSlot()
-	StartProcessor(net.Conn) error
+	StartProcessor(conn net.Conn) error
 }
 
-func handleConnecting(log zerolog.Logger, wg *sync.WaitGroup, cfg *Config, mgr Connector, address string) {
+func handleAccepting(log zerolog.Logger, wg *sync.WaitGroup, cfg *Config, mgr Acceptor, conn net.Conn) {
 	defer wg.Done()
 
-	// extract the variables from the config we are interested in
+	// extract configuration parameters we care about
 	var (
 		network = cfg.network
 		nonce   = cfg.nonce
+		address = conn.RemoteAddr().String()
 	)
 
-	// configure the component logger and set start/stop messages
-	log = log.With().Str("component", "connector").Str("address", address).Logger()
-	log.Info().Msg("connecting routine started")
-	defer log.Info().Msg("connecting routine stopped")
+	// set up logging with start/stop messages
+	log = log.With().Str("component", "acceptor").Str("address", address).Logger()
+	log.Info().Msg("accepting routine started")
+	defer log.Info().Msg("accepting routine stopped")
 
-	// claim a free connection slot and set the release
+	// first make sure we can claim a connection slot
 	err := mgr.ClaimSlot()
 	if err != nil {
-		log.Error().Err(err).Msg("could not claim slot")
+		log.Error().Err(err).Msg("could not claim connection slot")
+		conn.Close()
 		return
 	}
 	defer mgr.ReleaseSlot()
 
-	// resolve the address and dial the connection
-	addr, err := net.ResolveTCPAddr("tcp", address)
+	// execute the handshake on the incoming connection
+	syn := append(network, nonce...)
+	ack := make([]byte, len(syn))
+	_, err = conn.Write(syn)
 	if err != nil {
-		log.Error().Err(err).Msg("could not resolve address")
+		log.Error().Err(err).Msg("could not write syn packet")
+		conn.Close()
 		return
 	}
-	conn, err := net.DialTCP("tcp", nil, addr)
+	_, err = conn.Read(ack)
 	if err != nil {
-		log.Error().Err(err).Msg("could not dial address")
-		return
-	}
-
-	// execute the network handshake
-	ack := append(network, nonce...)
-	syn := make([]byte, len(ack))
-	_, err = conn.Read(syn)
-	if err != nil {
-		log.Error().Err(err).Msg("could not read syn packet")
+		log.Error().Err(err).Msg("could not read ack packet")
 		conn.Close()
 		return
 	}
@@ -87,17 +83,11 @@ func handleConnecting(log zerolog.Logger, wg *sync.WaitGroup, cfg *Config, mgr C
 		conn.Close()
 		return
 	}
-	_, err = conn.Write(ack)
-	if err != nil {
-		log.Error().Err(err).Msg("could not write ack packet")
-		conn.Close()
-		return
-	}
 
-	// create the peer for the valid connection
+	// submit the connection for a new peer creation
 	err = mgr.StartProcessor(conn)
 	if err != nil {
-		log.Error().Err(err).Msg("could not add peer")
+		log.Error().Err(err).Msg("could not start processor")
 		conn.Close()
 		return
 	}

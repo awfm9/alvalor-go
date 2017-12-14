@@ -73,6 +73,8 @@ func NewManager(log zerolog.Logger, options ...func(*Config)) *Manager {
 		option(cfg)
 	}
 
+	// TODO: validate the configuration parameters
+
 	// initialize the network component with all state
 	mgr := &Manager{
 		log:   log,
@@ -99,6 +101,8 @@ func NewManager(log zerolog.Logger, options ...func(*Config)) *Manager {
 	go handleDialing(log, wg, cfg, mgr, stop)
 
 	// initialize the listener who will accept connections when
+	wg.Add(1)
+	go handleServing(log, wg, cfg, mgr, stop)
 
 	return mgr
 }
@@ -132,8 +136,8 @@ func (mgr *Manager) PendingCount() uint {
 	return mgr.reg.pending
 }
 
-// DialConn will try to launch a new connection attempt.
-func (mgr *Manager) DialConn() error {
+// StartConnector will try to launch a new connection attempt.
+func (mgr *Manager) StartConnector() error {
 	addresses, err := mgr.book.Sample(1, IsActive(false), RandomSort())
 	if err != nil {
 		return errors.Wrap(err, "could not get address")
@@ -154,8 +158,20 @@ func (mgr *Manager) ReleaseSlot() {
 	mgr.reg.pending--
 }
 
-// AddPeer will add a new successful peer connection.
-func (mgr *Manager) AddPeer(conn net.Conn) error {
+// StartListener will start a listener on a given port.
+func (mgr *Manager) StartListener(stop <-chan struct{}) error {
+	go handleListening(mgr.log, mgr.wg, mgr.cfg, mgr, stop)
+	return nil
+}
+
+// StartAcceptor will start accepting an incoming connection.
+func (mgr *Manager) StartAcceptor(conn net.Conn) error {
+	go handleAccepting(mgr.log, mgr.wg, mgr.cfg, mgr, conn)
+	return nil
+}
+
+// StartProcessor will start processing on a given connection.
+func (mgr *Manager) StartProcessor(conn net.Conn) error {
 	address := conn.RemoteAddr().String()
 	input, err := mgr.rcv.addInput(conn, mgr.codec)
 	if err != nil {

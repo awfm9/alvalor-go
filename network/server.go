@@ -1,0 +1,81 @@
+// Copyright (c) 2017 The Alvalor Authors
+//
+// This file is part of Alvalor.
+//
+// Alvalor is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Affero General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Alvalor is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU Affero General Public License for more details.
+//
+// You should have received a copy of the GNU Affero General Public License
+// along with Alvalor.  If not, see <http://www.gnu.org/licenses/>.
+
+package network
+
+import (
+	"sync"
+	"time"
+
+	"github.com/rs/zerolog"
+)
+
+// Server contains all the dependencies for the serving routine.
+type Server interface {
+	PeerCount() uint
+	StartListener(stop <-chan struct{}) error
+}
+
+func handleServing(log zerolog.Logger, wg *sync.WaitGroup, cfg *Config, mgr Server, stop <-chan struct{}) {
+	defer wg.Done()
+
+	// extract the configuration parameters we are interested in
+	var (
+		interval = cfg.interval
+		maxPeers = cfg.maxPeers
+	)
+
+	// configure the logger for the component with start/stop messages
+	log = log.With().Str("component", "server").Logger()
+	log.Info().Msg("serving routine started")
+	defer log.Info().Msg("serving routine stopped")
+
+	// each time we tick, check if we should enable or disable the accepting of
+	// connections
+	var running bool
+	var done chan struct{}
+	ticker := time.NewTicker(interval)
+Loop:
+	for {
+		select {
+		case <-stop:
+			break Loop
+		case <-ticker.C:
+		}
+		peerCount := mgr.PeerCount()
+		if peerCount < maxPeers && !running {
+			done = make(chan struct{})
+			err := mgr.StartListener(done)
+			if err != nil {
+				log.Error().Err(err).Msg("could not start listener")
+				continue Loop
+			}
+			running = true
+		} else if running {
+			close(done)
+			running = false
+		}
+	}
+
+	// after the stop signal is received, we just need to stop listening if it's
+	// currently on, as the external waitgroup will handle the rest, we don't
+	// need to wait here
+	ticker.Stop()
+	if running {
+		close(done)
+	}
+}

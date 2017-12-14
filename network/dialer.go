@@ -31,7 +31,7 @@ type dialConnFunc func() error
 type Dialer interface {
 	PeerCount() uint
 	PendingCount() uint
-	DialConn() error
+	StartConnector() error
 }
 
 func handleDialing(log zerolog.Logger, wg *sync.WaitGroup, cfg *Config, mgr Dialer, stop <-chan struct{}) {
@@ -50,7 +50,7 @@ func handleDialing(log zerolog.Logger, wg *sync.WaitGroup, cfg *Config, mgr Dial
 		peerCount := mgr.PeerCount()
 		pendingCount := mgr.PendingCount()
 		if peerCount < cfg.minPeers && peerCount+pendingCount < cfg.maxPeers {
-			err := mgr.DialConn()
+			err := mgr.StartConnector()
 			if err != nil {
 				log.Error().Err(err).Msg("could not dial connection")
 				continue
