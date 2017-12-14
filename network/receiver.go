@@ -29,48 +29,49 @@ import (
 
 // Receiver is responsible for receiving and multiplexing all message.
 type Receiver struct {
-	log    zerolog.Logger
-	input  chan<- interface{}
-	inputs map[string]net.Conn
-	wg     *sync.WaitGroup
+	log        zerolog.Logger
+	wg         *sync.WaitGroup
+	inputs     map[string]chan interface{}
+	bufferSize uint
 }
 
 // NewReceiver creates a new receiver with the given input channel as feed for
 // new received messages.
-func NewReceiver(log zerolog.Logger, input chan<- interface{}) *Receiver {
+func NewReceiver(log zerolog.Logger) *Receiver {
 	return &Receiver{
-		log:    log,
-		input:  input,
-		inputs: make(map[string]net.Conn),
-		wg:     &sync.WaitGroup{},
+		log:        log,
+		inputs:     make(map[string]chan interface{}),
+		wg:         &sync.WaitGroup{},
+		bufferSize: 16,
 	}
 }
 
-func (r *Receiver) addInput(conn net.Conn, codec Codec) error {
+func (r *Receiver) addInput(conn net.Conn, codec Codec) (<-chan interface{}, error) {
 	address := conn.RemoteAddr().String()
 	_, ok := r.inputs[address]
 	if ok {
-		return errors.Errorf("input already exists (%v)", address)
+		return nil, errors.Errorf("input already exists (%v)", address)
 	}
-	r.inputs[address] = conn
+	input := make(chan interface{}, r.bufferSize)
+	r.inputs[address] = input
 	r.wg.Add(1)
-	go handleReceiving(r.log, r.wg, codec, conn, r.input)
-	return nil
+	go handleReceiving(r.log, r.wg, codec, conn, input)
+	return input, nil
 }
 
 func (r *Receiver) removeInput(address string) error {
-	conn, ok := r.inputs[address]
+	input, ok := r.inputs[address]
 	if !ok {
 		return errors.Errorf("input not found (%v)", address)
 	}
-	conn.Close()
+	close(input)
 	delete(r.inputs, address)
 	return nil
 }
 
 func (r *Receiver) stop() {
-	for address, conn := range r.inputs {
-		conn.Close()
+	for address, input := range r.inputs {
+		close(input)
 		delete(r.inputs, address)
 	}
 	r.wg.Wait()

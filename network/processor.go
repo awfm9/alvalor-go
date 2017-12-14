@@ -25,43 +25,26 @@ import (
 
 // Processor is all the dependencies for a processing routine.
 type Processor interface {
-	Peer(address string) (Peer, error)
-	Protocol(version string) (Protocol, error)
-	State() (State, error)
-	Send(address string, message interface{}) error
 }
 
-func handleProcessing(log zerolog.Logger, wg *sync.WaitGroup, cfg *Config, mgr Processor, messages <-chan Message) {
+func handleProcessing(log zerolog.Logger, wg *sync.WaitGroup, cfg *Config, mgr Processor, address string, input <-chan interface{}, output chan<- interface{}, subscriber chan<- interface{}) {
 	defer wg.Done()
-	for message := range messages {
-		state, err := mgr.State()
-		if err != nil {
-			log.Error().Err(err).Msg("could not get local state")
-			continue
-		}
-		address := message.Address
-		peer, err := mgr.Peer(address)
-		if err != nil {
-			log.Error().Str("address", address).Err(err).Msg("could not get peer")
-			continue
-		}
-		version := peer.Version
-		protocol, err := mgr.Protocol(peer.Version)
-		if err != nil {
-			log.Error().Str("address", address).Str("version", version).Err(err).Msg("could not get protocol")
-			continue
-		}
-		responses, recipients, err := protocol.Process(message, state, peer)
-		if err != nil {
-			log.Error().Str("address", address).Err(err).Msg("could not process message")
-			continue
-		}
-		for i, response := range responses {
-			recipient := recipients[i]
-			err := mgr.Send(recipient, response)
-			if err != nil {
-				log.Error().Str("address", address).Err(err).Msg("could not send message")
-				continue
+	log = log.With().Str("component", "processor").Str("address", address).Logger()
+	log.Info().Msg("processing routine started")
+	defer log.Info().Msg("processing routine stopped")
+	for message := range input {
+		switch msg := message.(type) {
+		case *Ping:
+			log.Debug().Msg("ping received")
+			output <- &Pong{}
+		case *Pong:
+			log.Debug().Msg("pong received")
+		default:
+			select {
+			case subscriber <- msg:
+				log.Debug().Msg("forwarded to subscriber")
+			default:
+				log.Error().Msg("subscriber timed out")
 			}
 		}
 	}

@@ -29,32 +29,32 @@ import (
 // Sender manages all the output channels to send messages to peers.
 type Sender struct {
 	log        zerolog.Logger
-	outputs    map[string]chan<- interface{}
-	bufferSize uint
 	wg         *sync.WaitGroup
+	outputs    map[string]chan interface{}
+	bufferSize uint
 }
 
 // NewSender creates a new sender responsible for sending messages to peers.
 func NewSender(log zerolog.Logger) *Sender {
 	return &Sender{
 		log:        log,
-		outputs:    make(map[string]chan<- interface{}),
+		outputs:    make(map[string]chan interface{}),
 		bufferSize: 16,
 		wg:         &sync.WaitGroup{},
 	}
 }
 
-func (s *Sender) addOutput(conn net.Conn, codec Codec) error {
+func (s *Sender) addOutput(conn net.Conn, codec Codec) (chan<- interface{}, error) {
 	address := conn.RemoteAddr().String()
 	_, ok := s.outputs[address]
 	if ok {
-		return errors.Errorf("output already exists: %v", address)
+		return nil, errors.Errorf("output already exists: %v", address)
 	}
 	output := make(chan interface{}, s.bufferSize)
 	s.outputs[address] = output
 	s.wg.Add(1)
 	go handleSending(s.log, s.wg, output, codec, conn)
-	return nil
+	return output, nil
 }
 
 func (s *Sender) removeOutput(address string) error {
@@ -65,20 +65,6 @@ func (s *Sender) removeOutput(address string) error {
 	close(output)
 	delete(s.outputs, address)
 	return nil
-}
-
-// Send will try to deliver the message to the peer with the address.
-func (s *Sender) Send(address string, message interface{}) error {
-	output, ok := s.outputs[address]
-	if !ok {
-		return errors.Errorf("output doesn't exist (%v)", address)
-	}
-	select {
-	case output <- message:
-		return nil
-	default:
-		return errors.Errorf("output timed out (%v)", address)
-	}
 }
 
 func (s *Sender) stop() {
