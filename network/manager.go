@@ -62,13 +62,15 @@ func NewManager(log zerolog.Logger, options ...func(*Config)) *Manager {
 
 	// initialize the default configuration and apply custom options
 	cfg := &Config{
-		network:  Odin,
-		listen:   false,
-		address:  "0.0.0.0:31337",
-		minPeers: 3,
-		maxPeers: 10,
-		nonce:    uuid.NewV4().Bytes(),
-		interval: time.Second * 1,
+		network:    Odin,
+		listen:     false,
+		address:    "0.0.0.0:31337",
+		minPeers:   3,
+		maxPeers:   10,
+		nonce:      uuid.NewV4().Bytes(),
+		interval:   time.Second * 1,
+		codec:      SimpleCodec{},
+		bufferSize: 16,
 	}
 	for _, option := range options {
 		option(cfg)
@@ -203,8 +205,8 @@ func (mgr *Manager) AddPeer(conn net.Conn) error {
 	}
 
 	// save the references needed for later interactions
-	input := make(chan interface{})
-	output := make(chan interface{})
+	input := make(chan interface{}, mgr.cfg.bufferSize)
+	output := make(chan interface{}, mgr.cfg.bufferSize)
 	mgr.conns[address] = conn
 	mgr.inputs[address] = input
 	mgr.outputs[address] = output

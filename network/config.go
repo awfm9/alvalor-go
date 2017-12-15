@@ -22,14 +22,15 @@ import "time"
 // Config represents the configuration parameters available to configure a node
 // on the peer-to-peer network.
 type Config struct {
-	network  []byte
-	nonce    []byte
-	listen   bool
-	address  string
-	minPeers uint
-	maxPeers uint
-	interval time.Duration
-	codec    Codec
+	network    []byte
+	nonce      []byte
+	listen     bool
+	address    string
+	minPeers   uint
+	maxPeers   uint
+	interval   time.Duration
+	codec      Codec
+	bufferSize uint
 }
 
 // SetNetwork allows us to configure a custom network ID.
