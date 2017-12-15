@@ -27,7 +27,7 @@ import (
 
 // Listener contains the manager dependencies we need to handle listening.
 type Listener interface {
-	StartAcceptor(conn net.Conn) error
+	StartAcceptor(conn net.Conn)
 }
 
 func handleListening(log zerolog.Logger, wg *sync.WaitGroup, cfg *Config, mgr Listener, stop <-chan struct{}) {
@@ -81,11 +81,7 @@ Loop:
 
 		// we should handle onboarding on a new goroutine to avoid blocking
 		// on listening, and as well so we can release slots with defer
-		err = mgr.StartAcceptor(conn)
-		if err != nil {
-			log.Error().Err(err).Msg("could not start acceptor")
-			continue
-		}
+		mgr.StartAcceptor(conn)
 	}
 
 	// ordered to quit, we close the listener down

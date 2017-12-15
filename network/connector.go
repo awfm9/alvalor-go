@@ -29,7 +29,7 @@ import (
 type Connector interface {
 	ClaimSlot() error
 	ReleaseSlot()
-	StartProcessor(net.Conn) error
+	AddPeer(net.Conn) error
 }
 
 func handleConnecting(log zerolog.Logger, wg *sync.WaitGroup, cfg *Config, mgr Connector, address string) {
@@ -95,9 +95,9 @@ func handleConnecting(log zerolog.Logger, wg *sync.WaitGroup, cfg *Config, mgr C
 	}
 
 	// create the peer for the valid connection
-	err = mgr.StartProcessor(conn)
+	err = mgr.AddPeer(conn)
 	if err != nil {
-		log.Error().Err(err).Msg("could not start processor")
+		log.Error().Err(err).Msg("could not add peer")
 		conn.Close()
 		return
 	}

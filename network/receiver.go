@@ -23,66 +23,16 @@ import (
 	"sync"
 
 	"github.com/pierrec/lz4"
-	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
 )
 
-// Receiver is responsible for receiving and multiplexing all message.
-type Receiver struct {
-	log        zerolog.Logger
-	wg         *sync.WaitGroup
-	inputs     map[string]chan interface{}
-	bufferSize uint
-}
-
-// NewReceiver creates a new receiver with the given input channel as feed for
-// new received messages.
-func NewReceiver(log zerolog.Logger) *Receiver {
-	return &Receiver{
-		log:        log,
-		inputs:     make(map[string]chan interface{}),
-		wg:         &sync.WaitGroup{},
-		bufferSize: 16,
-	}
-}
-
-func (r *Receiver) addInput(conn net.Conn, codec Codec) (<-chan interface{}, error) {
-	address := conn.RemoteAddr().String()
-	_, ok := r.inputs[address]
-	if ok {
-		return nil, errors.Errorf("input already exists (%v)", address)
-	}
-	input := make(chan interface{}, r.bufferSize)
-	r.inputs[address] = input
-	r.wg.Add(1)
-	go handleReceiving(r.log, r.wg, codec, conn, input)
-	return input, nil
-}
-
-func (r *Receiver) removeInput(address string) error {
-	input, ok := r.inputs[address]
-	if !ok {
-		return errors.Errorf("input not found (%v)", address)
-	}
-	close(input)
-	delete(r.inputs, address)
-	return nil
-}
-
-func (r *Receiver) stop() {
-	for address, input := range r.inputs {
-		close(input)
-		delete(r.inputs, address)
-	}
-	r.wg.Wait()
-}
-
-func handleReceiving(log zerolog.Logger, wg *sync.WaitGroup, codec Codec, conn net.Conn, input chan<- interface{}) {
+func handleReceiving(log zerolog.Logger, wg *sync.WaitGroup, cfg *Config, conn net.Conn, input chan<- interface{}) {
 	defer wg.Done()
 
 	// extract configuration as needed
 	var (
 		address = conn.RemoteAddr().String()
+		codec   = cfg.codec
 	)
 
 	// configure logger and add start/stop messages

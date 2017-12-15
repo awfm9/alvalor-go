@@ -18,6 +18,7 @@
 package network
 
 import (
+	"math/rand"
 	"sync"
 	"time"
 
@@ -27,7 +28,8 @@ import (
 // Dropper are the dependencies dropping routines need.
 type Dropper interface {
 	PeerCount() uint
-	DropPeer() error
+	GetAddresses() []string
+	DropPeer(address string) error
 }
 
 func handleDropping(log zerolog.Logger, wg *sync.WaitGroup, cfg *Config, mgr Dropper, stop <-chan struct{}) {
@@ -54,9 +56,14 @@ func handleDropping(log zerolog.Logger, wg *sync.WaitGroup, cfg *Config, mgr Dro
 		case <-ticker.C:
 		}
 		if mgr.PeerCount() > maxPeers {
-			err := mgr.DropPeer()
+			addresses := mgr.GetAddresses()
+			if len(addresses) == 0 {
+				continue
+			}
+			address := addresses[rand.Int()%len(addresses)]
+			err := mgr.DropPeer(address)
 			if err != nil {
-				log.Error().Err(err).Msg("could not drop peer")
+				log.Error().Str("address", address).Err(err).Msg("could not drop peer")
 				continue
 			}
 		}

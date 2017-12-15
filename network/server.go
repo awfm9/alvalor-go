@@ -27,7 +27,7 @@ import (
 // Server contains all the dependencies for the serving routine.
 type Server interface {
 	PeerCount() uint
-	StartListener(stop <-chan struct{}) error
+	StartListener(stop <-chan struct{})
 }
 
 func handleServing(log zerolog.Logger, wg *sync.WaitGroup, cfg *Config, mgr Server, stop <-chan struct{}) {
@@ -60,11 +60,7 @@ Loop:
 		peerCount := mgr.PeerCount()
 		if peerCount < maxPeers && !running && listen {
 			done = make(chan struct{})
-			err := mgr.StartListener(done)
-			if err != nil {
-				log.Error().Err(err).Msg("could not start listener")
-				continue Loop
-			}
+			mgr.StartListener(done)
 			running = true
 		} else if peerCount >= maxPeers && running {
 			close(done)

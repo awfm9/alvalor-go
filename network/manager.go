@@ -18,7 +18,6 @@
 package network
 
 import (
-	"math/rand"
 	"net"
 	"sync"
 	"time"
@@ -42,13 +41,14 @@ type Manager struct {
 	log        zerolog.Logger
 	wg         *sync.WaitGroup
 	cfg        *Config
-	reg        *Registry
-	snd        *Sender
-	rcv        *Receiver
 	book       Book
 	codec      Codec
 	subscriber chan<- interface{}
 	stop       chan<- struct{}
+	conns      map[string]net.Conn
+	inputs     map[string]chan interface{}
+	outputs    map[string]chan interface{}
+	pending    uint
 }
 
 // NewManager will initialize the completely wired up networking dependencies.
@@ -79,15 +79,14 @@ func NewManager(log zerolog.Logger, options ...func(*Config)) *Manager {
 	// initialize the network component with all state
 	stop := make(chan struct{})
 	mgr := &Manager{
-		log:   log,
-		wg:    wg,
-		cfg:   cfg,
-		reg:   NewRegistry(),
-		snd:   NewSender(log),
-		rcv:   NewReceiver(log),
-		book:  NewSimpleBook(),
-		codec: &SimpleCodec{},
-		stop:  stop,
+		log:     log,
+		wg:      wg,
+		cfg:     cfg,
+		book:    NewSimpleBook(),
+		stop:    make(chan struct{}),
+		conns:   make(map[string]net.Conn),
+		inputs:  make(map[string]chan interface{}),
+		outputs: make(map[string]chan interface{}),
 	}
 
 	// blacklist our own address
@@ -116,86 +115,107 @@ func (mgr *Manager) Stop() {
 	mgr.wg.Wait()
 }
 
-// DropPeer will drop a random peer from our connections.
-func (mgr *Manager) DropPeer() error {
-	addresses := make([]string, 0, len(mgr.reg.peers))
-	for address := range mgr.reg.peers {
+// GetAddresses will return the addresses of all connected peers.
+func (mgr *Manager) GetAddresses() []string {
+	addresses := make([]string, 0, len(mgr.conns))
+	for address := range mgr.conns {
 		addresses = append(addresses, address)
 	}
-	address := addresses[rand.Int()%len(addresses)]
-	err := mgr.snd.removeOutput(address)
-	if err != nil {
-		return errors.Wrap(err, "could not remove peer output")
+	return addresses
+}
+
+// DropPeer will drop a random peer from our connections.
+func (mgr *Manager) DropPeer(address string) error {
+	conn, ok := mgr.conns[address]
+	if !ok {
+		return errors.New("peer not found")
 	}
-	err = mgr.rcv.removeInput(address)
+	output := mgr.outputs[address]
+	delete(mgr.outputs, address)
+	close(output)
+	input := mgr.inputs[address]
+	delete(mgr.inputs, address)
+	close(input)
+	delete(mgr.conns, address)
+	err := conn.Close()
 	if err != nil {
-		return errors.Wrap(err, "could not remove peer input")
+		return errors.Wrap(err, "could not close connection")
 	}
-	delete(mgr.reg.peers, address)
 	return nil
 }
 
 // PeerCount returns the number of successfully connected to peers.
 func (mgr *Manager) PeerCount() uint {
-	return uint(len(mgr.reg.peers))
+	return uint(len(mgr.conns))
 }
 
 // PendingCount returns the number of pending peer connections.
 func (mgr *Manager) PendingCount() uint {
-	return mgr.reg.pending
+	return mgr.pending
 }
 
 // ClaimSlot claims one pending connection slot.
 func (mgr *Manager) ClaimSlot() error {
-	mgr.reg.pending++
+	mgr.pending++
 	return nil
 }
 
 // ReleaseSlot releases one pending connection slot.
 func (mgr *Manager) ReleaseSlot() {
-	mgr.reg.pending--
+	mgr.pending--
+}
+
+// GetAddress returns a random address for connection.
+func (mgr *Manager) GetAddress() (string, error) {
+	addresses, err := mgr.book.Sample(1, IsActive(false), RandomSort())
+	if err != nil {
+		return "", errors.Wrap(err, "could not get address")
+	}
+	return addresses[0], nil
 }
 
 // StartConnector will try to launch a new connection attempt.
-func (mgr *Manager) StartConnector() error {
-	addresses, err := mgr.book.Sample(1, IsActive(false), RandomSort())
-	if err != nil {
-		return errors.Wrap(err, "could not get address")
-	}
+func (mgr *Manager) StartConnector(address string) {
 	mgr.wg.Add(1)
-	go handleConnecting(mgr.log, mgr.wg, mgr.cfg, mgr, addresses[0])
-	return nil
+	go handleConnecting(mgr.log, mgr.wg, mgr.cfg, mgr, address)
 }
 
 // StartListener will start a listener on a given port.
-func (mgr *Manager) StartListener(stop <-chan struct{}) error {
+func (mgr *Manager) StartListener(stop <-chan struct{}) {
 	mgr.wg.Add(1)
 	go handleListening(mgr.log, mgr.wg, mgr.cfg, mgr, stop)
-	return nil
 }
 
 // StartAcceptor will start accepting an incoming connection.
-func (mgr *Manager) StartAcceptor(conn net.Conn) error {
+func (mgr *Manager) StartAcceptor(conn net.Conn) {
 	mgr.wg.Add(1)
 	go handleAccepting(mgr.log, mgr.wg, mgr.cfg, mgr, conn)
-	return nil
 }
 
-// StartProcessor will start processing on a given connection.
-func (mgr *Manager) StartProcessor(conn net.Conn) error {
+// AddPeer will launch all necessary processing for a new valid connection.
+func (mgr *Manager) AddPeer(conn net.Conn) error {
+
+	// check that we have nothing for this connection saved yet
 	address := conn.RemoteAddr().String()
-	input, err := mgr.rcv.addInput(conn, mgr.codec)
-	if err != nil {
-		return errors.Wrap(err, "could not add input")
+	_, ok := mgr.conns[address]
+	if ok {
+		return errors.New("peer already exists")
 	}
-	output, err := mgr.snd.addOutput(conn, mgr.codec)
-	if err != nil {
-		return errors.Wrap(err, "could not add output")
-	}
+
+	// save the references needed for later interactions
+	input := make(chan interface{})
+	output := make(chan interface{})
+	mgr.conns[address] = conn
+	mgr.inputs[address] = input
+	mgr.outputs[address] = output
+
+	// launch the message processing routines
+	mgr.wg.Add(1)
+	go handleSending(mgr.log, mgr.wg, mgr.cfg, conn, output)
+	mgr.wg.Add(1)
+	go handleReceiving(mgr.log, mgr.wg, mgr.cfg, conn, input)
 	mgr.wg.Add(1)
 	go handleProcessing(mgr.log, mgr.wg, mgr.cfg, mgr, address, input, output, mgr.subscriber)
-	mgr.reg.peers[address] = &Peer{Address: address, Conn: conn}
+
 	return nil
 }
-
-// TODO: add sender and receiver to manager, remove their state

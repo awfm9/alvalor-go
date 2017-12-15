@@ -22,65 +22,16 @@ import (
 	"sync"
 
 	"github.com/pierrec/lz4"
-	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
 )
 
-// Sender manages all the output channels to send messages to peers.
-type Sender struct {
-	log        zerolog.Logger
-	wg         *sync.WaitGroup
-	outputs    map[string]chan interface{}
-	bufferSize uint
-}
-
-// NewSender creates a new sender responsible for sending messages to peers.
-func NewSender(log zerolog.Logger) *Sender {
-	return &Sender{
-		log:        log,
-		outputs:    make(map[string]chan interface{}),
-		bufferSize: 16,
-		wg:         &sync.WaitGroup{},
-	}
-}
-
-func (s *Sender) addOutput(conn net.Conn, codec Codec) (chan<- interface{}, error) {
-	address := conn.RemoteAddr().String()
-	_, ok := s.outputs[address]
-	if ok {
-		return nil, errors.Errorf("output already exists: %v", address)
-	}
-	output := make(chan interface{}, s.bufferSize)
-	s.outputs[address] = output
-	s.wg.Add(1)
-	go handleSending(s.log, s.wg, output, codec, conn)
-	return output, nil
-}
-
-func (s *Sender) removeOutput(address string) error {
-	output, ok := s.outputs[address]
-	if !ok {
-		return errors.Errorf("output not found (%v)", address)
-	}
-	close(output)
-	delete(s.outputs, address)
-	return nil
-}
-
-func (s *Sender) stop() {
-	for address, output := range s.outputs {
-		close(output)
-		delete(s.outputs, address)
-	}
-	s.wg.Wait()
-}
-
-func handleSending(log zerolog.Logger, wg *sync.WaitGroup, output <-chan interface{}, codec Codec, conn net.Conn) {
+func handleSending(log zerolog.Logger, wg *sync.WaitGroup, cfg *Config, conn net.Conn, output <-chan interface{}) {
 	defer wg.Done()
 
 	// extract configuration parameters
 	var (
 		address = conn.RemoteAddr().String()
+		codec   = cfg.codec
 	)
 
 	// configure logger and add stop/start messages

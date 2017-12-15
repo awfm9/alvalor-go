@@ -29,6 +29,7 @@ type Config struct {
 	minPeers uint
 	maxPeers uint
 	interval time.Duration
+	codec    Codec
 }
 
 // SetNetwork allows us to configure a custom network ID.

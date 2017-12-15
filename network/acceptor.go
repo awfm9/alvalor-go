@@ -29,7 +29,7 @@ import (
 type Acceptor interface {
 	ClaimSlot() error
 	ReleaseSlot()
-	StartProcessor(conn net.Conn) error
+	AddPeer(conn net.Conn) error
 }
 
 func handleAccepting(log zerolog.Logger, wg *sync.WaitGroup, cfg *Config, mgr Acceptor, conn net.Conn) {
@@ -85,9 +85,9 @@ func handleAccepting(log zerolog.Logger, wg *sync.WaitGroup, cfg *Config, mgr Ac
 	}
 
 	// submit the connection for a new peer creation
-	err = mgr.StartProcessor(conn)
+	err = mgr.AddPeer(conn)
 	if err != nil {
-		log.Error().Err(err).Msg("could not start processor")
+		log.Error().Err(err).Msg("could not add peer")
 		conn.Close()
 		return
 	}

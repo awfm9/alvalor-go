@@ -31,7 +31,8 @@ type dialConnFunc func() error
 type Dialer interface {
 	PeerCount() uint
 	PendingCount() uint
-	StartConnector() error
+	GetAddress() (string, error)
+	StartConnector(address string)
 }
 
 func handleDialing(log zerolog.Logger, wg *sync.WaitGroup, cfg *Config, mgr Dialer, stop <-chan struct{}) {
@@ -62,11 +63,12 @@ func handleDialing(log zerolog.Logger, wg *sync.WaitGroup, cfg *Config, mgr Dial
 		peerCount := mgr.PeerCount()
 		pendingCount := mgr.PendingCount()
 		if peerCount < minPeers && peerCount+pendingCount < maxPeers {
-			err := mgr.StartConnector()
+			address, err := mgr.GetAddress()
 			if err != nil {
-				log.Error().Err(err).Msg("could not dial connection")
+				log.Error().Err(err).Msg("could not get address")
 				continue
 			}
+			mgr.StartConnector(address)
 		}
 	}
 }
