@@ -38,17 +38,16 @@ var (
 
 // Manager represents the manager of all network components.
 type Manager struct {
-	log        zerolog.Logger
-	wg         *sync.WaitGroup
-	cfg        *Config
-	book       Book
-	codec      Codec
-	subscriber chan<- interface{}
-	stop       chan<- struct{}
-	conns      map[string]net.Conn
-	inputs     map[string]chan interface{}
-	outputs    map[string]chan interface{}
-	pending    uint
+	log     zerolog.Logger
+	wg      *sync.WaitGroup
+	cfg     *Config
+	book    Book
+	codec   Codec
+	stop    chan struct{}
+	conns   map[string]net.Conn
+	inputs  map[string]chan interface{}
+	outputs map[string]chan interface{}
+	pending uint
 }
 
 // NewManager will initialize the completely wired up networking dependencies.
@@ -79,7 +78,6 @@ func NewManager(log zerolog.Logger, options ...func(*Config)) *Manager {
 	// TODO: validate the configuration parameters
 
 	// initialize the network component with all state
-	stop := make(chan struct{})
 	mgr := &Manager{
 		log:     log,
 		wg:      wg,
@@ -97,16 +95,16 @@ func NewManager(log zerolog.Logger, options ...func(*Config)) *Manager {
 	// initialize the dropper who will drop random connections when there are too
 	// many
 	wg.Add(1)
-	go handleDropping(log, wg, cfg, mgr, stop)
+	go handleDropping(log, wg, cfg, mgr, mgr.stop)
 
 	// initialize the connector who will start dialing connections when we are not
 	// connected to enough peers
 	wg.Add(1)
-	go handleDialing(log, wg, cfg, mgr, stop)
+	go handleDialing(log, wg, cfg, mgr, mgr.stop)
 
 	// initialize the listener who will accept connections when
 	wg.Add(1)
-	go handleServing(log, wg, cfg, mgr, stop)
+	go handleServing(log, wg, cfg, mgr, mgr.stop)
 
 	return mgr
 }
@@ -217,7 +215,7 @@ func (mgr *Manager) AddPeer(conn net.Conn) error {
 	mgr.wg.Add(1)
 	go handleReceiving(mgr.log, mgr.wg, mgr.cfg, conn, input)
 	mgr.wg.Add(1)
-	go handleProcessing(mgr.log, mgr.wg, mgr.cfg, mgr, address, input, output, mgr.subscriber)
+	go handleProcessing(mgr.log, mgr.wg, mgr.cfg, mgr, address, input, output)
 
 	return nil
 }

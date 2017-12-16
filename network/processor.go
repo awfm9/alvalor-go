@@ -27,7 +27,7 @@ import (
 type Processor interface {
 }
 
-func handleProcessing(log zerolog.Logger, wg *sync.WaitGroup, cfg *Config, mgr Processor, address string, input <-chan interface{}, output chan<- interface{}, subscriber chan<- interface{}) {
+func handleProcessing(log zerolog.Logger, wg *sync.WaitGroup, cfg *Config, mgr Processor, address string, input <-chan interface{}, output chan<- interface{}) {
 	defer wg.Done()
 
 	// configuration parameters
@@ -40,19 +40,12 @@ func handleProcessing(log zerolog.Logger, wg *sync.WaitGroup, cfg *Config, mgr P
 
 	// for each message, handle it as adequate
 	for message := range input {
-		switch msg := message.(type) {
+		switch message.(type) {
 		case *Ping:
 			log.Debug().Msg("ping received")
 			output <- &Pong{}
 		case *Pong:
 			log.Debug().Msg("pong received")
-		default:
-			select {
-			case subscriber <- msg:
-				log.Debug().Msg("forwarded to subscriber")
-			default:
-				log.Error().Msg("subscriber timed out")
-			}
 		}
 	}
 }
