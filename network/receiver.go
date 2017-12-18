@@ -23,6 +23,7 @@ import (
 	"sync"
 
 	"github.com/pierrec/lz4"
+	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
 )
 
@@ -49,7 +50,7 @@ func handleReceiving(log zerolog.Logger, wg *sync.WaitGroup, cfg *Config, mgr Re
 	reader := lz4.NewReader(conn)
 	for {
 		msg, err := codec.Decode(reader)
-		if err != nil && err == io.EOF {
+		if errors.Cause(err) == io.EOF {
 			log.Info().Msg("network connection closed")
 			break
 		}
