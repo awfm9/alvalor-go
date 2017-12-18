@@ -19,19 +19,23 @@ package network
 
 import (
 	"sync"
+	"time"
 
 	"github.com/rs/zerolog"
 )
 
 // Processor is all the dependencies for a processing routine.
 type Processor interface {
+	DropPeer(address string) error
 }
 
 func handleProcessing(log zerolog.Logger, wg *sync.WaitGroup, cfg *Config, mgr Processor, address string, input <-chan interface{}, output chan<- interface{}) {
 	defer wg.Done()
 
 	// configuration parameters
-	var ()
+	var (
+		interval = cfg.interval
+	)
 
 	// configure logger and add start/stop messages
 	log = log.With().Str("component", "processor").Str("address", address).Logger()
@@ -39,14 +43,33 @@ func handleProcessing(log zerolog.Logger, wg *sync.WaitGroup, cfg *Config, mgr P
 	defer log.Info().Msg("processing routine stopped")
 
 	// for each message, handle it as adequate
-	// TODO: implement sending heartbeat & receiving timeout
-	for message := range input {
-		switch message.(type) {
-		case *Ping:
-			log.Debug().Msg("ping received")
-			output <- &Pong{}
-		case *Pong:
-			log.Debug().Msg("pong received")
+	timeout := time.NewTimer(interval * 3)
+Loop:
+	for {
+		select {
+		case message, ok := <-input:
+			if !ok {
+				break Loop
+			}
+			if !timeout.Stop() {
+				<-timeout.C
+			}
+			timeout.Reset(interval * 3)
+			switch message.(type) {
+			case *Ping:
+				log.Debug().Msg("ping received")
+				output <- &Pong{}
+			case *Pong:
+				log.Debug().Msg("pong received")
+			}
+		case <-time.After(interval):
+			output <- &Ping{}
+		case <-timeout.C:
+			err := mgr.DropPeer(address)
+			if err != nil {
+				log.Error().Err(err).Msg("could not drop peer")
+			}
+			break Loop
 		}
 	}
 }
