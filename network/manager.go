@@ -88,6 +88,7 @@ func NewManager(log zerolog.Logger, options ...func(*Config)) *Manager {
 		conns:   make(map[string]net.Conn),
 		inputs:  make(map[string]chan interface{}),
 		outputs: make(map[string]chan interface{}),
+		known:   make(map[string]string),
 	}
 
 	// TODO: separate book package and inject so we can add addresses in main
@@ -125,6 +126,9 @@ func NewManager(log zerolog.Logger, options ...func(*Config)) *Manager {
 // Stop will shut down all routines and wait for them to end.
 func (mgr *Manager) Stop() {
 	close(mgr.stop)
+	for address := range mgr.conns {
+		go mgr.DropPeer(address)
+	}
 	mgr.wg.Wait()
 }
 

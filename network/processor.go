@@ -39,6 +39,7 @@ func handleProcessing(log zerolog.Logger, wg *sync.WaitGroup, cfg *Config, mgr P
 	defer log.Info().Msg("processing routine stopped")
 
 	// for each message, handle it as adequate
+	// TODO: implement sending heartbeat & receiving timeout
 	for message := range input {
 		switch message.(type) {
 		case *Ping:
