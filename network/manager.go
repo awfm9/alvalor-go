@@ -90,12 +90,12 @@ func NewManager(log zerolog.Logger, options ...func(*Config)) *Manager {
 	}
 
 	// blacklist our own address
-	mgr.book.Blacklist(cfg.address)
+	mgr.book.Invalid(cfg.address)
 
 	// initialize the dropper who will drop random connections when there are too
 	// many
 	wg.Add(1)
-	go handleDropping(log, wg, cfg, mgr, mgr.stop)
+	go handleDropping(log, wg, cfg, mgr, mgr.book, mgr.stop)
 
 	// initialize the connector who will start dialing connections when we are not
 	// connected to enough peers
@@ -177,7 +177,7 @@ func (mgr *Manager) GetAddress() (string, error) {
 // StartConnector will try to launch a new connection attempt.
 func (mgr *Manager) StartConnector(address string) {
 	mgr.wg.Add(1)
-	go handleConnecting(mgr.log, mgr.wg, mgr.cfg, mgr, address)
+	go handleConnecting(mgr.log, mgr.wg, mgr.cfg, mgr, mgr.book, address)
 }
 
 // StartListener will start a listener on a given port.
@@ -189,7 +189,7 @@ func (mgr *Manager) StartListener(stop <-chan struct{}) {
 // StartAcceptor will start accepting an incoming connection.
 func (mgr *Manager) StartAcceptor(conn net.Conn) {
 	mgr.wg.Add(1)
-	go handleAccepting(mgr.log, mgr.wg, mgr.cfg, mgr, conn)
+	go handleAccepting(mgr.log, mgr.wg, mgr.cfg, mgr, mgr.book, conn)
 }
 
 // AddPeer will launch all necessary processing for a new valid connection.
@@ -211,9 +211,9 @@ func (mgr *Manager) AddPeer(conn net.Conn) error {
 
 	// launch the message processing routines
 	mgr.wg.Add(1)
-	go handleSending(mgr.log, mgr.wg, mgr.cfg, conn, output)
+	go handleSending(mgr.log, mgr.wg, mgr.cfg, mgr.book, conn, output)
 	mgr.wg.Add(1)
-	go handleReceiving(mgr.log, mgr.wg, mgr.cfg, conn, input)
+	go handleReceiving(mgr.log, mgr.wg, mgr.cfg, mgr.book, conn, input)
 	mgr.wg.Add(1)
 	go handleProcessing(mgr.log, mgr.wg, mgr.cfg, mgr, address, input, output)
 

@@ -27,12 +27,12 @@ import (
 
 func TestAddSavesAndGetsPeer(t *testing.T) {
 	book := NewSimpleBook()
-	addr := "192.168.4.52"
-	book.Add(addr)
+	address := "192.168.4.52"
+	book.Add(address)
 
 	entries, _ := book.Sample(1, IsActive(false), ByPrioritySort())
 
-	assert.Equal(t, addr, entries[0], "Entry %s was not found in book", addr)
+	assert.Equal(t, address, entries[0], "Entry %s was not found in book", address)
 }
 
 func TestOrderedSampleReturnsErr(t *testing.T) {
@@ -45,103 +45,90 @@ func TestOrderedSampleReturnsErr(t *testing.T) {
 
 func TestAddDoesNotSavePeerIfBlacklisted(t *testing.T) {
 	book := NewSimpleBook()
-	addr := "125.192.78.113"
+	address := "125.192.78.113"
 
-	book.Blacklist(addr)
-	book.Add(addr)
+	book.Invalid(address)
+	book.Add(address)
 
 	_, err := book.Sample(1, IsActive(false), ByPrioritySort())
 
-	assert.NotNil(t, err, "Add should not save address in case it is blacklisted")
-}
-
-func TestAddSavesPeerIfBlacklistedAndWhitelistedLater(t *testing.T) {
-	book := NewSimpleBook()
-	addr := "125.192.78.113"
-
-	book.Blacklist(addr)
-	book.Whitelist(addr)
-	book.Add(addr)
-
-	entries, _ := book.Sample(1, IsActive(false), ByPrioritySort())
-
-	assert.Equal(t, addr, entries[0], "Address should be saved after whitelisting")
+	assert.NotNil(t, err, "Add should not save addressess in case it is blacklisted")
 }
 
 func TestOrderedSampleReturnsAddressWithHighestScoreWhenOtherConnectionsDropped(t *testing.T) {
 	book := NewSimpleBook()
-	addr1 := "127.54.51.66"
-	addr2 := "120.55.58.86"
-	addr3 := "156.23.41.24"
+	address1 := "127.54.51.66"
+	address2 := "120.55.58.86"
+	address3 := "156.23.41.24"
 
-	book.Add(addr1)
-	book.Add(addr2)
-	book.Add(addr3)
+	book.Add(address1)
+	book.Add(address2)
+	book.Add(address3)
 
-	book.Connected(addr1)
-	book.Disconnected(addr1)
-	book.Connected(addr1)
-	book.Dropped(addr1)
+	book.Success(address1)
+	book.Dropped(address1)
+	book.Success(address1)
+	book.Dropped(address1)
 
-	book.Connected(addr2)
-	book.Dropped(addr2)
-	book.Connected(addr2)
-	book.Dropped(addr2)
+	book.Success(address2)
+	book.Dropped(address2)
+	book.Success(address2)
+	book.Dropped(address2)
 
-	book.Connected(addr3)
-	book.Disconnected(addr3)
-	book.Connected(addr3)
-	book.Disconnected(addr3)
+	book.Success(address3)
+	book.Dropped(address3)
+	book.Success(address3)
+	book.Dropped(address3)
 
 	entries, _ := book.Sample(10, IsActive(false), ByPrioritySort())
 
-	assert.Equal(t, addr3, entries[0], "Address %s with highest score is expected. Actual address %s", addr3, entries[0])
-	assert.Equal(t, addr2, entries[2])
-	assert.Equal(t, addr1, entries[1])
+	assert.Equal(t, address3, entries[0], "Address %s with highest score is expected. Actual addressess %s", address3, entries[0])
+	assert.Equal(t, address2, entries[2])
+	assert.Equal(t, address1, entries[1])
 }
 
-func TestOrderedSampleReturnsAddressWithHighestScoreWhenOtherConnectionsFailed(t *testing.T) {
+func TestOrderedSampleReturnsAddressWithHighestScoreWhenOtherConnectionsError(t *testing.T) {
 	book := NewSimpleBook()
-	addr1 := "127.54.51.66"
-	addr2 := "120.55.58.86"
-	addr3 := "156.23.41.24"
+	address1 := "127.54.51.66"
+	address2 := "120.55.58.86"
+	address3 := "156.23.41.24"
 
-	book.Add(addr1)
-	book.Add(addr2)
-	book.Add(addr3)
+	book.Add(address1)
+	book.Add(address2)
+	book.Add(address3)
 
-	book.Failed(addr1)
-	book.Failed(addr1)
-	book.Failed(addr1)
+	book.Error(address1)
+	book.Error(address1)
+	book.Error(address1)
 
-	book.Failed(addr2)
-	book.Failed(addr2)
-	book.Failed(addr2)
+	book.Error(address2)
+	book.Error(address2)
+	book.Error(address2)
 
-	book.Connected(addr3)
-	book.Disconnected(addr3)
+	book.Success(address3)
+	book.Dropped(address3)
 
 	entries, _ := book.Sample(10, IsActive(false), ByPrioritySort())
 
-	assert.Equal(t, addr3, entries[0], "Address %s with highest score is expected. Actual address %s", addr3, entries[0])
-	assert.Equal(t, addr2, entries[2])
-	assert.Equal(t, addr1, entries[1])
+	assert.Equal(t, address3, entries[0], "Address %s with highest score is expected. Actual addressess %s", address3, entries[0])
+	assert.Equal(t, address2, entries[2])
+	assert.Equal(t, address1, entries[1])
 }
 
 func TestOrderedSampleLimitsByParam(t *testing.T) {
 	book := NewSimpleBook()
-	addr1 := "127.54.51.66"
-	addr2 := "120.55.58.86"
-	addr3 := "156.23.41.24"
+	address1 := "127.54.51.66"
+	address2 := "120.55.58.86"
+	address3 := "156.23.41.24"
 	sampleSize := 2
 
-	book.Add(addr1)
-	book.Add(addr2)
-	book.Add(addr3)
+	book.Add(address1)
+	book.Add(address2)
+	book.Add(address3)
 
 	entries, _ := book.Sample(sampleSize, IsActive(false), ByPrioritySort())
 
-	assert.Len(t, entries, sampleSize);
+	assert.Len(t, entries, sampleSize)
 }
 
 func TestRandomSampleReturnsErrorIfNoPeersAdded(t *testing.T) {
@@ -155,49 +142,49 @@ func TestRandomSampleReturnsErrorIfNoPeersAdded(t *testing.T) {
 func TestRandomSampleReturnsAddedPeers(t *testing.T) {
 	book := NewSimpleBook()
 	count := 10
-	addrs := make([]string, 0, count)
+	addresss := make([]string, 0, count)
 	for i := 0; i < count; i++ {
-		addr := randomAddr()
-		addrs = append(addrs, addr)
-		book.Add(addr)
-		book.Connected(addr)
+		address := randomAddr()
+		addresss = append(addresss, address)
+		book.Add(address)
+		book.Success(address)
 	}
 
 	sample, _ := book.Sample(count, Any(), RandomSort())
 
-	assert.Subset(t, addrs, sample, "Expected sample to be a subset of addrs")
+	assert.Subset(t, addresss, sample, "Expected sample to be a subset of addresss")
 }
 
 func TestRandomSampleReturnsSubsetOfAddedPeers(t *testing.T) {
 	book := NewSimpleBook()
 	count := 50
-	addrs := make([]string, 0, count)
+	addresss := make([]string, 0, count)
 	for i := 0; i < count; i++ {
-		addr := randomAddr()
-		addrs = append(addrs, addr)
-		book.Add(addr)
-		book.Connected(addr)
+		address := randomAddr()
+		addresss = append(addresss, address)
+		book.Add(address)
+		book.Success(address)
 	}
 
 	sample, _ := book.Sample(count, Any(), RandomSort())
 
-	assert.Subset(t, addrs, sample, "Expected sample to be a subset of addrs")
+	assert.Subset(t, addresss, sample, "Expected sample to be a subset of addresss")
 }
 
 func TestRandomSampleLimitsByParam(t *testing.T) {
 	book := NewSimpleBook()
-	addr1 := "127.54.51.66"
-	addr2 := "120.55.58.86"
-	addr3 := "156.23.41.24"
+	address1 := "127.54.51.66"
+	address2 := "120.55.58.86"
+	address3 := "156.23.41.24"
 	count := 2
 
-	book.Add(addr1)
-	book.Add(addr2)
-	book.Add(addr3)
+	book.Add(address1)
+	book.Add(address2)
+	book.Add(address3)
 
 	entries, _ := book.Sample(count, Any(), RandomSort())
 
-	assert.Len(t, entries, count);
+	assert.Len(t, entries, count)
 }
 
 func randomAddr() string {

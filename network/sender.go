@@ -25,7 +25,7 @@ import (
 	"github.com/rs/zerolog"
 )
 
-func handleSending(log zerolog.Logger, wg *sync.WaitGroup, cfg *Config, conn net.Conn, output <-chan interface{}) {
+func handleSending(log zerolog.Logger, wg *sync.WaitGroup, cfg *Config, book Book, conn net.Conn, output <-chan interface{}) {
 	defer wg.Done()
 
 	// extract configuration parameters
@@ -45,6 +45,7 @@ func handleSending(log zerolog.Logger, wg *sync.WaitGroup, cfg *Config, conn net
 		err := codec.Encode(writer, msg)
 		if err != nil {
 			log.Error().Err(err).Msg("could not write message")
+			book.Error(address)
 			continue
 		}
 	}
