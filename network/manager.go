@@ -18,6 +18,7 @@
 package network
 
 import (
+	"bytes"
 	"net"
 	"sync"
 	"time"
@@ -38,17 +39,13 @@ var (
 
 // Manager represents the manager of all network components.
 type Manager struct {
-	log     zerolog.Logger
-	wg      *sync.WaitGroup
-	cfg     *Config
-	book    Book
-	codec   Codec
-	stop    chan struct{}
-	conns   map[string]net.Conn
-	inputs  map[string]chan interface{}
-	outputs map[string]chan interface{}
-	pending uint
-	known   map[string]string
+	log      zerolog.Logger
+	wg       *sync.WaitGroup
+	cfg      *Config
+	book     Book
+	registry Registry
+	stop     chan struct{}
+	pending  uint
 }
 
 // NewManager will initialize the completely wired up networking dependencies.
@@ -80,15 +77,12 @@ func NewManager(log zerolog.Logger, options ...func(*Config)) *Manager {
 
 	// initialize the network component with all state
 	mgr := &Manager{
-		log:     log,
-		wg:      wg,
-		cfg:     cfg,
-		book:    NewSimpleBook(),
-		stop:    make(chan struct{}),
-		conns:   make(map[string]net.Conn),
-		inputs:  make(map[string]chan interface{}),
-		outputs: make(map[string]chan interface{}),
-		known:   make(map[string]string),
+		log:      log,
+		wg:       wg,
+		cfg:      cfg,
+		book:     NewSimpleBook(),
+		registry: NewSimpleRegistry(),
+		stop:     make(chan struct{}),
 	}
 
 	// TODO: separate book package and inject so we can add addresses in main
@@ -126,7 +120,7 @@ func NewManager(log zerolog.Logger, options ...func(*Config)) *Manager {
 // Stop will shut down all routines and wait for them to end.
 func (mgr *Manager) Stop() {
 	close(mgr.stop)
-	for address := range mgr.conns {
+	for _, address := range mgr.registry.List() {
 		go mgr.DropPeer(address)
 	}
 	mgr.wg.Wait()
@@ -134,42 +128,27 @@ func (mgr *Manager) Stop() {
 
 // GetAddresses will return the addresses of all connected peers.
 func (mgr *Manager) GetAddresses() []string {
-	addresses := make([]string, 0, len(mgr.conns))
-	for address := range mgr.conns {
-		addresses = append(addresses, address)
-	}
-	return addresses
+	return mgr.registry.List()
 }
 
 // DropPeer will drop a random peer from our connections.
 func (mgr *Manager) DropPeer(address string) error {
-	conn, ok := mgr.conns[address]
+	peer, ok := mgr.registry.Get(address)
 	if !ok {
 		return errors.New("peer not found")
 	}
-	output := mgr.outputs[address]
-	delete(mgr.outputs, address)
-	close(output)
-	input := mgr.inputs[address]
-	delete(mgr.inputs, address)
-	close(input)
-	delete(mgr.conns, address)
-	err := conn.Close()
+	close(peer.output)
+	close(peer.input)
+	err := peer.conn.Close()
 	if err != nil {
 		return errors.Wrap(err, "could not close connection")
-	}
-	for key := range mgr.known {
-		if key == address {
-			delete(mgr.known, address)
-			break
-		}
 	}
 	return nil
 }
 
 // PeerCount returns the number of successfully connected to peers.
 func (mgr *Manager) PeerCount() uint {
-	return uint(len(mgr.conns))
+	return mgr.registry.Count()
 }
 
 // PendingCount returns the number of pending peer connections.
@@ -180,8 +159,16 @@ func (mgr *Manager) PendingCount() uint {
 // KnownNonce will let us know if we are already connected to a peer with the
 // given nonce.
 func (mgr *Manager) KnownNonce(nonce []byte) bool {
-	_, ok := mgr.known[string(nonce)]
-	return ok
+	for _, address := range mgr.registry.List() {
+		peer, ok := mgr.registry.Get(address)
+		if !ok {
+			continue
+		}
+		if bytes.Equal(peer.nonce, nonce) {
+			return true
+		}
+	}
+	return false
 }
 
 // ClaimSlot claims one pending connection slot.
@@ -225,30 +212,24 @@ func (mgr *Manager) StartAcceptor(conn net.Conn) {
 // AddPeer will launch all necessary processing for a new valid connection.
 func (mgr *Manager) AddPeer(conn net.Conn, nonce []byte) error {
 
-	// check that we have nothing for this connection saved yet
-	address := conn.RemoteAddr().String()
-	_, ok := mgr.conns[address]
-	if ok {
-		return errors.New("peer already exists")
+	// create the peer and add to registry
+	peer := &Peer{
+		conn:   conn,
+		input:  make(chan interface{}, mgr.cfg.bufferSize),
+		output: make(chan interface{}, mgr.cfg.bufferSize),
+		nonce:  nonce,
+	}
+	err := mgr.registry.Add(peer)
+	if err != nil {
+		return errors.Wrap(err, "could not add peer to registry")
 	}
 
-	// add the nonce to the list of stuff we know
-	mgr.known[string(nonce)] = address
-
-	// save the references needed for later interactions
-	input := make(chan interface{}, mgr.cfg.bufferSize)
-	output := make(chan interface{}, mgr.cfg.bufferSize)
-	mgr.conns[address] = conn
-	mgr.inputs[address] = input
-	mgr.outputs[address] = output
-
 	// launch the message processing routines
-	mgr.wg.Add(1)
-	go handleSending(mgr.log, mgr.wg, mgr.cfg, mgr, mgr.book, conn, output)
-	mgr.wg.Add(1)
-	go handleReceiving(mgr.log, mgr.wg, mgr.cfg, mgr, mgr.book, conn, input)
-	mgr.wg.Add(1)
-	go handleProcessing(mgr.log, mgr.wg, mgr.cfg, mgr, address, input, output)
+	address := conn.RemoteAddr().String()
+	mgr.wg.Add(3)
+	go handleSending(mgr.log, mgr.wg, mgr.cfg, mgr, mgr.book, conn, peer.output)
+	go handleReceiving(mgr.log, mgr.wg, mgr.cfg, mgr, mgr.book, conn, peer.input)
+	go handleProcessing(mgr.log, mgr.wg, mgr.cfg, mgr, address, peer.input, peer.output)
 
 	return nil
 }
