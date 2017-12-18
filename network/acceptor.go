@@ -29,7 +29,7 @@ import (
 type Acceptor interface {
 	ClaimSlot() error
 	ReleaseSlot()
-	AddPeer(conn net.Conn) error
+	AddPeer(conn net.Conn, nonce []byte) error
 }
 
 func handleAccepting(log zerolog.Logger, wg *sync.WaitGroup, cfg *Config, mgr Acceptor, book Book, conn net.Conn) {
@@ -89,10 +89,12 @@ func handleAccepting(log zerolog.Logger, wg *sync.WaitGroup, cfg *Config, mgr Ac
 	}
 
 	// submit the connection for a new peer creation
-	err = mgr.AddPeer(conn)
+	err = mgr.AddPeer(conn, nonceIn)
 	if err != nil {
 		log.Error().Err(err).Msg("could not add peer")
 		conn.Close()
 		return
 	}
+
+	book.Success(address)
 }

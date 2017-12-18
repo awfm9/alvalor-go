@@ -123,6 +123,10 @@ func RandomSort() func([]*Entry) []*Entry {
 func (s *SimpleBook) Add(address string) {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
+	_, ok := s.blacklist[address]
+	if ok {
+		return
+	}
 	s.entries[address] = &Entry{address: address}
 }
 
@@ -131,6 +135,7 @@ func (s *SimpleBook) Add(address string) {
 func (s *SimpleBook) Invalid(address string) {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
+	delete(s.entries, address)
 	s.blacklist[address] = struct{}{}
 }
 

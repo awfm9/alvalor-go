@@ -29,7 +29,8 @@ import (
 type Connector interface {
 	ClaimSlot() error
 	ReleaseSlot()
-	AddPeer(net.Conn) error
+	KnownNonce(nonce []byte) bool
+	AddPeer(conn net.Conn, nonce []byte) error
 }
 
 func handleConnecting(log zerolog.Logger, wg *sync.WaitGroup, cfg *Config, mgr Connector, book Book, address string) {
@@ -99,12 +100,20 @@ func handleConnecting(log zerolog.Logger, wg *sync.WaitGroup, cfg *Config, mgr C
 		book.Invalid(address)
 		return
 	}
+	if mgr.KnownNonce(nonceIn) {
+		log.Error().Bytes("nonce", nonce).Msg("nonce already known")
+		conn.Close()
+		book.Invalid(address)
+		return
+	}
 
 	// create the peer for the valid connection
-	err = mgr.AddPeer(conn)
+	err = mgr.AddPeer(conn, nonceIn)
 	if err != nil {
 		log.Error().Err(err).Msg("could not add peer")
 		conn.Close()
 		return
 	}
+
+	book.Success(address)
 }

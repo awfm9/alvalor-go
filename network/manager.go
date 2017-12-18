@@ -48,6 +48,7 @@ type Manager struct {
 	inputs  map[string]chan interface{}
 	outputs map[string]chan interface{}
 	pending uint
+	known   map[string]string
 }
 
 // NewManager will initialize the completely wired up networking dependencies.
@@ -153,6 +154,12 @@ func (mgr *Manager) DropPeer(address string) error {
 	if err != nil {
 		return errors.Wrap(err, "could not close connection")
 	}
+	for key := range mgr.known {
+		if key == address {
+			delete(mgr.known, address)
+			break
+		}
+	}
 	return nil
 }
 
@@ -164,6 +171,13 @@ func (mgr *Manager) PeerCount() uint {
 // PendingCount returns the number of pending peer connections.
 func (mgr *Manager) PendingCount() uint {
 	return mgr.pending
+}
+
+// KnownNonce will let us know if we are already connected to a peer with the
+// given nonce.
+func (mgr *Manager) KnownNonce(nonce []byte) bool {
+	_, ok := mgr.known[string(nonce)]
+	return ok
 }
 
 // ClaimSlot claims one pending connection slot.
@@ -205,7 +219,7 @@ func (mgr *Manager) StartAcceptor(conn net.Conn) {
 }
 
 // AddPeer will launch all necessary processing for a new valid connection.
-func (mgr *Manager) AddPeer(conn net.Conn) error {
+func (mgr *Manager) AddPeer(conn net.Conn, nonce []byte) error {
 
 	// check that we have nothing for this connection saved yet
 	address := conn.RemoteAddr().String()
@@ -213,6 +227,9 @@ func (mgr *Manager) AddPeer(conn net.Conn) error {
 	if ok {
 		return errors.New("peer already exists")
 	}
+
+	// add the nonce to the list of stuff we know
+	mgr.known[string(nonce)] = address
 
 	// save the references needed for later interactions
 	input := make(chan interface{}, mgr.cfg.bufferSize)
