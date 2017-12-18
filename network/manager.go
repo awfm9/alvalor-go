@@ -89,6 +89,18 @@ func NewManager(log zerolog.Logger, options ...func(*Config)) *Manager {
 		outputs: make(map[string]chan interface{}),
 	}
 
+	// TODO: separate book package and inject so we can add addresses in main
+	mgr.book.Add("127.0.0.1:31330")
+	mgr.book.Add("127.0.0.1:31331")
+	mgr.book.Add("127.0.0.1:31332")
+	mgr.book.Add("127.0.0.1:31333")
+	mgr.book.Add("127.0.0.1:31334")
+	mgr.book.Add("127.0.0.1:31335")
+	mgr.book.Add("127.0.0.1:31336")
+	mgr.book.Add("127.0.0.1:31337")
+	mgr.book.Add("127.0.0.1:31338")
+	mgr.book.Add("127.0.0.1:31339")
+
 	// blacklist our own address
 	mgr.book.Invalid(cfg.address)
 
