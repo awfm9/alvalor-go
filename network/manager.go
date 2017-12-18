@@ -211,9 +211,9 @@ func (mgr *Manager) AddPeer(conn net.Conn) error {
 
 	// launch the message processing routines
 	mgr.wg.Add(1)
-	go handleSending(mgr.log, mgr.wg, mgr.cfg, mgr.book, conn, output)
+	go handleSending(mgr.log, mgr.wg, mgr.cfg, mgr, mgr.book, conn, output)
 	mgr.wg.Add(1)
-	go handleReceiving(mgr.log, mgr.wg, mgr.cfg, mgr.book, conn, input)
+	go handleReceiving(mgr.log, mgr.wg, mgr.cfg, mgr, mgr.book, conn, input)
 	mgr.wg.Add(1)
 	go handleProcessing(mgr.log, mgr.wg, mgr.cfg, mgr, address, input, output)
 
