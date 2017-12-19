@@ -29,12 +29,14 @@ type Processor interface {
 	DropPeer(address string) error
 }
 
-func handleProcessing(log zerolog.Logger, wg *sync.WaitGroup, cfg *Config, mgr Processor, address string, input <-chan interface{}, output chan<- interface{}) {
+func handleProcessing(log zerolog.Logger, wg *sync.WaitGroup, cfg *Config, mgr Processor, book Book, address string, input <-chan interface{}, output chan<- interface{}) {
 	defer wg.Done()
 
 	// configuration parameters
 	var (
 		interval = cfg.interval
+		listen   = cfg.listen
+		laddress = cfg.address
 	)
 
 	// configure logger and add start/stop messages
@@ -44,6 +46,10 @@ func handleProcessing(log zerolog.Logger, wg *sync.WaitGroup, cfg *Config, mgr P
 
 	// for each message, handle it as adequate
 	timeout := time.NewTimer(interval * 3)
+	if listen {
+		output <- &Peers{Addresses: []string{laddress}}
+	}
+	output <- &Discover{}
 Loop:
 	for {
 		select {
@@ -55,12 +61,25 @@ Loop:
 				<-timeout.C
 			}
 			timeout.Reset(interval * 3)
-			switch message.(type) {
+			switch msg := message.(type) {
 			case *Ping:
 				log.Debug().Msg("ping received")
 				output <- &Pong{}
 			case *Pong:
 				log.Debug().Msg("pong received")
+			case *Discover:
+				log.Debug().Msg("discover received")
+				addresses, err := book.Sample(16, Any(), RandomSort())
+				if err != nil {
+					log.Error().Err(err).Msg("could not get address sample")
+					continue
+				}
+				output <- &Peers{Addresses: addresses}
+			case *Peers:
+				log.Debug().Msg("peer received")
+				for _, address := range msg.Addresses {
+					book.Add(address)
+				}
 			}
 		case <-time.After(interval):
 			output <- &Ping{}

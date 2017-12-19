@@ -87,15 +87,6 @@ func NewManager(log zerolog.Logger, options ...func(*Config)) *Manager {
 
 	// TODO: separate book package and inject so we can add addresses in main
 	mgr.book.Add("127.0.0.1:31330")
-	mgr.book.Add("127.0.0.1:31331")
-	mgr.book.Add("127.0.0.1:31332")
-	mgr.book.Add("127.0.0.1:31333")
-	mgr.book.Add("127.0.0.1:31334")
-	mgr.book.Add("127.0.0.1:31335")
-	mgr.book.Add("127.0.0.1:31336")
-	mgr.book.Add("127.0.0.1:31337")
-	mgr.book.Add("127.0.0.1:31338")
-	mgr.book.Add("127.0.0.1:31339")
 
 	// blacklist our own address
 	mgr.book.Invalid(cfg.address)
@@ -221,7 +212,7 @@ func (mgr *Manager) AddPeer(conn net.Conn, nonce []byte) error {
 	mgr.wg.Add(3)
 	go handleSending(mgr.log, mgr.wg, mgr.cfg, mgr, mgr.book, conn, peer.output)
 	go handleReceiving(mgr.log, mgr.wg, mgr.cfg, mgr, mgr.book, conn, peer.input)
-	go handleProcessing(mgr.log, mgr.wg, mgr.cfg, mgr, address, peer.input, peer.output)
+	go handleProcessing(mgr.log, mgr.wg, mgr.cfg, mgr, mgr.book, address, peer.input, peer.output)
 
 	return nil
 }
