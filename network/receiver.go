@@ -58,8 +58,9 @@ func handleReceiving(log zerolog.Logger, wg *sync.WaitGroup, cfg *Config, mgr Re
 			log.Error().Err(err).Msg("reading message failed")
 			book.Error(address)
 			mgr.DropPeer(address)
-			break
+			continue
 		}
 		input <- msg
 	}
+	close(input)
 }

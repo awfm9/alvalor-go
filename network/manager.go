@@ -137,12 +137,11 @@ func (mgr *Manager) DropPeer(address string) error {
 	if !ok {
 		return errors.New("peer not found")
 	}
-	close(peer.output)
-	close(peer.input)
 	err := peer.conn.Close()
 	if err != nil {
 		return errors.Wrap(err, "could not close connection")
 	}
+	_ = mgr.registry.Remove(address)
 	return nil
 }
 

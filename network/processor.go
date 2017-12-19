@@ -65,11 +65,8 @@ Loop:
 		case <-time.After(interval):
 			output <- &Ping{}
 		case <-timeout.C:
-			err := mgr.DropPeer(address)
-			if err != nil {
-				log.Error().Err(err).Msg("could not drop peer")
-			}
-			break Loop
+			mgr.DropPeer(address)
 		}
 	}
+	close(output)
 }

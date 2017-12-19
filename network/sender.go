@@ -18,10 +18,12 @@
 package network
 
 import (
+	"io"
 	"net"
 	"sync"
 
 	"github.com/pierrec/lz4"
+	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
 )
 
@@ -48,11 +50,18 @@ func handleSending(log zerolog.Logger, wg *sync.WaitGroup, cfg *Config, mgr Send
 	writer := lz4.NewWriter(conn)
 	for msg := range output {
 		err := codec.Encode(writer, msg)
+		if errors.Cause(err) == io.EOF {
+			log.Info().Msg("network connection closed")
+			break
+		}
 		if err != nil {
 			log.Error().Err(err).Msg("could not write message")
 			book.Error(address)
 			mgr.DropPeer(address)
-			break
+			continue
 		}
+	}
+	for _ = range output {
+		// draining the channel
 	}
 }
