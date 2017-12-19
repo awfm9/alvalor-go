@@ -67,12 +67,16 @@ func (r *SimpleRegistry) Add(peer *Peer) error {
 
 // Has will check if we have this peer.
 func (r *SimpleRegistry) Has(address string) bool {
+	r.mutex.Lock()
+	defer r.mutex.Unlock()
 	_, ok := r.peers[address]
 	return ok
 }
 
 // Get will return the peer with the given address.
 func (r *SimpleRegistry) Get(address string) (*Peer, bool) {
+	r.mutex.Lock()
+	defer r.mutex.Unlock()
 	peer, ok := r.peers[address]
 	return peer, ok
 }

@@ -44,13 +44,13 @@ func handleReceiving(log zerolog.Logger, wg *sync.WaitGroup, cfg *Config, mgr Re
 	// configure logger and add start/stop messages
 	log = log.With().Str("component", "receiver").Str("address", address).Logger()
 	log.Info().Msg("receiving routine started")
-	defer log.Info().Msg("receiving routine closed")
+	defer log.Info().Msg("receiving routine stopped")
 
 	// read all messages from connetion and forward on channel
 	reader := lz4.NewReader(conn)
 	for {
 		msg, err := codec.Decode(reader)
-		if errors.Cause(err) == io.EOF {
+		if errors.Cause(err) == io.EOF || isClosedErr(err) {
 			log.Info().Msg("network connection closed")
 			break
 		}

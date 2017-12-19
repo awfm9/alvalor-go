@@ -100,18 +100,11 @@ func NewManager(log zerolog.Logger, options ...func(*Config)) *Manager {
 	// blacklist our own address
 	mgr.book.Invalid(cfg.address)
 
-	// initialize the dropper who will drop random connections when there are too
-	// many
-	wg.Add(1)
+	// initialize the connection dropper, the outgoing connection dialer and
+	// the incoming connection server
+	wg.Add(3)
 	go handleDropping(log, wg, cfg, mgr, mgr.book, mgr.stop)
-
-	// initialize the connector who will start dialing connections when we are not
-	// connected to enough peers
-	wg.Add(1)
 	go handleDialing(log, wg, cfg, mgr, mgr.stop)
-
-	// initialize the listener who will accept connections when
-	wg.Add(1)
 	go handleServing(log, wg, cfg, mgr, mgr.stop)
 
 	return mgr

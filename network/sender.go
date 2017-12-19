@@ -50,7 +50,7 @@ func handleSending(log zerolog.Logger, wg *sync.WaitGroup, cfg *Config, mgr Send
 	writer := lz4.NewWriter(conn)
 	for msg := range output {
 		err := codec.Encode(writer, msg)
-		if errors.Cause(err) == io.EOF {
+		if errors.Cause(err) == io.EOF || isClosedErr(err) {
 			log.Info().Msg("network connection closed")
 			break
 		}
