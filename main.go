@@ -15,12 +15,42 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with Alvalor.  If not, see <http://www.gnu.org/licenses/>.
 
-package network
+package main
 
-// Enumeration of different networks available. A node configured with one network will only
-// successfully connect to nodes of the same network. To be used for testing & iteration.
-var (
-	Odin = []byte{79, 68, 73, 78}
-	Thor = []byte{84, 72, 79, 82}
-	Loki = []byte{76, 79, 75, 73}
+import (
+	"flag"
+	"fmt"
+	"math/rand"
+	"os"
+	"os/signal"
+	"sync"
+	"time"
+
+	"github.com/alvalor/alvalor-go/network"
+	"github.com/rs/zerolog"
 )
+
+func main() {
+
+	rand.Seed(time.Now().UnixNano())
+
+	c := make(chan os.Signal)
+	signal.Notify(c, os.Interrupt)
+
+	log := zerolog.New(os.Stderr)
+
+	port := flag.Int("port", 31337, "server port number")
+	flag.Parse()
+
+	wg := &sync.WaitGroup{}
+	mgr := network.NewManager(log,
+		network.SetListen(true),
+		network.SetAddress(fmt.Sprintf("127.0.0.1:%v", *port)),
+	)
+
+	<-c
+
+	mgr.Stop()
+
+	wg.Wait()
+}

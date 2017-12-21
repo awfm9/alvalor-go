@@ -27,26 +27,25 @@ import (
 
 // Book represents an address book interface to handle known peer addresses on the alvalor network.
 type Book interface {
-	Add(addr string)
-	Whitelist(addr string)
-	Blacklist(addr string)
-	Connected(addr string)
-	Disconnected(addr string)
-	Dropped(addr string)
-	Failed(addr string)
+	Add(address string)
+	Invalid(address string)
+	Error(address string)
+	Success(address string)
+	Failure(address string)
+	Dropped(address string)
 	Sample(count int, filter func(*Entry) bool, sort func([]*Entry) []*Entry) ([]string, error)
 }
 
 // DefaultBook defines the book used by default for the initialization of a network node.
 var DefaultBook = &SimpleBook{
-	blacklist:  make(map[string]struct{}),
-	entries:    make(map[string]*Entry),
+	blacklist: make(map[string]struct{}),
+	entries:   make(map[string]*Entry),
 }
 
 // Entry represents an entry in the simple address book, containing the address, whether the peer is
 // currently active and how many successes/failures we had on the connection.
 type Entry struct {
-	addr    string
+	address string
 	active  bool
 	success int
 	failure int
@@ -74,36 +73,36 @@ var (
 // an explicit blacklist, a registry of peers and defines a sample size of how many addresses to
 // return on its random sample. It uses a mutex to be thread-safe.
 type SimpleBook struct {
-	mutex      sync.Mutex
-	blacklist  map[string]struct{}
-	entries    map[string]*Entry
+	mutex     sync.Mutex
+	blacklist map[string]struct{}
+	entries   map[string]*Entry
 }
 
 // NewSimpleBook creates a new default initialized instance of a simple address book.
 func NewSimpleBook() *SimpleBook {
 	return &SimpleBook{
-		blacklist:  make(map[string]struct{}),
-		entries:    make(map[string]*Entry),
+		blacklist: make(map[string]struct{}),
+		entries:   make(map[string]*Entry),
 	}
 }
 
 // IsActive represents filter to select active/inactive entries in Sample method
 func IsActive(active bool) func(e *Entry) bool {
 	return func(e *Entry) bool {
-        return e.active == active
+		return e.active == active
 	}
 }
 
 // Any reperesents filter to select any entries in Sample method
 func Any() func(e *Entry) bool {
 	return func(e *Entry) bool {
-        return true
+		return true
 	}
 }
 
 // ByPrioritySort represents an order by priority which is calculated based on score. It can be used to sort entries in Sample method
 func ByPrioritySort() func([]*Entry) []*Entry {
-	return func (entries []*Entry) []*Entry {
+	return func(entries []*Entry) []*Entry {
 		sort.Sort(byPriority(entries))
 		return entries
 	}
@@ -111,7 +110,7 @@ func ByPrioritySort() func([]*Entry) []*Entry {
 
 // RandomSort represents a random order. It can be used to sort entries in Sample method
 func RandomSort() func([]*Entry) []*Entry {
-	return func (entries []*Entry) []*Entry {
+	return func(entries []*Entry) []*Entry {
 		for i := 0; i < len(entries); i++ {
 			j := rand.Intn(i + 1)
 			entries[i], entries[j] = entries[j], entries[i]
@@ -120,47 +119,45 @@ func RandomSort() func([]*Entry) []*Entry {
 	}
 }
 
-// Whitelist will remove an address from the blacklist and set it's score to one by resetting
-// failures and setting success count to one.
-func (s *SimpleBook) Whitelist(addr string) {
-	s.mutex.Lock()
-	defer s.mutex.Unlock()
-	delete(s.blacklist, addr)
-	peer, ok := s.entries[addr]
-	if !ok {
-		return
-	}
-	peer.failure = 0
-	peer.success = 1
-}
-
-// Blacklist will delete an entry from the registry and put it in the blacklist so further adding
-// is no longer possible.
-func (s *SimpleBook) Blacklist(addr string) {
-	s.mutex.Lock()
-	defer s.mutex.Unlock()
-	delete(s.entries, addr)
-	s.blacklist[addr] = struct{}{}
-}
-
 // Add will add an address to the list of available peer addresses, unless it is blacklisted.
-func (s *SimpleBook) Add(addr string) {
+func (s *SimpleBook) Add(address string) {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
-	_, ok := s.blacklist[addr]
+	_, ok := s.blacklist[address]
 	if ok {
 		return
 	}
-	s.entries[addr] = &Entry{addr: addr}
+	s.entries[address] = &Entry{address: address}
 }
 
-// Connected should be called by consumers whenever a successful connection to the peer with the
-// given address was established. It is used to keep track of the active status and to increase the
-// success count of the peer.
-func (s *SimpleBook) Connected(addr string) {
+// Invalid should be called whenever an address should be considered permanently to be an
+// invalid peer.
+func (s *SimpleBook) Invalid(address string) {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
-	e, ok := s.entries[addr]
+	delete(s.entries, address)
+	s.blacklist[address] = struct{}{}
+}
+
+// Error should be called whenever there is an error on a connection that could be
+// temporary in nature.
+func (s *SimpleBook) Error(address string) {
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
+	e, ok := s.entries[address]
+	if !ok {
+		return
+	}
+	e.failure++
+}
+
+// Success should be called by consumers whenever a successful connection to the peer with the
+// given address was established. It is used to keep track of the active status and to increase the
+// success count of the peer.
+func (s *SimpleBook) Success(address string) {
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
+	e, ok := s.entries[address]
 	if !ok {
 		return
 	}
@@ -168,37 +165,24 @@ func (s *SimpleBook) Connected(addr string) {
 	e.success++
 }
 
-// Disconnected should be called by consumers whenever a peer was disconnected in a clean way. It is
+// Dropped should be called by consumers whenever a peer was disconnected. It is
 // used to keep track of the active status.
-func (s *SimpleBook) Disconnected(addr string) {
+func (s *SimpleBook) Dropped(address string) {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
-	e, ok := s.entries[addr]
+	e, ok := s.entries[address]
 	if !ok {
 		return
 	}
 	e.active = false
 }
 
-// Dropped should be called by consumers whenever a we decided to drop a peer due to errors in the
-// connection. It is used to keep track of the failure & active status of a peer.
-func (s *SimpleBook) Dropped(addr string) {
-	s.mutex.Lock()
-	defer s.mutex.Unlock()
-	e, ok := s.entries[addr]
-	if !ok {
-		return
-	}
-	e.active = false
-	e.failure++
-}
-
-// Failed should be called whenever connection to a peer failed. It is used to keep track of the
+// Failure should be called whenever connection to a peer failed. It is used to keep track of the
 // failure & active status of a peer.
-func (s *SimpleBook) Failed(addr string) {
+func (s *SimpleBook) Failure(address string) {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
-	e, ok := s.entries[addr]
+	e, ok := s.entries[address]
 	if !ok {
 		return
 	}
@@ -219,14 +203,14 @@ func (s *SimpleBook) Sample(count int, filter func(*Entry) bool, sort func([]*En
 	entries = sort(entries)
 
 	if len(entries) > count {
-	    entries = entries[:count]
+		entries = entries[:count]
 	}
 
-	addrs := make([]string, 0, count)
+	addresses := make([]string, 0, count)
 	for _, e := range entries {
-		addrs = append(addrs, e.addr)
+		addresses = append(addresses, e.address)
 	}
-	return addrs, nil
+	return addresses, nil
 }
 
 // slice method.

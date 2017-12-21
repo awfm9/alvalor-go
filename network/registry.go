@@ -17,57 +17,96 @@
 
 package network
 
-import "sync"
+import (
+	"errors"
+	"net"
+	"sync"
+)
 
-// registry represents a simple map of peers that is safe for concurrent access.
-type registry struct {
-	mutex sync.RWMutex
-	peers map[string]*peer
+// Registry presents a registry to manage peers.
+type Registry interface {
+	Add(peer *Peer) error
+	Has(address string) bool
+	Get(address string) (*Peer, bool)
+	Remove(address string) error
+	Count() uint
+	List() []string
 }
 
-// slice returns a copied slice of all registered peers.
-func (reg *registry) slice() []*peer {
-	reg.mutex.RLock()
-	defer reg.mutex.RUnlock()
-	peers := make([]*peer, 0, len(reg.peers))
-	for _, peer := range reg.peers {
-		peers = append(peers, peer)
+// Peer contains the data on a given peer.
+type Peer struct {
+	conn   net.Conn
+	input  chan interface{}
+	output chan interface{}
+	nonce  []byte
+}
+
+// SimpleRegistry takes care of managing peer data.
+type SimpleRegistry struct {
+	mutex sync.Mutex
+	peers map[string]*Peer
+}
+
+// NewSimpleRegistry creates a new peer registry.
+func NewSimpleRegistry() *SimpleRegistry {
+	return &SimpleRegistry{peers: make(map[string]*Peer)}
+}
+
+// Add will add a new peer to the registry.
+func (r *SimpleRegistry) Add(peer *Peer) error {
+	r.mutex.Lock()
+	defer r.mutex.Unlock()
+	address := peer.conn.RemoteAddr().String()
+	_, ok := r.peers[address]
+	if ok {
+		return errors.New("peer already exists")
 	}
-	return peers
+	r.peers[address] = peer
+	return nil
 }
 
-// has returns true if we know a peer with the given address.
-func (reg *registry) has(addr string) bool {
-	reg.mutex.RLock()
-	defer reg.mutex.RUnlock()
-	_, ok := reg.peers[addr]
+// Has will check if we have this peer.
+func (r *SimpleRegistry) Has(address string) bool {
+	r.mutex.Lock()
+	defer r.mutex.Unlock()
+	_, ok := r.peers[address]
 	return ok
 }
 
-// remove will remove the peer with the given address from the registry.
-func (reg *registry) remove(addr string) {
-	reg.mutex.Lock()
-	defer reg.mutex.Unlock()
-	delete(reg.peers, addr)
+// Get will return the peer with the given address.
+func (r *SimpleRegistry) Get(address string) (*Peer, bool) {
+	r.mutex.Lock()
+	defer r.mutex.Unlock()
+	peer, ok := r.peers[address]
+	return peer, ok
 }
 
-// add will add the given peer with the given address to the registry.
-func (reg *registry) add(addr string, peer *peer) {
-	reg.mutex.Lock()
-	defer reg.mutex.Unlock()
-	reg.peers[addr] = peer
+// Remove will remove a peer from the registry.
+func (r *SimpleRegistry) Remove(address string) error {
+	r.mutex.Lock()
+	defer r.mutex.Unlock()
+	_, ok := r.peers[address]
+	if !ok {
+		return errors.New("peer not found")
+	}
+	delete(r.peers, address)
+	return nil
 }
 
-// count will return the number of peers currently in the registry.
-func (reg *registry) count() int {
-	reg.mutex.RLock()
-	defer reg.mutex.RUnlock()
-	return len(reg.peers)
+// Count will return the count of peers in the map.
+func (r *SimpleRegistry) Count() uint {
+	r.mutex.Lock()
+	defer r.mutex.Unlock()
+	return uint(len(r.peers))
 }
 
-// get will return the peer with the given address.
-func (reg *registry) get(addr string) *peer {
-	reg.mutex.RLock()
-	defer reg.mutex.RUnlock()
-	return reg.peers[addr]
+// List will give us a list of all peer addresses.
+func (r *SimpleRegistry) List() []string {
+	r.mutex.Lock()
+	defer r.mutex.Unlock()
+	addresses := make([]string, 0, len(r.peers))
+	for address := range r.peers {
+		addresses = append(addresses, address)
+	}
+	return addresses
 }

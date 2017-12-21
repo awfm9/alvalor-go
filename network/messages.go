@@ -17,13 +17,13 @@
 
 package network
 
-// Discover represents a discovery message sent on the network.
-type Discover struct {
-}
+import "time"
 
-// Peers represents a list of peer addresses shared on the network.
-type Peers struct {
-	Addresses []string
+// Message describes a message received on the network.
+type Message struct {
+	Address   string
+	Timestamp time.Time
+	Value     interface{}
 }
 
 // Ping represents an outgoing heartbeat message sent on the network.
@@ -34,4 +34,13 @@ type Ping struct {
 // Pong represents a heartbeat response sent on the network.
 type Pong struct {
 	Nonce uint32
+}
+
+// Discover represents a discovery message sent on the network.
+type Discover struct {
+}
+
+// Peers represents a list of peer addresses shared on the network.
+type Peers struct {
+	Addresses []string
 }

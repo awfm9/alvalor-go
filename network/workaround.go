@@ -17,18 +17,19 @@
 
 package network
 
-// Message represents a message event bubbled up to the node subscriber.
-type Message struct {
-	Address string
-	Value   interface{}
-}
+import (
+	"strings"
 
-// Connected represents a connection event bubbled up to the node subscriber.
-type Connected struct {
-	Address string
-}
+	"github.com/pkg/errors"
+)
 
-// Disconnected represents a disconnection event bubbled up to the node subscriber.
-type Disconnected struct {
-	Address string
+func isClosedErr(err error) bool {
+	if err == nil {
+		return false
+	}
+	err = errors.Cause(err)
+	if strings.Contains(err.Error(), "use of closed network connection") {
+		return true
+	}
+	return false
 }
