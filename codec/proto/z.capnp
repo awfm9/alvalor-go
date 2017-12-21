@@ -16,8 +16,8 @@
 # along with Alvalor.  If not, see <http://www.gnu.org/licenses/>.
 
 using Go = import "/go.capnp";
-$Go.package("codec");
-$Go.import("codec");
+$Go.package("proto");
+$Go.import("proto");
 
 using Ping = import "ping.capnp".Ping;
 using Pong = import "pong.capnp".Pong;

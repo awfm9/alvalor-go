@@ -16,10 +16,10 @@
 # along with Alvalor.  If not, see <http://www.gnu.org/licenses/>.
 
 using Go = import "/go.capnp";
-$Go.package("codec");
-$Go.import("codec");
+$Go.package("proto");
+$Go.import("proto");
 
-@0xc4411f23835fd9b0;
-struct Ping {
+@0xcf51decd769a7cb5;
+struct Pong {
 	nonce @0 :UInt32;
 }

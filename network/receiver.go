@@ -19,10 +19,8 @@ package network
 
 import (
 	"io"
-	"net"
 	"sync"
 
-	"github.com/pierrec/lz4"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
 )
@@ -32,13 +30,12 @@ type Receiver interface {
 	DropPeer(address string) error
 }
 
-func handleReceiving(log zerolog.Logger, wg *sync.WaitGroup, cfg *Config, mgr Receiver, book Book, conn net.Conn, input chan<- interface{}) {
+func handleReceiving(log zerolog.Logger, wg *sync.WaitGroup, cfg *Config, mgr Receiver, book Book, address string, r io.Reader, input chan<- interface{}) {
 	defer wg.Done()
 
 	// extract configuration as needed
 	var (
-		address = conn.RemoteAddr().String()
-		codec   = cfg.codec
+		codec = cfg.codec
 	)
 
 	// configure logger and add start/stop messages
@@ -47,9 +44,8 @@ func handleReceiving(log zerolog.Logger, wg *sync.WaitGroup, cfg *Config, mgr Re
 	defer log.Info().Msg("receiving routine stopped")
 
 	// read all messages from connetion and forward on channel
-	reader := lz4.NewReader(conn)
 	for {
-		msg, err := codec.Decode(reader)
+		msg, err := codec.Decode(r)
 		if errors.Cause(err) == io.EOF || isClosedErr(err) {
 			log.Info().Msg("network connection closed")
 			break

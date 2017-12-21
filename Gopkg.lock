@@ -93,6 +93,12 @@
 
 [[projects]]
   branch = "master"
+  name = "github.com/veltor/veltor-go"
+  packages = ["network"]
+  revision = "c3d1c7f9302f858edbee82c18a9c8b430c049c76"
+
+[[projects]]
+  branch = "master"
   name = "golang.org/x/crypto"
   packages = ["blake2b","pbkdf2"]
   revision = "d585fd2cc9195196078f516b69daff6744ef5e84"
@@ -118,6 +124,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "1be473581f37cc22b305b197995bac63c75aeb8ffbd31946e2be2445f4f462b6"
+  inputs-digest = "85ed8f14668e38a00a865db8cf7dd11a57ecec6c331978cd3627999cbfc34732"
   solver-name = "gps-cdcl"
   solver-version = 1
