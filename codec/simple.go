@@ -15,7 +15,7 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with Alvalor.  If not, see <http://www.gnu.org/licenses/>.
 
-package simple
+package codec
 
 import (
 	"encoding/json"
@@ -39,8 +39,8 @@ const (
 // over the network.
 type Simple struct{}
 
-// New will create a new simple codec.
-func New() Simple {
+// NewSimple will create a new simple codec.
+func NewSimple() Simple {
 	return Simple{}
 }
 

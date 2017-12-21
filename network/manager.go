@@ -50,7 +50,7 @@ type Manager struct {
 }
 
 // NewManager will initialize the completely wired up networking dependencies.
-func NewManager(log zerolog.Logger, codec Codec, options ...func(*Config)) *Manager {
+func NewManager(log zerolog.Logger, codec Codec, book Book, options ...func(*Config)) *Manager {
 
 	// add the package information to the top package level logger
 	log = log.With().Str("package", "network").Logger()
@@ -81,7 +81,7 @@ func NewManager(log zerolog.Logger, codec Codec, options ...func(*Config)) *Mana
 		log:      log,
 		wg:       wg,
 		cfg:      cfg,
-		book:     NewSimpleBook(),
+		book:     book,
 		registry: NewSimpleRegistry(),
 		stop:     make(chan struct{}),
 	}
@@ -168,7 +168,7 @@ func (mgr *Manager) ReleaseSlot() {
 
 // GetAddress returns a random address for connection.
 func (mgr *Manager) GetAddress() (string, error) {
-	addresses, err := mgr.book.Sample(1, IsActive(false), RandomSort())
+	addresses, err := mgr.book.Sample(1, IsActive(false), ByRandom())
 	if err != nil {
 		return "", errors.Wrap(err, "could not get address")
 	}

@@ -15,7 +15,7 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with Alvalor.  If not, see <http://www.gnu.org/licenses/>.
 
-package proto
+package codec
 
 import (
 	"io"
@@ -29,8 +29,8 @@ import (
 // Proto represents the capnproto serialization module.
 type Proto struct{}
 
-// New will return a new proto codec.
-func New() Proto {
+// NewProto will return a new proto codec.
+func NewProto() Proto {
 	return Proto{}
 }
 
