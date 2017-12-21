@@ -69,7 +69,7 @@ Loop:
 				log.Debug().Msg("pong received")
 			case *Discover:
 				log.Debug().Msg("discover received")
-				addresses, err := book.Sample(16, Any(), RandomSort())
+				addresses, err := book.Sample(16, IsAny(), ByRandom())
 				if err != nil {
 					log.Error().Err(err).Msg("could not get address sample")
 					continue
