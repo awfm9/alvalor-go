@@ -20,7 +20,7 @@ package blockchain
 import (
 	"bytes"
 
-	"github.com/dgraph-io/badger/badger"
+	"github.com/dgraph-io/badger"
 	"github.com/pkg/errors"
 
 	"github.com/alvalor/alvalor-go/hasher"
@@ -29,25 +29,33 @@ import (
 
 // DB is a blockchain database that syncs the trie with the persistent key-value store on disk.
 type DB struct {
-	kv *badger.KV
+	kv *badger.DB
 	tr *trie.Trie
 	cd Codec
 }
 
 // NewDB creates a new blockchain DB on the disk.
-func NewDB(kv *badger.KV) (*DB, error) {
+func NewDB(kv *badger.DB) (*DB, error) {
 	tr := trie.New()
-	itr := kv.NewIterator(badger.DefaultIteratorOptions)
-	for itr.Rewind(); itr.Valid(); itr.Next() {
-		item := itr.Item()
-		key := item.Key()
-		val := item.Value()
-		ok := tr.Put(key, val, false)
-		if !ok {
-			return nil, errors.Errorf("could not insert key %x", key)
+	err := kv.View(func(tx *badger.Txn) error {
+		it := tx.NewIterator(badger.DefaultIteratorOptions)
+		for it.Rewind(); it.Valid(); it.Next() {
+			item := it.Item()
+			key := item.Key()
+			value, err := item.Value()
+			if err != nil {
+				return errors.Wrapf(err, "could not retrieve item value (%x)", key)
+			}
+			ok := tr.Put(key, value, false)
+			if !ok {
+				return errors.Wrapf(err, "could not put value (%x) with key (%x)", value, key)
+			}
 		}
+		return nil
+	})
+	if err != nil {
+		return nil, errors.Wrap(err, "could not execute iteration transaction")
 	}
-	itr.Close()
 	db := &DB{kv: kv, tr: tr}
 	return db, nil
 }
@@ -62,7 +70,9 @@ func (db *DB) Insert(id []byte, entity interface{}) error {
 	}
 	data := buf.Bytes()
 	hash := hasher.Sum256(data)
-	err = db.kv.Set(hash, data)
+	err = db.kv.Update(func(tx *badger.Txn) error {
+		return tx.Set(hash, data)
+	})
 	if err != nil {
 		return errors.Wrap(err, "could not save entity on disk")
 	}
@@ -78,14 +88,25 @@ func (db *DB) Insert(id []byte, entity interface{}) error {
 func (db *DB) Retrieve(id []byte) (interface{}, error) {
 	hash, ok := db.tr.Get(id)
 	if !ok {
-		return nil, errors.Errorf("could not find entity %x in trie", id)
+		return nil, errors.New("could not get hash for id")
 	}
-	var kv badger.KVItem
-	err := db.kv.Get(hash, &kv)
+	var value []byte
+	err := db.kv.View(func(tx *badger.Txn) error {
+		item, err := tx.Get(hash)
+		if err != nil {
+			return errors.Wrapf(err, "could not get item for hash (%x)", hash)
+		}
+		val, err := item.Value()
+		if err != nil {
+			return errors.Wrap(err, "could not get value for item")
+		}
+		value = val
+		return nil
+	})
 	if err != nil {
-		return nil, errors.Wrap(err, "could not retrieve entity from disk")
+		return nil, errors.Wrap(err, "could not lookup hash on key-value store")
 	}
-	buf := bytes.NewBuffer(kv.Value())
+	buf := bytes.NewBuffer(value)
 	entity, err := db.cd.Decode(buf)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not deserialize entity")
