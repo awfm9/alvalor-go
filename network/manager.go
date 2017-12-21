@@ -23,6 +23,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/pierrec/lz4"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
 	uuid "github.com/satori/go.uuid"
@@ -49,7 +50,7 @@ type Manager struct {
 }
 
 // NewManager will initialize the completely wired up networking dependencies.
-func NewManager(log zerolog.Logger, options ...func(*Config)) *Manager {
+func NewManager(log zerolog.Logger, codec Codec, options ...func(*Config)) *Manager {
 
 	// add the package information to the top package level logger
 	log = log.With().Str("package", "network").Logger()
@@ -66,7 +67,7 @@ func NewManager(log zerolog.Logger, options ...func(*Config)) *Manager {
 		maxPeers:   10,
 		nonce:      uuid.NewV4().Bytes(),
 		interval:   time.Second * 1,
-		codec:      SimpleCodec{},
+		codec:      codec,
 		bufferSize: 16,
 	}
 	for _, option := range options {
@@ -207,11 +208,15 @@ func (mgr *Manager) AddPeer(conn net.Conn, nonce []byte) error {
 		return errors.Wrap(err, "could not add peer to registry")
 	}
 
-	// launch the message processing routines
+	// initialize the readers and writers
 	address := conn.RemoteAddr().String()
+	r := lz4.NewReader(conn)
+	w := lz4.NewWriter(conn)
+
+	// launch the message processing routines
 	mgr.wg.Add(3)
-	go handleSending(mgr.log, mgr.wg, mgr.cfg, mgr, mgr.book, conn, peer.output)
-	go handleReceiving(mgr.log, mgr.wg, mgr.cfg, mgr, mgr.book, conn, peer.input)
+	go handleSending(mgr.log, mgr.wg, mgr.cfg, mgr, mgr.book, address, peer.output, w)
+	go handleReceiving(mgr.log, mgr.wg, mgr.cfg, mgr, mgr.book, address, r, peer.input)
 	go handleProcessing(mgr.log, mgr.wg, mgr.cfg, mgr, mgr.book, address, peer.input, peer.output)
 
 	return nil

@@ -152,7 +152,7 @@ func TestRandomSampleReturnsAddedPeers(t *testing.T) {
 
 	sample, _ := book.Sample(count, Any(), RandomSort())
 
-	assert.Subset(t, addresss, sample, "Expected sample to be a subset of addresss")
+	assert.Contains(t, addresss, sample, "Expected sample to be a subset of addresss")
 }
 
 func TestRandomSampleReturnsSubsetOfAddedPeers(t *testing.T) {
@@ -168,7 +168,7 @@ func TestRandomSampleReturnsSubsetOfAddedPeers(t *testing.T) {
 
 	sample, _ := book.Sample(count, Any(), RandomSort())
 
-	assert.Subset(t, addresss, sample, "Expected sample to be a subset of addresss")
+	assert.Contains(t, addresss, sample, "Expected sample to be a subset of addresss")
 }
 
 func TestRandomSampleLimitsByParam(t *testing.T) {

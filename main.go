@@ -26,6 +26,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/alvalor/alvalor-go/codec/simple"
 	"github.com/alvalor/alvalor-go/network"
 	"github.com/rs/zerolog"
 )
@@ -43,7 +44,7 @@ func main() {
 	flag.Parse()
 
 	wg := &sync.WaitGroup{}
-	mgr := network.NewManager(log,
+	mgr := network.NewManager(log, simple.New(),
 		network.SetListen(true),
 		network.SetAddress(fmt.Sprintf("127.0.0.1:%v", *port)),
 	)

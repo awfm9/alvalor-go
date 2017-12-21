@@ -19,10 +19,8 @@ package network
 
 import (
 	"io"
-	"net"
 	"sync"
 
-	"github.com/pierrec/lz4"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
 )
@@ -32,13 +30,12 @@ type Sender interface {
 	DropPeer(address string) error
 }
 
-func handleSending(log zerolog.Logger, wg *sync.WaitGroup, cfg *Config, mgr Sender, book Book, conn net.Conn, output <-chan interface{}) {
+func handleSending(log zerolog.Logger, wg *sync.WaitGroup, cfg *Config, mgr Sender, book Book, address string, output <-chan interface{}, w io.Writer) {
 	defer wg.Done()
 
 	// extract configuration parameters
 	var (
-		address = conn.RemoteAddr().String()
-		codec   = cfg.codec
+		codec = cfg.codec
 	)
 
 	// configure logger and add stop/start messages
@@ -47,9 +44,8 @@ func handleSending(log zerolog.Logger, wg *sync.WaitGroup, cfg *Config, mgr Send
 	defer log.Info().Msg("sending routine stopped")
 
 	// read messages from output channel and write to connection
-	writer := lz4.NewWriter(conn)
 	for msg := range output {
-		err := codec.Encode(writer, msg)
+		err := codec.Encode(w, msg)
 		if errors.Cause(err) == io.EOF || isClosedErr(err) {
 			log.Info().Msg("network connection closed")
 			break
