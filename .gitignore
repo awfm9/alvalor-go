@@ -1,3 +1,4 @@
 *.exe
 /alvalor
 /alvalor-go
+/vendor/
