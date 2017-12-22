@@ -14,12 +14,6 @@
   revision = "18fdff33d8fa6779a6eb859c3fbe0d330b340da2"
 
 [[projects]]
-  name = "github.com/davecgh/go-spew"
-  packages = ["spew"]
-  revision = "346938d642f2ec3594ed81d874461961cd0faa76"
-  version = "v1.1.0"
-
-[[projects]]
   name = "github.com/dgraph-io/badger"
   packages = [".","options","protos","skl","table","y"]
   revision = "69611218c7078be6de16f4ea13fb256e701b6b73"
@@ -56,12 +50,6 @@
   version = "v0.8.0"
 
 [[projects]]
-  name = "github.com/pmezard/go-difflib"
-  packages = ["difflib"]
-  revision = "792786c7400a136282c1664665ae0a8db921c6c2"
-  version = "v1.0.0"
-
-[[projects]]
   name = "github.com/rs/zerolog"
   packages = [".","internal/json"]
   revision = "3ac71fc58dbd43122668a912b755b0979ba9ce1f"
@@ -74,12 +62,6 @@
   version = "v1.1.0"
 
 [[projects]]
-  name = "github.com/stretchr/testify"
-  packages = ["assert"]
-  revision = "69483b4bd14f5845b5a1e55bca19e954e827f1d0"
-  version = "v1.1.4"
-
-[[projects]]
   branch = "master"
   name = "github.com/tvdburgt/go-argon2"
   packages = ["."]
@@ -90,12 +72,6 @@
   name = "github.com/tyler-smith/go-bip39"
   packages = ["."]
   revision = "8e7a99b3e716f36d3b080a9a70f9eb45abe4edcc"
-
-[[projects]]
-  branch = "master"
-  name = "github.com/veltor/veltor-go"
-  packages = ["network"]
-  revision = "c3d1c7f9302f858edbee82c18a9c8b430c049c76"
 
 [[projects]]
   branch = "master"
@@ -124,6 +100,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "85ed8f14668e38a00a865db8cf7dd11a57ecec6c331978cd3627999cbfc34732"
+  inputs-digest = "862a34ab6456ea1c60c7fb0b415953f44c8248ca59b3354e8e4d8b1507f3dcf5"
   solver-name = "gps-cdcl"
   solver-version = 1
