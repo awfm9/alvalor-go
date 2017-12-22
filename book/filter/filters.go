@@ -15,15 +15,20 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with Alvalor.  If not, see <http://www.gnu.org/licenses/>.
 
-package network
+package filter
 
-// Book represents an address book interface to handle known peer addresses on the alvalor
-type Book interface {
-	Add(address string)
-	Invalid(address string)
-	Error(address string)
-	Success(address string)
-	Failure(address string)
-	Dropped(address string)
-	Sample(count int, params ...interface{}) ([]string, error)
+import "github.com/alvalor/alvalor-go/book"
+
+// Active represents filter to select active/inactive entries in Sample method
+func Active(active bool) func(e *book.Entry) bool {
+	return func(e *book.Entry) bool {
+		return e.Active == active
+	}
+}
+
+// Any reperesents filter to select any entries in Sample method
+func Any() func(e *book.Entry) bool {
+	return func(e *book.Entry) bool {
+		return true
+	}
 }

@@ -27,6 +27,9 @@ import (
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
 	uuid "github.com/satori/go.uuid"
+
+	"github.com/alvalor/alvalor-go/book/filter"
+	"github.com/alvalor/alvalor-go/book/sort"
 )
 
 // Enumeration of different networks available. A node configured with one
@@ -168,7 +171,7 @@ func (mgr *Manager) ReleaseSlot() {
 
 // GetAddress returns a random address for connection.
 func (mgr *Manager) GetAddress() (string, error) {
-	addresses, err := mgr.book.Sample(1, IsActive(false), ByRandom())
+	addresses, err := mgr.book.Sample(1, filter.Active(false), sort.Random())
 	if err != nil {
 		return "", errors.Wrap(err, "could not get address")
 	}

@@ -22,6 +22,9 @@ import (
 	"time"
 
 	"github.com/rs/zerolog"
+
+	"github.com/alvalor/alvalor-go/book/filter"
+	"github.com/alvalor/alvalor-go/book/sort"
 )
 
 // Processor is all the dependencies for a processing routine.
@@ -69,7 +72,7 @@ Loop:
 				log.Debug().Msg("pong received")
 			case *Discover:
 				log.Debug().Msg("discover received")
-				addresses, err := book.Sample(16, IsAny(), ByRandom())
+				addresses, err := book.Sample(16, filter.Any(), sort.Random())
 				if err != nil {
 					log.Error().Err(err).Msg("could not get address sample")
 					continue

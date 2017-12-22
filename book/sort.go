@@ -15,15 +15,6 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with Alvalor.  If not, see <http://www.gnu.org/licenses/>.
 
-package network
+package book
 
-// Book represents an address book interface to handle known peer addresses on the alvalor
-type Book interface {
-	Add(address string)
-	Invalid(address string)
-	Error(address string)
-	Success(address string)
-	Failure(address string)
-	Dropped(address string)
-	Sample(count int, params ...interface{}) ([]string, error)
-}
+type sortFunc func(*Entry, *Entry) bool

@@ -21,15 +21,13 @@ import (
 	"errors"
 	"sort"
 	"sync"
-
-	"github.com/alvalor/alvalor-go/network"
 )
 
 // Simple is an address book with simple scoring.
 type Simple struct {
 	mutex     sync.Mutex
 	blacklist map[string]struct{}
-	entries   map[string]*network.Entry
+	entries   map[string]*Entry
 }
 
 // enumeration of different errors that we can return from address book functions.
@@ -44,7 +42,7 @@ var (
 func NewSimple() *Simple {
 	return &Simple{
 		blacklist: make(map[string]struct{}),
-		entries:   make(map[string]*network.Entry),
+		entries:   make(map[string]*Entry),
 	}
 }
 
@@ -56,7 +54,7 @@ func (s *Simple) Add(address string) {
 	if ok {
 		return
 	}
-	s.entries[address] = &network.Entry{Address: address}
+	s.entries[address] = &Entry{Address: address}
 }
 
 // Invalid should be called whenever an address should be considered permanently to be an
@@ -120,9 +118,21 @@ func (s *Simple) Failure(address string) {
 }
 
 // Sample will return entries limited by count, filtered by specified filter function and sorted by specified sort function
-func (s *Simple) Sample(count uint, filter func(*network.Entry) bool, less func(*network.Entry, *network.Entry) bool) ([]string, error) {
+func (s *Simple) Sample(count uint, params ...interface{}) ([]string, error) {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
+
+	// extract all the parameters for the sample
+	var filters []filterFunc
+	var sorts []sortFunc
+	for _, param := range params {
+		switch f := param.(type) {
+		case filterFunc:
+			filters = append(filters, f)
+		case sortFunc:
+			sorts = append(sorts, f)
+		}
+	}
 
 	// check if we have a valid count
 	if count == 0 {
@@ -130,10 +140,12 @@ func (s *Simple) Sample(count uint, filter func(*network.Entry) bool, less func(
 	}
 
 	// apply the filter
-	var entries []*network.Entry
+	var entries []*Entry
 	for _, e := range s.entries {
-		if !filter(e) {
-			continue
+		for _, filter := range filters {
+			if !filter(e) {
+				continue
+			}
 		}
 		entries = append(entries, e)
 	}
@@ -145,7 +157,12 @@ func (s *Simple) Sample(count uint, filter func(*network.Entry) bool, less func(
 
 	// sort the entries
 	sort.Slice(entries, func(i int, j int) bool {
-		return less(entries[i], entries[j])
+		for _, less := range sorts {
+			if less(entries[i], entries[j]) {
+				return true
+			}
+		}
+		return false
 	})
 
 	// make sure we don't return more than count
@@ -163,8 +180,8 @@ func (s *Simple) Sample(count uint, filter func(*network.Entry) bool, less func(
 }
 
 // slice method.
-func (s *Simple) slice(filter func(*network.Entry) bool) []*network.Entry {
-	entries := make([]*network.Entry, 0)
+func (s *Simple) slice(filter func(*Entry) bool) []*Entry {
+	entries := make([]*Entry, 0)
 	for _, e := range s.entries {
 		if !filter(e) {
 			continue
