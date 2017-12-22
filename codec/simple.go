@@ -22,7 +22,8 @@ import (
 	"io"
 
 	"github.com/pkg/errors"
-	"github.com/veltor/veltor-go/network"
+
+	"github.com/alvalor/alvalor-go/network"
 )
 
 // Enumeration of different entity types that we use to select the entity for decoding.
