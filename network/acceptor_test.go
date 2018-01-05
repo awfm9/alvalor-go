@@ -70,6 +70,52 @@ func (suite *AcceptorTestSuite) TestHandleAcceptingClosesConnectionWhenCantClaim
 	conn.AssertCalled(suite.T(), "Close")
 }
 
+func (suite *AcceptorTestSuite) TestHandleAcceptingClosesConnectionWhenCantReadSyncPacket() {
+	//Arrange
+	acceptor := &acceptorMock{}
+	book := &bookMock{}
+	conn := &connMock{}
+	addr := &addrMock{}
+	addr.On("String").Return("136.44.33.12:5523")
+	conn.On("RemoteAddr").Return(addr)
+
+	acceptor.On("ClaimSlot").Return(nil)
+	acceptor.On("ReleaseSlot").Return(nil)
+	book.On("Error", addr.String())
+	syn := make([]byte, len(suite.cfg.network)+len(suite.cfg.nonce))
+	conn.On("Read", syn).Return(1, errors.New("Can't read from connection"))
+	conn.On("Close").Return(nil)
+
+	//Act
+	handleAccepting(suite.log, &suite.wg, &suite.cfg, acceptor, book, conn)
+
+	//Assert
+	conn.AssertCalled(suite.T(), "Close")
+}
+
+func (suite *AcceptorTestSuite) TestHandleAcceptingNotifiesBookWhenCantReadSyncPacket() {
+	//Arrange
+	acceptor := &acceptorMock{}
+	book := &bookMock{}
+	conn := &connMock{}
+	addr := &addrMock{}
+	addr.On("String").Return("136.44.33.12:5523")
+	conn.On("RemoteAddr").Return(addr)
+
+	acceptor.On("ClaimSlot").Return(nil)
+	acceptor.On("ReleaseSlot").Return(nil)
+	book.On("Error", addr.String())
+	syn := make([]byte, len(suite.cfg.network)+len(suite.cfg.nonce))
+	conn.On("Read", syn).Return(1, errors.New("Can't read from connection"))
+	conn.On("Close").Return(nil)
+
+	//Act
+	handleAccepting(suite.log, &suite.wg, &suite.cfg, acceptor, book, conn)
+
+	//Assert
+	book.AssertCalled(suite.T(), "Error", addr.String())
+}
+
 func TestAcceptorTestSuite(t *testing.T) {
 	suite.Run(t, new(AcceptorTestSuite))
 }
