@@ -21,7 +21,9 @@ import (
 	"errors"
 	"github.com/rs/zerolog"
 	uuid "github.com/satori/go.uuid"
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/suite"
+	"net"
 	"os"
 	"sync"
 	"testing"
@@ -118,4 +120,99 @@ func (suite *AcceptorTestSuite) TestHandleAcceptingNotifiesBookWhenCantReadSynPa
 
 func TestAcceptorTestSuite(t *testing.T) {
 	suite.Run(t, new(AcceptorTestSuite))
+}
+
+type acceptorMock struct {
+	mock.Mock
+}
+
+func (acceptor *acceptorMock) ClaimSlot() error {
+	args := acceptor.Called()
+	return args.Error(0)
+}
+func (acceptor *acceptorMock) ReleaseSlot() {
+	acceptor.Called()
+}
+func (acceptor *acceptorMock) AddPeer(conn net.Conn, nonce []byte) error {
+	args := acceptor.Called(conn, nonce)
+	return args.Error(0)
+}
+
+type bookMock struct {
+	mock.Mock
+}
+
+func (book *bookMock) Add(address string) {
+	book.Called(address)
+}
+func (book *bookMock) Invalid(address string) {
+	book.Called(address)
+}
+func (book *bookMock) Error(address string) {
+	book.Called(address)
+}
+func (book *bookMock) Success(address string) {
+	book.Called(address)
+}
+func (book *bookMock) Failure(address string) {
+	book.Called(address)
+}
+func (book *bookMock) Dropped(address string) {
+	book.Called(address)
+}
+func (book *bookMock) Sample(count int, filter func(*Entry) bool, less func(*Entry, *Entry) bool) ([]string, error) {
+	args := book.Called(count, filter, less)
+	return args.Get(0).([]string), args.Error(1)
+}
+
+type connMock struct {
+	mock.Mock
+}
+
+func (conn *connMock) Read(b []byte) (n int, err error) {
+	args := conn.Called(b)
+	return args.Int(0), args.Error(1)
+}
+func (conn *connMock) Write(b []byte) (n int, err error) {
+	args := conn.Called(b)
+	return args.Int(0), args.Error(1)
+}
+func (conn *connMock) Close() error {
+	args := conn.Called()
+	return args.Error(0)
+}
+func (conn *connMock) LocalAddr() net.Addr {
+	args := conn.Called()
+	result, _ := args.Get(0).(*addrMock)
+	return result
+}
+func (conn *connMock) RemoteAddr() net.Addr {
+	args := conn.Called()
+	result, _ := args.Get(0).(*addrMock)
+	return result
+}
+func (conn *connMock) SetDeadline(t time.Time) error {
+	args := conn.Called()
+	return args.Error(0)
+}
+func (conn *connMock) SetReadDeadline(t time.Time) error {
+	args := conn.Called()
+	return args.Error(0)
+}
+func (conn *connMock) SetWriteDeadline(t time.Time) error {
+	args := conn.Called()
+	return args.Error(0)
+}
+
+type addrMock struct {
+	mock.Mock
+}
+
+func (addr *addrMock) Network() string {
+	args := addr.Called()
+	return args.String(0)
+}
+func (addr *addrMock) String() string {
+	args := addr.Called()
+	return args.String(0)
 }
