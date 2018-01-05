@@ -70,7 +70,7 @@ func (suite *AcceptorTestSuite) TestHandleAcceptingClosesConnectionWhenCantClaim
 	conn.AssertCalled(suite.T(), "Close")
 }
 
-func (suite *AcceptorTestSuite) TestHandleAcceptingClosesConnectionWhenCantReadSyncPacket() {
+func (suite *AcceptorTestSuite) TestHandleAcceptingClosesConnectionWhenCantReadSynPacket() {
 	//Arrange
 	acceptor := &acceptorMock{}
 	book := &bookMock{}
@@ -93,7 +93,7 @@ func (suite *AcceptorTestSuite) TestHandleAcceptingClosesConnectionWhenCantReadS
 	conn.AssertCalled(suite.T(), "Close")
 }
 
-func (suite *AcceptorTestSuite) TestHandleAcceptingNotifiesBookWhenCantReadSyncPacket() {
+func (suite *AcceptorTestSuite) TestHandleAcceptingNotifiesBookWhenCantReadSynPacket() {
 	//Arrange
 	acceptor := &acceptorMock{}
 	book := &bookMock{}
