@@ -118,6 +118,64 @@ func (suite *AcceptorTestSuite) TestHandleAcceptingNotifiesBookWhenCantReadSynPa
 	book.AssertCalled(suite.T(), "Error", addr.String())
 }
 
+func (suite *AcceptorTestSuite) TestHandleAcceptingClosesConnectionWhenNetworkMismatch() {
+	//Arrange
+	acceptor := &acceptorMock{}
+	book := &bookMock{}
+	conn := &connMock{}
+	addr := &addrMock{}
+	addr.On("String").Return("136.44.33.12:5523")
+	conn.On("RemoteAddr").Return(addr)
+
+	acceptor.On("ClaimSlot").Return(nil)
+	acceptor.On("ReleaseSlot").Return(nil)
+	book.On("Invalid", addr.String())
+	syn := make([]byte, len(suite.cfg.network)+len(suite.cfg.nonce))
+	conn.On("Read", syn).Run(func(args mock.Arguments) {
+		passedSyn := args.Get(0).([]byte)
+		synIn := append([]byte{66, 66, 77, 77}, uuid.NewV4().Bytes()...)
+		for i, val := range synIn {
+			passedSyn[i] = val
+		}
+	}).Return(1, nil)
+	conn.On("Close").Return(nil)
+
+	//Act
+	handleAccepting(suite.log, &suite.wg, &suite.cfg, acceptor, book, conn)
+
+	//Assert
+	conn.AssertCalled(suite.T(), "Close")
+}
+
+func (suite *AcceptorTestSuite) TestHandleAcceptingNotifiesBookWhenNetworkMismatch() {
+	//Arrange
+	acceptor := &acceptorMock{}
+	book := &bookMock{}
+	conn := &connMock{}
+	addr := &addrMock{}
+	addr.On("String").Return("136.44.33.12:5523")
+	conn.On("RemoteAddr").Return(addr)
+
+	acceptor.On("ClaimSlot").Return(nil)
+	acceptor.On("ReleaseSlot").Return(nil)
+	book.On("Invalid", addr.String())
+	syn := make([]byte, len(suite.cfg.network)+len(suite.cfg.nonce))
+	conn.On("Read", syn).Run(func(args mock.Arguments) {
+		passedSyn := args.Get(0).([]byte)
+		synIn := append([]byte{66, 66, 77, 77}, uuid.NewV4().Bytes()...)
+		for i, val := range synIn {
+			passedSyn[i] = val
+		}
+	}).Return(1, nil)
+	conn.On("Close").Return(nil)
+
+	//Act
+	handleAccepting(suite.log, &suite.wg, &suite.cfg, acceptor, book, conn)
+
+	//Assert
+	book.AssertCalled(suite.T(), "Invalid", addr.String())
+}
+
 func TestAcceptorTestSuite(t *testing.T) {
 	suite.Run(t, new(AcceptorTestSuite))
 }
