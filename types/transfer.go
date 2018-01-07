@@ -15,9 +15,11 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with Alvalor.  If not, see <http://www.gnu.org/licenses/>.
 
-package transaction
+package types
 
-// Action represents an action secured by a multi-signature wrapper.
-type Action interface {
-	ID() []byte
+// Transfer represents a movement of value from one account to another.
+type Transfer struct {
+	From   []byte
+	To     []byte
+	Amount uint64
 }
