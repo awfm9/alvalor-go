@@ -33,7 +33,11 @@ type Connector interface {
 	AddPeer(conn net.Conn, nonce []byte) error
 }
 
-func handleConnecting(log zerolog.Logger, wg *sync.WaitGroup, cfg *Config, mgr Connector, book Book, address string) {
+type TcpDialer interface {
+	Dial(raddr *net.TCPAddr) (*net.TCPConn, error)
+}
+
+func handleConnecting(log zerolog.Logger, wg *sync.WaitGroup, cfg *Config, mgr Connector, book Book, dialer TcpDialer, address string) {
 	defer wg.Done()
 
 	// extract the variables from the config we are interested in
@@ -62,7 +66,7 @@ func handleConnecting(log zerolog.Logger, wg *sync.WaitGroup, cfg *Config, mgr C
 		book.Invalid(address)
 		return
 	}
-	conn, err := net.DialTCP("tcp", nil, addr)
+	conn, err := dialer.Dial(addr)
 	if err != nil {
 		log.Debug().Err(err).Msg("could not dial address")
 		book.Failure(address)

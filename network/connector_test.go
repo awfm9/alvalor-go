@@ -50,12 +50,13 @@ func (suite *ConnectorTestSuite) TestHandleConnectingDoesNotCallReleaseSlotIfCan
 	//Arrange
 	connector := &connectorMock{}
 	book := &bookMock{}
+	dialer := &tcpDialerMock{}
 	addr := "136.44.33.12:5523"
 
 	connector.On("ClaimSlot").Return(errors.New("Can't claim slot"))
 
 	//Act
-	handleConnecting(suite.log, &suite.wg, &suite.cfg, connector, book, addr)
+	handleConnecting(suite.log, &suite.wg, &suite.cfg, connector, book, dialer, addr)
 
 	//Assert
 	connector.AssertNotCalled(suite.T(), "ReleaseSlot")
@@ -65,6 +66,7 @@ func (suite *ConnectorTestSuite) TestHandleConnectingNotifiesBookIfAddressInvali
 	//Arrange
 	connector := &connectorMock{}
 	book := &bookMock{}
+	dialer := &tcpDialerMock{}
 	addr := "136.44.33.1024dd"
 
 	connector.On("ClaimSlot").Return(nil)
@@ -72,10 +74,30 @@ func (suite *ConnectorTestSuite) TestHandleConnectingNotifiesBookIfAddressInvali
 	book.On("Invalid", addr)
 
 	//Act
-	handleConnecting(suite.log, &suite.wg, &suite.cfg, connector, book, addr)
+	handleConnecting(suite.log, &suite.wg, &suite.cfg, connector, book, dialer, addr)
 
 	//Assert
 	book.AssertCalled(suite.T(), "Invalid", addr)
+}
+
+func (suite *ConnectorTestSuite) TestHandleConnectingNotifiesBookIfCannotDialAddress() {
+	//Arrange
+	connector := &connectorMock{}
+	book := &bookMock{}
+	dialer := &tcpDialerMock{}
+	addr := "136.44.33.15:552"
+	tcpAddr, _ := net.ResolveTCPAddr("tcp", addr)
+
+	connector.On("ClaimSlot").Return(nil)
+	connector.On("ReleaseSlot")
+	book.On("Failure", addr)
+	dialer.On("Dial", tcpAddr).Return(&net.TCPConn{}, errors.New("Cannot dial this address"))
+
+	//Act
+	handleConnecting(suite.log, &suite.wg, &suite.cfg, connector, book, dialer, addr)
+
+	//Assert
+	book.AssertCalled(suite.T(), "Failure", addr)
 }
 
 func TestConnectorTestSuite(t *testing.T) {
@@ -100,4 +122,13 @@ func (connector *connectorMock) KnownNonce(nonce []byte) bool {
 func (connector *connectorMock) AddPeer(conn net.Conn, nonce []byte) error {
 	args := connector.Called(conn, nonce)
 	return args.Error(0)
+}
+
+type tcpDialerMock struct {
+	mock.Mock
+}
+
+func (dialer *tcpDialerMock) Dial(raddr *net.TCPAddr) (*net.TCPConn, error) {
+	args := dialer.Called(raddr)
+	return args.Get(0).(*net.TCPConn), args.Error(1)
 }
