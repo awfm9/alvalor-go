@@ -91,13 +91,59 @@ func (suite *ConnectorTestSuite) TestHandleConnectingNotifiesBookIfCannotDialAdd
 	connector.On("ClaimSlot").Return(nil)
 	connector.On("ReleaseSlot")
 	book.On("Failure", addr)
-	dialer.On("Dial", tcpAddr).Return(&net.TCPConn{}, errors.New("Cannot dial this address"))
+	dialer.On("Dial", tcpAddr).Return(&connMock{}, errors.New("Cannot dial this address"))
 
 	//Act
 	handleConnecting(suite.log, &suite.wg, &suite.cfg, connector, book, dialer, addr)
 
 	//Assert
 	book.AssertCalled(suite.T(), "Failure", addr)
+}
+
+func (suite *ConnectorTestSuite) TestHandleConnectingClosesConnectionIfCantWriteSyn() {
+	//Arrange
+	connector := &connectorMock{}
+	book := &bookMock{}
+	dialer := &tcpDialerMock{}
+	conn := &connMock{}
+	addr := "136.44.33.15:552"
+	tcpAddr, _ := net.ResolveTCPAddr("tcp", addr)
+
+	connector.On("ClaimSlot").Return(nil)
+	connector.On("ReleaseSlot")
+	book.On("Error", addr)
+	dialer.On("Dial", tcpAddr).Return(conn, nil)
+	conn.On("Close").Return(nil)
+	conn.On("Write", append(suite.cfg.network, suite.cfg.nonce...)).Return(1, errors.New("Can't write to this connection"))
+
+	//Act
+	handleConnecting(suite.log, &suite.wg, &suite.cfg, connector, book, dialer, addr)
+
+	//Assert
+	conn.AssertCalled(suite.T(), "Close")
+}
+
+func (suite *ConnectorTestSuite) TestHandleConnectingNotifiesBookIfCantWriteSyn() {
+	//Arrange
+	connector := &connectorMock{}
+	book := &bookMock{}
+	dialer := &tcpDialerMock{}
+	conn := &connMock{}
+	addr := "136.44.33.15:552"
+	tcpAddr, _ := net.ResolveTCPAddr("tcp", addr)
+
+	connector.On("ClaimSlot").Return(nil)
+	connector.On("ReleaseSlot")
+	book.On("Error", addr)
+	dialer.On("Dial", tcpAddr).Return(conn, nil)
+	conn.On("Close").Return(nil)
+	conn.On("Write", append(suite.cfg.network, suite.cfg.nonce...)).Return(1, errors.New("Can't write to this connection"))
+
+	//Act
+	handleConnecting(suite.log, &suite.wg, &suite.cfg, connector, book, dialer, addr)
+
+	//Assert
+	book.AssertCalled(suite.T(), "Error", addr)
 }
 
 func TestConnectorTestSuite(t *testing.T) {
@@ -128,7 +174,7 @@ type tcpDialerMock struct {
 	mock.Mock
 }
 
-func (dialer *tcpDialerMock) Dial(raddr *net.TCPAddr) (*net.TCPConn, error) {
+func (dialer *tcpDialerMock) Dial(raddr *net.TCPAddr) (net.Conn, error) {
 	args := dialer.Called(raddr)
-	return args.Get(0).(*net.TCPConn), args.Error(1)
+	return args.Get(0).(net.Conn), args.Error(1)
 }

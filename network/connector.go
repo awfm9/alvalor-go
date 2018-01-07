@@ -34,7 +34,7 @@ type Connector interface {
 }
 
 type TcpDialer interface {
-	Dial(raddr *net.TCPAddr) (*net.TCPConn, error)
+	Dial(raddr *net.TCPAddr) (net.Conn, error)
 }
 
 func handleConnecting(log zerolog.Logger, wg *sync.WaitGroup, cfg *Config, mgr Connector, book Book, dialer TcpDialer, address string) {

@@ -24,6 +24,6 @@ import (
 type tcpDialer struct {
 }
 
-func (dialer *tcpDialer) Dial(raddr *net.TCPAddr) (*net.TCPConn, error) {
+func (dialer *tcpDialer) Dial(raddr *net.TCPAddr) (net.Conn, error) {
 	return net.DialTCP("tcp", nil, raddr)
 }
