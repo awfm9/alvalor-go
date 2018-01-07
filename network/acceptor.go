@@ -32,7 +32,7 @@ type Acceptor interface {
 	AddPeer(conn net.Conn, nonce []byte) error
 }
 
-func handleAccepting(log zerolog.Logger, wg *sync.WaitGroup, cfg *Config, mgr Acceptor, book Book, conn net.Conn) {
+func handleAccepting(log zerolog.Logger, wg *sync.WaitGroup, cfg *Config, mgr Acceptor, book *Book, conn net.Conn) {
 	defer wg.Done()
 
 	// extract configuration parameters we care about

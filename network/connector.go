@@ -33,7 +33,7 @@ type Connector interface {
 	AddPeer(conn net.Conn, nonce []byte) error
 }
 
-func handleConnecting(log zerolog.Logger, wg *sync.WaitGroup, cfg *Config, mgr Connector, book Book, address string) {
+func handleConnecting(log zerolog.Logger, wg *sync.WaitGroup, cfg *Config, mgr Connector, book *Book, address string) {
 	defer wg.Done()
 
 	// extract the variables from the config we are interested in
