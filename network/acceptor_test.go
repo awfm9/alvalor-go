@@ -202,7 +202,7 @@ func (suite *AcceptorTestSuite) TestHandleAcceptingClosesConnectionWhenIdentical
 	handleAccepting(suite.log, &suite.wg, &suite.cfg, acceptor, book, conn)
 
 	//Assert
-	book.AssertCalled(suite.T(), "Invalid", addr.String())
+	conn.AssertCalled(suite.T(), "Close")
 }
 
 func (suite *AcceptorTestSuite) TestHandleAcceptingNotifiesBookWhenIdenticalNonce() {
@@ -232,6 +232,66 @@ func (suite *AcceptorTestSuite) TestHandleAcceptingNotifiesBookWhenIdenticalNonc
 
 	//Assert
 	book.AssertCalled(suite.T(), "Invalid", addr.String())
+}
+
+func (suite *AcceptorTestSuite) TestHandleAcceptingClosesConnectionWhenCantWriteAck() {
+	//Arrange
+	acceptor := &acceptorMock{}
+	book := &bookMock{}
+	conn := &connMock{}
+	addr := &addrMock{}
+	addr.On("String").Return("136.44.33.12:5523")
+	conn.On("RemoteAddr").Return(addr)
+
+	acceptor.On("ClaimSlot").Return(nil)
+	acceptor.On("ReleaseSlot").Return(nil)
+	book.On("Error", addr.String())
+	syn := make([]byte, len(suite.cfg.network)+len(suite.cfg.nonce))
+	conn.On("Read", syn).Run(func(args mock.Arguments) {
+		passedSyn := args.Get(0).([]byte)
+		synIn := append(suite.cfg.network, uuid.NewV4().Bytes()...)
+		for i, val := range synIn {
+			passedSyn[i] = val
+		}
+	}).Return(1, nil)
+	conn.On("Write", append(suite.cfg.network, suite.cfg.nonce...)).Return(1, errors.New("Cannot write to this tcp connection for whatever reason"))
+	conn.On("Close").Return(nil)
+
+	//Act
+	handleAccepting(suite.log, &suite.wg, &suite.cfg, acceptor, book, conn)
+
+	//Assert
+	conn.AssertCalled(suite.T(), "Close")
+}
+
+func (suite *AcceptorTestSuite) TestHandleAcceptingNotifiesBookWhenCantWriteAck() {
+	//Arrange
+	acceptor := &acceptorMock{}
+	book := &bookMock{}
+	conn := &connMock{}
+	addr := &addrMock{}
+	addr.On("String").Return("136.44.33.12:5523")
+	conn.On("RemoteAddr").Return(addr)
+
+	acceptor.On("ClaimSlot").Return(nil)
+	acceptor.On("ReleaseSlot").Return(nil)
+	book.On("Error", addr.String())
+	syn := make([]byte, len(suite.cfg.network)+len(suite.cfg.nonce))
+	conn.On("Read", syn).Run(func(args mock.Arguments) {
+		passedSyn := args.Get(0).([]byte)
+		synIn := append(suite.cfg.network, uuid.NewV4().Bytes()...)
+		for i, val := range synIn {
+			passedSyn[i] = val
+		}
+	}).Return(1, nil)
+	conn.On("Write", append(suite.cfg.network, suite.cfg.nonce...)).Return(1, errors.New("Cannot write to this tcp connection for whatever reason"))
+	conn.On("Close").Return(nil)
+
+	//Act
+	handleAccepting(suite.log, &suite.wg, &suite.cfg, acceptor, book, conn)
+
+	//Assert
+	book.AssertCalled(suite.T(), "Error", addr.String())
 }
 
 func TestAcceptorTestSuite(t *testing.T) {
