@@ -194,6 +194,68 @@ func (suite *ConnectorTestSuite) TestHandleConnectingNotifiesBookIfCantReadAck()
 	book.AssertCalled(suite.T(), "Error", addr)
 }
 
+func (suite *ConnectorTestSuite) TestHandleConnectingClosesConnectionWhenNetworkMismatch() {
+	//Arrange
+	connector := &connectorMock{}
+	book := &bookMock{}
+	dialer := &tcpDialerMock{}
+	conn := &connMock{}
+	addr := "136.44.33.15:552"
+	tcpAddr, _ := net.ResolveTCPAddr("tcp", addr)
+
+	connector.On("ClaimSlot").Return(nil)
+	connector.On("ReleaseSlot")
+	book.On("Invalid", addr)
+	dialer.On("Dial", tcpAddr).Return(conn, nil)
+	conn.On("Close").Return(nil)
+	conn.On("Write", append(suite.cfg.network, suite.cfg.nonce...)).Return(1, nil)
+	syn := make([]byte, len(suite.cfg.network)+len(suite.cfg.nonce))
+	conn.On("Read", syn).Run(func(args mock.Arguments) {
+		passedSyn := args.Get(0).([]byte)
+		synIn := append([]byte{66, 66, 77, 77}, uuid.NewV4().Bytes()...)
+		for i, val := range synIn {
+			passedSyn[i] = val
+		}
+	}).Return(1, nil)
+
+	//Act
+	handleConnecting(suite.log, &suite.wg, &suite.cfg, connector, book, dialer, addr)
+
+	//Assert
+	conn.AssertCalled(suite.T(), "Close")
+}
+
+func (suite *ConnectorTestSuite) TestHandleConnectingNotifiesBookWhenNetworkMismatch() {
+	//Arrange
+	connector := &connectorMock{}
+	book := &bookMock{}
+	dialer := &tcpDialerMock{}
+	conn := &connMock{}
+	addr := "136.44.33.15:552"
+	tcpAddr, _ := net.ResolveTCPAddr("tcp", addr)
+
+	connector.On("ClaimSlot").Return(nil)
+	connector.On("ReleaseSlot")
+	book.On("Invalid", addr)
+	dialer.On("Dial", tcpAddr).Return(conn, nil)
+	conn.On("Close").Return(nil)
+	conn.On("Write", append(suite.cfg.network, suite.cfg.nonce...)).Return(1, nil)
+	syn := make([]byte, len(suite.cfg.network)+len(suite.cfg.nonce))
+	conn.On("Read", syn).Run(func(args mock.Arguments) {
+		passedSyn := args.Get(0).([]byte)
+		synIn := append([]byte{66, 66, 77, 77}, uuid.NewV4().Bytes()...)
+		for i, val := range synIn {
+			passedSyn[i] = val
+		}
+	}).Return(1, nil)
+
+	//Act
+	handleConnecting(suite.log, &suite.wg, &suite.cfg, connector, book, dialer, addr)
+
+	//Assert
+	book.AssertCalled(suite.T(), "Invalid", addr)
+}
+
 func TestConnectorTestSuite(t *testing.T) {
 	suite.Run(t, new(ConnectorTestSuite))
 }
