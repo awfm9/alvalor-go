@@ -30,7 +30,7 @@ type Receiver interface {
 	DropPeer(address string) error
 }
 
-func handleReceiving(log zerolog.Logger, wg *sync.WaitGroup, cfg *Config, mgr Receiver, book Book, address string, r io.Reader, input chan<- interface{}) {
+func handleReceiving(log zerolog.Logger, wg *sync.WaitGroup, cfg *Config, mgr Receiver, book *Book, address string, r io.Reader, input chan<- interface{}) {
 	defer wg.Done()
 
 	// extract configuration as needed

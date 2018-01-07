@@ -15,33 +15,30 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with Alvalor.  If not, see <http://www.gnu.org/licenses/>.
 
-package sort
+package network
 
 import (
 	"bytes"
 	"math/rand"
 	"net"
-
-	"github.com/alvalor/alvalor-go/book"
 )
 
-// Score represents an order by priority which is calculated based on score. It can be used to sort entries in Sample method
-func Score(score func(*book.Entry) float64) func(*book.Entry, *book.Entry) bool {
-	return func(e1 *book.Entry, e2 *book.Entry) bool {
+type sortFunc func(*entry, *entry) bool
+
+func byScore(score func(*entry) float64) func(*entry, *entry) bool {
+	return func(e1 *entry, e2 *entry) bool {
 		return score(e1) > score(e2)
 	}
 }
 
-// Random represents a random order. It can be used to sort entries in Sample method
-func Random() func(*book.Entry, *book.Entry) bool {
-	return func(*book.Entry, *book.Entry) bool {
+func byRandom() func(*entry, *entry) bool {
+	return func(*entry, *entry) bool {
 		return rand.Int()%2 == 0
 	}
 }
 
-// Hash represents ordering by IP hash, to distribute geographically.
-func Hash(hash func([]byte) []byte) func(*book.Entry, *book.Entry) bool {
-	return func(e1 *book.Entry, e2 *book.Entry) bool {
+func byHash(hash func([]byte) []byte) func(*entry, *entry) bool {
+	return func(e1 *entry, e2 *entry) bool {
 		ip1, _, _ := net.SplitHostPort(e1.Address)
 		ip2, _, _ := net.SplitHostPort(e2.Address)
 		h1 := hash([]byte(ip1))

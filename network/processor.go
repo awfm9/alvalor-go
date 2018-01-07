@@ -22,9 +22,6 @@ import (
 	"time"
 
 	"github.com/rs/zerolog"
-
-	"github.com/alvalor/alvalor-go/book/filter"
-	"github.com/alvalor/alvalor-go/book/sort"
 )
 
 // Processor is all the dependencies for a processing routine.
@@ -32,7 +29,7 @@ type Processor interface {
 	DropPeer(address string) error
 }
 
-func handleProcessing(log zerolog.Logger, wg *sync.WaitGroup, cfg *Config, mgr Processor, book Book, address string, input <-chan interface{}, output chan<- interface{}) {
+func handleProcessing(log zerolog.Logger, wg *sync.WaitGroup, cfg *Config, mgr Processor, book *Book, address string, input <-chan interface{}, output chan<- interface{}) {
 	defer wg.Done()
 
 	// configuration parameters
@@ -72,7 +69,7 @@ Loop:
 				log.Debug().Msg("pong received")
 			case *Discover:
 				log.Debug().Msg("discover received")
-				addresses, err := book.Sample(16, filter.Any(), sort.Random())
+				addresses, err := book.Sample(16, isAny(), byRandom())
 				if err != nil {
 					log.Error().Err(err).Msg("could not get address sample")
 					continue

@@ -15,6 +15,18 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with Alvalor.  If not, see <http://www.gnu.org/licenses/>.
 
-package book
+package network
 
-type sortFunc func(*Entry, *Entry) bool
+type filterFunc func(e *entry) bool
+
+func isActive(active bool) func(e *entry) bool {
+	return func(e *entry) bool {
+		return e.Active == active
+	}
+}
+
+func isAny() func(e *entry) bool {
+	return func(e *entry) bool {
+		return true
+	}
+}

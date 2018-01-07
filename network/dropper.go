@@ -32,7 +32,7 @@ type Dropper interface {
 	DropPeer(address string) error
 }
 
-func handleDropping(log zerolog.Logger, wg *sync.WaitGroup, cfg *Config, mgr Dropper, book Book, stop <-chan struct{}) {
+func handleDropping(log zerolog.Logger, wg *sync.WaitGroup, cfg *Config, mgr Dropper, book *Book, stop <-chan struct{}) {
 	defer wg.Done()
 
 	// extract desired configuration parameters

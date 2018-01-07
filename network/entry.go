@@ -15,11 +15,11 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with Alvalor.  If not, see <http://www.gnu.org/licenses/>.
 
-package book
+package network
 
-// Entry represents an entry in the simple address book, containing the address, whether the peer is
+// etry represents an entry in the address book, containing the address, whether the peer is
 // currently active and how many successes/failures we had on the connection.
-type Entry struct {
+type entry struct {
 	Address string
 	Active  bool
 	Success int

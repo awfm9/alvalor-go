@@ -27,9 +27,6 @@ import (
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
 	uuid "github.com/satori/go.uuid"
-
-	"github.com/alvalor/alvalor-go/book/filter"
-	"github.com/alvalor/alvalor-go/book/sort"
 )
 
 // Enumeration of different networks available. A node configured with one
@@ -46,14 +43,14 @@ type Manager struct {
 	log      zerolog.Logger
 	wg       *sync.WaitGroup
 	cfg      *Config
-	book     Book
+	book     *Book
 	registry Registry
 	stop     chan struct{}
 	pending  uint
 }
 
 // NewManager will initialize the completely wired up networking dependencies.
-func NewManager(log zerolog.Logger, codec Codec, book Book, options ...func(*Config)) *Manager {
+func NewManager(log zerolog.Logger, codec Codec, options ...func(*Config)) *Manager {
 
 	// add the package information to the top package level logger
 	log = log.With().Str("package", "network").Logger()
@@ -84,7 +81,7 @@ func NewManager(log zerolog.Logger, codec Codec, book Book, options ...func(*Con
 		log:      log,
 		wg:       wg,
 		cfg:      cfg,
-		book:     book,
+		book:     NewBook(),
 		registry: NewSimpleRegistry(),
 		stop:     make(chan struct{}),
 	}
@@ -171,7 +168,7 @@ func (mgr *Manager) ReleaseSlot() {
 
 // GetAddress returns a random address for connection.
 func (mgr *Manager) GetAddress() (string, error) {
-	addresses, err := mgr.book.Sample(1, filter.Active(false), sort.Random())
+	addresses, err := mgr.book.Sample(1, isActive(false), byRandom())
 	if err != nil {
 		return "", errors.Wrap(err, "could not get address")
 	}
