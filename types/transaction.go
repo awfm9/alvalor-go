@@ -19,8 +19,8 @@ package types
 
 // Transaction represents an atomic standard transaction on the Alvalor network.
 type Transaction struct {
-	Transfers  []Transfer
 	Creates    []Create
+	Transfers  []Transfer
 	Destroys   []Destroy
 	Fees       []Fee
 	Signatures [][]byte

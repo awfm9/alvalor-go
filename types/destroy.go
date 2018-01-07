@@ -20,5 +20,4 @@ package types
 // Destroy will remove an account from the blockchain.
 type Destroy struct {
 	From []byte
-	To   []byte
 }

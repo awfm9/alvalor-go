@@ -21,5 +21,6 @@ package types
 type Create struct {
 	To          []byte
 	Signatories [][]byte
-	Threshold   uint8
+	Weights     []float64
+	Threshold   float64
 }
