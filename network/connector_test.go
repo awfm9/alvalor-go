@@ -146,6 +146,54 @@ func (suite *ConnectorTestSuite) TestHandleConnectingNotifiesBookIfCantWriteSyn(
 	book.AssertCalled(suite.T(), "Error", addr)
 }
 
+func (suite *ConnectorTestSuite) TestHandleConnectingClosesConnectionIfCantReadAck() {
+	//Arrange
+	connector := &connectorMock{}
+	book := &bookMock{}
+	dialer := &tcpDialerMock{}
+	conn := &connMock{}
+	addr := "136.44.33.15:552"
+	tcpAddr, _ := net.ResolveTCPAddr("tcp", addr)
+
+	connector.On("ClaimSlot").Return(nil)
+	connector.On("ReleaseSlot")
+	book.On("Error", addr)
+	dialer.On("Dial", tcpAddr).Return(conn, nil)
+	conn.On("Close").Return(nil)
+	conn.On("Write", append(suite.cfg.network, suite.cfg.nonce...)).Return(1, nil)
+	conn.On("Read", make([]byte, len(suite.cfg.network)+len(suite.cfg.nonce))).Return(1, errors.New("Can't read from this connection"))
+
+	//Act
+	handleConnecting(suite.log, &suite.wg, &suite.cfg, connector, book, dialer, addr)
+
+	//Assert
+	conn.AssertCalled(suite.T(), "Close")
+}
+
+func (suite *ConnectorTestSuite) TestHandleConnectingNotifiesBookIfCantReadAck() {
+	//Arrange
+	connector := &connectorMock{}
+	book := &bookMock{}
+	dialer := &tcpDialerMock{}
+	conn := &connMock{}
+	addr := "136.44.33.15:552"
+	tcpAddr, _ := net.ResolveTCPAddr("tcp", addr)
+
+	connector.On("ClaimSlot").Return(nil)
+	connector.On("ReleaseSlot")
+	book.On("Error", addr)
+	dialer.On("Dial", tcpAddr).Return(conn, nil)
+	conn.On("Close").Return(nil)
+	conn.On("Write", append(suite.cfg.network, suite.cfg.nonce...)).Return(1, nil)
+	conn.On("Read", make([]byte, len(suite.cfg.network)+len(suite.cfg.nonce))).Return(1, errors.New("Can't read from this connection"))
+
+	//Act
+	handleConnecting(suite.log, &suite.wg, &suite.cfg, connector, book, dialer, addr)
+
+	//Assert
+	book.AssertCalled(suite.T(), "Error", addr)
+}
+
 func TestConnectorTestSuite(t *testing.T) {
 	suite.Run(t, new(ConnectorTestSuite))
 }
