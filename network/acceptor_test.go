@@ -294,6 +294,38 @@ func (suite *AcceptorTestSuite) TestHandleAcceptingNotifiesBookWhenCantWriteAck(
 	book.AssertCalled(suite.T(), "Error", addr.String())
 }
 
+func (suite *AcceptorTestSuite) TestHandleAcceptingClosesConnectionWhenCantAddPeer() {
+	//Arrange
+	nonceIn := uuid.NewV4().Bytes()
+	acceptor := &acceptorMock{}
+	book := &bookMock{}
+	conn := &connMock{}
+	addr := &addrMock{}
+	addr.On("String").Return("136.44.33.12:5523")
+	conn.On("RemoteAddr").Return(addr)
+
+	acceptor.On("ClaimSlot").Return(nil)
+	acceptor.On("ReleaseSlot").Return(nil)
+	acceptor.On("AddPeer", conn, nonceIn).Return(errors.New("Can't add this peer"))
+	book.On("Error", addr.String())
+	syn := make([]byte, len(suite.cfg.network)+len(suite.cfg.nonce))
+	conn.On("Read", syn).Run(func(args mock.Arguments) {
+		passedSyn := args.Get(0).([]byte)
+		synIn := append(suite.cfg.network, nonceIn...)
+		for i, val := range synIn {
+			passedSyn[i] = val
+		}
+	}).Return(1, nil)
+	conn.On("Write", append(suite.cfg.network, suite.cfg.nonce...)).Return(1, nil)
+	conn.On("Close").Return(nil)
+
+	//Act
+	handleAccepting(suite.log, &suite.wg, &suite.cfg, acceptor, book, conn)
+
+	//Assert
+	conn.AssertCalled(suite.T(), "Close")
+}
+
 func TestAcceptorTestSuite(t *testing.T) {
 	suite.Run(t, new(AcceptorTestSuite))
 }
