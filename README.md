@@ -2,9 +2,9 @@
 
 [![GoDoc](http://img.shields.io/badge/go-documentation-blue.svg)](http://godoc.org/github.com/alvalor/alvalor-go)
 [![Go Report Card](https://goreportcard.com/badge/github.com/alvalor/alvalor-go)](https://goreportcard.com/report/github.com/alvalor/alvalor-go)
-[![Codecov](https://img.shields.io/codecov/c/github/labstack/echo.svg)](https://codecov.io/gh/alvalor/alvalor-go)[![Telegram](https://patrolavia.github.io/telegram-badge/chat.png)](https://t.me/alvalor)
-[![Twitter](https://img.shields.io/badge/twitter-@alvalor-project-55acee.svg)](https://twitter.com/alvalorproject)
-[![License](http://img.shields.io/badge/license-mit-blue.svg)](https://raw.githubusercontent.com/alvalor/alvalor-go/master/LICENSE)
+[![Codecov](https://img.shields.io/codecov/c/github/alvalor/alvalor-go.svg)](https://codecov.io/gh/alvalor/alvalor-go) [![Telegram](https://img.shields.io/badge/telegram-alvalor-0088cc.svg)](https://t.me/alvalor)
+[![Twitter](https://img.shields.io/badge/twitter-@alvalorproject-1da1f2.svg)](https://twitter.com/alvalorproject)
+[![License](https://img.shields.io/badge/License-AGPL%20v3-blue.svg)](https://raw.githubusercontent.com/alvalor/alvalor-go/master/LICENSE)
 
 ## Introduction
 
