@@ -20,7 +20,6 @@ package network
 import (
 	"math/rand"
 	"sync"
-	"time"
 
 	"github.com/rs/zerolog"
 )
@@ -32,12 +31,11 @@ type Dropper interface {
 	DropPeer(address string) error
 }
 
-func handleDropping(log zerolog.Logger, wg *sync.WaitGroup, cfg *Config, mgr Dropper, book *Book, stop <-chan struct{}) {
+func handleDropping(log zerolog.Logger, wg *sync.WaitGroup, cfg *Config, mgr Dropper, book *Book) {
 	defer wg.Done()
 
 	// extract desired configuration parameters
 	var (
-		interval = cfg.interval
 		maxPeers = cfg.maxPeers
 	)
 
@@ -46,27 +44,27 @@ func handleDropping(log zerolog.Logger, wg *sync.WaitGroup, cfg *Config, mgr Dro
 	log.Info().Msg("dropping routine started")
 	defer log.Info().Msg("dropping routine stopped")
 
-	// each tick, check if we have too many peers and if yes, drop one
-	ticker := time.NewTicker(interval)
-	for {
-		select {
-		case <-stop:
-			ticker.Stop()
-			return
-		case <-ticker.C:
-		}
-		if mgr.PeerCount() > maxPeers {
-			addresses := mgr.GetAddresses()
-			if len(addresses) == 0 {
-				continue
-			}
-			address := addresses[rand.Int()%len(addresses)]
-			err := mgr.DropPeer(address)
-			if err != nil {
-				log.Error().Str("address", address).Err(err).Msg("could not drop peer")
-				continue
-			}
-			book.Dropped(address)
-		}
+	// if we don't have too many peers, abort
+	if mgr.PeerCount() <= maxPeers {
+		log.Debug().Msg("valid number of peers")
+		return
 	}
+
+	// try to get addresses of peers available to drop
+	addresses := mgr.GetAddresses()
+	if len(addresses) == 0 {
+		log.Debug().Msg("not connected to any peers")
+		return
+	}
+
+	// select a random peer and drop it
+	address := addresses[rand.Int()%len(addresses)]
+	err := mgr.DropPeer(address)
+	if err != nil {
+		log.Error().Str("address", address).Err(err).Msg("could not drop peer")
+		return
+	}
+
+	// notify the address manager that we dropped the peer
+	book.Dropped(address)
 }

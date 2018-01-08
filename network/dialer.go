@@ -19,7 +19,6 @@ package network
 
 import (
 	"sync"
-	"time"
 
 	"github.com/rs/zerolog"
 )
@@ -35,12 +34,11 @@ type Dialer interface {
 	StartConnector(address string)
 }
 
-func handleDialing(log zerolog.Logger, wg *sync.WaitGroup, cfg *Config, mgr Dialer, stop <-chan struct{}) {
+func handleDialing(log zerolog.Logger, wg *sync.WaitGroup, cfg *Config, mgr Dialer) {
 	defer wg.Done()
 
 	// extract needed configuration parameters
 	var (
-		interval = cfg.interval
 		minPeers = cfg.minPeers
 		maxPeers = cfg.maxPeers
 	)
@@ -50,25 +48,28 @@ func handleDialing(log zerolog.Logger, wg *sync.WaitGroup, cfg *Config, mgr Dial
 	log.Info().Msg("dialing routine started")
 	defer log.Info().Msg("dialing routine stopped")
 
-	// on each tick, check if we are below minimum peers and should have free
-	// connection slots, then start a new dialer
-	ticker := time.NewTicker(interval)
-	for {
-		select {
-		case <-stop:
-			ticker.Stop()
-			return
-		case <-ticker.C:
-		}
-		peerCount := mgr.PeerCount()
-		pendingCount := mgr.PendingCount()
-		if peerCount < minPeers && peerCount+pendingCount < maxPeers {
-			address, err := mgr.GetAddress()
-			if err != nil {
-				log.Error().Err(err).Msg("could not get address")
-				continue
-			}
-			mgr.StartConnector(address)
-		}
+	// if we already reached the minimum number of peers, we can abort
+	peerCount := mgr.PeerCount()
+	if peerCount >= minPeers {
+		log.Debug().Msg("no free slots for outgoing peers")
+		return
 	}
+
+	// we use the difference between min and max peers as available pending
+	// connection slots; if there are none free, we can abort
+	pendingCount := mgr.PendingCount()
+	if peerCount+pendingCount >= maxPeers {
+		log.Debug().Msg("no free slots for pending connections")
+		return
+	}
+
+	// try to get an address to connect to
+	address, err := mgr.GetAddress()
+	if err != nil {
+		log.Error().Err(err).Msg("could not get address")
+		return
+	}
+
+	// start the connecting go routine
+	mgr.StartConnector(address)
 }
