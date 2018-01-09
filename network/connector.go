@@ -25,19 +25,25 @@ import (
 	"github.com/rs/zerolog"
 )
 
-// Connector are the dependencies connecting routines need.
-type Connector interface {
-	ClaimSlot() error
-	ReleaseSlot()
+// ConnectorDeps are the dependencies connecting routines need.
+type ConnectorDeps interface {
 	KnownNonce(nonce []byte) bool
-	AddPeer(conn net.Conn, nonce []byte) error
+	AddPeer(conn net.Conn, nonce []byte)
 }
 
-func handleConnecting(log zerolog.Logger, wg *sync.WaitGroup, cfg *Config, mgr Connector, book *Book, address string) {
+// ConnectorEvents are the events that can happen during connection.
+type ConnectorEvents interface {
+	Error(address string)
+	Invalid(address string)
+	Success(address string)
+}
+
+func handleConnecting(log zerolog.Logger, wg *sync.WaitGroup, cfg *Config, deps ConnectorDeps, events ConnectorEvents, conn net.Conn) {
 	defer wg.Done()
 
 	// extract the variables from the config we are interested in
 	var (
+		address = conn.RemoteAddr().String()
 		network = cfg.network
 		nonce   = cfg.nonce
 	)
@@ -47,73 +53,45 @@ func handleConnecting(log zerolog.Logger, wg *sync.WaitGroup, cfg *Config, mgr C
 	log.Info().Msg("connecting routine started")
 	defer log.Info().Msg("connecting routine stopped")
 
-	// claim a free connection slot and set the release
-	err := mgr.ClaimSlot()
-	if err != nil {
-		log.Error().Err(err).Msg("could not claim slot")
-		return
-	}
-	defer mgr.ReleaseSlot()
-
-	// resolve the address and dial the connection
-	addr, err := net.ResolveTCPAddr("tcp", address)
-	if err != nil {
-		log.Error().Err(err).Msg("could not resolve address")
-		book.Invalid(address)
-		return
-	}
-	conn, err := net.DialTCP("tcp", nil, addr)
-	if err != nil {
-		log.Debug().Err(err).Msg("could not dial address")
-		book.Failure(address)
-		return
-	}
-
 	// execute the network handshake
 	syn := append(network, nonce...)
 	ack := make([]byte, len(syn))
-	_, err = conn.Write(syn)
+	_, err := conn.Write(syn)
 	if err != nil {
 		log.Error().Err(err).Msg("could not write syn packet")
 		conn.Close()
-		book.Error(address)
+		events.Error(address)
 		return
 	}
 	_, err = conn.Read(ack)
 	if err != nil {
 		log.Error().Err(err).Msg("could not read ack packet")
 		conn.Close()
-		book.Error(address)
+		events.Error(address)
 		return
 	}
 	networkIn := ack[:len(network)]
 	if !bytes.Equal(networkIn, network) {
 		log.Error().Bytes("network", network).Bytes("network_in", networkIn).Msg("network mismatch")
 		conn.Close()
-		book.Invalid(address)
+		events.Invalid(address)
 		return
 	}
 	nonceIn := ack[len(network):]
 	if bytes.Equal(nonceIn, nonce) {
 		log.Error().Bytes("nonce", nonce).Msg("identical nonce")
 		conn.Close()
-		book.Invalid(address)
+		events.Invalid(address)
 		return
 	}
-	if mgr.KnownNonce(nonceIn) {
+	if deps.KnownNonce(nonceIn) {
 		log.Error().Bytes("nonce", nonce).Msg("nonce already known")
 		conn.Close()
-		book.Invalid(address)
+		events.Invalid(address)
 		return
 	}
 
 	// create the peer for the valid connection
-	err = mgr.AddPeer(conn, nonceIn)
-	if err != nil {
-		log.Error().Err(err).Msg("could not add peer")
-		conn.Close()
-		return
-	}
-
-	book.Success(address)
+	deps.AddPeer(conn, nonceIn)
+	events.Success(address)
 }

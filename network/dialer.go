@@ -18,57 +18,58 @@
 package network
 
 import (
+	"net"
 	"sync"
-	"time"
 
 	"github.com/rs/zerolog"
 )
 
-type pendingCountFunc func() uint
-type dialConnFunc func() error
-
-// Dialer are the dependencies dialing routines need.
-type Dialer interface {
-	PeerCount() uint
-	PendingCount() uint
-	GetAddress() (string, error)
-	StartConnector(address string)
+// Connector are the dependencies connecting routines need.
+type DialerDeps interface {
+	ClaimSlot() error
+	ReleaseSlot()
+	KnownNonce(nonce []byte) bool
+	AddPeer(conn net.Conn, nonce []byte) error
 }
 
-func handleDialing(log zerolog.Logger, wg *sync.WaitGroup, cfg *Config, mgr Dialer, stop <-chan struct{}) {
+type DialerEvents interface {
+	Invalid(address string)
+	Failure(address string)
+}
+
+func handleDialing(log zerolog.Logger, wg *sync.WaitGroup, cfg *Config, deps DialerDeps, events DialerEvents, address string) {
 	defer wg.Done()
 
-	// extract needed configuration parameters
+	// extract the variables from the config we are interested in
 	var (
-		interval = cfg.interval
-		minPeers = cfg.minPeers
-		maxPeers = cfg.maxPeers
+		network = cfg.network
+		nonce   = cfg.nonce
 	)
 
-	// configure logger and add start/stop messages
-	log = log.With().Str("component", "dialer").Logger()
-	log.Info().Msg("dialing routine started")
-	defer log.Info().Msg("dialing routine stopped")
+	// configure the component logger and set start/stop messages
+	log = log.With().Str("component", "connector").Str("address", address).Logger()
+	log.Info().Msg("connecting routine started")
+	defer log.Info().Msg("connecting routine stopped")
 
-	// on each tick, check if we are below minimum peers and should have free
-	// connection slots, then start a new dialer
-	ticker := time.NewTicker(interval)
-	for {
-		select {
-		case <-stop:
-			ticker.Stop()
-			return
-		case <-ticker.C:
-		}
-		peerCount := mgr.PeerCount()
-		pendingCount := mgr.PendingCount()
-		if peerCount < minPeers && peerCount+pendingCount < maxPeers {
-			address, err := mgr.GetAddress()
-			if err != nil {
-				log.Error().Err(err).Msg("could not get address")
-				continue
-			}
-			mgr.StartConnector(address)
-		}
+	// claim a free connection slot and set the release
+	err := deps.ClaimSlot()
+	if err != nil {
+		log.Error().Err(err).Msg("could not claim slot")
+		return
+	}
+	defer deps.ReleaseSlot()
+
+	// resolve the address and dial the connection
+	addr, err := net.ResolveTCPAddr("tcp", address)
+	if err != nil {
+		log.Error().Err(err).Msg("could not resolve address")
+		events.Invalid(address)
+		return
+	}
+	conn, err := net.DialTCP("tcp", nil, addr)
+	if err != nil {
+		log.Debug().Err(err).Msg("could not dial address")
+		events.Failure(address)
+		return
 	}
 }

@@ -26,6 +26,7 @@ import (
 	"github.com/pierrec/lz4"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
+	"github.com/rs/zerolog/log"
 	uuid "github.com/satori/go.uuid"
 )
 
@@ -47,6 +48,9 @@ type Manager struct {
 	registry Registry
 	stop     chan struct{}
 	pending  uint
+	handlers []func()
+	mutex    sync.Mutex
+	listener net.Listener
 }
 
 // NewManager will initialize the completely wired up networking dependencies.
@@ -86,18 +90,21 @@ func NewManager(log zerolog.Logger, codec Codec, options ...func(*Config)) *Mana
 		stop:     make(chan struct{}),
 	}
 
-	// TODO: separate book package and inject so we can add addresses in main
-	mgr.book.Add("127.0.0.1:31330")
-
 	// blacklist our own address
 	mgr.book.Invalid(cfg.address)
 
-	// initialize the connection dropper, the outgoing connection dialer and
-	// the incoming connection server
-	wg.Add(3)
-	go handleDropping(log, wg, cfg, mgr, mgr.book, mgr.stop)
-	go handleDialing(log, wg, cfg, mgr, mgr.stop)
-	go handleServing(log, wg, cfg, mgr, mgr.stop)
+	// register drop handler
+	mgr.handlers = append(mgr.handlers, func() { handleDropping(log, wg, cfg, mgr, mgr.book) })
+
+	// register dialing handler
+	mgr.handlers = append(mgr.handlers, func() { handleDialing(log, wg, cfg, mgr) })
+
+	// register serving handler
+	mgr.handlers = append(mgr.handlers, func() { handleServing(log, wg, cfg, mgr) })
+
+	// initialize the emitter which will start the handlers regularly
+	wg.Add(1)
+	go handleEmitting(log, wg, cfg, mgr, mgr.stop)
 
 	return mgr
 }
@@ -175,6 +182,12 @@ func (mgr *Manager) GetAddress() (string, error) {
 	return addresses[0], nil
 }
 
+// StartHandlers will start the registered handlers.
+func (mgr *Manager) Launch() {
+	mgr.mutex.Lock()
+	defer mgr.mutex.Unlock()
+}
+
 // StartConnector will try to launch a new connection attempt.
 func (mgr *Manager) StartConnector(address string) {
 	mgr.wg.Add(1)
@@ -182,19 +195,45 @@ func (mgr *Manager) StartConnector(address string) {
 }
 
 // StartListener will start a listener on a given port.
-func (mgr *Manager) StartListener(stop <-chan struct{}) {
-	mgr.wg.Add(1)
-	go handleListening(mgr.log, mgr.wg, mgr.cfg, mgr, stop)
+func (mgr *Manager) StartListener() {
+	mgr.mutex.Lock()
+	defer mgr.mutex.Unlock()
+	if mgr.listener != nil {
+		return
+	}
+	addr, err := net.ResolveTCPAddr("tcp", mgr.cfg.address)
+	if err != nil {
+		log.Error().Err(err).Msg("could not resolve listen address")
+		return
+	}
+	listener, err := net.ListenTCP("tcp", addr)
+	if err != nil {
+		log.Error().Err(err).Msg("could not listen on address")
+		return
+	}
+
+	mgr.handlers = append(mgr.handlers, func() { handleListening(mgr.log, mgr.wg, mgr.cfg, listener, mgr) })
+}
+
+// StopListener will stop a listener on the configured port.
+func (mgr *Manager) StopListener() {
+	mgr.mutex.Lock()
+	defer mgr.mutex.Unlock()
+	if mgr.listener == nil {
+		return
+	}
+	mgr.handlers = mgr.handlers[:len(mgr.handlers)-1]
+	mgr.listener.Close()
 }
 
 // StartAcceptor will start accepting an incoming connection.
 func (mgr *Manager) StartAcceptor(conn net.Conn) {
 	mgr.wg.Add(1)
-	go handleAccepting(mgr.log, mgr.wg, mgr.cfg, mgr, mgr.book, conn)
+	go handleIncoming(mgr.log, mgr.wg, mgr.cfg, mgr, mgr.book, conn)
 }
 
 // AddPeer will launch all necessary processing for a new valid connection.
-func (mgr *Manager) AddPeer(conn net.Conn, nonce []byte) error {
+func (mgr *Manager) AddPeer(conn net.Conn, nonce []byte) {
 
 	// create the peer and add to registry
 	peer := &Peer{
@@ -205,7 +244,8 @@ func (mgr *Manager) AddPeer(conn net.Conn, nonce []byte) error {
 	}
 	err := mgr.registry.Add(peer)
 	if err != nil {
-		return errors.Wrap(err, "could not add peer to registry")
+		mgr.log.Error().Err(err).Msg("could not add peer to registry")
+		return
 	}
 
 	// initialize the readers and writers
@@ -218,6 +258,4 @@ func (mgr *Manager) AddPeer(conn net.Conn, nonce []byte) error {
 	go handleSending(mgr.log, mgr.wg, mgr.cfg, mgr, mgr.book, address, peer.output, w)
 	go handleReceiving(mgr.log, mgr.wg, mgr.cfg, mgr, mgr.book, address, r, peer.input)
 	go handleProcessing(mgr.log, mgr.wg, mgr.cfg, mgr, mgr.book, address, peer.input, peer.output)
-
-	return nil
 }

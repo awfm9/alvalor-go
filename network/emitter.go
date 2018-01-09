@@ -19,37 +19,39 @@ package network
 
 import (
 	"sync"
+	"time"
 
 	"github.com/rs/zerolog"
 )
 
-// Server contains all the dependencies for the serving routine.
-type Server interface {
-	PeerCount() uint
-	StartListener()
-	StopListener()
+// EmitterDeps is used to interface with the manager.
+type emitterDeps interface {
+	Launch()
 }
 
-func handleServing(log zerolog.Logger, wg *sync.WaitGroup, cfg *Config, mgr Server) {
+func handleEmitting(log zerolog.Logger, wg *sync.WaitGroup, cfg *Config, deps emitterDeps, stop <-chan struct{}) {
 	defer wg.Done()
 
-	// extract the configuration parameters we are interested in
+	// extract configuration parameters we care about
 	var (
-		listen   = cfg.listen
-		maxPeers = cfg.maxPeers
+		interval = cfg.interval
 	)
 
-	// configure the logger for the component with start/stop messages
-	log = log.With().Str("component", "server").Logger()
-	log.Info().Msg("serving routine started")
-	defer log.Info().Msg("serving routine stopped")
+	// set up logging with start/stop messages
+	log = log.With().Str("component", "emitter").Dur("interval", interval).Logger()
+	log.Info().Msg("emitting routine started")
+	defer log.Info().Msg("emitting routine stopped")
 
-	// each time we tick, check if we should enable or disable the accepting of
-	// connections
-	peerCount := mgr.PeerCount()
-	if listen && peerCount < maxPeers {
-		mgr.StartListener()
-	} else if listen && peerCount >= maxPeers {
-		mgr.StopListener()
+	// on each ticker, execute handlers function until we quit
+	ticker := time.NewTicker(interval)
+Loop:
+	for {
+		select {
+		case <-stop:
+			break Loop
+		case <-ticker.C:
+			deps.Launch()
+		}
 	}
+	ticker.Stop()
 }
