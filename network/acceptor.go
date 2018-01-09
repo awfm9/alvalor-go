@@ -32,7 +32,13 @@ type Acceptor interface {
 	AddPeer(conn net.Conn, nonce []byte) error
 }
 
-func handleAccepting(log zerolog.Logger, wg *sync.WaitGroup, cfg *Config, mgr Acceptor, book Book, conn net.Conn) {
+type AcceptorEvents interface {
+	Error(address string)
+	Invalid(address string)
+	Success(address string)
+}
+
+func handleAccepting(log zerolog.Logger, wg *sync.WaitGroup, cfg *Config, mgr Acceptor, events AcceptorEvents, conn net.Conn) {
 	defer wg.Done()
 
 	// extract configuration parameters we care about
@@ -63,28 +69,28 @@ func handleAccepting(log zerolog.Logger, wg *sync.WaitGroup, cfg *Config, mgr Ac
 	if err != nil {
 		log.Error().Err(err).Msg("could not read syn packet")
 		conn.Close()
-		book.Error(address)
+		events.Error(address)
 		return
 	}
 	networkIn := syn[:len(network)]
 	if !bytes.Equal(networkIn, network) {
 		log.Error().Bytes("network", network).Bytes("network_in", networkIn).Msg("network mismatch")
 		conn.Close()
-		book.Invalid(address)
+		events.Invalid(address)
 		return
 	}
 	nonceIn := syn[len(network):]
 	if bytes.Equal(nonceIn, nonce) {
 		log.Error().Bytes("nonce", nonce).Msg("identical nonce")
 		conn.Close()
-		book.Invalid(address)
+		events.Invalid(address)
 		return
 	}
 	_, err = conn.Write(ack)
 	if err != nil {
 		log.Error().Err(err).Msg("could not write ack packet")
 		conn.Close()
-		book.Error(address)
+		events.Error(address)
 		return
 	}
 
@@ -96,5 +102,5 @@ func handleAccepting(log zerolog.Logger, wg *sync.WaitGroup, cfg *Config, mgr Ac
 		return
 	}
 
-	book.Success(address)
+	events.Success(address)
 }

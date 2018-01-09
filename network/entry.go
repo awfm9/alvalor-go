@@ -15,31 +15,13 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with Alvalor.  If not, see <http://www.gnu.org/licenses/>.
 
-package transaction
+package network
 
-import (
-	"encoding/binary"
-
-	"golang.org/x/crypto/blake2b"
-)
-
-// Transfer represents a value transfer transaction.
-type Transfer struct {
-	From   []byte // origin account of the transfer
-	To     []byte // target account of the transfer
-	Amount uint64 // amount to be transfered
-	Nonce  uint64 // nonce to make sure we can issue same transfer again
-}
-
-// ID returns the ID of the transfer.
-func (t Transfer) ID() []byte {
-	h, _ := blake2b.New256(nil)
-	h.Write(t.From)
-	h.Write(t.To)
-	buf := make([]byte, 8)
-	binary.LittleEndian.PutUint64(buf, t.Amount)
-	h.Write(buf)
-	binary.LittleEndian.PutUint64(buf, t.Nonce)
-	h.Write(buf)
-	return h.Sum(nil)
+// etry represents an entry in the address book, containing the address, whether the peer is
+// currently active and how many successes/failures we had on the connection.
+type entry struct {
+	Address string
+	Active  bool
+	Success int
+	Failure int
 }

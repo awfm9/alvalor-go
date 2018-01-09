@@ -49,61 +49,61 @@ func (suite *ConnectorTestSuite) SetupTest() {
 func (suite *ConnectorTestSuite) TestHandleConnectingDoesNotCallReleaseSlotIfCantClaim() {
 	//Arrange
 	connector := &connectorMock{}
-	book := &bookMock{}
+	connectorEvents := &connectorEventsMock{}
 	dialer := &tcpDialerMock{}
 	addr := "136.44.33.12:5523"
 
 	connector.On("ClaimSlot").Return(errors.New("Can't claim slot"))
 
 	//Act
-	handleConnecting(suite.log, &suite.wg, &suite.cfg, connector, book, dialer, addr)
+	handleConnecting(suite.log, &suite.wg, &suite.cfg, connector, connectorEvents, dialer, addr)
 
 	//Assert
 	connector.AssertNotCalled(suite.T(), "ReleaseSlot")
 }
 
-func (suite *ConnectorTestSuite) TestHandleConnectingNotifiesBookIfAddressInvalid() {
+func (suite *ConnectorTestSuite) TestHandleConnectingNotifiesconnectorEventsIfAddressInvalid() {
 	//Arrange
 	connector := &connectorMock{}
-	book := &bookMock{}
+	connectorEvents := &connectorEventsMock{}
 	dialer := &tcpDialerMock{}
 	addr := "136.44.33.1024dd"
 
 	connector.On("ClaimSlot").Return(nil)
 	connector.On("ReleaseSlot")
-	book.On("Invalid", addr)
+	connectorEvents.On("Invalid", addr)
 
 	//Act
-	handleConnecting(suite.log, &suite.wg, &suite.cfg, connector, book, dialer, addr)
+	handleConnecting(suite.log, &suite.wg, &suite.cfg, connector, connectorEvents, dialer, addr)
 
 	//Assert
-	book.AssertCalled(suite.T(), "Invalid", addr)
+	connectorEvents.AssertCalled(suite.T(), "Invalid", addr)
 }
 
-func (suite *ConnectorTestSuite) TestHandleConnectingNotifiesBookIfCannotDialAddress() {
+func (suite *ConnectorTestSuite) TestHandleConnectingNotifiesconnectorEventsIfCannotDialAddress() {
 	//Arrange
 	connector := &connectorMock{}
-	book := &bookMock{}
+	connectorEvents := &connectorEventsMock{}
 	dialer := &tcpDialerMock{}
 	addr := "136.44.33.15:552"
 	tcpAddr, _ := net.ResolveTCPAddr("tcp", addr)
 
 	connector.On("ClaimSlot").Return(nil)
 	connector.On("ReleaseSlot")
-	book.On("Failure", addr)
+	connectorEvents.On("Failure", addr)
 	dialer.On("Dial", tcpAddr).Return(&connMock{}, errors.New("Cannot dial this address"))
 
 	//Act
-	handleConnecting(suite.log, &suite.wg, &suite.cfg, connector, book, dialer, addr)
+	handleConnecting(suite.log, &suite.wg, &suite.cfg, connector, connectorEvents, dialer, addr)
 
 	//Assert
-	book.AssertCalled(suite.T(), "Failure", addr)
+	connectorEvents.AssertCalled(suite.T(), "Failure", addr)
 }
 
 func (suite *ConnectorTestSuite) TestHandleConnectingClosesConnectionIfCantWriteSyn() {
 	//Arrange
 	connector := &connectorMock{}
-	book := &bookMock{}
+	connectorEvents := &connectorEventsMock{}
 	dialer := &tcpDialerMock{}
 	conn := &connMock{}
 	addr := "136.44.33.15:552"
@@ -111,22 +111,22 @@ func (suite *ConnectorTestSuite) TestHandleConnectingClosesConnectionIfCantWrite
 
 	connector.On("ClaimSlot").Return(nil)
 	connector.On("ReleaseSlot")
-	book.On("Error", addr)
+	connectorEvents.On("Error", addr)
 	dialer.On("Dial", tcpAddr).Return(conn, nil)
 	conn.On("Close").Return(nil)
 	conn.On("Write", append(suite.cfg.network, suite.cfg.nonce...)).Return(1, errors.New("Can't write to this connection"))
 
 	//Act
-	handleConnecting(suite.log, &suite.wg, &suite.cfg, connector, book, dialer, addr)
+	handleConnecting(suite.log, &suite.wg, &suite.cfg, connector, connectorEvents, dialer, addr)
 
 	//Assert
 	conn.AssertCalled(suite.T(), "Close")
 }
 
-func (suite *ConnectorTestSuite) TestHandleConnectingNotifiesBookIfCantWriteSyn() {
+func (suite *ConnectorTestSuite) TestHandleConnectingNotifiesconnectorEventsIfCantWriteSyn() {
 	//Arrange
 	connector := &connectorMock{}
-	book := &bookMock{}
+	connectorEvents := &connectorEventsMock{}
 	dialer := &tcpDialerMock{}
 	conn := &connMock{}
 	addr := "136.44.33.15:552"
@@ -134,22 +134,22 @@ func (suite *ConnectorTestSuite) TestHandleConnectingNotifiesBookIfCantWriteSyn(
 
 	connector.On("ClaimSlot").Return(nil)
 	connector.On("ReleaseSlot")
-	book.On("Error", addr)
+	connectorEvents.On("Error", addr)
 	dialer.On("Dial", tcpAddr).Return(conn, nil)
 	conn.On("Close").Return(nil)
 	conn.On("Write", append(suite.cfg.network, suite.cfg.nonce...)).Return(1, errors.New("Can't write to this connection"))
 
 	//Act
-	handleConnecting(suite.log, &suite.wg, &suite.cfg, connector, book, dialer, addr)
+	handleConnecting(suite.log, &suite.wg, &suite.cfg, connector, connectorEvents, dialer, addr)
 
 	//Assert
-	book.AssertCalled(suite.T(), "Error", addr)
+	connectorEvents.AssertCalled(suite.T(), "Error", addr)
 }
 
 func (suite *ConnectorTestSuite) TestHandleConnectingClosesConnectionIfCantReadAck() {
 	//Arrange
 	connector := &connectorMock{}
-	book := &bookMock{}
+	connectorEvents := &connectorEventsMock{}
 	dialer := &tcpDialerMock{}
 	conn := &connMock{}
 	addr := "136.44.33.15:552"
@@ -157,23 +157,23 @@ func (suite *ConnectorTestSuite) TestHandleConnectingClosesConnectionIfCantReadA
 
 	connector.On("ClaimSlot").Return(nil)
 	connector.On("ReleaseSlot")
-	book.On("Error", addr)
+	connectorEvents.On("Error", addr)
 	dialer.On("Dial", tcpAddr).Return(conn, nil)
 	conn.On("Close").Return(nil)
 	conn.On("Write", append(suite.cfg.network, suite.cfg.nonce...)).Return(1, nil)
 	conn.On("Read", make([]byte, len(suite.cfg.network)+len(suite.cfg.nonce))).Return(1, errors.New("Can't read from this connection"))
 
 	//Act
-	handleConnecting(suite.log, &suite.wg, &suite.cfg, connector, book, dialer, addr)
+	handleConnecting(suite.log, &suite.wg, &suite.cfg, connector, connectorEvents, dialer, addr)
 
 	//Assert
 	conn.AssertCalled(suite.T(), "Close")
 }
 
-func (suite *ConnectorTestSuite) TestHandleConnectingNotifiesBookIfCantReadAck() {
+func (suite *ConnectorTestSuite) TestHandleConnectingNotifiesconnectorEventsIfCantReadAck() {
 	//Arrange
 	connector := &connectorMock{}
-	book := &bookMock{}
+	connectorEvents := &connectorEventsMock{}
 	dialer := &tcpDialerMock{}
 	conn := &connMock{}
 	addr := "136.44.33.15:552"
@@ -181,23 +181,23 @@ func (suite *ConnectorTestSuite) TestHandleConnectingNotifiesBookIfCantReadAck()
 
 	connector.On("ClaimSlot").Return(nil)
 	connector.On("ReleaseSlot")
-	book.On("Error", addr)
+	connectorEvents.On("Error", addr)
 	dialer.On("Dial", tcpAddr).Return(conn, nil)
 	conn.On("Close").Return(nil)
 	conn.On("Write", append(suite.cfg.network, suite.cfg.nonce...)).Return(1, nil)
 	conn.On("Read", make([]byte, len(suite.cfg.network)+len(suite.cfg.nonce))).Return(1, errors.New("Can't read from this connection"))
 
 	//Act
-	handleConnecting(suite.log, &suite.wg, &suite.cfg, connector, book, dialer, addr)
+	handleConnecting(suite.log, &suite.wg, &suite.cfg, connector, connectorEvents, dialer, addr)
 
 	//Assert
-	book.AssertCalled(suite.T(), "Error", addr)
+	connectorEvents.AssertCalled(suite.T(), "Error", addr)
 }
 
 func (suite *ConnectorTestSuite) TestHandleConnectingClosesConnectionWhenNetworkMismatch() {
 	//Arrange
 	connector := &connectorMock{}
-	book := &bookMock{}
+	connectorEvents := &connectorEventsMock{}
 	dialer := &tcpDialerMock{}
 	conn := &connMock{}
 	addr := "136.44.33.15:552"
@@ -205,7 +205,7 @@ func (suite *ConnectorTestSuite) TestHandleConnectingClosesConnectionWhenNetwork
 
 	connector.On("ClaimSlot").Return(nil)
 	connector.On("ReleaseSlot")
-	book.On("Invalid", addr)
+	connectorEvents.On("Invalid", addr)
 	dialer.On("Dial", tcpAddr).Return(conn, nil)
 	conn.On("Close").Return(nil)
 	conn.On("Write", append(suite.cfg.network, suite.cfg.nonce...)).Return(1, nil)
@@ -219,16 +219,16 @@ func (suite *ConnectorTestSuite) TestHandleConnectingClosesConnectionWhenNetwork
 	}).Return(1, nil)
 
 	//Act
-	handleConnecting(suite.log, &suite.wg, &suite.cfg, connector, book, dialer, addr)
+	handleConnecting(suite.log, &suite.wg, &suite.cfg, connector, connectorEvents, dialer, addr)
 
 	//Assert
 	conn.AssertCalled(suite.T(), "Close")
 }
 
-func (suite *ConnectorTestSuite) TestHandleConnectingNotifiesBookWhenNetworkMismatch() {
+func (suite *ConnectorTestSuite) TestHandleConnectingNotifiesconnectorEventsWhenNetworkMismatch() {
 	//Arrange
 	connector := &connectorMock{}
-	book := &bookMock{}
+	connectorEvents := &connectorEventsMock{}
 	dialer := &tcpDialerMock{}
 	conn := &connMock{}
 	addr := "136.44.33.15:552"
@@ -236,7 +236,7 @@ func (suite *ConnectorTestSuite) TestHandleConnectingNotifiesBookWhenNetworkMism
 
 	connector.On("ClaimSlot").Return(nil)
 	connector.On("ReleaseSlot")
-	book.On("Invalid", addr)
+	connectorEvents.On("Invalid", addr)
 	dialer.On("Dial", tcpAddr).Return(conn, nil)
 	conn.On("Close").Return(nil)
 	conn.On("Write", append(suite.cfg.network, suite.cfg.nonce...)).Return(1, nil)
@@ -250,16 +250,16 @@ func (suite *ConnectorTestSuite) TestHandleConnectingNotifiesBookWhenNetworkMism
 	}).Return(1, nil)
 
 	//Act
-	handleConnecting(suite.log, &suite.wg, &suite.cfg, connector, book, dialer, addr)
+	handleConnecting(suite.log, &suite.wg, &suite.cfg, connector, connectorEvents, dialer, addr)
 
 	//Assert
-	book.AssertCalled(suite.T(), "Invalid", addr)
+	connectorEvents.AssertCalled(suite.T(), "Invalid", addr)
 }
 
 func (suite *ConnectorTestSuite) TestHandleConnectingClosesConnectionWhenIdenticalNonce() {
 	//Arrange
 	connector := &connectorMock{}
-	book := &bookMock{}
+	connectorEvents := &connectorEventsMock{}
 	dialer := &tcpDialerMock{}
 	conn := &connMock{}
 	addr := "136.44.33.15:552"
@@ -267,7 +267,7 @@ func (suite *ConnectorTestSuite) TestHandleConnectingClosesConnectionWhenIdentic
 
 	connector.On("ClaimSlot").Return(nil)
 	connector.On("ReleaseSlot")
-	book.On("Invalid", addr)
+	connectorEvents.On("Invalid", addr)
 	dialer.On("Dial", tcpAddr).Return(conn, nil)
 	conn.On("Close").Return(nil)
 	conn.On("Write", append(suite.cfg.network, suite.cfg.nonce...)).Return(1, nil)
@@ -281,16 +281,16 @@ func (suite *ConnectorTestSuite) TestHandleConnectingClosesConnectionWhenIdentic
 	}).Return(1, nil)
 
 	//Act
-	handleConnecting(suite.log, &suite.wg, &suite.cfg, connector, book, dialer, addr)
+	handleConnecting(suite.log, &suite.wg, &suite.cfg, connector, connectorEvents, dialer, addr)
 
 	//Assert
 	conn.AssertCalled(suite.T(), "Close")
 }
 
-func (suite *ConnectorTestSuite) TestHandleConnectingNotifiesBookWhenIdenticalNonce() {
+func (suite *ConnectorTestSuite) TestHandleConnectingNotifiesconnectorEventsWhenIdenticalNonce() {
 	//Arrange
 	connector := &connectorMock{}
-	book := &bookMock{}
+	connectorEvents := &connectorEventsMock{}
 	dialer := &tcpDialerMock{}
 	conn := &connMock{}
 	addr := "136.44.33.15:552"
@@ -298,7 +298,7 @@ func (suite *ConnectorTestSuite) TestHandleConnectingNotifiesBookWhenIdenticalNo
 
 	connector.On("ClaimSlot").Return(nil)
 	connector.On("ReleaseSlot")
-	book.On("Invalid", addr)
+	connectorEvents.On("Invalid", addr)
 	dialer.On("Dial", tcpAddr).Return(conn, nil)
 	conn.On("Close").Return(nil)
 	conn.On("Write", append(suite.cfg.network, suite.cfg.nonce...)).Return(1, nil)
@@ -312,16 +312,16 @@ func (suite *ConnectorTestSuite) TestHandleConnectingNotifiesBookWhenIdenticalNo
 	}).Return(1, nil)
 
 	//Act
-	handleConnecting(suite.log, &suite.wg, &suite.cfg, connector, book, dialer, addr)
+	handleConnecting(suite.log, &suite.wg, &suite.cfg, connector, connectorEvents, dialer, addr)
 
 	//Assert
-	book.AssertCalled(suite.T(), "Invalid", addr)
+	connectorEvents.AssertCalled(suite.T(), "Invalid", addr)
 }
 
 func (suite *ConnectorTestSuite) TestHandleConnectingClosesConnectionWhenNonceAlreadyKnown() {
 	//Arrange
 	connector := &connectorMock{}
-	book := &bookMock{}
+	connectorEvents := &connectorEventsMock{}
 	dialer := &tcpDialerMock{}
 	conn := &connMock{}
 	addr := "136.44.33.15:552"
@@ -330,7 +330,7 @@ func (suite *ConnectorTestSuite) TestHandleConnectingClosesConnectionWhenNonceAl
 	connector.On("ClaimSlot").Return(nil)
 	connector.On("ReleaseSlot")
 	connector.On("KnownNonce", nonceIn).Return(true)
-	book.On("Invalid", addr)
+	connectorEvents.On("Invalid", addr)
 	dialer.On("Dial", tcpAddr).Return(conn, nil)
 	conn.On("Close").Return(nil)
 	conn.On("Write", append(suite.cfg.network, suite.cfg.nonce...)).Return(1, nil)
@@ -344,16 +344,16 @@ func (suite *ConnectorTestSuite) TestHandleConnectingClosesConnectionWhenNonceAl
 	}).Return(1, nil)
 
 	//Act
-	handleConnecting(suite.log, &suite.wg, &suite.cfg, connector, book, dialer, addr)
+	handleConnecting(suite.log, &suite.wg, &suite.cfg, connector, connectorEvents, dialer, addr)
 
 	//Assert
 	conn.AssertCalled(suite.T(), "Close")
 }
 
-func (suite *ConnectorTestSuite) TestHandleConnectingNotifiesBookWhenNonceAlreadyKnown() {
+func (suite *ConnectorTestSuite) TestHandleConnectingNotifiesconnectorEventsWhenNonceAlreadyKnown() {
 	//Arrange
 	connector := &connectorMock{}
-	book := &bookMock{}
+	connectorEvents := &connectorEventsMock{}
 	dialer := &tcpDialerMock{}
 	conn := &connMock{}
 	addr := "136.44.33.15:552"
@@ -362,7 +362,7 @@ func (suite *ConnectorTestSuite) TestHandleConnectingNotifiesBookWhenNonceAlread
 	connector.On("ClaimSlot").Return(nil)
 	connector.On("ReleaseSlot")
 	connector.On("KnownNonce", nonceIn).Return(true)
-	book.On("Invalid", addr)
+	connectorEvents.On("Invalid", addr)
 	dialer.On("Dial", tcpAddr).Return(conn, nil)
 	conn.On("Close").Return(nil)
 	conn.On("Write", append(suite.cfg.network, suite.cfg.nonce...)).Return(1, nil)
@@ -376,16 +376,16 @@ func (suite *ConnectorTestSuite) TestHandleConnectingNotifiesBookWhenNonceAlread
 	}).Return(1, nil)
 
 	//Act
-	handleConnecting(suite.log, &suite.wg, &suite.cfg, connector, book, dialer, addr)
+	handleConnecting(suite.log, &suite.wg, &suite.cfg, connector, connectorEvents, dialer, addr)
 
 	//Assert
-	book.AssertCalled(suite.T(), "Invalid", addr)
+	connectorEvents.AssertCalled(suite.T(), "Invalid", addr)
 }
 
 func (suite *ConnectorTestSuite) TestHandleConnectingClosesConnectionWhenCannotAddPeer() {
 	//Arrange
 	connector := &connectorMock{}
-	book := &bookMock{}
+	connectorEvents := &connectorEventsMock{}
 	dialer := &tcpDialerMock{}
 	conn := &connMock{}
 	addr := "136.44.33.15:552"
@@ -395,7 +395,7 @@ func (suite *ConnectorTestSuite) TestHandleConnectingClosesConnectionWhenCannotA
 	connector.On("ReleaseSlot")
 	connector.On("KnownNonce", nonceIn).Return(false)
 	connector.On("AddPeer", conn, nonceIn).Return(errors.New("Cannot add peer"))
-	book.On("Invalid", addr)
+	connectorEvents.On("Invalid", addr)
 	dialer.On("Dial", tcpAddr).Return(conn, nil)
 	conn.On("Close").Return(nil)
 	conn.On("Write", append(suite.cfg.network, suite.cfg.nonce...)).Return(1, nil)
@@ -409,16 +409,16 @@ func (suite *ConnectorTestSuite) TestHandleConnectingClosesConnectionWhenCannotA
 	}).Return(1, nil)
 
 	//Act
-	handleConnecting(suite.log, &suite.wg, &suite.cfg, connector, book, dialer, addr)
+	handleConnecting(suite.log, &suite.wg, &suite.cfg, connector, connectorEvents, dialer, addr)
 
 	//Assert
 	conn.AssertCalled(suite.T(), "Close")
 }
 
-func (suite *ConnectorTestSuite) TestHandleConnectingNotifiesBookAboutSuccess() {
+func (suite *ConnectorTestSuite) TestHandleConnectingNotifiesconnectorEventsAboutSuccess() {
 	//Arrange
 	connector := &connectorMock{}
-	book := &bookMock{}
+	connectorEvents := &connectorEventsMock{}
 	dialer := &tcpDialerMock{}
 	conn := &connMock{}
 	addr := "136.44.33.15:552"
@@ -428,7 +428,7 @@ func (suite *ConnectorTestSuite) TestHandleConnectingNotifiesBookAboutSuccess() 
 	connector.On("ReleaseSlot")
 	connector.On("KnownNonce", nonceIn).Return(false)
 	connector.On("AddPeer", conn, nonceIn).Return(nil)
-	book.On("Success", addr)
+	connectorEvents.On("Success", addr)
 	dialer.On("Dial", tcpAddr).Return(conn, nil)
 	conn.On("Close").Return(nil)
 	conn.On("Write", append(suite.cfg.network, suite.cfg.nonce...)).Return(1, nil)
@@ -442,16 +442,16 @@ func (suite *ConnectorTestSuite) TestHandleConnectingNotifiesBookAboutSuccess() 
 	}).Return(1, nil)
 
 	//Act
-	handleConnecting(suite.log, &suite.wg, &suite.cfg, connector, book, dialer, addr)
+	handleConnecting(suite.log, &suite.wg, &suite.cfg, connector, connectorEvents, dialer, addr)
 
 	//Assert
-	book.AssertCalled(suite.T(), "Success", addr)
+	connectorEvents.AssertCalled(suite.T(), "Success", addr)
 }
 
 func (suite *ConnectorTestSuite) TestHandleConnectingReleasesSlotIfItClaimedBefore() {
 	//Arrange
 	connector := &connectorMock{}
-	book := &bookMock{}
+	connectorEvents := &connectorEventsMock{}
 	dialer := &tcpDialerMock{}
 	conn := &connMock{}
 	addr := "136.44.33.15:552"
@@ -461,7 +461,7 @@ func (suite *ConnectorTestSuite) TestHandleConnectingReleasesSlotIfItClaimedBefo
 	connector.On("ReleaseSlot")
 	connector.On("KnownNonce", nonceIn).Return(false)
 	connector.On("AddPeer", conn, nonceIn).Return(nil)
-	book.On("Success", addr)
+	connectorEvents.On("Success", addr)
 	dialer.On("Dial", tcpAddr).Return(conn, nil)
 	conn.On("Close").Return(nil)
 	conn.On("Write", append(suite.cfg.network, suite.cfg.nonce...)).Return(1, nil)
@@ -475,7 +475,7 @@ func (suite *ConnectorTestSuite) TestHandleConnectingReleasesSlotIfItClaimedBefo
 	}).Return(1, nil)
 
 	//Act
-	handleConnecting(suite.log, &suite.wg, &suite.cfg, connector, book, dialer, addr)
+	handleConnecting(suite.log, &suite.wg, &suite.cfg, connector, connectorEvents, dialer, addr)
 
 	//Assert
 	connector.AssertCalled(suite.T(), "ReleaseSlot")
@@ -483,6 +483,24 @@ func (suite *ConnectorTestSuite) TestHandleConnectingReleasesSlotIfItClaimedBefo
 
 func TestConnectorTestSuite(t *testing.T) {
 	suite.Run(t, new(ConnectorTestSuite))
+}
+
+type connectorEventsMock struct {
+	mock.Mock
+}
+
+func (connectorEvents *connectorEventsMock) Invalid(address string) {
+	connectorEvents.Called(address)
+}
+func (connectorEvents *connectorEventsMock) Error(address string) {
+	connectorEvents.Called(address)
+}
+func (connectorEvents *connectorEventsMock) Success(address string) {
+	connectorEvents.Called(address)
+}
+
+func (connectorEvents *connectorEventsMock) Failure(address string) {
+	connectorEvents.Called(address)
 }
 
 type connectorMock struct {

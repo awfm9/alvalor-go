@@ -37,7 +37,14 @@ type TcpDialer interface {
 	Dial(raddr *net.TCPAddr) (net.Conn, error)
 }
 
-func handleConnecting(log zerolog.Logger, wg *sync.WaitGroup, cfg *Config, mgr Connector, book Book, dialer TcpDialer, address string) {
+type ConnectorEvents interface {
+	Error(address string)
+	Invalid(address string)
+	Success(address string)
+	Failure(address string)
+}
+
+func handleConnecting(log zerolog.Logger, wg *sync.WaitGroup, cfg *Config, mgr Connector, events ConnectorEvents, dialer TcpDialer, address string) {
 	defer wg.Done()
 
 	// extract the variables from the config we are interested in
@@ -63,13 +70,13 @@ func handleConnecting(log zerolog.Logger, wg *sync.WaitGroup, cfg *Config, mgr C
 	addr, err := net.ResolveTCPAddr("tcp", address)
 	if err != nil {
 		log.Error().Err(err).Msg("could not resolve address")
-		book.Invalid(address)
+		events.Invalid(address)
 		return
 	}
 	conn, err := dialer.Dial(addr)
 	if err != nil {
 		log.Debug().Err(err).Msg("could not dial address")
-		book.Failure(address)
+		events.Failure(address)
 		return
 	}
 
@@ -80,34 +87,34 @@ func handleConnecting(log zerolog.Logger, wg *sync.WaitGroup, cfg *Config, mgr C
 	if err != nil {
 		log.Error().Err(err).Msg("could not write syn packet")
 		conn.Close()
-		book.Error(address)
+		events.Error(address)
 		return
 	}
 	_, err = conn.Read(ack)
 	if err != nil {
 		log.Error().Err(err).Msg("could not read ack packet")
 		conn.Close()
-		book.Error(address)
+		events.Error(address)
 		return
 	}
 	networkIn := ack[:len(network)]
 	if !bytes.Equal(networkIn, network) {
 		log.Error().Bytes("network", network).Bytes("network_in", networkIn).Msg("network mismatch")
 		conn.Close()
-		book.Invalid(address)
+		events.Invalid(address)
 		return
 	}
 	nonceIn := ack[len(network):]
 	if bytes.Equal(nonceIn, nonce) {
 		log.Error().Bytes("nonce", nonce).Msg("identical nonce")
 		conn.Close()
-		book.Invalid(address)
+		events.Invalid(address)
 		return
 	}
 	if mgr.KnownNonce(nonceIn) {
 		log.Error().Bytes("nonce", nonce).Msg("nonce already known")
 		conn.Close()
-		book.Invalid(address)
+		events.Invalid(address)
 		return
 	}
 
@@ -119,5 +126,5 @@ func handleConnecting(log zerolog.Logger, wg *sync.WaitGroup, cfg *Config, mgr C
 		return
 	}
 
-	book.Success(address)
+	events.Success(address)
 }

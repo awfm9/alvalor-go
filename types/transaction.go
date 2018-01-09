@@ -15,9 +15,14 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with Alvalor.  If not, see <http://www.gnu.org/licenses/>.
 
-package transaction
+package types
 
-// Action represents an action secured by a multi-signature wrapper.
-type Action interface {
-	ID() []byte
+// Transaction represents an atomic standard transaction on the Alvalor network.
+type Transaction struct {
+	Creates    []Create
+	Transfers  []Transfer
+	Destroys   []Destroy
+	Fees       []Fee
+	Signatures [][]byte
+	Data       []byte
 }

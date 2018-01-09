@@ -30,7 +30,7 @@ type Sender interface {
 	DropPeer(address string) error
 }
 
-func handleSending(log zerolog.Logger, wg *sync.WaitGroup, cfg *Config, mgr Sender, book Book, address string, output <-chan interface{}, w io.Writer) {
+func handleSending(log zerolog.Logger, wg *sync.WaitGroup, cfg *Config, mgr Sender, book *Book, address string, output <-chan interface{}, w io.Writer) {
 	defer wg.Done()
 
 	// extract configuration parameters

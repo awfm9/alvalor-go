@@ -15,12 +15,12 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with Alvalor.  If not, see <http://www.gnu.org/licenses/>.
 
-package transaction
+package types
 
-// Signature represents a multisig wrapper for transactions.
-type Signature struct {
-	Action     Action   // the underlying action to be executed
-	ActionSigs [][]byte // the signatures that should correspond to the origin of the action
-	Fee        Fee      // the attached fee transaction
-	FeeSigs    [][]byte // the signatures that should correspond to the origin of the fees
+// Create will create an account on the blockchain.
+type Create struct {
+	To          []byte
+	Signatories [][]byte
+	Weights     []float64
+	Threshold   float64
 }

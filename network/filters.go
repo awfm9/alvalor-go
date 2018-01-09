@@ -15,32 +15,18 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with Alvalor.  If not, see <http://www.gnu.org/licenses/>.
 
-package transaction
+package network
 
-import (
-	"encoding/binary"
+type filterFunc func(e *entry) bool
 
-	"golang.org/x/crypto/blake2b"
-)
-
-// Creation creates a new account.
-type Creation struct {
-	Origin      []byte   // account issuing the creation of a new account
-	Target      []byte   // target account to be created
-	Required    uint64   // number of signatories required for a valid signature
-	Signatories [][]byte // public keys of the valid account signatories
+func isActive(active bool) func(e *entry) bool {
+	return func(e *entry) bool {
+		return e.Active == active
+	}
 }
 
-// ID returns the ID of the cration transaction.
-func (c Creation) ID() []byte {
-	h, _ := blake2b.New256(nil)
-	h.Write(c.Origin)
-	h.Write(c.Target)
-	buf := make([]byte, 8)
-	binary.LittleEndian.PutUint64(buf, c.Required)
-	h.Write(buf)
-	for _, signatory := range c.Signatories {
-		h.Write(signatory)
+func isAny() func(e *entry) bool {
+	return func(e *entry) bool {
+		return true
 	}
-	return h.Sum(nil)
 }

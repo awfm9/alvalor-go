@@ -56,7 +56,7 @@ func (suite *AcceptorTestSuite) SetupTest() {
 func (suite *AcceptorTestSuite) TestHandleAcceptingClosesConnectionWhenCantClaimSlot() {
 	//Arrange
 	acceptor := &acceptorMock{}
-	book := &bookMock{}
+	acceptorEvents := &acceptorEventsMock{}
 	conn := &connMock{}
 	addr := &addrMock{}
 	addr.On("String").Return("136.44.33.12:5523")
@@ -66,7 +66,7 @@ func (suite *AcceptorTestSuite) TestHandleAcceptingClosesConnectionWhenCantClaim
 	conn.On("Close").Return(nil)
 
 	//Act
-	handleAccepting(suite.log, &suite.wg, &suite.cfg, acceptor, book, conn)
+	handleAccepting(suite.log, &suite.wg, &suite.cfg, acceptor, acceptorEvents, conn)
 
 	//Assert
 	conn.AssertCalled(suite.T(), "Close")
@@ -75,7 +75,7 @@ func (suite *AcceptorTestSuite) TestHandleAcceptingClosesConnectionWhenCantClaim
 func (suite *AcceptorTestSuite) TestHandleAcceptingClosesConnectionWhenCantReadSynPacket() {
 	//Arrange
 	acceptor := &acceptorMock{}
-	book := &bookMock{}
+	acceptorEvents := &acceptorEventsMock{}
 	conn := &connMock{}
 	addr := &addrMock{}
 	addr.On("String").Return("136.44.33.12:5523")
@@ -83,22 +83,22 @@ func (suite *AcceptorTestSuite) TestHandleAcceptingClosesConnectionWhenCantReadS
 
 	acceptor.On("ClaimSlot").Return(nil)
 	acceptor.On("ReleaseSlot").Return(nil)
-	book.On("Error", addr.String())
+	acceptorEvents.On("Error", addr.String())
 	syn := make([]byte, len(suite.cfg.network)+len(suite.cfg.nonce))
 	conn.On("Read", syn).Return(1, errors.New("Can't read from connection"))
 	conn.On("Close").Return(nil)
 
 	//Act
-	handleAccepting(suite.log, &suite.wg, &suite.cfg, acceptor, book, conn)
+	handleAccepting(suite.log, &suite.wg, &suite.cfg, acceptor, acceptorEvents, conn)
 
 	//Assert
 	conn.AssertCalled(suite.T(), "Close")
 }
 
-func (suite *AcceptorTestSuite) TestHandleAcceptingNotifiesBookWhenCantReadSynPacket() {
+func (suite *AcceptorTestSuite) TestHandleAcceptingNotifiesacceptorEventsWhenCantReadSynPacket() {
 	//Arrange
 	acceptor := &acceptorMock{}
-	book := &bookMock{}
+	acceptorEvents := &acceptorEventsMock{}
 	conn := &connMock{}
 	addr := &addrMock{}
 	addr.On("String").Return("136.44.33.12:5523")
@@ -106,22 +106,22 @@ func (suite *AcceptorTestSuite) TestHandleAcceptingNotifiesBookWhenCantReadSynPa
 
 	acceptor.On("ClaimSlot").Return(nil)
 	acceptor.On("ReleaseSlot").Return(nil)
-	book.On("Error", addr.String())
+	acceptorEvents.On("Error", addr.String())
 	syn := make([]byte, len(suite.cfg.network)+len(suite.cfg.nonce))
 	conn.On("Read", syn).Return(1, errors.New("Can't read from connection"))
 	conn.On("Close").Return(nil)
 
 	//Act
-	handleAccepting(suite.log, &suite.wg, &suite.cfg, acceptor, book, conn)
+	handleAccepting(suite.log, &suite.wg, &suite.cfg, acceptor, acceptorEvents, conn)
 
 	//Assert
-	book.AssertCalled(suite.T(), "Error", addr.String())
+	acceptorEvents.AssertCalled(suite.T(), "Error", addr.String())
 }
 
 func (suite *AcceptorTestSuite) TestHandleAcceptingClosesConnectionWhenNetworkMismatch() {
 	//Arrange
 	acceptor := &acceptorMock{}
-	book := &bookMock{}
+	acceptorEvents := &acceptorEventsMock{}
 	conn := &connMock{}
 	addr := &addrMock{}
 	addr.On("String").Return("136.44.33.12:5523")
@@ -129,7 +129,7 @@ func (suite *AcceptorTestSuite) TestHandleAcceptingClosesConnectionWhenNetworkMi
 
 	acceptor.On("ClaimSlot").Return(nil)
 	acceptor.On("ReleaseSlot").Return(nil)
-	book.On("Invalid", addr.String())
+	acceptorEvents.On("Invalid", addr.String())
 	syn := make([]byte, len(suite.cfg.network)+len(suite.cfg.nonce))
 	conn.On("Read", syn).Run(func(args mock.Arguments) {
 		passedSyn := args.Get(0).([]byte)
@@ -141,16 +141,16 @@ func (suite *AcceptorTestSuite) TestHandleAcceptingClosesConnectionWhenNetworkMi
 	conn.On("Close").Return(nil)
 
 	//Act
-	handleAccepting(suite.log, &suite.wg, &suite.cfg, acceptor, book, conn)
+	handleAccepting(suite.log, &suite.wg, &suite.cfg, acceptor, acceptorEvents, conn)
 
 	//Assert
 	conn.AssertCalled(suite.T(), "Close")
 }
 
-func (suite *AcceptorTestSuite) TestHandleAcceptingNotifiesBookWhenNetworkMismatch() {
+func (suite *AcceptorTestSuite) TestHandleAcceptingNotifiesacceptorEventsWhenNetworkMismatch() {
 	//Arrange
 	acceptor := &acceptorMock{}
-	book := &bookMock{}
+	acceptorEvents := &acceptorEventsMock{}
 	conn := &connMock{}
 	addr := &addrMock{}
 	addr.On("String").Return("136.44.33.12:5523")
@@ -158,7 +158,7 @@ func (suite *AcceptorTestSuite) TestHandleAcceptingNotifiesBookWhenNetworkMismat
 
 	acceptor.On("ClaimSlot").Return(nil)
 	acceptor.On("ReleaseSlot").Return(nil)
-	book.On("Invalid", addr.String())
+	acceptorEvents.On("Invalid", addr.String())
 	syn := make([]byte, len(suite.cfg.network)+len(suite.cfg.nonce))
 	conn.On("Read", syn).Run(func(args mock.Arguments) {
 		passedSyn := args.Get(0).([]byte)
@@ -170,16 +170,16 @@ func (suite *AcceptorTestSuite) TestHandleAcceptingNotifiesBookWhenNetworkMismat
 	conn.On("Close").Return(nil)
 
 	//Act
-	handleAccepting(suite.log, &suite.wg, &suite.cfg, acceptor, book, conn)
+	handleAccepting(suite.log, &suite.wg, &suite.cfg, acceptor, acceptorEvents, conn)
 
 	//Assert
-	book.AssertCalled(suite.T(), "Invalid", addr.String())
+	acceptorEvents.AssertCalled(suite.T(), "Invalid", addr.String())
 }
 
 func (suite *AcceptorTestSuite) TestHandleAcceptingClosesConnectionWhenIdenticalNonce() {
 	//Arrange
 	acceptor := &acceptorMock{}
-	book := &bookMock{}
+	acceptorEvents := &acceptorEventsMock{}
 	conn := &connMock{}
 	addr := &addrMock{}
 	addr.On("String").Return("136.44.33.12:5523")
@@ -187,7 +187,7 @@ func (suite *AcceptorTestSuite) TestHandleAcceptingClosesConnectionWhenIdentical
 
 	acceptor.On("ClaimSlot").Return(nil)
 	acceptor.On("ReleaseSlot").Return(nil)
-	book.On("Invalid", addr.String())
+	acceptorEvents.On("Invalid", addr.String())
 	syn := make([]byte, len(suite.cfg.network)+len(suite.cfg.nonce))
 	conn.On("Read", syn).Run(func(args mock.Arguments) {
 		passedSyn := args.Get(0).([]byte)
@@ -199,16 +199,16 @@ func (suite *AcceptorTestSuite) TestHandleAcceptingClosesConnectionWhenIdentical
 	conn.On("Close").Return(nil)
 
 	//Act
-	handleAccepting(suite.log, &suite.wg, &suite.cfg, acceptor, book, conn)
+	handleAccepting(suite.log, &suite.wg, &suite.cfg, acceptor, acceptorEvents, conn)
 
 	//Assert
 	conn.AssertCalled(suite.T(), "Close")
 }
 
-func (suite *AcceptorTestSuite) TestHandleAcceptingNotifiesBookWhenIdenticalNonce() {
+func (suite *AcceptorTestSuite) TestHandleAcceptingNotifiesacceptorEventsWhenIdenticalNonce() {
 	//Arrange
 	acceptor := &acceptorMock{}
-	book := &bookMock{}
+	acceptorEvents := &acceptorEventsMock{}
 	conn := &connMock{}
 	addr := &addrMock{}
 	addr.On("String").Return("136.44.33.12:5523")
@@ -216,7 +216,7 @@ func (suite *AcceptorTestSuite) TestHandleAcceptingNotifiesBookWhenIdenticalNonc
 
 	acceptor.On("ClaimSlot").Return(nil)
 	acceptor.On("ReleaseSlot").Return(nil)
-	book.On("Invalid", addr.String())
+	acceptorEvents.On("Invalid", addr.String())
 	syn := make([]byte, len(suite.cfg.network)+len(suite.cfg.nonce))
 	conn.On("Read", syn).Run(func(args mock.Arguments) {
 		passedSyn := args.Get(0).([]byte)
@@ -228,16 +228,16 @@ func (suite *AcceptorTestSuite) TestHandleAcceptingNotifiesBookWhenIdenticalNonc
 	conn.On("Close").Return(nil)
 
 	//Act
-	handleAccepting(suite.log, &suite.wg, &suite.cfg, acceptor, book, conn)
+	handleAccepting(suite.log, &suite.wg, &suite.cfg, acceptor, acceptorEvents, conn)
 
 	//Assert
-	book.AssertCalled(suite.T(), "Invalid", addr.String())
+	acceptorEvents.AssertCalled(suite.T(), "Invalid", addr.String())
 }
 
 func (suite *AcceptorTestSuite) TestHandleAcceptingClosesConnectionWhenCantWriteAck() {
 	//Arrange
 	acceptor := &acceptorMock{}
-	book := &bookMock{}
+	acceptorEvents := &acceptorEventsMock{}
 	conn := &connMock{}
 	addr := &addrMock{}
 	addr.On("String").Return("136.44.33.12:5523")
@@ -245,7 +245,7 @@ func (suite *AcceptorTestSuite) TestHandleAcceptingClosesConnectionWhenCantWrite
 
 	acceptor.On("ClaimSlot").Return(nil)
 	acceptor.On("ReleaseSlot").Return(nil)
-	book.On("Error", addr.String())
+	acceptorEvents.On("Error", addr.String())
 	syn := make([]byte, len(suite.cfg.network)+len(suite.cfg.nonce))
 	conn.On("Read", syn).Run(func(args mock.Arguments) {
 		passedSyn := args.Get(0).([]byte)
@@ -258,16 +258,16 @@ func (suite *AcceptorTestSuite) TestHandleAcceptingClosesConnectionWhenCantWrite
 	conn.On("Close").Return(nil)
 
 	//Act
-	handleAccepting(suite.log, &suite.wg, &suite.cfg, acceptor, book, conn)
+	handleAccepting(suite.log, &suite.wg, &suite.cfg, acceptor, acceptorEvents, conn)
 
 	//Assert
 	conn.AssertCalled(suite.T(), "Close")
 }
 
-func (suite *AcceptorTestSuite) TestHandleAcceptingNotifiesBookWhenCantWriteAck() {
+func (suite *AcceptorTestSuite) TestHandleAcceptingNotifiesacceptorEventsWhenCantWriteAck() {
 	//Arrange
 	acceptor := &acceptorMock{}
-	book := &bookMock{}
+	acceptorEvents := &acceptorEventsMock{}
 	conn := &connMock{}
 	addr := &addrMock{}
 	addr.On("String").Return("136.44.33.12:5523")
@@ -275,7 +275,7 @@ func (suite *AcceptorTestSuite) TestHandleAcceptingNotifiesBookWhenCantWriteAck(
 
 	acceptor.On("ClaimSlot").Return(nil)
 	acceptor.On("ReleaseSlot").Return(nil)
-	book.On("Error", addr.String())
+	acceptorEvents.On("Error", addr.String())
 	syn := make([]byte, len(suite.cfg.network)+len(suite.cfg.nonce))
 	conn.On("Read", syn).Run(func(args mock.Arguments) {
 		passedSyn := args.Get(0).([]byte)
@@ -288,17 +288,17 @@ func (suite *AcceptorTestSuite) TestHandleAcceptingNotifiesBookWhenCantWriteAck(
 	conn.On("Close").Return(nil)
 
 	//Act
-	handleAccepting(suite.log, &suite.wg, &suite.cfg, acceptor, book, conn)
+	handleAccepting(suite.log, &suite.wg, &suite.cfg, acceptor, acceptorEvents, conn)
 
 	//Assert
-	book.AssertCalled(suite.T(), "Error", addr.String())
+	acceptorEvents.AssertCalled(suite.T(), "Error", addr.String())
 }
 
 func (suite *AcceptorTestSuite) TestHandleAcceptingClosesConnectionWhenCantAddPeer() {
 	//Arrange
 	nonceIn := uuid.NewV4().Bytes()
 	acceptor := &acceptorMock{}
-	book := &bookMock{}
+	acceptorEvents := &acceptorEventsMock{}
 	conn := &connMock{}
 	addr := &addrMock{}
 	addr.On("String").Return("136.44.33.12:5523")
@@ -307,7 +307,7 @@ func (suite *AcceptorTestSuite) TestHandleAcceptingClosesConnectionWhenCantAddPe
 	acceptor.On("ClaimSlot").Return(nil)
 	acceptor.On("ReleaseSlot").Return(nil)
 	acceptor.On("AddPeer", conn, nonceIn).Return(errors.New("Can't add this peer"))
-	book.On("Error", addr.String())
+	acceptorEvents.On("Error", addr.String())
 	syn := make([]byte, len(suite.cfg.network)+len(suite.cfg.nonce))
 	conn.On("Read", syn).Run(func(args mock.Arguments) {
 		passedSyn := args.Get(0).([]byte)
@@ -320,17 +320,17 @@ func (suite *AcceptorTestSuite) TestHandleAcceptingClosesConnectionWhenCantAddPe
 	conn.On("Close").Return(nil)
 
 	//Act
-	handleAccepting(suite.log, &suite.wg, &suite.cfg, acceptor, book, conn)
+	handleAccepting(suite.log, &suite.wg, &suite.cfg, acceptor, acceptorEvents, conn)
 
 	//Assert
 	conn.AssertCalled(suite.T(), "Close")
 }
 
-func (suite *AcceptorTestSuite) TestHandleAcceptingNotifiesBookAboutSuccess() {
+func (suite *AcceptorTestSuite) TestHandleAcceptingNotifiesacceptorEventsAboutSuccess() {
 	//Arrange
 	nonceIn := uuid.NewV4().Bytes()
 	acceptor := &acceptorMock{}
-	book := &bookMock{}
+	acceptorEvents := &acceptorEventsMock{}
 	conn := &connMock{}
 	addr := &addrMock{}
 	addr.On("String").Return("136.44.33.12:5523")
@@ -339,7 +339,7 @@ func (suite *AcceptorTestSuite) TestHandleAcceptingNotifiesBookAboutSuccess() {
 	acceptor.On("ClaimSlot").Return(nil)
 	acceptor.On("ReleaseSlot").Return(nil)
 	acceptor.On("AddPeer", conn, nonceIn).Return(nil)
-	book.On("Success", addr.String())
+	acceptorEvents.On("Success", addr.String())
 	syn := make([]byte, len(suite.cfg.network)+len(suite.cfg.nonce))
 	conn.On("Read", syn).Run(func(args mock.Arguments) {
 		passedSyn := args.Get(0).([]byte)
@@ -352,17 +352,17 @@ func (suite *AcceptorTestSuite) TestHandleAcceptingNotifiesBookAboutSuccess() {
 	conn.On("Close").Return(nil)
 
 	//Act
-	handleAccepting(suite.log, &suite.wg, &suite.cfg, acceptor, book, conn)
+	handleAccepting(suite.log, &suite.wg, &suite.cfg, acceptor, acceptorEvents, conn)
 
 	//Assert
-	book.AssertCalled(suite.T(), "Success", addr.String())
+	acceptorEvents.AssertCalled(suite.T(), "Success", addr.String())
 }
 
 func (suite *AcceptorTestSuite) TestHandleAcceptingReleasesSlotIfItClaimedBefore() {
 	//Arrange
 	nonceIn := uuid.NewV4().Bytes()
 	acceptor := &acceptorMock{}
-	book := &bookMock{}
+	acceptorEvents := &acceptorEventsMock{}
 	conn := &connMock{}
 	addr := &addrMock{}
 	addr.On("String").Return("136.44.33.12:5523")
@@ -371,7 +371,7 @@ func (suite *AcceptorTestSuite) TestHandleAcceptingReleasesSlotIfItClaimedBefore
 	acceptor.On("ClaimSlot").Return(nil)
 	acceptor.On("ReleaseSlot").Return(nil)
 	acceptor.On("AddPeer", conn, nonceIn).Return(nil)
-	book.On("Success", addr.String())
+	acceptorEvents.On("Success", addr.String())
 	syn := make([]byte, len(suite.cfg.network)+len(suite.cfg.nonce))
 	conn.On("Read", syn).Run(func(args mock.Arguments) {
 		passedSyn := args.Get(0).([]byte)
@@ -384,7 +384,7 @@ func (suite *AcceptorTestSuite) TestHandleAcceptingReleasesSlotIfItClaimedBefore
 	conn.On("Close").Return(nil)
 
 	//Act
-	handleAccepting(suite.log, &suite.wg, &suite.cfg, acceptor, book, conn)
+	handleAccepting(suite.log, &suite.wg, &suite.cfg, acceptor, acceptorEvents, conn)
 
 	//Assert
 	acceptor.AssertCalled(suite.T(), "ReleaseSlot")
@@ -410,31 +410,18 @@ func (acceptor *acceptorMock) AddPeer(conn net.Conn, nonce []byte) error {
 	return args.Error(0)
 }
 
-type bookMock struct {
+type acceptorEventsMock struct {
 	mock.Mock
 }
 
-func (book *bookMock) Add(address string) {
-	book.Called(address)
+func (acceptorEvents *acceptorEventsMock) Invalid(address string) {
+	acceptorEvents.Called(address)
 }
-func (book *bookMock) Invalid(address string) {
-	book.Called(address)
+func (acceptorEvents *acceptorEventsMock) Error(address string) {
+	acceptorEvents.Called(address)
 }
-func (book *bookMock) Error(address string) {
-	book.Called(address)
-}
-func (book *bookMock) Success(address string) {
-	book.Called(address)
-}
-func (book *bookMock) Failure(address string) {
-	book.Called(address)
-}
-func (book *bookMock) Dropped(address string) {
-	book.Called(address)
-}
-func (book *bookMock) Sample(count int, filter func(*Entry) bool, less func(*Entry, *Entry) bool) ([]string, error) {
-	args := book.Called(count, filter, less)
-	return args.Get(0).([]string), args.Error(1)
+func (acceptorEvents *acceptorEventsMock) Success(address string) {
+	acceptorEvents.Called(address)
 }
 
 type connMock struct {
