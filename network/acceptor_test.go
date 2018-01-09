@@ -95,7 +95,7 @@ func (suite *AcceptorTestSuite) TestHandleAcceptingClosesConnectionWhenCantReadS
 	conn.AssertCalled(suite.T(), "Close")
 }
 
-func (suite *AcceptorTestSuite) TestHandleAcceptingNotifiesacceptorEventsWhenCantReadSynPacket() {
+func (suite *AcceptorTestSuite) TestHandleAcceptingNotifiesAcceptorEventsWhenCantReadSynPacket() {
 	//Arrange
 	acceptor := &acceptorMock{}
 	acceptorEvents := &acceptorEventsMock{}
@@ -147,7 +147,7 @@ func (suite *AcceptorTestSuite) TestHandleAcceptingClosesConnectionWhenNetworkMi
 	conn.AssertCalled(suite.T(), "Close")
 }
 
-func (suite *AcceptorTestSuite) TestHandleAcceptingNotifiesacceptorEventsWhenNetworkMismatch() {
+func (suite *AcceptorTestSuite) TestHandleAcceptingNotifiesAcceptorEventsWhenNetworkMismatch() {
 	//Arrange
 	acceptor := &acceptorMock{}
 	acceptorEvents := &acceptorEventsMock{}
@@ -205,7 +205,7 @@ func (suite *AcceptorTestSuite) TestHandleAcceptingClosesConnectionWhenIdentical
 	conn.AssertCalled(suite.T(), "Close")
 }
 
-func (suite *AcceptorTestSuite) TestHandleAcceptingNotifiesacceptorEventsWhenIdenticalNonce() {
+func (suite *AcceptorTestSuite) TestHandleAcceptingNotifiesAcceptorEventsWhenIdenticalNonce() {
 	//Arrange
 	acceptor := &acceptorMock{}
 	acceptorEvents := &acceptorEventsMock{}
@@ -264,7 +264,7 @@ func (suite *AcceptorTestSuite) TestHandleAcceptingClosesConnectionWhenCantWrite
 	conn.AssertCalled(suite.T(), "Close")
 }
 
-func (suite *AcceptorTestSuite) TestHandleAcceptingNotifiesacceptorEventsWhenCantWriteAck() {
+func (suite *AcceptorTestSuite) TestHandleAcceptingNotifiesAcceptorEventsWhenCantWriteAck() {
 	//Arrange
 	acceptor := &acceptorMock{}
 	acceptorEvents := &acceptorEventsMock{}
@@ -326,7 +326,7 @@ func (suite *AcceptorTestSuite) TestHandleAcceptingClosesConnectionWhenCantAddPe
 	conn.AssertCalled(suite.T(), "Close")
 }
 
-func (suite *AcceptorTestSuite) TestHandleAcceptingNotifiesacceptorEventsAboutSuccess() {
+func (suite *AcceptorTestSuite) TestHandleAcceptingNotifiesAcceptorEventsAboutSuccess() {
 	//Arrange
 	nonceIn := uuid.NewV4().Bytes()
 	acceptor := &acceptorMock{}

@@ -62,7 +62,7 @@ func (suite *ConnectorTestSuite) TestHandleConnectingDoesNotCallReleaseSlotIfCan
 	connector.AssertNotCalled(suite.T(), "ReleaseSlot")
 }
 
-func (suite *ConnectorTestSuite) TestHandleConnectingNotifiesconnectorEventsIfAddressInvalid() {
+func (suite *ConnectorTestSuite) TestHandleConnectingNotifiesConnectorEventsIfAddressInvalid() {
 	//Arrange
 	connector := &connectorMock{}
 	connectorEvents := &connectorEventsMock{}
@@ -80,7 +80,7 @@ func (suite *ConnectorTestSuite) TestHandleConnectingNotifiesconnectorEventsIfAd
 	connectorEvents.AssertCalled(suite.T(), "Invalid", addr)
 }
 
-func (suite *ConnectorTestSuite) TestHandleConnectingNotifiesconnectorEventsIfCannotDialAddress() {
+func (suite *ConnectorTestSuite) TestHandleConnectingNotifiesConnectorEventsIfCannotDialAddress() {
 	//Arrange
 	connector := &connectorMock{}
 	connectorEvents := &connectorEventsMock{}
@@ -123,7 +123,7 @@ func (suite *ConnectorTestSuite) TestHandleConnectingClosesConnectionIfCantWrite
 	conn.AssertCalled(suite.T(), "Close")
 }
 
-func (suite *ConnectorTestSuite) TestHandleConnectingNotifiesconnectorEventsIfCantWriteSyn() {
+func (suite *ConnectorTestSuite) TestHandleConnectingNotifiesConnectorEventsIfCantWriteSyn() {
 	//Arrange
 	connector := &connectorMock{}
 	connectorEvents := &connectorEventsMock{}
@@ -170,7 +170,7 @@ func (suite *ConnectorTestSuite) TestHandleConnectingClosesConnectionIfCantReadA
 	conn.AssertCalled(suite.T(), "Close")
 }
 
-func (suite *ConnectorTestSuite) TestHandleConnectingNotifiesconnectorEventsIfCantReadAck() {
+func (suite *ConnectorTestSuite) TestHandleConnectingNotifiesConnectorEventsIfCantReadAck() {
 	//Arrange
 	connector := &connectorMock{}
 	connectorEvents := &connectorEventsMock{}
@@ -225,7 +225,7 @@ func (suite *ConnectorTestSuite) TestHandleConnectingClosesConnectionWhenNetwork
 	conn.AssertCalled(suite.T(), "Close")
 }
 
-func (suite *ConnectorTestSuite) TestHandleConnectingNotifiesconnectorEventsWhenNetworkMismatch() {
+func (suite *ConnectorTestSuite) TestHandleConnectingNotifiesConnectorEventsWhenNetworkMismatch() {
 	//Arrange
 	connector := &connectorMock{}
 	connectorEvents := &connectorEventsMock{}
@@ -287,7 +287,7 @@ func (suite *ConnectorTestSuite) TestHandleConnectingClosesConnectionWhenIdentic
 	conn.AssertCalled(suite.T(), "Close")
 }
 
-func (suite *ConnectorTestSuite) TestHandleConnectingNotifiesconnectorEventsWhenIdenticalNonce() {
+func (suite *ConnectorTestSuite) TestHandleConnectingNotifiesConnectorEventsWhenIdenticalNonce() {
 	//Arrange
 	connector := &connectorMock{}
 	connectorEvents := &connectorEventsMock{}
@@ -350,7 +350,7 @@ func (suite *ConnectorTestSuite) TestHandleConnectingClosesConnectionWhenNonceAl
 	conn.AssertCalled(suite.T(), "Close")
 }
 
-func (suite *ConnectorTestSuite) TestHandleConnectingNotifiesconnectorEventsWhenNonceAlreadyKnown() {
+func (suite *ConnectorTestSuite) TestHandleConnectingNotifiesConnectorEventsWhenNonceAlreadyKnown() {
 	//Arrange
 	connector := &connectorMock{}
 	connectorEvents := &connectorEventsMock{}
@@ -415,7 +415,7 @@ func (suite *ConnectorTestSuite) TestHandleConnectingClosesConnectionWhenCannotA
 	conn.AssertCalled(suite.T(), "Close")
 }
 
-func (suite *ConnectorTestSuite) TestHandleConnectingNotifiesconnectorEventsAboutSuccess() {
+func (suite *ConnectorTestSuite) TestHandleConnectingNotifiesConnectorEventsAboutSuccess() {
 	//Arrange
 	connector := &connectorMock{}
 	connectorEvents := &connectorEventsMock{}
