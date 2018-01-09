@@ -23,15 +23,6 @@ import (
 	"sync"
 )
 
-type IBook interface {
-	Add(address string)
-	Invalid(address string)
-	Error(address string)
-	Success(address string)
-	Failure(address string)
-	Dropped(address string)
-}
-
 // Book is an address book with simple scoring.
 type Book struct {
 	mutex     sync.Mutex
