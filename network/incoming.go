@@ -25,14 +25,14 @@ import (
 	"github.com/rs/zerolog"
 )
 
-// Acceptor contains all the dependencies needed to accept a connection.
-type Acceptor interface {
+// Incoming contains all the dependencies needed to accept a connection.
+type Incoming interface {
 	ClaimSlot() error
 	ReleaseSlot()
 	AddPeer(conn net.Conn, nonce []byte) error
 }
 
-func handleAccepting(log zerolog.Logger, wg *sync.WaitGroup, cfg *Config, mgr Acceptor, book *Book, conn net.Conn) {
+func handleIncoming(log zerolog.Logger, wg *sync.WaitGroup, cfg *Config, mgr Incoming, book *Book, conn net.Conn) {
 	defer wg.Done()
 
 	// extract configuration parameters we care about

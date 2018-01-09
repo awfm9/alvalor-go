@@ -90,9 +90,6 @@ func NewManager(log zerolog.Logger, codec Codec, options ...func(*Config)) *Mana
 		stop:     make(chan struct{}),
 	}
 
-	// TODO: separate book package and inject so we can add addresses in main
-	mgr.book.Add("127.0.0.1:31330")
-
 	// blacklist our own address
 	mgr.book.Invalid(cfg.address)
 
@@ -105,7 +102,7 @@ func NewManager(log zerolog.Logger, codec Codec, options ...func(*Config)) *Mana
 	// register serving handler
 	mgr.handlers = append(mgr.handlers, func() { handleServing(log, wg, cfg, mgr) })
 
-	// initialize the emitter which will start other routines regularly
+	// initialize the emitter which will start the handlers regularly
 	wg.Add(1)
 	go handleEmitting(log, wg, cfg, mgr, mgr.stop)
 
@@ -186,15 +183,9 @@ func (mgr *Manager) GetAddress() (string, error) {
 }
 
 // StartHandlers will start the registered handlers.
-func (mgr *Manager) StartHandlers() {
+func (mgr *Manager) Launch() {
 	mgr.mutex.Lock()
 	defer mgr.mutex.Unlock()
-
-	// launch all of the handlers in their own goroutine
-	for _, handler := range mgr.handlers {
-		mgr.wg.Add(1)
-		go handler()
-	}
 }
 
 // StartConnector will try to launch a new connection attempt.
@@ -238,11 +229,11 @@ func (mgr *Manager) StopListener() {
 // StartAcceptor will start accepting an incoming connection.
 func (mgr *Manager) StartAcceptor(conn net.Conn) {
 	mgr.wg.Add(1)
-	go handleAccepting(mgr.log, mgr.wg, mgr.cfg, mgr, mgr.book, conn)
+	go handleIncoming(mgr.log, mgr.wg, mgr.cfg, mgr, mgr.book, conn)
 }
 
 // AddPeer will launch all necessary processing for a new valid connection.
-func (mgr *Manager) AddPeer(conn net.Conn, nonce []byte) error {
+func (mgr *Manager) AddPeer(conn net.Conn, nonce []byte) {
 
 	// create the peer and add to registry
 	peer := &Peer{
@@ -253,7 +244,8 @@ func (mgr *Manager) AddPeer(conn net.Conn, nonce []byte) error {
 	}
 	err := mgr.registry.Add(peer)
 	if err != nil {
-		return errors.Wrap(err, "could not add peer to registry")
+		mgr.log.Error().Err(err).Msg("could not add peer to registry")
+		return
 	}
 
 	// initialize the readers and writers
@@ -266,6 +258,4 @@ func (mgr *Manager) AddPeer(conn net.Conn, nonce []byte) error {
 	go handleSending(mgr.log, mgr.wg, mgr.cfg, mgr, mgr.book, address, peer.output, w)
 	go handleReceiving(mgr.log, mgr.wg, mgr.cfg, mgr, mgr.book, address, r, peer.input)
 	go handleProcessing(mgr.log, mgr.wg, mgr.cfg, mgr, mgr.book, address, peer.input, peer.output)
-
-	return nil
 }

@@ -18,40 +18,27 @@
 package network
 
 import (
-	"sync"
-	"time"
+	"math/rand"
 
 	"github.com/rs/zerolog"
 )
 
-// EmitterDeps is used to interface with the manager.
-type emitterDeps interface {
-	Launch()
+// DropperDeps are the dependencies dropping routines need.
+type DropperDeps interface {
+	PeerCount() uint
+	GetAddresses() []string
+	DropPeer(address string)
 }
 
-func handleEmitting(log zerolog.Logger, wg *sync.WaitGroup, cfg *Config, deps emitterDeps, stop <-chan struct{}) {
-	defer wg.Done()
-
-	// extract configuration parameters we care about
-	var (
-		interval = cfg.interval
-	)
-
-	// set up logging with start/stop messages
-	log = log.With().Str("component", "emitter").Dur("interval", interval).Logger()
-	log.Info().Msg("emitting routine started")
-	defer log.Info().Msg("emitting routine stopped")
-
-	// on each ticker, execute handlers function until we quit
-	ticker := time.NewTicker(interval)
-Loop:
-	for {
-		select {
-		case <-stop:
-			break Loop
-		case <-ticker.C:
-			deps.Launch()
-		}
+func checkDropping(log zerolog.Logger, maxPeers uint, deps DropperDeps) {
+	if deps.PeerCount() <= maxPeers {
+		return
 	}
-	ticker.Stop()
+	addresses := deps.GetAddresses()
+	if len(addresses) == 0 {
+		return
+	}
+	address := addresses[rand.Int()%len(addresses)]
+	deps.DropPeer(address)
+	events.Dropped(address)
 }
