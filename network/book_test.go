@@ -18,6 +18,7 @@
 package network
 
 import (
+	"math"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -70,4 +71,37 @@ func TestInvalidBlacklistsAddr(t *testing.T) {
 
 	// assert
 	assert.Equal(t, 0, len(entries))
+}
+
+func TestSampleReturnsAddressWithHighestScoreWhenOtherConnectionsDropped(t *testing.T) {
+	// arrange
+	book := NewBook()
+	addr1 := "127.54.51.66"
+	addr2 := "120.55.58.86"
+	addr3 := "156.23.41.24"
+
+	book.Found(addr1)
+	book.Found(addr2)
+	book.Found(addr3)
+
+	book.Success(addr1)
+	book.Error(addr1)
+	book.Success(addr1)
+	book.Error(addr1)
+
+	book.Success(addr2)
+	book.Error(addr2)
+	book.Success(addr2)
+	book.Error(addr2)
+
+	book.Success(addr3)
+	book.Error(addr3)
+	book.Success(addr3)
+	book.Error(addr3)
+
+	entries, _ := book.Sample(10, isActive(false), byScore(func(entry *entry) float64 { return math.Min((float64(entry.Success)/float64(entry.Failure))/100, 1) }))
+
+	assert.Equal(t, addr3, entries[0], "Address %s with highest score is expected. Actual address %s", addr3, entries[0])
+	assert.Equal(t, addr2, entries[2])
+	assert.Equal(t, addr1, entries[1])
 }
