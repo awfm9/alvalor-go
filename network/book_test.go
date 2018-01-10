@@ -24,14 +24,14 @@ import (
 )
 
 func TestFoundSavesPeer(t *testing.T) {
-	//Arrange
+	// arrange
 	book := NewBook()
 	addr := "17.55.14.66"
 
-	//Act
+	// act
 	book.Found(addr)
 	entries, _ := book.Sample(1)
 
-	//Assert
+	// assert
 	assert.Equal(t, addr, entries[0])
 }
