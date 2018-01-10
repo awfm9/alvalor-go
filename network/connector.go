@@ -25,26 +25,26 @@ import (
 	"github.com/rs/zerolog"
 )
 
-// Connector are the dependencies connecting routines need.
-type Connector interface {
+type connectorInfos interface {
+	KnownNonce(nonce []byte) bool
+}
+
+type connectorActions interface {
 	ClaimSlot() error
 	ReleaseSlot()
-	KnownNonce(nonce []byte) bool
 	AddPeer(conn net.Conn, nonce []byte) error
 }
 
-type TcpDialer interface {
-	Dial(raddr *net.TCPAddr) (net.Conn, error)
-}
-
-type ConnectorEvents interface {
+type connectorEvents interface {
 	Error(address string)
 	Invalid(address string)
 	Success(address string)
 	Failure(address string)
 }
 
-func handleConnecting(log zerolog.Logger, wg *sync.WaitGroup, cfg *Config, mgr Connector, events ConnectorEvents, dialer TcpDialer, address string) {
+type dialFunc func(address string) (net.Conn, error)
+
+func handleConnecting(log zerolog.Logger, wg *sync.WaitGroup, cfg *Config, infos connectorInfos, actions connectorActions, events connectorEvents, dial dialFunc, address string) {
 	defer wg.Done()
 
 	// extract the variables from the config we are interested in
@@ -59,21 +59,21 @@ func handleConnecting(log zerolog.Logger, wg *sync.WaitGroup, cfg *Config, mgr C
 	defer log.Info().Msg("connecting routine stopped")
 
 	// claim a free connection slot and set the release
-	err := mgr.ClaimSlot()
+	err := actions.ClaimSlot()
 	if err != nil {
 		log.Error().Err(err).Msg("could not claim slot")
 		return
 	}
-	defer mgr.ReleaseSlot()
+	defer actions.ReleaseSlot()
 
 	// resolve the address and dial the connection
-	addr, err := net.ResolveTCPAddr("tcp", address)
+	_, err = net.ResolveTCPAddr("tcp", address)
 	if err != nil {
 		log.Error().Err(err).Msg("could not resolve address")
 		events.Invalid(address)
 		return
 	}
-	conn, err := dialer.Dial(addr)
+	conn, err := dial(address)
 	if err != nil {
 		log.Debug().Err(err).Msg("could not dial address")
 		events.Failure(address)
@@ -111,7 +111,7 @@ func handleConnecting(log zerolog.Logger, wg *sync.WaitGroup, cfg *Config, mgr C
 		events.Invalid(address)
 		return
 	}
-	if mgr.KnownNonce(nonceIn) {
+	if infos.KnownNonce(nonceIn) {
 		log.Error().Bytes("nonce", nonce).Msg("nonce already known")
 		conn.Close()
 		events.Invalid(address)
@@ -119,7 +119,7 @@ func handleConnecting(log zerolog.Logger, wg *sync.WaitGroup, cfg *Config, mgr C
 	}
 
 	// create the peer for the valid connection
-	err = mgr.AddPeer(conn, nonceIn)
+	err = actions.AddPeer(conn, nonceIn)
 	if err != nil {
 		log.Error().Err(err).Msg("could not add peer")
 		conn.Close()
