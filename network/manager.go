@@ -178,7 +178,7 @@ func (mgr *Manager) GetAddress() (string, error) {
 // StartConnector will try to launch a new connection attempt.
 func (mgr *Manager) StartConnector(address string) {
 	mgr.wg.Add(1)
-	go handleConnecting(mgr.log, mgr.wg, mgr.cfg, mgr, mgr.book, address)
+	go handleConnecting(mgr.log, mgr.wg, mgr.cfg, mgr, mgr.book, &tcpDialer{}, address)
 }
 
 // StartListener will start a listener on a given port.
