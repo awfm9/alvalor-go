@@ -19,6 +19,7 @@ package network
 
 import (
 	"bytes"
+	"math/rand"
 	"net"
 	"sync"
 	"time"
@@ -90,7 +91,7 @@ func NewManager(log zerolog.Logger, codec Codec, options ...func(*Config)) *Mana
 	}
 
 	// TODO: separate book package and inject so we can add addresses in main
-	mgr.book.Add("127.0.0.1:31330")
+	mgr.book.Found("127.0.0.1:31330")
 
 	// blacklist our own address
 	mgr.book.Invalid(cfg.address)
@@ -98,9 +99,9 @@ func NewManager(log zerolog.Logger, codec Codec, options ...func(*Config)) *Mana
 	// initialize the connection dropper, the outgoing connection dialer and
 	// the incoming connection server
 	wg.Add(3)
-	go handleDropping(log, wg, cfg, mgr, mgr.book, mgr.stop)
-	go handleDialing(log, wg, cfg, mgr, mgr.stop)
-	go handleServing(log, wg, cfg, mgr, mgr.stop)
+	go handleDropping(log, wg, cfg, mgr, mgr, mgr.book, mgr.stop)
+	go handleDialing(log, wg, cfg, mgr, mgr, mgr.stop)
+	go handleServing(log, wg, cfg, mgr, mgr, mgr.stop)
 
 	return mgr
 }
@@ -131,6 +132,20 @@ func (mgr *Manager) DropPeer(address string) error {
 	}
 	_ = mgr.registry.Remove(address)
 	return nil
+}
+
+// DropRandomPeer will drop a random peer from our connections.
+func (mgr *Manager) DropRandomPeer() (string, error) {
+	addresses := mgr.registry.List()
+	if len(addresses) == 0 {
+		return "", errors.New("no peers available")
+	}
+	address := addresses[rand.Int()%len(addresses)]
+	err := mgr.DropPeer(address)
+	if err != nil {
+		return "", errors.Wrap(err, "could not drop peer")
+	}
+	return address, nil
 }
 
 // PeerCount returns the number of successfully connected to peers.
@@ -178,10 +193,24 @@ func (mgr *Manager) GetAddress() (string, error) {
 	return addresses[0], nil
 }
 
+// AddressSample returns a random address sample.
+func (mgr *Manager) AddressSample() ([]string, error) {
+	addresses, err := mgr.book.Sample(16, isAny(), byRandom())
+	if err != nil {
+		return nil, errors.Wrap(err, "could not get addresses")
+	}
+	return addresses, nil
+}
+
 // StartConnector will try to launch a new connection attempt.
-func (mgr *Manager) StartConnector(address string) {
+func (mgr *Manager) StartConnector() {
+	addresses, err := mgr.book.Sample(1, isActive(false), byRandom())
+	if err != nil {
+		mgr.log.Error().Err(err).Msg("could not get address for connector")
+		return
+	}
 	mgr.wg.Add(1)
-	go handleConnecting(mgr.log, mgr.wg, mgr.cfg, mgr, mgr, mgr.book, dial, address)
+	go handleConnecting(mgr.log, mgr.wg, mgr.cfg, mgr, mgr, mgr.book, dial, addresses[0])
 }
 
 // StartListener will start a listener on a given port.
@@ -220,7 +249,7 @@ func (mgr *Manager) AddPeer(conn net.Conn, nonce []byte) error {
 	mgr.wg.Add(3)
 	go handleSending(mgr.log, mgr.wg, mgr.cfg, mgr, mgr.book, address, peer.output, w)
 	go handleReceiving(mgr.log, mgr.wg, mgr.cfg, mgr, mgr.book, address, r, peer.input)
-	go handleProcessing(mgr.log, mgr.wg, mgr.cfg, mgr, mgr.book, address, peer.input, peer.output)
+	go handleProcessing(mgr.log, mgr.wg, mgr.cfg, mgr, mgr, mgr.book, address, peer.input, peer.output)
 
 	return nil
 }

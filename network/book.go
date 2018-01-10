@@ -46,8 +46,8 @@ func NewBook() *Book {
 	}
 }
 
-// Add will add an address to the list of available peer addresses, unless it is blacklisted.
-func (b *Book) Add(address string) {
+// Found will add an address to the list of available peer addresses, unless it is blacklisted.
+func (b *Book) Found(address string) {
 	b.mutex.Lock()
 	defer b.mutex.Unlock()
 	_, ok := b.blacklist[address]

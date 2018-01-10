@@ -24,18 +24,16 @@ import (
 	"github.com/rs/zerolog"
 )
 
-type pendingCountFunc func() uint
-type dialConnFunc func() error
-
-// Dialer are the dependencies dialing routines need.
-type Dialer interface {
+type dialerInfos interface {
 	PeerCount() uint
 	PendingCount() uint
-	GetAddress() (string, error)
-	StartConnector(address string)
 }
 
-func handleDialing(log zerolog.Logger, wg *sync.WaitGroup, cfg *Config, mgr Dialer, stop <-chan struct{}) {
+type dialerActions interface {
+	StartConnector()
+}
+
+func handleDialing(log zerolog.Logger, wg *sync.WaitGroup, cfg *Config, infos dialerInfos, actions dialerActions, stop <-chan struct{}) {
 	defer wg.Done()
 
 	// extract needed configuration parameters
@@ -60,15 +58,14 @@ func handleDialing(log zerolog.Logger, wg *sync.WaitGroup, cfg *Config, mgr Dial
 			return
 		case <-ticker.C:
 		}
-		peerCount := mgr.PeerCount()
-		pendingCount := mgr.PendingCount()
-		if peerCount < minPeers && peerCount+pendingCount < maxPeers {
-			address, err := mgr.GetAddress()
-			if err != nil {
-				log.Error().Err(err).Msg("could not get address")
-				continue
-			}
-			mgr.StartConnector(address)
+		peerCount := infos.PeerCount()
+		pendingCount := infos.PendingCount()
+		if peerCount >= minPeers {
+			continue
 		}
+		if peerCount+pendingCount >= maxPeers {
+			continue
+		}
+		actions.StartConnector()
 	}
 }

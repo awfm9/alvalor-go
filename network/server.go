@@ -24,13 +24,15 @@ import (
 	"github.com/rs/zerolog"
 )
 
-// Server contains all the dependencies for the serving routine.
-type Server interface {
+type serverInfos interface {
 	PeerCount() uint
+}
+
+type serverActions interface {
 	StartListener(stop <-chan struct{})
 }
 
-func handleServing(log zerolog.Logger, wg *sync.WaitGroup, cfg *Config, mgr Server, stop <-chan struct{}) {
+func handleServing(log zerolog.Logger, wg *sync.WaitGroup, cfg *Config, infos serverInfos, actions serverActions, stop <-chan struct{}) {
 	defer wg.Done()
 
 	// extract the configuration parameters we are interested in
@@ -57,10 +59,10 @@ Loop:
 			break Loop
 		case <-ticker.C:
 		}
-		peerCount := mgr.PeerCount()
+		peerCount := infos.PeerCount()
 		if peerCount < maxPeers && !running && listen {
 			done = make(chan struct{})
-			mgr.StartListener(done)
+			actions.StartListener(done)
 			running = true
 		} else if peerCount >= maxPeers && running {
 			close(done)

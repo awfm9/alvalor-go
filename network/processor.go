@@ -24,12 +24,19 @@ import (
 	"github.com/rs/zerolog"
 )
 
-// Processor is all the dependencies for a processing routine.
-type Processor interface {
+type processorInfos interface {
+	AddressSample() ([]string, error)
+}
+
+type processorActions interface {
 	DropPeer(address string) error
 }
 
-func handleProcessing(log zerolog.Logger, wg *sync.WaitGroup, cfg *Config, mgr Processor, book *Book, address string, input <-chan interface{}, output chan<- interface{}) {
+type processorEvents interface {
+	Found(address string)
+}
+
+func handleProcessing(log zerolog.Logger, wg *sync.WaitGroup, cfg *Config, infos processorInfos, actions processorActions, events processorEvents, address string, input <-chan interface{}, output chan<- interface{}) {
 	defer wg.Done()
 
 	// configuration parameters
@@ -69,7 +76,7 @@ Loop:
 				log.Debug().Msg("pong received")
 			case *Discover:
 				log.Debug().Msg("discover received")
-				addresses, err := book.Sample(16, isAny(), byRandom())
+				addresses, err := infos.AddressSample()
 				if err != nil {
 					log.Error().Err(err).Msg("could not get address sample")
 					continue
@@ -78,13 +85,13 @@ Loop:
 			case *Peers:
 				log.Debug().Msg("peer received")
 				for _, address := range msg.Addresses {
-					book.Add(address)
+					events.Found(address)
 				}
 			}
 		case <-time.After(interval):
 			output <- &Ping{}
 		case <-timeout.C:
-			mgr.DropPeer(address)
+			actions.DropPeer(address)
 		}
 	}
 	close(output)
