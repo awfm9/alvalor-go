@@ -4,7 +4,7 @@
 [![Go Report Card](https://goreportcard.com/badge/github.com/alvalor/alvalor-go)](https://goreportcard.com/report/github.com/alvalor/alvalor-go)
 [![Telegram](https://img.shields.io/badge/telegram-alvalor-0088cc.svg)](https://t.me/alvalor)
 [![Twitter](https://img.shields.io/badge/twitter-@alvalorproject-1da1f2.svg)](https://twitter.com/alvalorproject)
-[![License](https://img.shields.io/badge/License-AGPL%20v3-blue.svg)](https://raw.githubusercontent.com/alvalor/alvalor-go/master/LICENSE)
+[![License](https://img.shields.io/badge/License-AGPL%20v3-red.svg)](https://raw.githubusercontent.com/alvalor/alvalor-go/master/LICENSE)
 
 ## Introduction
 
