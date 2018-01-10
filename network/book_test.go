@@ -23,7 +23,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestFoundSavesPeer(t *testing.T) {
+func TestFoundSavesAddr(t *testing.T) {
 	// arrange
 	book := NewBook()
 	addr := "17.55.14.66"
@@ -34,4 +34,18 @@ func TestFoundSavesPeer(t *testing.T) {
 
 	// assert
 	assert.Equal(t, addr, entries[0])
+}
+
+func TestInvalidBlacklistsAddr(t *testing.T) {
+	// arrange
+	book := NewBook()
+	addr := "17.55.14.66"
+
+	// act
+	book.Invalid(addr)
+	book.Found(addr)
+	entries, _ := book.Sample(1)
+
+	// assert
+	assert.Equal(t, 0, len(entries))
 }
