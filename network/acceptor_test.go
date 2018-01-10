@@ -19,15 +19,16 @@ package network
 
 import (
 	"errors"
+	"io/ioutil"
+	"net"
+	"sync"
+	"testing"
+	"time"
+
 	"github.com/rs/zerolog"
 	uuid "github.com/satori/go.uuid"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/suite"
-	"net"
-	"os"
-	"sync"
-	"testing"
-	"time"
 )
 
 type AcceptorTestSuite struct {
@@ -38,375 +39,263 @@ type AcceptorTestSuite struct {
 }
 
 func (suite *AcceptorTestSuite) SetupTest() {
-	suite.log = zerolog.New(os.Stderr)
+	suite.log = zerolog.New(ioutil.Discard)
 	suite.wg = sync.WaitGroup{}
 	suite.wg.Add(1)
 	suite.cfg = Config{
-		network:    Odin,
-		listen:     false,
-		address:    "0.0.0.0:31337",
-		minPeers:   3,
-		maxPeers:   10,
-		nonce:      uuid.NewV4().Bytes(),
-		interval:   time.Second * 1,
-		bufferSize: 16,
+		network: Odin,
+		nonce:   uuid.NewV4().Bytes(),
 	}
 }
 
-func (suite *AcceptorTestSuite) TestHandleAcceptingClosesConnectionWhenCantClaimSlot() {
-	//Arrange
-	acceptor := &acceptorMock{}
-	acceptorEvents := &acceptorEventsMock{}
-	conn := &connMock{}
-	addr := &addrMock{}
-	addr.On("String").Return("136.44.33.12:5523")
-	conn.On("RemoteAddr").Return(addr)
+func (suite *AcceptorTestSuite) TestHandleAcceptingWhenCantClaimSlot() {
 
-	acceptor.On("ClaimSlot").Return(errors.New("Can't claim slot"))
+	// arrange
+	address := "136.44.33.12:5523"
+
+	addr := &addrMock{}
+	addr.On("String").Return(address)
+
+	conn := &connMock{}
+	conn.On("RemoteAddr").Return(addr)
 	conn.On("Close").Return(nil)
 
-	//Act
-	handleAccepting(suite.log, &suite.wg, &suite.cfg, acceptor, acceptorEvents, conn)
+	actions := &acceptorActionsMock{}
+	actions.On("ClaimSlot").Return(errors.New("cannot claim slot"))
 
-	//Assert
+	events := &acceptorEventsMock{}
+
+	// act
+	handleAccepting(suite.log, &suite.wg, &suite.cfg, actions, events, conn)
+
+	// assert
 	conn.AssertCalled(suite.T(), "Close")
 }
 
-func (suite *AcceptorTestSuite) TestHandleAcceptingClosesConnectionWhenCantReadSynPacket() {
-	//Arrange
-	acceptor := &acceptorMock{}
-	acceptorEvents := &acceptorEventsMock{}
-	conn := &connMock{}
-	addr := &addrMock{}
-	addr.On("String").Return("136.44.33.12:5523")
-	conn.On("RemoteAddr").Return(addr)
+func (suite *AcceptorTestSuite) TestHandleAcceptingWhenCantReadSyn() {
 
-	acceptor.On("ClaimSlot").Return(nil)
-	acceptor.On("ReleaseSlot").Return(nil)
-	acceptorEvents.On("Error", addr.String())
-	syn := make([]byte, len(suite.cfg.network)+len(suite.cfg.nonce))
-	conn.On("Read", syn).Return(1, errors.New("Can't read from connection"))
+	// arrange
+	address := "136.44.33.12:552"
+	buf := make([]byte, len(suite.cfg.network)+len(suite.cfg.nonce))
+
+	addr := &addrMock{}
+	addr.On("String").Return(address)
+
+	conn := &connMock{}
+	conn.On("RemoteAddr").Return(addr)
+	conn.On("Read", buf).Return(1, errors.New("cannot read from connection"))
 	conn.On("Close").Return(nil)
 
-	//Act
-	handleAccepting(suite.log, &suite.wg, &suite.cfg, acceptor, acceptorEvents, conn)
+	actions := &acceptorActionsMock{}
+	actions.On("ClaimSlot").Return(nil)
+	actions.On("ReleaseSlot").Return(nil)
 
-	//Assert
+	events := &acceptorEventsMock{}
+	events.On("Error", address)
+
+	// act
+	handleAccepting(suite.log, &suite.wg, &suite.cfg, actions, events, conn)
+
+	// assert
+	actions.AssertCalled(suite.T(), "ReleaseSlot")
+	events.AssertCalled(suite.T(), "Error", address)
 	conn.AssertCalled(suite.T(), "Close")
 }
 
-func (suite *AcceptorTestSuite) TestHandleAcceptingNotifiesAcceptorEventsWhenCantReadSynPacket() {
-	//Arrange
-	acceptor := &acceptorMock{}
-	acceptorEvents := &acceptorEventsMock{}
-	conn := &connMock{}
-	addr := &addrMock{}
-	addr.On("String").Return("136.44.33.12:5523")
-	conn.On("RemoteAddr").Return(addr)
+func (suite *AcceptorTestSuite) TestHandleAcceptingWhenNetworkMismatch() {
 
-	acceptor.On("ClaimSlot").Return(nil)
-	acceptor.On("ReleaseSlot").Return(nil)
-	acceptorEvents.On("Error", addr.String())
-	syn := make([]byte, len(suite.cfg.network)+len(suite.cfg.nonce))
-	conn.On("Read", syn).Return(1, errors.New("Can't read from connection"))
+	// arrange
+	address := "136.44.33.12:5523"
+	syn := append([]byte{1, 2, 3, 4}, uuid.NewV4().Bytes()...)
+	buf := make([]byte, len(syn))
+
+	addr := &addrMock{}
+	addr.On("String").Return(address)
+
+	conn := &connMock{}
+	conn.On("RemoteAddr").Return(addr)
+	conn.On("Read", buf).Run(func(args mock.Arguments) {
+		copy(args.Get(0).([]byte), syn)
+	}).Return(len(buf), nil)
 	conn.On("Close").Return(nil)
 
-	//Act
-	handleAccepting(suite.log, &suite.wg, &suite.cfg, acceptor, acceptorEvents, conn)
+	actions := &acceptorActionsMock{}
+	actions.On("ClaimSlot").Return(nil)
+	actions.On("ReleaseSlot").Return(nil)
 
-	//Assert
-	acceptorEvents.AssertCalled(suite.T(), "Error", addr.String())
-}
+	events := &acceptorEventsMock{}
+	events.On("Invalid", address)
 
-func (suite *AcceptorTestSuite) TestHandleAcceptingClosesConnectionWhenNetworkMismatch() {
-	//Arrange
-	acceptor := &acceptorMock{}
-	acceptorEvents := &acceptorEventsMock{}
-	conn := &connMock{}
-	addr := &addrMock{}
-	addr.On("String").Return("136.44.33.12:5523")
-	conn.On("RemoteAddr").Return(addr)
+	// act
+	handleAccepting(suite.log, &suite.wg, &suite.cfg, actions, events, conn)
 
-	acceptor.On("ClaimSlot").Return(nil)
-	acceptor.On("ReleaseSlot").Return(nil)
-	acceptorEvents.On("Invalid", addr.String())
-	syn := make([]byte, len(suite.cfg.network)+len(suite.cfg.nonce))
-	conn.On("Read", syn).Run(func(args mock.Arguments) {
-		passedSyn := args.Get(0).([]byte)
-		synIn := append([]byte{66, 66, 77, 77}, uuid.NewV4().Bytes()...)
-		for i, val := range synIn {
-			passedSyn[i] = val
-		}
-	}).Return(1, nil)
-	conn.On("Close").Return(nil)
-
-	//Act
-	handleAccepting(suite.log, &suite.wg, &suite.cfg, acceptor, acceptorEvents, conn)
-
-	//Assert
+	// assert
+	actions.AssertCalled(suite.T(), "ReleaseSlot")
+	events.AssertCalled(suite.T(), "Invalid", address)
 	conn.AssertCalled(suite.T(), "Close")
 }
 
-func (suite *AcceptorTestSuite) TestHandleAcceptingNotifiesAcceptorEventsWhenNetworkMismatch() {
-	//Arrange
-	acceptor := &acceptorMock{}
-	acceptorEvents := &acceptorEventsMock{}
-	conn := &connMock{}
-	addr := &addrMock{}
-	addr.On("String").Return("136.44.33.12:5523")
-	conn.On("RemoteAddr").Return(addr)
+func (suite *AcceptorTestSuite) TestHandleAcceptingWhenIdenticalNonce() {
 
-	acceptor.On("ClaimSlot").Return(nil)
-	acceptor.On("ReleaseSlot").Return(nil)
-	acceptorEvents.On("Invalid", addr.String())
-	syn := make([]byte, len(suite.cfg.network)+len(suite.cfg.nonce))
-	conn.On("Read", syn).Run(func(args mock.Arguments) {
-		passedSyn := args.Get(0).([]byte)
-		synIn := append([]byte{66, 66, 77, 77}, uuid.NewV4().Bytes()...)
-		for i, val := range synIn {
-			passedSyn[i] = val
-		}
-	}).Return(1, nil)
+	// arrange
+	address := "136.44.33.12:5523"
+	syn := append(suite.cfg.network, suite.cfg.nonce...)
+	buf := make([]byte, len(syn))
+
+	addr := &addrMock{}
+	addr.On("String").Return(address)
+
+	conn := &connMock{}
+	conn.On("RemoteAddr").Return(addr)
+	conn.On("Read", buf).Run(func(args mock.Arguments) {
+		copy(args.Get(0).([]byte), syn)
+	}).Return(len(buf), nil)
 	conn.On("Close").Return(nil)
 
-	//Act
-	handleAccepting(suite.log, &suite.wg, &suite.cfg, acceptor, acceptorEvents, conn)
+	actions := &acceptorActionsMock{}
+	actions.On("ClaimSlot").Return(nil)
+	actions.On("ReleaseSlot").Return(nil)
 
-	//Assert
-	acceptorEvents.AssertCalled(suite.T(), "Invalid", addr.String())
-}
+	events := &acceptorEventsMock{}
+	events.On("Invalid", address)
 
-func (suite *AcceptorTestSuite) TestHandleAcceptingClosesConnectionWhenIdenticalNonce() {
-	//Arrange
-	acceptor := &acceptorMock{}
-	acceptorEvents := &acceptorEventsMock{}
-	conn := &connMock{}
-	addr := &addrMock{}
-	addr.On("String").Return("136.44.33.12:5523")
-	conn.On("RemoteAddr").Return(addr)
+	// act
+	handleAccepting(suite.log, &suite.wg, &suite.cfg, actions, events, conn)
 
-	acceptor.On("ClaimSlot").Return(nil)
-	acceptor.On("ReleaseSlot").Return(nil)
-	acceptorEvents.On("Invalid", addr.String())
-	syn := make([]byte, len(suite.cfg.network)+len(suite.cfg.nonce))
-	conn.On("Read", syn).Run(func(args mock.Arguments) {
-		passedSyn := args.Get(0).([]byte)
-		synIn := append(suite.cfg.network, suite.cfg.nonce...)
-		for i, val := range synIn {
-			passedSyn[i] = val
-		}
-	}).Return(1, nil)
-	conn.On("Close").Return(nil)
-
-	//Act
-	handleAccepting(suite.log, &suite.wg, &suite.cfg, acceptor, acceptorEvents, conn)
-
-	//Assert
+	// assert
+	actions.AssertCalled(suite.T(), "ReleaseSlot")
+	events.AssertCalled(suite.T(), "Invalid", address)
 	conn.AssertCalled(suite.T(), "Close")
 }
 
-func (suite *AcceptorTestSuite) TestHandleAcceptingNotifiesAcceptorEventsWhenIdenticalNonce() {
-	//Arrange
-	acceptor := &acceptorMock{}
-	acceptorEvents := &acceptorEventsMock{}
-	conn := &connMock{}
-	addr := &addrMock{}
-	addr.On("String").Return("136.44.33.12:5523")
-	conn.On("RemoteAddr").Return(addr)
+func (suite *AcceptorTestSuite) TestHandleAcceptingWhenCantWriteAck() {
 
-	acceptor.On("ClaimSlot").Return(nil)
-	acceptor.On("ReleaseSlot").Return(nil)
-	acceptorEvents.On("Invalid", addr.String())
-	syn := make([]byte, len(suite.cfg.network)+len(suite.cfg.nonce))
-	conn.On("Read", syn).Run(func(args mock.Arguments) {
-		passedSyn := args.Get(0).([]byte)
-		synIn := append(suite.cfg.network, suite.cfg.nonce...)
-		for i, val := range synIn {
-			passedSyn[i] = val
-		}
-	}).Return(1, nil)
+	// arrange
+	address := "136.44.33.12:5523"
+	syn := append(suite.cfg.network, uuid.NewV4().Bytes()...)
+	buf := make([]byte, len(syn))
+	ack := append(suite.cfg.network, suite.cfg.nonce...)
+
+	addr := &addrMock{}
+	addr.On("String").Return(address)
+
+	conn := &connMock{}
+	conn.On("RemoteAddr").Return(addr)
+	conn.On("Read", buf).Run(func(args mock.Arguments) {
+		copy(args.Get(0).([]byte), syn)
+	}).Return(len(buf), nil)
+	conn.On("Write", ack).Return(0, errors.New("cannot write to connection"))
 	conn.On("Close").Return(nil)
 
-	//Act
-	handleAccepting(suite.log, &suite.wg, &suite.cfg, acceptor, acceptorEvents, conn)
+	actions := &acceptorActionsMock{}
+	actions.On("ClaimSlot").Return(nil)
+	actions.On("ReleaseSlot").Return(nil)
 
-	//Assert
-	acceptorEvents.AssertCalled(suite.T(), "Invalid", addr.String())
-}
+	events := &acceptorEventsMock{}
+	events.On("Error", address)
 
-func (suite *AcceptorTestSuite) TestHandleAcceptingClosesConnectionWhenCantWriteAck() {
-	//Arrange
-	acceptor := &acceptorMock{}
-	acceptorEvents := &acceptorEventsMock{}
-	conn := &connMock{}
-	addr := &addrMock{}
-	addr.On("String").Return("136.44.33.12:5523")
-	conn.On("RemoteAddr").Return(addr)
+	// act
+	handleAccepting(suite.log, &suite.wg, &suite.cfg, actions, events, conn)
 
-	acceptor.On("ClaimSlot").Return(nil)
-	acceptor.On("ReleaseSlot").Return(nil)
-	acceptorEvents.On("Error", addr.String())
-	syn := make([]byte, len(suite.cfg.network)+len(suite.cfg.nonce))
-	conn.On("Read", syn).Run(func(args mock.Arguments) {
-		passedSyn := args.Get(0).([]byte)
-		synIn := append(suite.cfg.network, uuid.NewV4().Bytes()...)
-		for i, val := range synIn {
-			passedSyn[i] = val
-		}
-	}).Return(1, nil)
-	conn.On("Write", append(suite.cfg.network, suite.cfg.nonce...)).Return(1, errors.New("Cannot write to this tcp connection for whatever reason"))
-	conn.On("Close").Return(nil)
-
-	//Act
-	handleAccepting(suite.log, &suite.wg, &suite.cfg, acceptor, acceptorEvents, conn)
-
-	//Assert
+	// assert
+	actions.AssertCalled(suite.T(), "ReleaseSlot")
+	events.AssertCalled(suite.T(), "Error", address)
 	conn.AssertCalled(suite.T(), "Close")
 }
 
-func (suite *AcceptorTestSuite) TestHandleAcceptingNotifiesAcceptorEventsWhenCantWriteAck() {
-	//Arrange
-	acceptor := &acceptorMock{}
-	acceptorEvents := &acceptorEventsMock{}
-	conn := &connMock{}
+func (suite *AcceptorTestSuite) TestHandleAcceptingWhenCantAddPeer() {
+
+	// arrange
+	address := "136.44.33.12:5523"
+	nonce := uuid.NewV4().Bytes()
+	syn := append(suite.cfg.network, nonce...)
+	buf := make([]byte, len(syn))
+	ack := append(suite.cfg.network, suite.cfg.nonce...)
+
 	addr := &addrMock{}
-	addr.On("String").Return("136.44.33.12:5523")
+	addr.On("String").Return(address)
+
+	conn := &connMock{}
 	conn.On("RemoteAddr").Return(addr)
 
-	acceptor.On("ClaimSlot").Return(nil)
-	acceptor.On("ReleaseSlot").Return(nil)
-	acceptorEvents.On("Error", addr.String())
-	syn := make([]byte, len(suite.cfg.network)+len(suite.cfg.nonce))
-	conn.On("Read", syn).Run(func(args mock.Arguments) {
-		passedSyn := args.Get(0).([]byte)
-		synIn := append(suite.cfg.network, uuid.NewV4().Bytes()...)
-		for i, val := range synIn {
-			passedSyn[i] = val
-		}
-	}).Return(1, nil)
-	conn.On("Write", append(suite.cfg.network, suite.cfg.nonce...)).Return(1, errors.New("Cannot write to this tcp connection for whatever reason"))
+	actions := &acceptorActionsMock{}
+	actions.On("ClaimSlot").Return(nil)
+	actions.On("ReleaseSlot").Return(nil)
+	actions.On("AddPeer", conn, nonce).Return(errors.New("cannot add peer"))
+
+	events := &acceptorEventsMock{}
+	events.On("Error", address)
+
+	conn.On("Read", buf).Run(func(args mock.Arguments) {
+		copy(args.Get(0).([]byte), syn)
+	}).Return(len(buf), nil)
+	conn.On("Write", ack).Return(len(ack), nil)
 	conn.On("Close").Return(nil)
 
-	//Act
-	handleAccepting(suite.log, &suite.wg, &suite.cfg, acceptor, acceptorEvents, conn)
+	// act
+	handleAccepting(suite.log, &suite.wg, &suite.cfg, actions, events, conn)
 
-	//Assert
-	acceptorEvents.AssertCalled(suite.T(), "Error", addr.String())
-}
-
-func (suite *AcceptorTestSuite) TestHandleAcceptingClosesConnectionWhenCantAddPeer() {
-	//Arrange
-	nonceIn := uuid.NewV4().Bytes()
-	acceptor := &acceptorMock{}
-	acceptorEvents := &acceptorEventsMock{}
-	conn := &connMock{}
-	addr := &addrMock{}
-	addr.On("String").Return("136.44.33.12:5523")
-	conn.On("RemoteAddr").Return(addr)
-
-	acceptor.On("ClaimSlot").Return(nil)
-	acceptor.On("ReleaseSlot").Return(nil)
-	acceptor.On("AddPeer", conn, nonceIn).Return(errors.New("Can't add this peer"))
-	acceptorEvents.On("Error", addr.String())
-	syn := make([]byte, len(suite.cfg.network)+len(suite.cfg.nonce))
-	conn.On("Read", syn).Run(func(args mock.Arguments) {
-		passedSyn := args.Get(0).([]byte)
-		synIn := append(suite.cfg.network, nonceIn...)
-		for i, val := range synIn {
-			passedSyn[i] = val
-		}
-	}).Return(1, nil)
-	conn.On("Write", append(suite.cfg.network, suite.cfg.nonce...)).Return(1, nil)
-	conn.On("Close").Return(nil)
-
-	//Act
-	handleAccepting(suite.log, &suite.wg, &suite.cfg, acceptor, acceptorEvents, conn)
-
-	//Assert
+	// assert
+	actions.AssertCalled(suite.T(), "ReleaseSlot")
 	conn.AssertCalled(suite.T(), "Close")
 }
 
-func (suite *AcceptorTestSuite) TestHandleAcceptingNotifiesAcceptorEventsAboutSuccess() {
-	//Arrange
-	nonceIn := uuid.NewV4().Bytes()
-	acceptor := &acceptorMock{}
-	acceptorEvents := &acceptorEventsMock{}
-	conn := &connMock{}
-	addr := &addrMock{}
-	addr.On("String").Return("136.44.33.12:5523")
-	conn.On("RemoteAddr").Return(addr)
+func (suite *AcceptorTestSuite) TestHandleAcceptingWhenSuccess() {
 
-	acceptor.On("ClaimSlot").Return(nil)
-	acceptor.On("ReleaseSlot").Return(nil)
-	acceptor.On("AddPeer", conn, nonceIn).Return(nil)
-	acceptorEvents.On("Success", addr.String())
-	syn := make([]byte, len(suite.cfg.network)+len(suite.cfg.nonce))
-	conn.On("Read", syn).Run(func(args mock.Arguments) {
-		passedSyn := args.Get(0).([]byte)
-		synIn := append(suite.cfg.network, nonceIn...)
-		for i, val := range synIn {
-			passedSyn[i] = val
-		}
-	}).Return(1, nil)
-	conn.On("Write", append(suite.cfg.network, suite.cfg.nonce...)).Return(1, nil)
+	// arrange
+	address := "136.44.33.12:5523"
+	nonce := uuid.NewV4().Bytes()
+	syn := append(suite.cfg.network, nonce...)
+	buf := make([]byte, len(syn))
+	ack := append(suite.cfg.network, suite.cfg.nonce...)
+
+	addr := &addrMock{}
+	addr.On("String").Return(address)
+
+	conn := &connMock{}
+	conn.On("RemoteAddr").Return(addr)
+	conn.On("Read", buf).Run(func(args mock.Arguments) {
+		copy(args.Get(0).([]byte), syn)
+	}).Return(len(buf), nil)
+	conn.On("Write", ack).Return(len(ack), nil)
 	conn.On("Close").Return(nil)
 
-	//Act
-	handleAccepting(suite.log, &suite.wg, &suite.cfg, acceptor, acceptorEvents, conn)
+	actions := &acceptorActionsMock{}
+	actions.On("ClaimSlot").Return(nil)
+	actions.On("ReleaseSlot").Return(nil)
+	actions.On("AddPeer", conn, nonce).Return(nil)
 
-	//Assert
-	acceptorEvents.AssertCalled(suite.T(), "Success", addr.String())
-}
+	events := &acceptorEventsMock{}
+	events.On("Success", address)
 
-func (suite *AcceptorTestSuite) TestHandleAcceptingReleasesSlotIfItClaimedBefore() {
-	//Arrange
-	nonceIn := uuid.NewV4().Bytes()
-	acceptor := &acceptorMock{}
-	acceptorEvents := &acceptorEventsMock{}
-	conn := &connMock{}
-	addr := &addrMock{}
-	addr.On("String").Return("136.44.33.12:5523")
-	conn.On("RemoteAddr").Return(addr)
+	// act
+	handleAccepting(suite.log, &suite.wg, &suite.cfg, actions, events, conn)
 
-	acceptor.On("ClaimSlot").Return(nil)
-	acceptor.On("ReleaseSlot").Return(nil)
-	acceptor.On("AddPeer", conn, nonceIn).Return(nil)
-	acceptorEvents.On("Success", addr.String())
-	syn := make([]byte, len(suite.cfg.network)+len(suite.cfg.nonce))
-	conn.On("Read", syn).Run(func(args mock.Arguments) {
-		passedSyn := args.Get(0).([]byte)
-		synIn := append(suite.cfg.network, nonceIn...)
-		for i, val := range synIn {
-			passedSyn[i] = val
-		}
-	}).Return(1, nil)
-	conn.On("Write", append(suite.cfg.network, suite.cfg.nonce...)).Return(1, nil)
-	conn.On("Close").Return(nil)
-
-	//Act
-	handleAccepting(suite.log, &suite.wg, &suite.cfg, acceptor, acceptorEvents, conn)
-
-	//Assert
-	acceptor.AssertCalled(suite.T(), "ReleaseSlot")
+	// assert
+	actions.AssertCalled(suite.T(), "ReleaseSlot")
+	actions.AssertCalled(suite.T(), "AddPeer", conn, nonce)
+	events.AssertCalled(suite.T(), "Success", address)
 }
 
 func TestAcceptorTestSuite(t *testing.T) {
 	suite.Run(t, new(AcceptorTestSuite))
 }
 
-type acceptorMock struct {
+type acceptorActionsMock struct {
 	mock.Mock
 }
 
-func (acceptor *acceptorMock) ClaimSlot() error {
-	args := acceptor.Called()
+func (actions *acceptorActionsMock) ClaimSlot() error {
+	args := actions.Called()
 	return args.Error(0)
 }
-func (acceptor *acceptorMock) ReleaseSlot() {
-	acceptor.Called()
+
+func (actions *acceptorActionsMock) ReleaseSlot() {
+	actions.Called()
 }
-func (acceptor *acceptorMock) AddPeer(conn net.Conn, nonce []byte) error {
-	args := acceptor.Called(conn, nonce)
+
+func (actions *acceptorActionsMock) AddPeer(conn net.Conn, nonce []byte) error {
+	args := actions.Called(conn, nonce)
 	return args.Error(0)
 }
 
@@ -414,14 +303,16 @@ type acceptorEventsMock struct {
 	mock.Mock
 }
 
-func (acceptorEvents *acceptorEventsMock) Invalid(address string) {
-	acceptorEvents.Called(address)
+func (events *acceptorEventsMock) Invalid(address string) {
+	events.Called(address)
 }
-func (acceptorEvents *acceptorEventsMock) Error(address string) {
-	acceptorEvents.Called(address)
+
+func (events *acceptorEventsMock) Error(address string) {
+	events.Called(address)
 }
-func (acceptorEvents *acceptorEventsMock) Success(address string) {
-	acceptorEvents.Called(address)
+
+func (events *acceptorEventsMock) Success(address string) {
+	events.Called(address)
 }
 
 type connMock struct {
@@ -432,32 +323,39 @@ func (conn *connMock) Read(b []byte) (n int, err error) {
 	args := conn.Called(b)
 	return args.Int(0), args.Error(1)
 }
+
 func (conn *connMock) Write(b []byte) (n int, err error) {
 	args := conn.Called(b)
 	return args.Int(0), args.Error(1)
 }
+
 func (conn *connMock) Close() error {
 	args := conn.Called()
 	return args.Error(0)
 }
+
 func (conn *connMock) LocalAddr() net.Addr {
 	args := conn.Called()
 	result, _ := args.Get(0).(*addrMock)
 	return result
 }
+
 func (conn *connMock) RemoteAddr() net.Addr {
 	args := conn.Called()
 	result, _ := args.Get(0).(*addrMock)
 	return result
 }
+
 func (conn *connMock) SetDeadline(t time.Time) error {
 	args := conn.Called()
 	return args.Error(0)
 }
+
 func (conn *connMock) SetReadDeadline(t time.Time) error {
 	args := conn.Called()
 	return args.Error(0)
 }
+
 func (conn *connMock) SetWriteDeadline(t time.Time) error {
 	args := conn.Called()
 	return args.Error(0)
@@ -471,6 +369,7 @@ func (addr *addrMock) Network() string {
 	args := addr.Called()
 	return args.String(0)
 }
+
 func (addr *addrMock) String() string {
 	args := addr.Called()
 	return args.String(0)

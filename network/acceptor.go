@@ -25,20 +25,19 @@ import (
 	"github.com/rs/zerolog"
 )
 
-// Acceptor contains all the dependencies needed to accept a connection.
-type Acceptor interface {
+type acceptorActions interface {
 	ClaimSlot() error
 	ReleaseSlot()
 	AddPeer(conn net.Conn, nonce []byte) error
 }
 
-type AcceptorEvents interface {
+type acceptorEvents interface {
 	Error(address string)
 	Invalid(address string)
 	Success(address string)
 }
 
-func handleAccepting(log zerolog.Logger, wg *sync.WaitGroup, cfg *Config, mgr Acceptor, events AcceptorEvents, conn net.Conn) {
+func handleAccepting(log zerolog.Logger, wg *sync.WaitGroup, cfg *Config, actions acceptorActions, events acceptorEvents, conn net.Conn) {
 	defer wg.Done()
 
 	// extract configuration parameters we care about
@@ -54,13 +53,13 @@ func handleAccepting(log zerolog.Logger, wg *sync.WaitGroup, cfg *Config, mgr Ac
 	defer log.Info().Msg("accepting routine stopped")
 
 	// first make sure we can claim a connection slot
-	err := mgr.ClaimSlot()
+	err := actions.ClaimSlot()
 	if err != nil {
 		log.Error().Err(err).Msg("could not claim connection slot")
 		conn.Close()
 		return
 	}
-	defer mgr.ReleaseSlot()
+	defer actions.ReleaseSlot()
 
 	// execute the handshake on the incoming connection
 	ack := append(network, nonce...)
@@ -95,7 +94,7 @@ func handleAccepting(log zerolog.Logger, wg *sync.WaitGroup, cfg *Config, mgr Ac
 	}
 
 	// submit the connection for a new peer creation
-	err = mgr.AddPeer(conn, nonceIn)
+	err = actions.AddPeer(conn, nonceIn)
 	if err != nil {
 		log.Error().Err(err).Msg("could not add peer")
 		conn.Close()

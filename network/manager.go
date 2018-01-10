@@ -38,6 +38,9 @@ var (
 	Loki = []byte{76, 79, 75, 73}
 )
 
+// wrapper around the standard dial function
+var dial = func(address string) (net.Conn, error) { return net.Dial("tcp", address) }
+
 // Manager represents the manager of all network components.
 type Manager struct {
 	log      zerolog.Logger
@@ -178,7 +181,7 @@ func (mgr *Manager) GetAddress() (string, error) {
 // StartConnector will try to launch a new connection attempt.
 func (mgr *Manager) StartConnector(address string) {
 	mgr.wg.Add(1)
-	go handleConnecting(mgr.log, mgr.wg, mgr.cfg, mgr, mgr.book, &tcpDialer{}, address)
+	go handleConnecting(mgr.log, mgr.wg, mgr.cfg, mgr, mgr, mgr.book, dial, address)
 }
 
 // StartListener will start a listener on a given port.
