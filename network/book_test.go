@@ -23,6 +23,28 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+func TestSampleReturnsErrorIfZeroCountPassed(t *testing.T) {
+	// arrange
+	book := NewBook()
+
+	// act
+	_, err := book.Sample(0)
+
+	// assert
+	assert.Equal(t, errInvalidCount, err)
+}
+
+func TestSampleReturnsErrorIfEmpty(t *testing.T) {
+	// arrange
+	book := NewBook()
+
+	// act
+	_, err := book.Sample(1)
+
+	// assert
+	assert.Equal(t, errBookEmpty, err)
+}
+
 func TestFoundSavesAddr(t *testing.T) {
 	// arrange
 	book := NewBook()
