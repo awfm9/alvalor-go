@@ -25,12 +25,15 @@ import (
 	"github.com/rs/zerolog"
 )
 
-// Receiver injects the dependencies needed for the receiving routine.
-type Receiver interface {
+type receiverActions interface {
 	DropPeer(address string) error
 }
 
-func handleReceiving(log zerolog.Logger, wg *sync.WaitGroup, cfg *Config, mgr Receiver, book *Book, address string, r io.Reader, input chan<- interface{}) {
+type receiverEvents interface {
+	Error(address string)
+}
+
+func handleReceiving(log zerolog.Logger, wg *sync.WaitGroup, cfg *Config, actions receiverActions, events receiverEvents, address string, r io.Reader, input chan<- interface{}) {
 	defer wg.Done()
 
 	// extract configuration as needed
@@ -52,8 +55,8 @@ func handleReceiving(log zerolog.Logger, wg *sync.WaitGroup, cfg *Config, mgr Re
 		}
 		if err != nil {
 			log.Error().Err(err).Msg("reading message failed")
-			book.Error(address)
-			mgr.DropPeer(address)
+			events.Error(address)
+			actions.DropPeer(address)
 			continue
 		}
 		input <- msg

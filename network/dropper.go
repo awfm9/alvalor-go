@@ -18,21 +18,25 @@
 package network
 
 import (
-	"math/rand"
 	"sync"
 	"time"
 
 	"github.com/rs/zerolog"
 )
 
-// Dropper are the dependencies dropping routines need.
-type Dropper interface {
+type dropperInfos interface {
 	PeerCount() uint
-	GetAddresses() []string
-	DropPeer(address string) error
 }
 
-func handleDropping(log zerolog.Logger, wg *sync.WaitGroup, cfg *Config, mgr Dropper, book *Book, stop <-chan struct{}) {
+type dropperActions interface {
+	DropRandomPeer() (string, error)
+}
+
+type dropperEvents interface {
+	Dropped(address string)
+}
+
+func handleDropping(log zerolog.Logger, wg *sync.WaitGroup, cfg *Config, infos dropperInfos, actions dropperActions, events dropperEvents, stop <-chan struct{}) {
 	defer wg.Done()
 
 	// extract desired configuration parameters
@@ -55,18 +59,14 @@ func handleDropping(log zerolog.Logger, wg *sync.WaitGroup, cfg *Config, mgr Dro
 			return
 		case <-ticker.C:
 		}
-		if mgr.PeerCount() > maxPeers {
-			addresses := mgr.GetAddresses()
-			if len(addresses) == 0 {
-				continue
-			}
-			address := addresses[rand.Int()%len(addresses)]
-			err := mgr.DropPeer(address)
-			if err != nil {
-				log.Error().Str("address", address).Err(err).Msg("could not drop peer")
-				continue
-			}
-			book.Dropped(address)
+		if infos.PeerCount() <= maxPeers {
+			continue
 		}
+		address, err := actions.DropRandomPeer()
+		if err != nil {
+			log.Error().Err(err).Msg("could not drop peer")
+			continue
+		}
+		events.Dropped(address)
 	}
 }

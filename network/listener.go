@@ -25,12 +25,11 @@ import (
 	"github.com/rs/zerolog"
 )
 
-// Listener contains the manager dependencies we need to handle listening.
-type Listener interface {
+type listenerActions interface {
 	StartAcceptor(conn net.Conn)
 }
 
-func handleListening(log zerolog.Logger, wg *sync.WaitGroup, cfg *Config, mgr Listener, stop <-chan struct{}) {
+func handleListening(log zerolog.Logger, wg *sync.WaitGroup, cfg *Config, actions listenerActions, stop <-chan struct{}) {
 	defer wg.Done()
 
 	// extract the config parameters we are interested in
@@ -81,7 +80,7 @@ Loop:
 
 		// we should handle onboarding on a new goroutine to avoid blocking
 		// on listening, and as well so we can release slots with defer
-		mgr.StartAcceptor(conn)
+		actions.StartAcceptor(conn)
 	}
 
 	// ordered to quit, we close the listener down

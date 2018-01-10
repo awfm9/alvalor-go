@@ -25,12 +25,15 @@ import (
 	"github.com/rs/zerolog"
 )
 
-// Sender injects the dependencies needed for the sending routine.
-type Sender interface {
+type senderActions interface {
 	DropPeer(address string) error
 }
 
-func handleSending(log zerolog.Logger, wg *sync.WaitGroup, cfg *Config, mgr Sender, book *Book, address string, output <-chan interface{}, w io.Writer) {
+type senderEvents interface {
+	Error(address string)
+}
+
+func handleSending(log zerolog.Logger, wg *sync.WaitGroup, cfg *Config, actions senderActions, events senderEvents, address string, output <-chan interface{}, w io.Writer) {
 	defer wg.Done()
 
 	// extract configuration parameters
@@ -52,8 +55,8 @@ func handleSending(log zerolog.Logger, wg *sync.WaitGroup, cfg *Config, mgr Send
 		}
 		if err != nil {
 			log.Error().Err(err).Msg("could not write message")
-			book.Error(address)
-			mgr.DropPeer(address)
+			events.Error(address)
+			actions.DropPeer(address)
 			continue
 		}
 	}
