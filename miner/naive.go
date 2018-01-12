@@ -28,34 +28,26 @@ import (
 
 // Naive represents a naive miner which is not efficient but easy to understand.
 type Naive struct {
-	header types.Header
-	parent chan []byte
-	state  chan []byte
+	data   []byte
+	parent chan types.Header
 	delta  chan []byte
-	target chan []byte
-	out    chan types.Header
 	stop   chan struct{}
+	out    chan types.Header
 }
 
 // NewNaive creates a new naive miner initialized with the given parameters.
-func NewNaive(parent []byte, state []byte, delta []byte, miner []byte, target []byte) *Naive {
-	header := types.Header{
-		Parent: parent,
-		State:  state,
-		Delta:  delta,
-		Miner:  miner,
-		Target: target,
-		Nonce:  0,
-		Time:   time.Now(),
-	}
-	return &Naive{
-		header: header,
-		parent: make(chan []byte, 1),
-		state:  make(chan []byte, 1),
-		delta:  make(chan []byte, 1),
-		target: make(chan []byte, 1),
+func NewNaive(miner []byte, parent types.Header, delta []byte, target []byte) *Naive {
+	nv := &Naive{
+		data:   make([]byte, 176),
+		parent: make(chan types.Header, 1),
 		stop:   make(chan struct{}),
 	}
+	copy(nv.data[0:32], parent.Hash())
+	copy(nv.data[32:64], parent.State)
+	copy(nv.data[64:96], delta)
+	copy(nv.data[96:128], miner)
+	copy(nv.data[128:160], target)
+	return nv
 }
 
 // Start will start the mining process.
@@ -72,7 +64,7 @@ func (nv *Naive) Stop() {
 }
 
 // Parent will update the block we try to mine with a new parent hash.
-func (nv *Naive) Parent(parent []byte) {
+func (nv *Naive) Parent(parent types.Header) {
 	nv.parent <- parent
 }
 
@@ -81,49 +73,52 @@ func (nv *Naive) Delta(delta []byte) {
 	nv.delta <- delta
 }
 
-// Target will update the target difficulty we are trying to mine for.
-func (nv *Naive) Target(target []byte) {
-	nv.target <- target
-}
-
 // mine is the mining loop.
 func (nv *Naive) mine() {
+	nonce := uint64(0)
+	ticker := time.NewTicker(time.Second)
 Loop:
 	for {
 		select {
 		case <-nv.stop:
 			break Loop
 		case parent := <-nv.parent:
-			nv.header.Parent = parent
-			nv.header.Nonce = 0
-			continue Loop
-		case state := <-nv.state:
-			nv.header.State = state
-			nv.header.Nonce = 0
+			copy(nv.data[0:32], parent.Hash())
+			copy(nv.data[32:64], parent.State)
+			nonce = 0
 			continue Loop
 		case delta := <-nv.delta:
-			nv.header.Delta = delta
-			nv.header.Nonce = 0
-		case target := <-nv.target:
-			nv.header.Target = target
-			nv.header.Nonce = 0
+			copy(nv.data[64:96], delta)
+			nonce = 0
+			continue Loop
+		case ts := <-ticker.C:
+			binary.LittleEndian.PutUint64(nv.data[160:168], uint64(ts.Unix()))
+			nonce = 0
 		default:
 			// go on
 		}
-		nv.header.Time = time.Now()
-		h, _ := blake2b.New256(nil)
-		_, _ = h.Write(nv.header.Parent)
-		_, _ = h.Write(nv.header.State)
-		_, _ = h.Write(nv.header.Delta)
-		_, _ = h.Write(nv.header.Miner)
-		_, _ = h.Write(nv.header.Target)
-		ts := make([]byte, 8)
-		binary.LittleEndian.PutUint64(ts, uint64(nv.header.Time.Unix()))
-		_, _ = h.Write(ts)
-		hash := h.Sum(nil)
-		if bytes.Compare(hash, nv.header.Target) < 0 {
-			nv.out <- nv.header
+		binary.LittleEndian.PutUint64(nv.data[168:176], nonce)
+		hash := blake2b.Sum256(nv.data)
+		if bytes.Compare(hash[:], nv.data[128:160]) < 0 {
+			unix := binary.LittleEndian.Uint64(nv.data[160:168])
+			header := types.Header{
+				Parent: make([]byte, 32),
+				State:  make([]byte, 32),
+				Delta:  make([]byte, 32),
+				Miner:  make([]byte, 32),
+				Target: make([]byte, 32),
+				Time:   time.Unix(int64(unix), 0),
+				Nonce:  nonce,
+			}
+			copy(header.Parent, nv.data[0:32])
+			copy(header.State, nv.data[32:64])
+			copy(header.Delta, nv.data[64:96])
+			copy(header.Miner, nv.data[96:128])
+			copy(header.Target, nv.data[128:160])
+			nv.out <- header
+			nonce = 0
+			continue
 		}
-		nv.header.Nonce++
+		nonce++
 	}
 }

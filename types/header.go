@@ -18,7 +18,10 @@
 package types
 
 import (
+	"encoding/binary"
 	"time"
+
+	"golang.org/x/crypto/blake2b"
 )
 
 // Header represents the header data of a block that will be hashed.
@@ -28,6 +31,21 @@ type Header struct {
 	Delta  []byte
 	Miner  []byte
 	Target []byte
-	Nonce  uint64
 	Time   time.Time
+	Nonce  uint64
+}
+
+// Hash returns the hash (ID) of the block with the given header.
+func (hdr Header) Hash() []byte {
+	h, _ := blake2b.New256(nil)
+	_, _ = h.Write(hdr.Parent)
+	_, _ = h.Write(hdr.State)
+	_, _ = h.Write(hdr.Delta)
+	_, _ = h.Write(hdr.Miner)
+	_, _ = h.Write(hdr.Target)
+	data := make([]byte, 16)
+	binary.LittleEndian.PutUint64(data[:8], uint64(hdr.Time.Unix()))
+	binary.LittleEndian.PutUint64(data[8:], hdr.Nonce)
+	_, _ = h.Write(data)
+	return h.Sum(nil)
 }
