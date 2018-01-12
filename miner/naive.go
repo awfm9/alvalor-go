@@ -59,8 +59,8 @@ func (nv *Naive) Start() <-chan types.Header {
 
 // Stop will stop the mining process.
 func (nv *Naive) Stop() {
-	close(nv.out)
 	close(nv.stop)
+	<-nv.out
 }
 
 // Parent will update the block we try to mine with a new parent hash.
@@ -121,4 +121,5 @@ Loop:
 		}
 		nonce++
 	}
+	close(nv.out)
 }
