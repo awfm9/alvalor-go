@@ -14,6 +14,12 @@
   revision = "18fdff33d8fa6779a6eb859c3fbe0d330b340da2"
 
 [[projects]]
+  name = "github.com/davecgh/go-spew"
+  packages = ["spew"]
+  revision = "346938d642f2ec3594ed81d874461961cd0faa76"
+  version = "v1.1.0"
+
+[[projects]]
   name = "github.com/dgraph-io/badger"
   packages = [".","options","protos","skl","table","y"]
   revision = "69611218c7078be6de16f4ea13fb256e701b6b73"
@@ -50,6 +56,12 @@
   version = "v0.8.0"
 
 [[projects]]
+  name = "github.com/pmezard/go-difflib"
+  packages = ["difflib"]
+  revision = "792786c7400a136282c1664665ae0a8db921c6c2"
+  version = "v1.0.0"
+
+[[projects]]
   name = "github.com/rs/zerolog"
   packages = [".","internal/json"]
   revision = "3ac71fc58dbd43122668a912b755b0979ba9ce1f"
@@ -60,6 +72,18 @@
   packages = ["."]
   revision = "879c5887cd475cd7864858769793b2ceb0d44feb"
   version = "v1.1.0"
+
+[[projects]]
+  name = "github.com/stretchr/objx"
+  packages = ["."]
+  revision = "facf9a85c22f48d2f52f2380e4efce1768749a89"
+  version = "v0.1"
+
+[[projects]]
+  name = "github.com/stretchr/testify"
+  packages = ["assert","mock","require","suite"]
+  revision = "b91bfb9ebec76498946beb6af7c0230c7cc7ba6c"
+  version = "v1.2.0"
 
 [[projects]]
   branch = "master"
@@ -100,6 +124,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "862a34ab6456ea1c60c7fb0b415953f44c8248ca59b3354e8e4d8b1507f3dcf5"
+  inputs-digest = "5b31cd3e0f9c1594fbd28af79088b88dea50e51bc0506d1103235eb56af4936f"
   solver-name = "gps-cdcl"
   solver-version = 1
