@@ -21,7 +21,8 @@ import "github.com/alvalor/alvalor-go/types"
 
 // Miner defines the interface we want to use for mining.
 type Miner interface {
-	Start()
-	AddTx(types.Transaction)
+	Start() <-chan types.Header
+	Parent(types.Header)
+	Delta([]byte)
 	Stop()
 }
