@@ -49,7 +49,7 @@ func TestSampleReturnsErrorIfEmpty(t *testing.T) {
 func TestFoundSavesAddr(t *testing.T) {
 	// arrange
 	book := NewBook()
-	addr := "17.55.14.66"
+	addr := "17.55.14.66:7732"
 
 	// act
 	book.Found(addr)
@@ -62,7 +62,7 @@ func TestFoundSavesAddr(t *testing.T) {
 func TestInvalidBlacklistsAddr(t *testing.T) {
 	// arrange
 	book := NewBook()
-	addr := "17.55.14.66"
+	addr := "17.55.14.66:7732"
 
 	// act
 	book.Invalid(addr)
@@ -76,7 +76,7 @@ func TestInvalidBlacklistsAddr(t *testing.T) {
 func TestFailureDeactivatesAddress(t *testing.T) {
 	// arrange
 	book := NewBook()
-	addr := "17.55.14.66"
+	addr := "17.55.14.66:7732"
 
 	// act
 	book.Found(addr)
@@ -90,7 +90,7 @@ func TestFailureDeactivatesAddress(t *testing.T) {
 func TestDroppedDeactivatesAddress(t *testing.T) {
 	// arrange
 	book := NewBook()
-	addr := "17.55.14.66"
+	addr := "17.55.14.66:7732"
 
 	// act
 	book.Found(addr)
