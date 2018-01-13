@@ -86,6 +86,20 @@ func TestFailureDeactivatesAddress(t *testing.T) {
 	assert.Len(t, entries, 0)
 }
 
+func TestDroppedDeactivatesAddress(t *testing.T) {
+	// arrange
+	book := NewBook()
+	addr := "17.55.14.66"
+
+	// act
+	book.Found(addr)
+	book.Dropped(addr)
+	entries, _ := book.Sample(1, isActive(true))
+
+	// assert
+	assert.Len(t, entries, 0)
+}
+
 func TestSampleReturnsAddressWithHighestScoreWhenOtherConnectionsDropped(t *testing.T) {
 	// arrange
 	book := NewBook()
