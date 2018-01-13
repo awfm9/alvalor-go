@@ -18,7 +18,6 @@
 package network
 
 import (
-	"math"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -29,7 +28,7 @@ func TestSampleReturnsErrorIfZeroCountPassed(t *testing.T) {
 	book := NewBook()
 
 	// act
-	_, err := book.Sample(0)
+	_, err := book.Sample(0, isActive(false), byScore())
 
 	// assert
 	assert.Equal(t, errInvalidCount, err)
@@ -40,7 +39,7 @@ func TestSampleReturnsErrorIfEmpty(t *testing.T) {
 	book := NewBook()
 
 	// act
-	_, err := book.Sample(1)
+	_, err := book.Sample(1, isActive(false), byScore())
 
 	// assert
 	assert.Equal(t, errBookEmpty, err)
@@ -53,7 +52,7 @@ func TestFoundSavesAddr(t *testing.T) {
 
 	// act
 	book.Found(addr)
-	entries, _ := book.Sample(1)
+	entries, _ := book.Sample(1, isActive(false), byScore())
 
 	// assert
 	assert.Equal(t, addr, entries[0])
@@ -67,7 +66,7 @@ func TestInvalidBlacklistsAddr(t *testing.T) {
 	// act
 	book.Invalid(addr)
 	book.Found(addr)
-	entries, _ := book.Sample(1)
+	entries, _ := book.Sample(1, isActive(false), byScore())
 
 	// assert
 	assert.Equal(t, 0, len(entries))
@@ -92,16 +91,17 @@ func TestSampleReturnsAddressWithHighestScoreWhenOtherConnectionsDropped(t *test
 	book.Success(addr2)
 	book.Error(addr2)
 	book.Success(addr2)
-	book.Error(addr2)
 
 	book.Success(addr3)
-	book.Error(addr3)
+	book.Dropped(addr3)
 	book.Success(addr3)
-	book.Error(addr3)
+	book.Dropped(addr3)
+	book.Success(addr3)
 
-	entries, _ := book.Sample(10, isActive(false), byScore(func(entry *entry) float64 { return math.Min((float64(entry.Success)/float64(entry.Failure))/100, 1) }))
+	entries, _ := book.Sample(10, isActive(true), byScore())
 
-	assert.Equal(t, addr3, entries[0], "Address %s with highest score is expected. Actual address %s", addr3, entries[0])
-	assert.Equal(t, addr2, entries[2])
-	assert.Equal(t, addr1, entries[1])
+	assert.Len(t, entries, 3)
+	assert.Equal(t, addr3, entries[0])
+	assert.Equal(t, addr2, entries[1])
+	assert.Equal(t, addr1, entries[2])
 }

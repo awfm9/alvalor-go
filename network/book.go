@@ -118,21 +118,9 @@ func (b *Book) Failure(address string) {
 }
 
 // Sample will return entries limited by count, filtered by specified filter function and sorted by specified sort function
-func (b *Book) Sample(count uint, params ...interface{}) ([]string, error) {
+func (b *Book) Sample(count uint, filter filterFunc, less sortFunc) ([]string, error) {
 	b.mutex.Lock()
 	defer b.mutex.Unlock()
-
-	// extract all the parameters for the sample
-	var filters []filterFunc
-	var sorts []sortFunc
-	for _, param := range params {
-		switch f := param.(type) {
-		case filterFunc:
-			filters = append(filters, f)
-		case sortFunc:
-			sorts = append(sorts, f)
-		}
-	}
 
 	// check if we have a valid count
 	if count == 0 {
@@ -142,10 +130,8 @@ func (b *Book) Sample(count uint, params ...interface{}) ([]string, error) {
 	// apply the filter
 	var entries []*entry
 	for _, e := range b.entries {
-		for _, filter := range filters {
-			if !filter(e) {
-				continue
-			}
+		if !filter(e) {
+			continue
 		}
 		entries = append(entries, e)
 	}
@@ -157,10 +143,8 @@ func (b *Book) Sample(count uint, params ...interface{}) ([]string, error) {
 
 	// sort the entries
 	sort.Slice(entries, func(i int, j int) bool {
-		for _, less := range sorts {
-			if less(entries[i], entries[j]) {
-				return true
-			}
+		if less(entries[i], entries[j]) {
+			return true
 		}
 		return false
 	})
