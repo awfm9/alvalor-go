@@ -32,7 +32,8 @@ func byScoreFunc(score func(*entry) float64) func(*entry, *entry) bool {
 
 func byScore() func(*entry, *entry) bool {
 	return byScoreFunc(func(entry *entry) float64 {
-		return math.Min((float64(entry.Success)/float64(entry.Failure))/100, 1)
+		score := math.Min((float64(entry.Success)/float64(entry.Failure))/100, 1)
+		return score
 	})
 }
 
