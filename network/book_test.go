@@ -108,20 +108,17 @@ func TestSampleReturnsAddressWithHighestScoreWhenOtherConnectionsDropped(t *test
 	addr3 := "156.23.41.24"
 
 	book.Found(addr1)
+	book.Success(addr1)
+	book.Error(addr1)
+	book.Success(addr1)
+	book.Error(addr1)
+
 	book.Found(addr2)
-	book.Found(addr3)
-
-	book.Success(addr1)
-	book.Error(addr1)
-	book.Success(addr1)
-	book.Error(addr1)
-
 	book.Success(addr2)
 	book.Error(addr2)
 	book.Success(addr2)
 
-	book.Success(addr3)
-	book.Dropped(addr3)
+	book.Found(addr3)
 	book.Success(addr3)
 	book.Dropped(addr3)
 	book.Success(addr3)
