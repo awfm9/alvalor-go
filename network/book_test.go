@@ -159,3 +159,19 @@ func TestSampleReturnsAddressWithHighestScoreWhenOtherConnectionsFailed(t *testi
 	assert.Equal(t, addr2, entries[1])
 	assert.Equal(t, addr1, entries[2])
 }
+
+func TestSampleReturnsOnlySpecifiedCountOfEntries(t *testing.T) {
+	// arrange
+	book := NewBook()
+	addr1 := "127.54.51.66"
+	addr2 := "120.55.58.86"
+	addr3 := "156.23.41.24"
+
+	book.Found(addr1)
+	book.Found(addr2)
+	book.Found(addr3)
+
+	entries, _ := book.Sample(1)
+
+	assert.Len(t, entries, 1)
+}
