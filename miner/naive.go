@@ -31,6 +31,7 @@ type Naive struct {
 	data   []byte
 	parent chan types.Header
 	delta  chan []byte
+	target chan []byte
 	stop   chan struct{}
 	out    chan types.Header
 }
@@ -40,6 +41,8 @@ func NewNaive(miner []byte, parent types.Header, delta []byte, target []byte) *N
 	nv := &Naive{
 		data:   make([]byte, 176),
 		parent: make(chan types.Header, 1),
+		delta:  make(chan []byte),
+		target: make(chan []byte),
 		stop:   make(chan struct{}),
 	}
 	copy(nv.data[0:32], parent.Hash())
@@ -71,6 +74,11 @@ func (nv *Naive) Parent(parent types.Header) {
 // Delta will update the block we try to mine with a new transaction root hash.
 func (nv *Naive) Delta(delta []byte) {
 	nv.delta <- delta
+}
+
+// Target will change the target difficulty of the block hash.
+func (nv *Naive) Target(target []byte) {
+	nv.target <- target
 }
 
 // mine is the mining loop.
