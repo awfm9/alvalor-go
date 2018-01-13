@@ -93,7 +93,7 @@ func (b *Book) Success(address string) {
 }
 
 // Dropped should be called by consumers whenever a peer was disconnected. It is
-// used to keep track of the active statub.
+// used to keep track of the active status.
 func (b *Book) Dropped(address string) {
 	b.mutex.Lock()
 	defer b.mutex.Unlock()
