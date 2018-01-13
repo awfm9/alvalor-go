@@ -104,9 +104,9 @@ func TestDroppedDeactivatesAddress(t *testing.T) {
 func TestSampleReturnsAddressWithHighestScoreWhenOtherConnectionsDropped(t *testing.T) {
 	// arrange
 	book := NewBook()
-	addr1 := "127.54.51.66"
-	addr2 := "120.55.58.86"
-	addr3 := "156.23.41.24"
+	addr1 := "127.54.51.66:1733"
+	addr2 := "120.55.58.86:3321"
+	addr3 := "156.23.41.24:1767"
 
 	book.Found(addr1)
 	book.Success(addr1)
@@ -135,9 +135,9 @@ func TestSampleReturnsAddressWithHighestScoreWhenOtherConnectionsDropped(t *test
 func TestSampleReturnsAddressWithHighestScoreWhenOtherConnectionsFailed(t *testing.T) {
 	// arrange
 	book := NewBook()
-	addr1 := "127.54.51.66"
-	addr2 := "120.55.58.86"
-	addr3 := "156.23.41.24"
+	addr1 := "127.54.51.66:1733"
+	addr2 := "120.55.58.86:3321"
+	addr3 := "156.23.41.24:1767"
 
 	book.Found(addr1)
 	book.Success(addr1)
@@ -164,9 +164,9 @@ func TestSampleReturnsAddressWithHighestScoreWhenOtherConnectionsFailed(t *testi
 func TestSampleReturnsAddressSortedRandomly(t *testing.T) {
 	// arrange
 	book := NewBook()
-	addr1 := "127.54.51.66"
-	addr2 := "120.55.58.86"
-	addr3 := "156.23.41.24"
+	addr1 := "127.54.51.66:1733"
+	addr2 := "120.55.58.86:3321"
+	addr3 := "156.23.41.24:1767"
 	addr4 := "177.7.44.62"
 
 	book.Found(addr1)
@@ -210,9 +210,9 @@ func TestSampleReturnsAddressSortedByHash(t *testing.T) {
 func TestSampleReturnsOnlySpecifiedCountOfEntries(t *testing.T) {
 	// arrange
 	book := NewBook()
-	addr1 := "127.54.51.66"
-	addr2 := "120.55.58.86"
-	addr3 := "156.23.41.24"
+	addr1 := "127.54.51.66:1733"
+	addr2 := "120.55.58.86:3321"
+	addr3 := "156.23.41.24:1767"
 
 	book.Found(addr1)
 	book.Found(addr2)
