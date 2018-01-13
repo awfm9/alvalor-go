@@ -28,7 +28,7 @@ func TestSampleReturnsErrorIfZeroCountPassed(t *testing.T) {
 	book := NewBook()
 
 	// act
-	_, err := book.Sample(0, isActive(false), byScore())
+	_, err := book.Sample(0)
 
 	// assert
 	assert.Equal(t, errInvalidCount, err)
@@ -39,7 +39,7 @@ func TestSampleReturnsErrorIfEmpty(t *testing.T) {
 	book := NewBook()
 
 	// act
-	_, err := book.Sample(1, isActive(false), byScore())
+	_, err := book.Sample(1)
 
 	// assert
 	assert.Equal(t, errBookEmpty, err)
@@ -52,7 +52,7 @@ func TestFoundSavesAddr(t *testing.T) {
 
 	// act
 	book.Found(addr)
-	entries, _ := book.Sample(1, isActive(false), byScore())
+	entries, _ := book.Sample(1)
 
 	// assert
 	assert.Equal(t, addr, entries[0])
@@ -66,7 +66,7 @@ func TestInvalidBlacklistsAddr(t *testing.T) {
 	// act
 	book.Invalid(addr)
 	book.Found(addr)
-	entries, _ := book.Sample(1, isActive(false), byScore())
+	entries, _ := book.Sample(1)
 
 	// assert
 	assert.Equal(t, 0, len(entries))

@@ -24,8 +24,6 @@ import (
 	"net"
 )
 
-type sortFunc func(*entry, *entry) bool
-
 func byScoreFunc(score func(*entry) float64) func(*entry, *entry) bool {
 	return func(e1 *entry, e2 *entry) bool {
 		return score(e1) > score(e2)
