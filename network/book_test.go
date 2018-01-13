@@ -160,6 +160,33 @@ func TestSampleReturnsAddressWithHighestScoreWhenOtherConnectionsFailed(t *testi
 	assert.Equal(t, addr1, entries[2])
 }
 
+func TestSampleReturnsAddressSortedRandomly(t *testing.T) {
+	// arrange
+	book := NewBook()
+	addr1 := "127.54.51.66"
+	addr2 := "120.55.58.86"
+	addr3 := "156.23.41.24"
+	addr4 := "177.7.44.62"
+
+	book.Found(addr1)
+	book.Found(addr2)
+	book.Found(addr3)
+	book.Found(addr4)
+
+	entries1, _ := book.Sample(10, byRandom())
+	entries2, _ := book.Sample(10, byRandom())
+
+	assert.Len(t, entries1, 4)
+	assert.Len(t, entries2, 4)
+	equalCount := 0
+	for i, value := range entries1 {
+		if entries2[i] == value {
+			equalCount++
+		}
+	}
+	assert.NotEqual(t, 4, equalCount)
+}
+
 func TestSampleReturnsOnlySpecifiedCountOfEntries(t *testing.T) {
 	// arrange
 	book := NewBook()
