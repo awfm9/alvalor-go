@@ -18,6 +18,7 @@
 package network
 
 import (
+	"crypto/md5"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -185,6 +186,25 @@ func TestSampleReturnsAddressSortedRandomly(t *testing.T) {
 		}
 	}
 	assert.NotEqual(t, 4, equalCount)
+}
+
+func TestSampleReturnsAddressSortedByHash(t *testing.T) {
+	// arrange
+	book := NewBook()
+	addr1 := "127.54.51.66:27015"
+	addr2 := "120.55.58.86:33523"
+
+	book.Found(addr1)
+	book.Found(addr2)
+
+	entries, _ := book.Sample(10, byHash(func(data []byte) []byte {
+		hasher := md5.New()
+		hasher.Write(data)
+		return hasher.Sum(nil)
+	}))
+
+	assert.Equal(t, addr1, entries[1])
+	assert.Equal(t, addr2, entries[0])
 }
 
 func TestSampleReturnsOnlySpecifiedCountOfEntries(t *testing.T) {
