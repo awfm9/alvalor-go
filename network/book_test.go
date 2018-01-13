@@ -69,7 +69,21 @@ func TestInvalidBlacklistsAddr(t *testing.T) {
 	entries, _ := book.Sample(1)
 
 	// assert
-	assert.Equal(t, 0, len(entries))
+	assert.Len(t, entries, 0)
+}
+
+func TestFailureDeactivatesAddress(t *testing.T) {
+	// arrange
+	book := NewBook()
+	addr := "17.55.14.66"
+
+	// act
+	book.Found(addr)
+	book.Failure(addr)
+	entries, _ := book.Sample(1, isActive(true))
+
+	// assert
+	assert.Len(t, entries, 0)
 }
 
 func TestSampleReturnsAddressWithHighestScoreWhenOtherConnectionsDropped(t *testing.T) {

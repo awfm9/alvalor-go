@@ -141,10 +141,11 @@ func (b *Book) Sample(count uint, params ...interface{}) ([]string, error) {
 
 	// apply the filter
 	var entries []*entry
+Outer:
 	for _, e := range b.entries {
 		for _, filter := range filters {
 			if !filter(e) {
-				continue
+				continue Outer
 			}
 		}
 		entries = append(entries, e)
