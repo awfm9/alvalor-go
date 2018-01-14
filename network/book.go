@@ -93,7 +93,7 @@ func (b *Book) Success(address string) {
 }
 
 // Dropped should be called by consumers whenever a peer was disconnected. It is
-// used to keep track of the active statub.
+// used to keep track of the active status.
 func (b *Book) Dropped(address string) {
 	b.mutex.Lock()
 	defer b.mutex.Unlock()
@@ -123,13 +123,13 @@ func (b *Book) Sample(count uint, params ...interface{}) ([]string, error) {
 	defer b.mutex.Unlock()
 
 	// extract all the parameters for the sample
-	var filters []filterFunc
-	var sorts []sortFunc
+	var filters []func(e *entry) bool
+	var sorts []func(*entry, *entry) bool
 	for _, param := range params {
 		switch f := param.(type) {
-		case filterFunc:
+		case func(e *entry) bool:
 			filters = append(filters, f)
-		case sortFunc:
+		case func(*entry, *entry) bool:
 			sorts = append(sorts, f)
 		}
 	}
@@ -141,10 +141,11 @@ func (b *Book) Sample(count uint, params ...interface{}) ([]string, error) {
 
 	// apply the filter
 	var entries []*entry
+Outer:
 	for _, e := range b.entries {
 		for _, filter := range filters {
 			if !filter(e) {
-				continue
+				continue Outer
 			}
 		}
 		entries = append(entries, e)
