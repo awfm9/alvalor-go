@@ -216,7 +216,10 @@ func (mgr *Manager) StartConnector() {
 // StartListener will start a listener on a given port.
 func (mgr *Manager) StartListener(stop <-chan struct{}) {
 	mgr.wg.Add(1)
-	go handleListening(mgr.log, mgr.wg, mgr.cfg, mgr, stop)
+	createListener := func(addr *net.TCPAddr) (Listener, error) {
+		return net.ListenTCP("tcp", addr)
+	}
+	go handleListening(mgr.log, mgr.wg, mgr.cfg, mgr, createListener, stop)
 }
 
 // StartAcceptor will start accepting an incoming connection.
