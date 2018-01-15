@@ -29,7 +29,9 @@ type listenerActions interface {
 	StartAcceptor(conn net.Conn)
 }
 
-func handleListening(log zerolog.Logger, wg *sync.WaitGroup, cfg *Config, actions listenerActions, stop <-chan struct{}) {
+type listenFunc func(addr *net.TCPAddr) (Listener, error)
+
+func handleListening(log zerolog.Logger, wg *sync.WaitGroup, cfg *Config, actions listenerActions, listener listenFunc, stop <-chan struct{}) {
 	defer wg.Done()
 
 	// extract the config parameters we are interested in
@@ -48,7 +50,8 @@ func handleListening(log zerolog.Logger, wg *sync.WaitGroup, cfg *Config, action
 		log.Error().Err(err).Msg("could not resolve listen address")
 		return
 	}
-	ln, err := net.ListenTCP("tcp", addr)
+
+	ln, err := listener(addr)
 	if err != nil {
 		log.Error().Err(err).Msg("could not listen on address")
 		return
@@ -66,7 +69,7 @@ Loop:
 
 		// if not try to accept a new connection with a low enough timeout so
 		// quiting doesn't block too long due to long for loop iterations
-		ln.SetDeadline(time.Now().Add(time.Millisecond * 100))
+		ln.SetDeadline(time.Millisecond * 100)
 		var conn net.Conn
 		conn, err = ln.Accept()
 		if netErr, ok := err.(*net.OpError); ok && netErr.Timeout() {
@@ -89,4 +92,10 @@ Loop:
 		log.Error().Err(err).Msg("could not close listener")
 		return
 	}
+}
+
+type Listener interface {
+	Accept() (net.Conn, error)
+	Close() error
+	SetDeadline(time.Duration)
 }
