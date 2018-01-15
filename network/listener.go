@@ -69,7 +69,7 @@ Loop:
 
 		// if not try to accept a new connection with a low enough timeout so
 		// quiting doesn't block too long due to long for loop iterations
-		ln.SetDeadline(time.Millisecond * 100)
+		ln.SetDeadline(time.Now().Add(time.Millisecond * 100))
 		var conn net.Conn
 		conn, err = ln.Accept()
 		if netErr, ok := err.(*net.OpError); ok && netErr.Timeout() {
@@ -97,5 +97,5 @@ Loop:
 type Listener interface {
 	Accept() (net.Conn, error)
 	Close() error
-	SetDeadline(time.Duration)
+	SetDeadline(time.Time) error
 }

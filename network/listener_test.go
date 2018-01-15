@@ -56,7 +56,7 @@ func (suite *ListenerTestSuite) TestHandleListeningDoesNotStartAcceptorIfCantAcc
 	stop := make(chan struct{})
 
 	listener := &listenerMock{}
-	listener.On("SetDeadline", time.Millisecond*100)
+	listener.On("SetDeadline", mock.Anything).Return(nil)
 	//err := &net.OpError{Op: "read", Err: errors.New("Error while accepting connection")}
 	listener.On("Accept").Return(conn, errors.New("Error while accepting connection"))
 	listener.On("Close").Return(nil)
@@ -83,7 +83,7 @@ func (suite *ListenerTestSuite) TestHandleListeningStartsAcceptor() {
 	stop := make(chan struct{})
 
 	listener := &listenerMock{}
-	listener.On("SetDeadline", time.Millisecond*100)
+	listener.On("SetDeadline", mock.Anything).Return(nil)
 	listener.On("Accept").Return(conn, nil)
 	listener.On("Close").Return(nil)
 
@@ -126,6 +126,7 @@ func (listener *listenerMock) Close() error {
 	return args.Error(0)
 }
 
-func (listener *listenerMock) SetDeadline(time time.Duration) {
-	listener.Called(time)
+func (listener *listenerMock) SetDeadline(time time.Time) error {
+	args := listener.Called(time)
+	return args.Error(0)
 }
