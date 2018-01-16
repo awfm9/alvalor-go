@@ -31,7 +31,7 @@ type listenerActions interface {
 
 type listenFunc func(addr *net.TCPAddr) (Listener, error)
 
-func handleListening(log zerolog.Logger, wg *sync.WaitGroup, cfg *Config, actions listenerActions, listener listenFunc, stop <-chan struct{}) {
+func handleListening(log zerolog.Logger, wg *sync.WaitGroup, cfg *Config, actions listenerActions, listen listenFunc, stop <-chan struct{}) {
 	defer wg.Done()
 
 	// extract the config parameters we are interested in
@@ -51,7 +51,7 @@ func handleListening(log zerolog.Logger, wg *sync.WaitGroup, cfg *Config, action
 		return
 	}
 
-	ln, err := listener(addr)
+	ln, err := listen(addr)
 	if err != nil {
 		log.Error().Err(err).Msg("could not listen on address")
 		return
@@ -94,6 +94,7 @@ Loop:
 	}
 }
 
+// Listener represents a wrapper around TCP listener for testing purposes.
 type Listener interface {
 	Accept() (net.Conn, error)
 	Close() error

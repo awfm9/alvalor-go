@@ -18,7 +18,6 @@
 package network
 
 import (
-	"errors"
 	"sort"
 	"sync"
 )
@@ -29,14 +28,6 @@ type Book struct {
 	blacklist map[string]struct{}
 	entries   map[string]*entry
 }
-
-// enumeration of different errors that we can return from address book functionb.
-var (
-	errAddrInvalid  = errors.New("invalid address")
-	errAddrUnknown  = errors.New("unknown address")
-	errBookEmpty    = errors.New("book empty")
-	errInvalidCount = errors.New("invalid address count")
-)
 
 // NewBook creates a new default initialized instance of a simple address book.
 func NewBook() *Book {
@@ -118,7 +109,7 @@ func (b *Book) Failure(address string) {
 }
 
 // Sample will return entries limited by count, filtered by specified filter function and sorted by specified sort function
-func (b *Book) Sample(count uint, params ...interface{}) ([]string, error) {
+func (b *Book) Sample(count uint, params ...interface{}) []string {
 	b.mutex.Lock()
 	defer b.mutex.Unlock()
 
@@ -134,11 +125,6 @@ func (b *Book) Sample(count uint, params ...interface{}) ([]string, error) {
 		}
 	}
 
-	// check if we have a valid count
-	if count == 0 {
-		return nil, errInvalidCount
-	}
-
 	// apply the filter
 	var entries []*entry
 Outer:
@@ -149,11 +135,6 @@ Outer:
 			}
 		}
 		entries = append(entries, e)
-	}
-
-	// check if we have any entries that fulfill the criteria
-	if len(entries) == 0 {
-		return nil, errBookEmpty
 	}
 
 	// sort the entries
@@ -177,17 +158,5 @@ Outer:
 		addresses = append(addresses, e.Address)
 	}
 
-	return addresses, nil
-}
-
-// slice method.
-func (b *Book) slice(filter func(*entry) bool) []*entry {
-	entries := make([]*entry, 0)
-	for _, e := range b.entries {
-		if !filter(e) {
-			continue
-		}
-		entries = append(entries, e)
-	}
-	return entries
+	return addresses
 }
