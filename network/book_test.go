@@ -32,8 +32,8 @@ func TestNewBook(t *testing.T) {
 
 	book := NewBook()
 
-	assert.NotNil(t, book.entries, "entries map not initialized")
-	assert.NotNil(t, book.blacklist, "blacklist map not initialized")
+	assert.NotNil(t, book.entries, "Entries map not initialized")
+	assert.NotNil(t, book.blacklist, "Blacklist map not initialized")
 }
 
 func TestFound(t *testing.T) {
@@ -43,13 +43,13 @@ func TestFound(t *testing.T) {
 	address := "17.55.14.66:7732"
 	book.Found(address)
 	_, known := book.entries[address]
-	assert.True(t, known, "found didn't add valid address")
+	assert.True(t, known, "Found didn't add valid address to entries")
 
 	address = "123.32.1.99:1373"
 	book.blacklist[address] = struct{}{}
 	book.Found(address)
 	_, known = book.entries[address]
-	assert.False(t, known, "found added blacklisted address")
+	assert.False(t, known, "Found added blacklisted address to entries")
 }
 
 func TestInvalid(t *testing.T) {
@@ -59,13 +59,13 @@ func TestInvalid(t *testing.T) {
 	address := "17.55.14.66:7732"
 	book.Invalid(address)
 	_, blacklisted := book.blacklist[address]
-	assert.True(t, blacklisted, "invalid didn't blacklist address")
+	assert.True(t, blacklisted, "Invalid didn't blacklist address")
 
 	address = "123.32.1.99:1373"
 	book.entries[address] = &entry{}
 	book.Invalid(address)
 	_, known := book.entries[address]
-	assert.False(t, known, "invalid didn't remove address from entries")
+	assert.False(t, known, "Invalid didn't remove address from entries")
 }
 
 func TestError(t *testing.T) {
@@ -74,12 +74,12 @@ func TestError(t *testing.T) {
 
 	address := "17.55.14.66:7732"
 	book.Error(address)
-	assert.Len(t, book.entries, 0, "error on unknown address modified state")
+	assert.Len(t, book.entries, 0, "Error on unknown address modified entries")
 
 	e := &entry{Failure: 0}
 	book.entries[address] = e
 	book.Error(address)
-	assert.Equal(t, e.Failure, 1, "error did not increase failure counter")
+	assert.Equal(t, e.Failure, 1, "Error did not increase failure counter on entry")
 }
 
 func TestSuccess(t *testing.T) {
@@ -88,13 +88,13 @@ func TestSuccess(t *testing.T) {
 
 	address := "17.55.14.66:7732"
 	book.Success(address)
-	assert.Len(t, book.entries, 0, "success on unknown address modified state")
+	assert.Len(t, book.entries, 0, "Success on unknown address modified entries")
 
 	e := &entry{Success: 0, Active: false}
 	book.entries[address] = e
 	book.Success(address)
-	assert.Equal(t, e.Success, 1, "success did not increase success counter")
-	assert.True(t, e.Active, "success did not change entry to active")
+	assert.Equal(t, e.Success, 1, "Success did not increase success counter on entry")
+	assert.True(t, e.Active, "Success did not change entry to active")
 }
 
 func TestDropped(t *testing.T) {
@@ -103,12 +103,12 @@ func TestDropped(t *testing.T) {
 
 	address := "17.55.14.66:7732"
 	book.Dropped(address)
-	assert.Len(t, book.entries, 0, "dropped on unknown address modified state")
+	assert.Len(t, book.entries, 0, "Dropped on unknown address modified entries")
 
 	e := &entry{Active: true}
 	book.entries[address] = e
 	book.Dropped(address)
-	assert.False(t, e.Active, "dropped did not change entry to inactive")
+	assert.False(t, e.Active, "Dropped did not change entry to inactive")
 }
 
 func TestFailure(t *testing.T) {
@@ -117,13 +117,13 @@ func TestFailure(t *testing.T) {
 
 	address := "17.55.14.66:7732"
 	book.Failure(address)
-	assert.Len(t, book.entries, 0, "failure on unknown address modified state")
+	assert.Len(t, book.entries, 0, "Failure on unknown address modified entries")
 
 	e := &entry{Failure: 0, Active: true}
 	book.entries[address] = e
 	book.Failure(address)
-	assert.Equal(t, e.Failure, 1, "failure did not increase failure counter")
-	assert.False(t, e.Active, "failure did not change entry to inactive")
+	assert.Equal(t, e.Failure, 1, "Failure did not increase failure counter on entry")
+	assert.False(t, e.Active, "Failure did not change entry to inactive")
 }
 
 func TestSample(t *testing.T) {
@@ -146,25 +146,25 @@ func TestSample(t *testing.T) {
 	book.entries[addr7] = &entry{Address: addr7, Success: 0, Failure: 1, Active: true}  // -1
 
 	actual := book.Sample(6)
-	assert.Len(t, actual, 6, "undersampling returns invalid count")
+	assert.Len(t, actual, 6, "Undersampling returns invalid count")
 
 	actual = book.Sample(7)
-	assert.Len(t, actual, 7, "exact sampling returns invalid count")
+	assert.Len(t, actual, 7, "Exact sampling returns invalid count")
 
 	actual = book.Sample(8)
-	assert.Len(t, actual, 7, "oversampling returns invalid count")
+	assert.Len(t, actual, 7, "Oversampling returns invalid count")
 
 	actual = book.Sample(7, isAny())
 	expected := []string{addr1, addr2, addr3, addr4, addr5, addr6, addr7}
-	assert.ElementsMatch(t, expected, actual, "is any filter returns wrong elements")
+	assert.ElementsMatch(t, expected, actual, "Is any filter returns wrong elements")
 
 	actual = book.Sample(7, isActive(true))
 	expected = []string{addr1, addr3, addr5, addr7}
-	assert.ElementsMatch(t, expected, actual, "is active filter returns wrong elements")
+	assert.ElementsMatch(t, expected, actual, "Is active filter returns wrong elements")
 
 	actual = book.Sample(7, byScore())
 	expected = []string{addr6, addr5, addr1, addr4, addr7, addr3, addr2}
-	assert.Equal(t, expected, actual, "by score sort returns wrong ordering")
+	assert.Equal(t, expected, actual, "By score sort returns wrong ordering")
 
 	actual = book.Sample(7, byHash(func(data []byte) []byte {
 		hasher := md5.New()
@@ -179,7 +179,7 @@ func TestSample(t *testing.T) {
 		h2 := md5.Sum([]byte(ip2))
 		return bytes.Compare(h1[:], h2[:]) < 0
 	})
-	assert.Equal(t, expected, actual, "by hash sort has wrong order")
+	assert.Equal(t, expected, actual, "By hash sort returns wrong ordering")
 
 	mismatch := false
 	for i := 0; i < 100; i++ {
@@ -190,5 +190,5 @@ func TestSample(t *testing.T) {
 			break
 		}
 	}
-	assert.True(t, mismatch, "by random sorts all equal")
+	assert.True(t, mismatch, "By random sort always returns same ordering")
 }
