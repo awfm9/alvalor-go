@@ -18,36 +18,23 @@
 package network
 
 import (
-	"bytes"
-	"math/rand"
-	"net"
+	"errors"
+	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
-func byScoreFunc(score func(*entry) float64) func(*entry, *entry) bool {
-	return func(e1 *entry, e2 *entry) bool {
-		return score(e1) > score(e2)
-	}
-}
+func TestIsClosedErr(t *testing.T) {
 
-func byScore() func(*entry, *entry) bool {
-	return byScoreFunc(func(entry *entry) float64 {
-		score := float64(entry.Success - entry.Failure)
-		return score
-	})
-}
+	var err error
+	ok := isClosedErr(err)
+	assert.False(t, ok, "Nil error is closed error")
 
-func byRandom() func(*entry, *entry) bool {
-	return func(*entry, *entry) bool {
-		return rand.Int()%2 == 0
-	}
-}
+	err = errors.New("something")
+	ok = isClosedErr(err)
+	assert.False(t, ok, "Something error is closed error")
 
-func byHash(hash func([]byte) []byte) func(*entry, *entry) bool {
-	return func(e1 *entry, e2 *entry) bool {
-		ip1, _, _ := net.SplitHostPort(e1.Address)
-		ip2, _, _ := net.SplitHostPort(e2.Address)
-		h1 := hash([]byte(ip1))
-		h2 := hash([]byte(ip2))
-		return bytes.Compare(h1[:], h2[:]) < 0
-	}
+	err = errors.New("some use of closed network connection thing")
+	ok = isClosedErr(err)
+	assert.True(t, ok, "Closed error is not closed error")
 }

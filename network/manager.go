@@ -186,27 +186,27 @@ func (mgr *Manager) ReleaseSlot() {
 
 // GetAddress returns a random address for connection.
 func (mgr *Manager) GetAddress() (string, error) {
-	addresses, err := mgr.book.Sample(1, isActive(false), byRandom())
-	if err != nil {
-		return "", errors.Wrap(err, "could not get address")
+	addresses := mgr.book.Sample(1, isActive(false), byRandom())
+	if len(addresses) == 0 {
+		return "", errors.New("no inactive addresses in book")
 	}
 	return addresses[0], nil
 }
 
 // AddressSample returns a random address sample.
 func (mgr *Manager) AddressSample() ([]string, error) {
-	addresses, err := mgr.book.Sample(16, isAny(), byRandom())
-	if err != nil {
-		return nil, errors.Wrap(err, "could not get addresses")
+	addresses := mgr.book.Sample(16, isAny(), byRandom())
+	if len(addresses) == 0 {
+		return nil, errors.New("no addresses in book")
 	}
 	return addresses, nil
 }
 
 // StartConnector will try to launch a new connection attempt.
 func (mgr *Manager) StartConnector() {
-	addresses, err := mgr.book.Sample(1, isActive(false), byRandom())
-	if err != nil {
-		mgr.log.Error().Err(err).Msg("could not get address for connector")
+	addresses := mgr.book.Sample(1, isActive(false), byRandom())
+	if len(addresses) == 0 {
+		mgr.log.Error().Msg("could not get address for connector")
 		return
 	}
 	mgr.wg.Add(1)

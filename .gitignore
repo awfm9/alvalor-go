@@ -2,3 +2,4 @@
 /alvalor
 /alvalor-go
 /vendor/
+*.out

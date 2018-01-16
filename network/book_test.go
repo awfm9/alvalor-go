@@ -18,207 +18,177 @@
 package network
 
 import (
+	"bytes"
 	"crypto/md5"
+	"net"
+	"reflect"
+	"sort"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 )
 
-func TestSampleReturnsErrorIfZeroCountPassed(t *testing.T) {
-	// arrange
+func TestNewBook(t *testing.T) {
+
 	book := NewBook()
 
-	// act
-	_, err := book.Sample(0)
-
-	// assert
-	assert.Equal(t, errInvalidCount, err)
+	assert.NotNil(t, book.entries, "Entries map not initialized")
+	assert.NotNil(t, book.blacklist, "Blacklist map not initialized")
 }
 
-func TestSampleReturnsErrorIfEmpty(t *testing.T) {
-	// arrange
+func TestFound(t *testing.T) {
+
 	book := NewBook()
 
-	// act
-	_, err := book.Sample(1)
+	address := "192.0.2.1:1337"
+	book.Found(address)
+	_, known := book.entries[address]
+	assert.True(t, known, "Found didn't add valid address to entries")
 
-	// assert
-	assert.Equal(t, errBookEmpty, err)
+	address = "192.0.2.2:1337"
+	book.blacklist[address] = struct{}{}
+	book.Found(address)
+	_, known = book.entries[address]
+	assert.False(t, known, "Found added blacklisted address to entries")
 }
 
-func TestFoundSavesAddr(t *testing.T) {
-	// arrange
+func TestInvalid(t *testing.T) {
+
 	book := NewBook()
-	addr := "17.55.14.66:7732"
 
-	// act
-	book.Found(addr)
-	entries, _ := book.Sample(1)
+	address := "192.0.2.1:1337"
+	book.Invalid(address)
+	_, blacklisted := book.blacklist[address]
+	assert.True(t, blacklisted, "Invalid didn't blacklist address")
 
-	// assert
-	assert.Equal(t, addr, entries[0])
+	address = "192.0.2.2:1337"
+	book.entries[address] = &entry{}
+	book.Invalid(address)
+	_, known := book.entries[address]
+	assert.False(t, known, "Invalid didn't remove address from entries")
 }
 
-func TestInvalidBlacklistsAddr(t *testing.T) {
-	// arrange
+func TestError(t *testing.T) {
+
 	book := NewBook()
-	addr := "17.55.14.66:7732"
 
-	// act
-	book.Invalid(addr)
-	book.Found(addr)
-	entries, _ := book.Sample(1)
+	address := "192.0.2.1:1337"
+	book.Error(address)
+	assert.Len(t, book.entries, 0, "Error on unknown address modified entries")
 
-	// assert
-	assert.Len(t, entries, 0)
+	e := &entry{Failure: 0}
+	book.entries[address] = e
+	book.Error(address)
+	assert.Equal(t, e.Failure, 1, "Error did not increase failure counter on entry")
 }
 
-func TestFailureDeactivatesAddress(t *testing.T) {
-	// arrange
+func TestSuccess(t *testing.T) {
+
 	book := NewBook()
-	addr := "17.55.14.66:7732"
 
-	// act
-	book.Found(addr)
-	book.Failure(addr)
-	entries, _ := book.Sample(1, isActive(true))
+	address := "192.0.2.1:1337"
+	book.Success(address)
+	assert.Len(t, book.entries, 0, "Success on unknown address modified entries")
 
-	// assert
-	assert.Len(t, entries, 0)
+	e := &entry{Success: 0, Active: false}
+	book.entries[address] = e
+	book.Success(address)
+	assert.Equal(t, e.Success, 1, "Success did not increase success counter on entry")
+	assert.True(t, e.Active, "Success did not change entry to active")
 }
 
-func TestDroppedDeactivatesAddress(t *testing.T) {
-	// arrange
+func TestDropped(t *testing.T) {
+
 	book := NewBook()
-	addr := "17.55.14.66:7732"
 
-	// act
-	book.Found(addr)
-	book.Dropped(addr)
-	entries, _ := book.Sample(1, isActive(true))
+	address := "192.0.2.1:1337"
+	book.Dropped(address)
+	assert.Len(t, book.entries, 0, "Dropped on unknown address modified entries")
 
-	// assert
-	assert.Len(t, entries, 0)
+	e := &entry{Active: true}
+	book.entries[address] = e
+	book.Dropped(address)
+	assert.False(t, e.Active, "Dropped did not change entry to inactive")
 }
 
-func TestSampleReturnsAddressWithHighestScoreWhenOtherConnectionsDropped(t *testing.T) {
-	// arrange
+func TestFailure(t *testing.T) {
+
 	book := NewBook()
-	addr1 := "127.54.51.66:1733"
-	addr2 := "120.55.58.86:3321"
-	addr3 := "156.23.41.24:1767"
 
-	book.Found(addr1)
-	book.Success(addr1)
-	book.Error(addr1)
-	book.Success(addr1)
-	book.Error(addr1)
+	address := "192.0.2.1:1337"
+	book.Failure(address)
+	assert.Len(t, book.entries, 0, "Failure on unknown address modified entries")
 
-	book.Found(addr2)
-	book.Success(addr2)
-	book.Error(addr2)
-	book.Success(addr2)
-
-	book.Found(addr3)
-	book.Success(addr3)
-	book.Dropped(addr3)
-	book.Success(addr3)
-
-	entries, _ := book.Sample(10, isActive(true), byScore())
-
-	assert.Len(t, entries, 3)
-	assert.Equal(t, addr3, entries[0])
-	assert.Equal(t, addr2, entries[1])
-	assert.Equal(t, addr1, entries[2])
+	e := &entry{Failure: 0, Active: true}
+	book.entries[address] = e
+	book.Failure(address)
+	assert.Equal(t, e.Failure, 1, "Failure did not increase failure counter on entry")
+	assert.False(t, e.Active, "Failure did not change entry to inactive")
 }
 
-func TestSampleReturnsAddressWithHighestScoreWhenOtherConnectionsFailed(t *testing.T) {
-	// arrange
+func TestSample(t *testing.T) {
+
 	book := NewBook()
-	addr1 := "127.54.51.66:1733"
-	addr2 := "120.55.58.86:3321"
-	addr3 := "156.23.41.24:1767"
+	addr1 := "192.0.2.1:1337"
+	addr2 := "192.0.2.2:1337"
+	addr3 := "192.0.2.3:1337"
+	addr4 := "192.0.2.4:1337"
+	addr5 := "192.0.2.5:1337"
+	addr6 := "192.0.2.6:1337"
+	addr7 := "192.0.2.7:1337"
 
-	book.Found(addr1)
-	book.Success(addr1)
-	book.Failure(addr1)
-	book.Success(addr1)
-	book.Failure(addr1)
+	book.entries[addr1] = &entry{Address: addr1, Success: 1, Failure: 0, Active: true}  // +1
+	book.entries[addr2] = &entry{Address: addr2, Success: 0, Failure: 7, Active: false} // -7
+	book.entries[addr3] = &entry{Address: addr3, Success: 2, Failure: 5, Active: true}  // -3
+	book.entries[addr4] = &entry{Address: addr4, Success: 0, Failure: 0, Active: false} // +0
+	book.entries[addr5] = &entry{Address: addr5, Success: 5, Failure: 2, Active: true}  // +3
+	book.entries[addr6] = &entry{Address: addr6, Success: 5, Failure: 0, Active: false} // +5
+	book.entries[addr7] = &entry{Address: addr7, Success: 0, Failure: 1, Active: true}  // -1
 
-	book.Found(addr2)
-	book.Success(addr2)
-	book.Failure(addr2)
-	book.Success(addr2)
+	actual := book.Sample(6)
+	assert.Len(t, actual, 6, "Undersampling returns invalid count")
 
-	book.Found(addr3)
-	book.Success(addr3)
+	actual = book.Sample(7)
+	assert.Len(t, actual, 7, "Exact sampling returns invalid count")
 
-	entries, _ := book.Sample(10, isAny(), byScore())
+	actual = book.Sample(8)
+	assert.Len(t, actual, 7, "Oversampling returns invalid count")
 
-	assert.Len(t, entries, 3)
-	assert.Equal(t, addr3, entries[0])
-	assert.Equal(t, addr2, entries[1])
-	assert.Equal(t, addr1, entries[2])
-}
+	actual = book.Sample(7, isAny())
+	expected := []string{addr1, addr2, addr3, addr4, addr5, addr6, addr7}
+	assert.ElementsMatch(t, expected, actual, "Is any filter returns wrong elements")
 
-func TestSampleReturnsAddressSortedRandomly(t *testing.T) {
-	// arrange
-	book := NewBook()
-	addr1 := "127.54.51.66:1733"
-	addr2 := "120.55.58.86:3321"
-	addr3 := "156.23.41.24:1767"
-	addr4 := "177.7.44.62"
+	actual = book.Sample(7, isActive(true))
+	expected = []string{addr1, addr3, addr5, addr7}
+	assert.ElementsMatch(t, expected, actual, "Is active filter returns wrong elements")
 
-	book.Found(addr1)
-	book.Found(addr2)
-	book.Found(addr3)
-	book.Found(addr4)
+	actual = book.Sample(7, byScore())
+	expected = []string{addr6, addr5, addr1, addr4, addr7, addr3, addr2}
+	assert.Equal(t, expected, actual, "By score sort returns wrong ordering")
 
-	entries1, _ := book.Sample(10, byRandom())
-	entries2, _ := book.Sample(10, byRandom())
-
-	assert.Len(t, entries1, 4)
-	assert.Len(t, entries2, 4)
-	equalCount := 0
-	for i, value := range entries1 {
-		if entries2[i] == value {
-			equalCount++
-		}
-	}
-	assert.NotEqual(t, 4, equalCount)
-}
-
-func TestSampleReturnsAddressSortedByHash(t *testing.T) {
-	// arrange
-	book := NewBook()
-	addr1 := "127.54.51.66:27015"
-	addr2 := "120.55.58.86:33523"
-
-	book.Found(addr1)
-	book.Found(addr2)
-
-	entries, _ := book.Sample(10, byHash(func(data []byte) []byte {
+	actual = book.Sample(7, byHash(func(data []byte) []byte {
 		hasher := md5.New()
 		hasher.Write(data)
 		return hasher.Sum(nil)
 	}))
+	expected = []string{addr1, addr2, addr3, addr4, addr5, addr6, addr7}
+	sort.Slice(expected, func(i int, j int) bool {
+		ip1, _, _ := net.SplitHostPort(expected[i])
+		ip2, _, _ := net.SplitHostPort(expected[j])
+		h1 := md5.Sum([]byte(ip1))
+		h2 := md5.Sum([]byte(ip2))
+		return bytes.Compare(h1[:], h2[:]) < 0
+	})
+	assert.Equal(t, expected, actual, "By hash sort returns wrong ordering")
 
-	assert.Equal(t, addr1, entries[1])
-	assert.Equal(t, addr2, entries[0])
-}
-
-func TestSampleReturnsOnlySpecifiedCountOfEntries(t *testing.T) {
-	// arrange
-	book := NewBook()
-	addr1 := "127.54.51.66:1733"
-	addr2 := "120.55.58.86:3321"
-	addr3 := "156.23.41.24:1767"
-
-	book.Found(addr1)
-	book.Found(addr2)
-	book.Found(addr3)
-
-	entries, _ := book.Sample(1)
-
-	assert.Len(t, entries, 1)
+	mismatch := false
+	for i := 0; i < 100; i++ {
+		sample1 := book.Sample(7, byRandom())
+		sample2 := book.Sample(7, byRandom())
+		if !reflect.DeepEqual(sample1, sample2) {
+			mismatch = true
+			break
+		}
+	}
+	assert.True(t, mismatch, "By random sort always returns same ordering")
 }
