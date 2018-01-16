@@ -40,12 +40,12 @@ func TestFound(t *testing.T) {
 
 	book := NewBook()
 
-	address := "17.55.14.66:7732"
+	address := "192.0.2.1:1337"
 	book.Found(address)
 	_, known := book.entries[address]
 	assert.True(t, known, "Found didn't add valid address to entries")
 
-	address = "123.32.1.99:1373"
+	address = "192.0.2.2:1337"
 	book.blacklist[address] = struct{}{}
 	book.Found(address)
 	_, known = book.entries[address]
@@ -56,12 +56,12 @@ func TestInvalid(t *testing.T) {
 
 	book := NewBook()
 
-	address := "17.55.14.66:7732"
+	address := "192.0.2.1:1337"
 	book.Invalid(address)
 	_, blacklisted := book.blacklist[address]
 	assert.True(t, blacklisted, "Invalid didn't blacklist address")
 
-	address = "123.32.1.99:1373"
+	address = "192.0.2.2:1337"
 	book.entries[address] = &entry{}
 	book.Invalid(address)
 	_, known := book.entries[address]
@@ -72,7 +72,7 @@ func TestError(t *testing.T) {
 
 	book := NewBook()
 
-	address := "17.55.14.66:7732"
+	address := "192.0.2.1:1337"
 	book.Error(address)
 	assert.Len(t, book.entries, 0, "Error on unknown address modified entries")
 
@@ -86,7 +86,7 @@ func TestSuccess(t *testing.T) {
 
 	book := NewBook()
 
-	address := "17.55.14.66:7732"
+	address := "192.0.2.1:1337"
 	book.Success(address)
 	assert.Len(t, book.entries, 0, "Success on unknown address modified entries")
 
@@ -101,7 +101,7 @@ func TestDropped(t *testing.T) {
 
 	book := NewBook()
 
-	address := "17.55.14.66:7732"
+	address := "192.0.2.1:1337"
 	book.Dropped(address)
 	assert.Len(t, book.entries, 0, "Dropped on unknown address modified entries")
 
@@ -115,7 +115,7 @@ func TestFailure(t *testing.T) {
 
 	book := NewBook()
 
-	address := "17.55.14.66:7732"
+	address := "192.0.2.1:1337"
 	book.Failure(address)
 	assert.Len(t, book.entries, 0, "Failure on unknown address modified entries")
 
