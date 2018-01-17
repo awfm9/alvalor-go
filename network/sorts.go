@@ -23,9 +23,9 @@ import (
 	"net"
 )
 
-func byScoreFunc(score func(*entry) float64) func(*entry, *entry) bool {
-	return func(e1 *entry, e2 *entry) bool {
-		return score(e1) > score(e2)
+func byRandom() func(*entry, *entry) bool {
+	return func(*entry, *entry) bool {
+		return rand.Int()%2 == 0
 	}
 }
 
@@ -36,13 +36,13 @@ func byScore() func(*entry, *entry) bool {
 	})
 }
 
-func byRandom() func(*entry, *entry) bool {
-	return func(*entry, *entry) bool {
-		return rand.Int()%2 == 0
+func byScoreFunc(score func(*entry) float64) func(*entry, *entry) bool {
+	return func(e1 *entry, e2 *entry) bool {
+		return score(e1) > score(e2)
 	}
 }
 
-func byHash(hash func([]byte) []byte) func(*entry, *entry) bool {
+func byHashFunc(hash func([]byte) []byte) func(*entry, *entry) bool {
 	return func(e1 *entry, e2 *entry) bool {
 		ip1, _, _ := net.SplitHostPort(e1.Address)
 		ip2, _, _ := net.SplitHostPort(e2.Address)

@@ -166,7 +166,7 @@ func TestSample(t *testing.T) {
 	expected = []string{addr6, addr5, addr1, addr4, addr7, addr3, addr2}
 	assert.Equal(t, expected, actual, "By score sort returns wrong ordering")
 
-	actual = book.Sample(7, byHash(func(data []byte) []byte {
+	actual = book.Sample(7, byHashFunc(func(data []byte) []byte {
 		hasher := md5.New()
 		hasher.Write(data)
 		return hasher.Sum(nil)
