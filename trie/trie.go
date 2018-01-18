@@ -17,17 +17,18 @@
 
 package trie
 
-import "github.com/alvalor/alvalor-go/hasher"
+import "hash"
 
 // Trie represents our own implementation of the patricia merkle trie as specified in the Ethereum
 // yellow paper, with a few simplications due to the simpler structure of the Alvalor blockchain.
 type Trie struct {
+	h    hash.Hash
 	root node
 }
 
 // New creates a new empty trie with no state.
-func New() *Trie {
-	t := &Trie{}
+func New(h hash.Hash) *Trie {
+	t := &Trie{h: h}
 	return t
 }
 
@@ -119,7 +120,7 @@ func (t *Trie) Get(key []byte) ([]byte, bool) {
 			}
 			return nil, false
 		case valueNode:
-			return n.Hash(), true
+			return []byte(n), true
 		case nil:
 			return nil, false
 		}
@@ -212,8 +213,36 @@ Compact:
 // the root is not initialized, it will return the hash of an empty byte array to uniquely represent
 // a trie without state.
 func (t *Trie) Hash() []byte {
-	if t.root == nil {
-		return hasher.Zero256
+	return t.nodeHash(t.root)
+}
+
+// nodeHash will return the hash of a given node.
+func (t *Trie) nodeHash(node node) []byte {
+	switch n := node.(type) {
+	case *fullNode:
+		t.h.Reset()
+		zero := t.h.Sum(nil)
+		t.h.Reset()
+		for _, child := range n.children {
+			if child == nil {
+				_, _ = t.h.Write(zero)
+				continue
+			}
+			_, _ = t.h.Write(t.nodeHash(child))
+		}
+		return t.h.Sum(nil)
+	case *shortNode:
+		t.h.Reset()
+		t.h.Write(n.key)
+		t.h.Write(t.nodeHash(n.child))
+		return t.h.Sum(nil)
+	case valueNode:
+		return []byte(n)
+	case nil:
+		t.h.Reset()
+		zero := t.h.Sum(nil)
+		return zero
+	default:
+		panic("invalid node type")
 	}
-	return t.root.Hash()
 }
