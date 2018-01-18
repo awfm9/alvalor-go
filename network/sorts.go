@@ -19,13 +19,14 @@ package network
 
 import (
 	"bytes"
+	"hash"
 	"math/rand"
 	"net"
 )
 
-func byScoreFunc(score func(*entry) float64) func(*entry, *entry) bool {
-	return func(e1 *entry, e2 *entry) bool {
-		return score(e1) > score(e2)
+func byRandom() func(*entry, *entry) bool {
+	return func(*entry, *entry) bool {
+		return rand.Int()%2 == 0
 	}
 }
 
@@ -36,18 +37,22 @@ func byScore() func(*entry, *entry) bool {
 	})
 }
 
-func byRandom() func(*entry, *entry) bool {
-	return func(*entry, *entry) bool {
-		return rand.Int()%2 == 0
+func byScoreFunc(score func(*entry) float64) func(*entry, *entry) bool {
+	return func(e1 *entry, e2 *entry) bool {
+		return score(e1) > score(e2)
 	}
 }
 
-func byHash(hash func([]byte) []byte) func(*entry, *entry) bool {
+func byHashFunc(h hash.Hash) func(*entry, *entry) bool {
 	return func(e1 *entry, e2 *entry) bool {
 		ip1, _, _ := net.SplitHostPort(e1.Address)
+		h.Reset()
+		_, _ = h.Write([]byte(ip1))
+		h1 := h.Sum(nil)
 		ip2, _, _ := net.SplitHostPort(e2.Address)
-		h1 := hash([]byte(ip1))
-		h2 := hash([]byte(ip2))
+		h.Reset()
+		_, _ = h.Write([]byte(ip2))
+		h2 := h.Sum(nil)
 		return bytes.Compare(h1[:], h2[:]) < 0
 	}
 }

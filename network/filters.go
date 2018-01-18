@@ -17,14 +17,14 @@
 
 package network
 
-func isActive(active bool) func(e *entry) bool {
-	return func(e *entry) bool {
-		return e.Active == active
-	}
-}
-
 func isAny() func(e *entry) bool {
 	return func(e *entry) bool {
 		return true
+	}
+}
+
+func isActive(active bool) func(e *entry) bool {
+	return func(e *entry) bool {
+		return e.Active == active
 	}
 }
