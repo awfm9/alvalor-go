@@ -19,24 +19,25 @@ package blockchain
 
 import (
 	"bytes"
+	"hash"
 
 	"github.com/dgraph-io/badger"
 	"github.com/pkg/errors"
 
-	"github.com/alvalor/alvalor-go/hasher"
 	"github.com/alvalor/alvalor-go/trie"
 )
 
 // DB is a blockchain database that syncs the trie with the persistent key-value store on disk.
 type DB struct {
+	h  hash.Hash
 	kv *badger.DB
 	tr *trie.Trie
 	cd Codec
 }
 
 // NewDB creates a new blockchain DB on the disk.
-func NewDB(kv *badger.DB) (*DB, error) {
-	tr := trie.New()
+func NewDB(h hash.Hash, kv *badger.DB) (*DB, error) {
+	tr := trie.New(h)
 	err := kv.View(func(tx *badger.Txn) error {
 		it := tx.NewIterator(badger.DefaultIteratorOptions)
 		for it.Rewind(); it.Valid(); it.Next() {
@@ -56,7 +57,7 @@ func NewDB(kv *badger.DB) (*DB, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "could not execute iteration transaction")
 	}
-	db := &DB{kv: kv, tr: tr}
+	db := &DB{h: h, kv: kv, tr: tr}
 	return db, nil
 }
 
@@ -69,7 +70,9 @@ func (db *DB) Insert(id []byte, entity interface{}) error {
 		return errors.Wrap(err, "could not serialize entity")
 	}
 	data := buf.Bytes()
-	hash := hasher.Sum256(data)
+	db.h.Reset()
+	db.h.Write(data)
+	hash := db.h.Sum(nil)
 	err = db.kv.Update(func(tx *badger.Txn) error {
 		return tx.Set(hash, data)
 	})

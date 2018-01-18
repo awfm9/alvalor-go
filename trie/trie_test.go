@@ -23,14 +23,15 @@ import (
 	"testing"
 	"time"
 
-	"github.com/alvalor/alvalor-go/hasher"
+	"golang.org/x/crypto/blake2b"
 )
 
 const TestLength = 1000000
 
 func TestSingle(t *testing.T) {
 	rand.Seed(time.Now().UnixNano())
-	trie := New()
+	h, _ := blake2b.New256(nil)
+	trie := New(h)
 	for i := 0; i < TestLength; i++ {
 		key := make([]byte, 32)
 		hash := make([]byte, 32)
@@ -60,7 +61,8 @@ func TestSingle(t *testing.T) {
 
 func TestBatch(t *testing.T) {
 	rand.Seed(time.Now().UnixNano())
-	trie := New()
+	h, _ := blake2b.New256(nil)
+	trie := New(h)
 	keys := make([][]byte, 0, TestLength)
 	hashes := make([][]byte, 0, TestLength)
 	for i := 0; i < TestLength; i++ {
@@ -94,7 +96,9 @@ func TestBatch(t *testing.T) {
 			t.Fatalf("could not del %v: %x", i, key)
 		}
 	}
-	if !bytes.Equal(trie.Hash(), hasher.Zero256) {
+	h.Reset()
+	zero := h.Sum(nil)
+	if !bytes.Equal(trie.Hash(), zero) {
 		t.Fatalf("root hash not zero: %x", trie.Hash())
 	}
 }
