@@ -18,11 +18,8 @@
 package network
 
 import (
-	"bytes"
 	"crypto/md5"
-	"net"
 	"reflect"
-	"sort"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -137,13 +134,13 @@ func TestSample(t *testing.T) {
 	addr6 := "192.0.2.6:1337"
 	addr7 := "192.0.2.7:1337"
 
-	book.entries[addr1] = &entry{Address: addr1, Success: 1, Failure: 0, Active: true}  // +1
-	book.entries[addr2] = &entry{Address: addr2, Success: 0, Failure: 7, Active: false} // -7
-	book.entries[addr3] = &entry{Address: addr3, Success: 2, Failure: 5, Active: true}  // -3
-	book.entries[addr4] = &entry{Address: addr4, Success: 0, Failure: 0, Active: false} // +0
-	book.entries[addr5] = &entry{Address: addr5, Success: 5, Failure: 2, Active: true}  // +3
-	book.entries[addr6] = &entry{Address: addr6, Success: 5, Failure: 0, Active: false} // +5
-	book.entries[addr7] = &entry{Address: addr7, Success: 0, Failure: 1, Active: true}  // -1
+	book.entries[addr1] = &entry{Address: addr1, Success: 1, Failure: 0, Active: true}
+	book.entries[addr2] = &entry{Address: addr2, Success: 0, Failure: 7, Active: false}
+	book.entries[addr3] = &entry{Address: addr3, Success: 2, Failure: 5, Active: true}
+	book.entries[addr4] = &entry{Address: addr4, Success: 0, Failure: 0, Active: false}
+	book.entries[addr5] = &entry{Address: addr5, Success: 5, Failure: 2, Active: true}
+	book.entries[addr6] = &entry{Address: addr6, Success: 5, Failure: 0, Active: false}
+	book.entries[addr7] = &entry{Address: addr7, Success: 0, Failure: 1, Active: true}
 
 	actual := book.Sample(6)
 	assert.Len(t, actual, 6, "Undersampling returns invalid count")
@@ -163,22 +160,27 @@ func TestSample(t *testing.T) {
 	assert.ElementsMatch(t, expected, actual, "Is active filter returns wrong elements")
 
 	actual = book.Sample(7, byScore())
-	expected = []string{addr6, addr5, addr1, addr4, addr7, addr3, addr2}
+	expected = []string{
+		addr6, // +5
+		addr5, // +3
+		addr1, // +1
+		addr4, // +0
+		addr7, // -1
+		addr3, // -3
+		addr2, // -7
+	}
 	assert.Equal(t, expected, actual, "By score sort returns wrong ordering")
 
-	actual = book.Sample(7, byHashFunc(func(data []byte) []byte {
-		hasher := md5.New()
-		hasher.Write(data)
-		return hasher.Sum(nil)
-	}))
-	expected = []string{addr1, addr2, addr3, addr4, addr5, addr6, addr7}
-	sort.Slice(expected, func(i int, j int) bool {
-		ip1, _, _ := net.SplitHostPort(expected[i])
-		ip2, _, _ := net.SplitHostPort(expected[j])
-		h1 := md5.Sum([]byte(ip1))
-		h2 := md5.Sum([]byte(ip2))
-		return bytes.Compare(h1[:], h2[:]) < 0
-	})
+	actual = book.Sample(7, byHashFunc(md5.New()))
+	expected = []string{
+		addr2, // 7f83fddecaba901abfd469d899958433
+		addr5, // 87cf214a6664ce35b0b247b4e8c4a529
+		addr6, // d07d5578976452b56c7be96b384603cd
+		addr1, // d0f88d6c87767262ba8e93d6acccd784
+		addr7, // e9cc93d8ae23cfc5941cec7cc4ee788a
+		addr4, // ecf7a94a85ef4966739abcf2f32668bf
+		addr3, // f2d19c83feb2cb2458fd427acfb343d7
+	}
 	assert.Equal(t, expected, actual, "By hash sort returns wrong ordering")
 
 	mismatch := false

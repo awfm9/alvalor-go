@@ -18,6 +18,9 @@
 package network
 
 import (
+	"crypto/md5"
+	"crypto/sha256"
+	"hash"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -46,18 +49,18 @@ func TestByScore(t *testing.T) {
 		expected bool
 	}{
 		"first score higher": {
-			entry1:   &entry{Success: 1, Failure: 0},
-			entry2:   &entry{Success: 0, Failure: 1},
+			entry1:   &entry{Success: 1, Failure: 0}, // +1
+			entry2:   &entry{Success: 0, Failure: 1}, // -1
 			expected: true,
 		},
 		"first score lower": {
-			entry1:   &entry{Success: 0, Failure: 1},
-			entry2:   &entry{Success: 1, Failure: 0},
+			entry1:   &entry{Success: 0, Failure: 1}, // -1
+			entry2:   &entry{Success: 1, Failure: 0}, // +1
 			expected: false,
 		},
 		"both equal score": {
-			entry1:   &entry{Success: 1, Failure: 1},
-			entry2:   &entry{Success: 1, Failure: 1},
+			entry1:   &entry{Success: 1, Failure: 1}, // 0
+			entry2:   &entry{Success: 1, Failure: 1}, // 0
 			expected: false,
 		},
 	}
@@ -119,4 +122,51 @@ func TestByScoreFunc(t *testing.T) {
 }
 
 func TestByHashFunc(t *testing.T) {
+	vectors := map[string]struct {
+		entry1   *entry
+		entry2   *entry
+		hash     hash.Hash
+		expected bool
+	}{
+		"same md5": {
+			entry1:   &entry{Address: "192.0.2.1:1234"}, // d0f88d6c87767262ba8e93d6acccd784
+			entry2:   &entry{Address: "192.0.2.1:1234"}, // d0f88d6c87767262ba8e93d6acccd784
+			hash:     md5.New(),
+			expected: false,
+		},
+		"first lower md5": {
+			entry1:   &entry{Address: "192.0.2.2:1234"}, // 7f83fddecaba901abfd469d899958433
+			entry2:   &entry{Address: "192.0.2.1:1234"}, // d0f88d6c87767262ba8e93d6acccd784
+			hash:     md5.New(),
+			expected: true,
+		},
+		"second lower md5": {
+			entry1:   &entry{Address: "192.0.2.1:1234"}, // d0f88d6c87767262ba8e93d6acccd784
+			entry2:   &entry{Address: "192.0.2.2:1234"}, // 7f83fddecaba901abfd469d899958433
+			hash:     md5.New(),
+			expected: false,
+		},
+		"same address sha256": {
+			entry1:   &entry{Address: "192.0.2.1:1234"}, // 37fcff24bf62035b2b08020afc08b4fecd4fcffce57ab23518e3561ff0fe76b9
+			entry2:   &entry{Address: "192.0.2.1:1234"}, // 37fcff24bf62035b2b08020afc08b4fecd4fcffce57ab23518e3561ff0fe76b9
+			hash:     sha256.New(),
+			expected: false,
+		},
+		"first lower sha256": {
+			entry1:   &entry{Address: "192.0.2.1:1234"}, // 37fcff24bf62035b2b08020afc08b4fecd4fcffce57ab23518e3561ff0fe76b9
+			entry2:   &entry{Address: "192.0.2.2:1234"}, // 9a6b293639db1e588add3900fe817a3ed3b9822a99e4799098e550a2d70b7e1f
+			hash:     sha256.New(),
+			expected: true,
+		},
+		"second lower sha256": {
+			entry1:   &entry{Address: "192.0.2.2:1234"}, // 9a6b293639db1e588add3900fe817a3ed3b9822a99e4799098e550a2d70b7e1f
+			entry2:   &entry{Address: "192.0.2.1:1234"}, // 37fcff24bf62035b2b08020afc08b4fecd4fcffce57ab23518e3561ff0fe76b9
+			hash:     sha256.New(),
+			expected: false,
+		},
+	}
+	for name, vector := range vectors {
+		actual := byHashFunc(vector.hash)(vector.entry1, vector.entry2)
+		assert.Equalf(t, vector.expected, actual, "By hash func sort wrong result for %v", name)
+	}
 }
