@@ -220,28 +220,26 @@ func (t *Trie) Hash() []byte {
 func (t *Trie) nodeHash(node node) []byte {
 	switch n := node.(type) {
 	case *fullNode:
-		t.h.Reset()
-		zero := t.h.Sum(nil)
-		t.h.Reset()
+		var hashes [][]byte
 		for _, child := range n.children {
-			if child == nil {
-				_, _ = t.h.Write(zero)
-				continue
-			}
-			_, _ = t.h.Write(t.nodeHash(child))
+			hashes = append(hashes, t.nodeHash(child))
+		}
+		t.h.Reset()
+		for _, hash := range hashes {
+			t.h.Write(hash)
 		}
 		return t.h.Sum(nil)
 	case *shortNode:
+		hash := t.nodeHash(n.child)
 		t.h.Reset()
 		t.h.Write(n.key)
-		t.h.Write(t.nodeHash(n.child))
+		t.h.Write(hash)
 		return t.h.Sum(nil)
 	case valueNode:
 		return []byte(n)
 	case nil:
 		t.h.Reset()
-		zero := t.h.Sum(nil)
-		return zero
+		return t.h.Sum(nil)
 	default:
 		panic("invalid node type")
 	}
