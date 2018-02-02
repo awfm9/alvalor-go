@@ -25,13 +25,7 @@ import (
 	"github.com/rs/zerolog"
 )
 
-type listenerActions interface {
-	StartAcceptor(conn net.Conn)
-}
-
-type listenFunc func(address string) (Listener, error)
-
-func handleListening(log zerolog.Logger, wg *sync.WaitGroup, cfg *Config, actions listenerActions, listen listenFunc, stop <-chan struct{}) {
+func handleListening(log zerolog.Logger, wg *sync.WaitGroup, cfg *Config, handlers handlerManager, listener listenManager, stop <-chan struct{}) {
 	defer wg.Done()
 
 	// extract the config parameters we are interested in
@@ -45,7 +39,7 @@ func handleListening(log zerolog.Logger, wg *sync.WaitGroup, cfg *Config, action
 	defer log.Info().Msg("listening routine stopped")
 
 	// initialize the listener
-	ln, err := listen(address)
+	ln, err := listener.Listen(address)
 	if err != nil {
 		log.Error().Err(err).Msg("could not listen on address")
 		return
@@ -66,7 +60,7 @@ Loop:
 		ln.SetDeadline(time.Now().Add(time.Millisecond * 100))
 		var conn net.Conn
 		conn, err = ln.Accept()
-		if netErr, ok := err.(*net.OpError); ok && netErr.Timeout() {
+		if netErr, ok := err.(net.Error); ok && netErr.Timeout() {
 			// this is the default timeout we get with the deadline, so just iterate
 			continue
 		}
@@ -77,7 +71,7 @@ Loop:
 
 		// we should handle onboarding on a new goroutine to avoid blocking
 		// on listening, and as well so we can release slots with defer
-		actions.StartAcceptor(conn)
+		handlers.Accept(conn)
 	}
 
 	// ordered to quit, we close the listener down
@@ -86,11 +80,4 @@ Loop:
 		log.Error().Err(err).Msg("could not close listener")
 		return
 	}
-}
-
-// Listener represents a wrapper around TCP listener for testing purposes.
-type Listener interface {
-	Accept() (net.Conn, error)
-	Close() error
-	SetDeadline(time.Time) error
 }

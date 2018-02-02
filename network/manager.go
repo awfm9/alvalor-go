@@ -41,15 +41,16 @@ var dial = func(address string) (net.Conn, error) { return net.Dial("tcp", addre
 
 // Manager represents the manager of all network components.
 type Manager struct {
-	log     zerolog.Logger
-	wg      *sync.WaitGroup
-	cfg     *Config
-	book    *Book
-	slots   slotManager
-	peers   peerManager
-	rep     reputationManager
-	stop    chan struct{}
-	pending uint
+	log      zerolog.Logger
+	wg       *sync.WaitGroup
+	cfg      *Config
+	book     *Book
+	slots    slotManager
+	peers    peerManager
+	rep      reputationManager
+	handlers handlerManager
+	stop     chan struct{}
+	pending  uint
 }
 
 // NewManager will initialize the completely wired up networking dependencies.
@@ -82,13 +83,14 @@ func NewManager(log zerolog.Logger, codec Codec, options ...func(*Config)) *Mana
 
 	// initialize the network component with all state
 	mgr := &Manager{
-		log:   log,
-		wg:    wg,
-		cfg:   cfg,
-		slots: newSimpleSlotManager(cfg.maxPending),
-		peers: newSimplePeerManager(cfg.minPeers, cfg.maxPeers),
-		rep:   newSimpleReputationManager(),
-		stop:  make(chan struct{}),
+		log:      log,
+		wg:       wg,
+		cfg:      cfg,
+		slots:    newSimpleSlotManager(cfg.maxPending),
+		peers:    newSimplePeerManager(cfg.minPeers, cfg.maxPeers),
+		rep:      newSimpleReputationManager(),
+		handlers: &simpleHandlerManager{},
+		stop:     make(chan struct{}),
 	}
 
 	// TODO: separate book package and inject so we can add addresses in main
@@ -159,18 +161,8 @@ func (mgr *Manager) StartConnector() {
 // StartListener will start a listener on a given port.
 func (mgr *Manager) StartListener(stop <-chan struct{}) {
 	mgr.wg.Add(1)
-	listen := func(address string) (Listener, error) {
-		tcpAddress, err := net.ResolveTCPAddr("tcp", address)
-		if err != nil {
-			return nil, errors.Wrap(err, "could not resolve address")
-		}
-		ln, err := net.ListenTCP("tcp", tcpAddress)
-		if err != nil {
-			return nil, errors.Wrap(err, "could not listen on address")
-		}
-		return ln, nil
-	}
-	go handleListening(mgr.log, mgr.wg, mgr.cfg, mgr, listen, stop)
+	listener := &simpleListenManager{}
+	go handleListening(mgr.log, mgr.wg, mgr.cfg, mgr.handlers, listener, stop)
 }
 
 // StartAcceptor will start accepting an incoming connection.

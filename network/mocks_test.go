@@ -24,6 +24,25 @@ import (
 	"github.com/stretchr/testify/mock"
 )
 
+type ErrorMock struct {
+	mock.Mock
+}
+
+func (em *ErrorMock) Error() string {
+	args := em.Called()
+	return args.String(0)
+}
+
+func (em *ErrorMock) Timeout() bool {
+	args := em.Called()
+	return args.Bool(0)
+}
+
+func (em *ErrorMock) Temporary() bool {
+	args := em.Called()
+	return args.Bool(0)
+}
+
 type AddrMock struct {
 	mock.Mock
 }
@@ -80,6 +99,55 @@ func (cm *ConnMock) SetReadDeadline(t time.Time) error {
 func (cm *ConnMock) SetWriteDeadline(t time.Time) error {
 	args := cm.Called(t)
 	return args.Error(0)
+}
+
+type ListenerMock struct {
+	mock.Mock
+}
+
+func (lm *ListenerMock) Accept() (net.Conn, error) {
+	args := lm.Called()
+	var conn net.Conn
+	if args.Get(0) != nil {
+		conn = args.Get(0).(*ConnMock)
+	}
+	return conn, args.Error(1)
+}
+
+func (lm *ListenerMock) Close() error {
+	args := lm.Called()
+	return args.Error(0)
+}
+
+func (lm *ListenerMock) SetDeadline(t time.Time) error {
+	args := lm.Called(t)
+	return args.Error(0)
+}
+
+type DialManagerMock struct {
+	mock.Mock
+}
+
+func (dm *DialManagerMock) Dial(address string) (net.Conn, error) {
+	args := dm.Called(address)
+	var conn net.Conn
+	if args.Get(0) != nil {
+		conn = args.Get(0).(*ConnMock)
+	}
+	return conn, args.Error(1)
+}
+
+type ListenManagerMock struct {
+	mock.Mock
+}
+
+func (lm *ListenManagerMock) Listen(address string) (Listener, error) {
+	args := lm.Called(address)
+	var ln Listener
+	if args.Get(0) != nil {
+		ln = args.Get(0).(*ListenerMock)
+	}
+	return ln, args.Error(1)
 }
 
 type SlotManagerMock struct {
@@ -153,15 +221,10 @@ func (rm *ReputationManagerMock) Score(address string) float32 {
 	return float32(args.Get(0).(float64))
 }
 
-type DialManagerMock struct {
+type HandlerManagerMock struct {
 	mock.Mock
 }
 
-func (dm *DialManagerMock) Dial(address string) (net.Conn, error) {
-	args := dm.Called(address)
-	var conn *ConnMock
-	if args.Get(0) != nil {
-		conn = args.Get(0).(*ConnMock)
-	}
-	return conn, args.Error(1)
+func (hm *HandlerManagerMock) Accept(conn net.Conn) {
+	_ = hm.Called(conn)
 }
