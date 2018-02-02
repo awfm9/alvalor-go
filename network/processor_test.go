@@ -119,8 +119,8 @@ func (suite *ProcessorTestSuite) TestProcessingPublishesPing() {
 	time.Sleep(50 * time.Millisecond)
 
 	// assert
+	_ = <-output
 	msg := <-output
-	msg = <-output
 	assert.IsType(suite.T(), &Ping{}, msg)
 }
 
@@ -143,8 +143,8 @@ func (suite *ProcessorTestSuite) TestProcessingPublishesPong() {
 	// act
 	input <- &Ping{}
 	go handleProcessing(suite.log, &suite.wg, &suite.cfg, infos, actions, events, address, input, output)
+	_ = <-output
 	msg := <-output
-	msg = <-output
 
 	// assert
 	assert.IsType(suite.T(), &Pong{}, msg)
@@ -172,8 +172,8 @@ func (suite *ProcessorTestSuite) TestProcessingPublishesPeersIfDiscoverReceived(
 	// act
 	input <- &Discover{}
 	go handleProcessing(suite.log, &suite.wg, &suite.cfg, infos, actions, events, address, input, output)
+	_ = <-output
 	msg := <-output
-	msg = <-output
 
 	// assert
 	assert.IsType(suite.T(), &Peers{}, msg)

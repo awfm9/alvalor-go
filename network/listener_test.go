@@ -67,7 +67,7 @@ func (suite *ListenerTestSuite) TestHandleListeningDoesNotStartAcceptorIfCantAcc
 	}()
 
 	// act
-	handleListening(suite.log, &suite.wg, &suite.cfg, actions, func(addr *net.TCPAddr) (Listener, error) { return listener, nil }, stop)
+	handleListening(suite.log, &suite.wg, &suite.cfg, actions, func(string) (Listener, error) { return listener, nil }, stop)
 
 	// assert
 	actions.AssertNotCalled(suite.T(), "StartAcceptor", conn)
@@ -93,7 +93,7 @@ func (suite *ListenerTestSuite) TestHandleListeningStartsAcceptor() {
 	}()
 
 	// act
-	handleListening(suite.log, &suite.wg, &suite.cfg, actions, func(addr *net.TCPAddr) (Listener, error) { return listener, nil }, stop)
+	handleListening(suite.log, &suite.wg, &suite.cfg, actions, func(string) (Listener, error) { return listener, nil }, stop)
 
 	// assert
 	actions.AssertCalled(suite.T(), "StartAcceptor", conn)

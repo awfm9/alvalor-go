@@ -29,7 +29,7 @@ type listenerActions interface {
 	StartAcceptor(conn net.Conn)
 }
 
-type listenFunc func(addr *net.TCPAddr) (Listener, error)
+type listenFunc func(address string) (Listener, error)
 
 func handleListening(log zerolog.Logger, wg *sync.WaitGroup, cfg *Config, actions listenerActions, listen listenFunc, stop <-chan struct{}) {
 	defer wg.Done()
@@ -44,14 +44,8 @@ func handleListening(log zerolog.Logger, wg *sync.WaitGroup, cfg *Config, action
 	log.Info().Msg("listening routine started")
 	defer log.Info().Msg("listening routine stopped")
 
-	// resolve and start listening on the address
-	addr, err := net.ResolveTCPAddr("tcp", address)
-	if err != nil {
-		log.Error().Err(err).Msg("could not resolve listen address")
-		return
-	}
-
-	ln, err := listen(addr)
+	// initialize the listener
+	ln, err := listen(address)
 	if err != nil {
 		log.Error().Err(err).Msg("could not listen on address")
 		return
