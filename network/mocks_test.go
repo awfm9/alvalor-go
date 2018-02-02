@@ -109,6 +109,11 @@ func (pm *PeerManagerMock) DropAll() {
 	_ = pm.Called()
 }
 
+func (pm *PeerManagerMock) Known(nonce []byte) bool {
+	args := pm.Called(nonce)
+	return args.Bool(0)
+}
+
 func (pm *PeerManagerMock) Count() uint {
 	args := pm.Called()
 	return uint(args.Int(0))
@@ -116,7 +121,11 @@ func (pm *PeerManagerMock) Count() uint {
 
 func (pm *PeerManagerMock) Addresses() []string {
 	args := pm.Called()
-	return args.Get(0).([]string)
+	var addresses []string
+	if args.Get(0) != nil {
+		addresses = args.Get(0).([]string)
+	}
+	return addresses
 }
 
 type ReputationManagerMock struct {
@@ -142,4 +151,17 @@ func (rm *ReputationManagerMock) Success(address string) {
 func (rm *ReputationManagerMock) Score(address string) float32 {
 	args := rm.Called(address)
 	return float32(args.Get(0).(float64))
+}
+
+type DialManagerMock struct {
+	mock.Mock
+}
+
+func (dm *DialManagerMock) Dial(address string) (net.Conn, error) {
+	args := dm.Called(address)
+	var conn *ConnMock
+	if args.Get(0) != nil {
+		conn = args.Get(0).(*ConnMock)
+	}
+	return conn, args.Error(1)
 }

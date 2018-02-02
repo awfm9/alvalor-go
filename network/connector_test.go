@@ -17,398 +17,341 @@
 //
 package network
 
-//
-// import (
-// 	"errors"
-// 	"io/ioutil"
-// 	"net"
-// 	"sync"
-// 	"testing"
-//
-// 	"github.com/rs/zerolog"
-// 	uuid "github.com/satori/go.uuid"
-// 	"github.com/stretchr/testify/mock"
-// 	"github.com/stretchr/testify/suite"
-// )
-//
-// type ConnectorTestSuite struct {
-// 	suite.Suite
-// 	log zerolog.Logger
-// 	wg  sync.WaitGroup
-// 	cfg Config
-// }
-//
-// func (suite *ConnectorTestSuite) SetupTest() {
-// 	suite.log = zerolog.New(ioutil.Discard)
-// 	suite.wg = sync.WaitGroup{}
-// 	suite.wg.Add(1)
-// 	suite.cfg = Config{
-// 		network: Odin,
-// 		nonce:   uuid.NewV4().Bytes(),
-// 	}
-// }
-//
-// func (suite *ConnectorTestSuite) TestHandleConnectingWhenCantClaimSlot() {
-//
-// 	// arrange
-// 	address := "136.44.33.12:5523"
-//
-// 	dial := func(string) (net.Conn, error) { return nil, nil }
-//
-// 	infos := &connectorInfosMock{}
-//
-// 	actions := &connectorActionsMock{}
-// 	actions.On("ClaimSlot").Return(errors.New("cannot claim slot"))
-//
-// 	events := &connectorEventsMock{}
-//
-// 	// act
-// 	handleConnecting(suite.log, &suite.wg, &suite.cfg, infos, actions, events, dial, address)
-//
-// 	// assert
-// 	actions.AssertNotCalled(suite.T(), "ReleaseSlot")
-// }
-//
-// func (suite *ConnectorTestSuite) TestHandleConnectingWhenAddressInvalid() {
-//
-// 	// arrange
-// 	address := "not_valid"
-//
-// 	conn := &connMock{}
-//
-// 	dial := func(string) (net.Conn, error) { return conn, nil }
-//
-// 	infos := &connectorInfosMock{}
-//
-// 	actions := &connectorActionsMock{}
-// 	actions.On("ClaimSlot").Return(nil)
-// 	actions.On("ReleaseSlot")
-//
-// 	events := &connectorEventsMock{}
-// 	events.On("Invalid", address)
-//
-// 	// act
-// 	handleConnecting(suite.log, &suite.wg, &suite.cfg, infos, actions, events, dial, address)
-//
-// 	//Assert
-// 	actions.AssertCalled(suite.T(), "ReleaseSlot")
-// 	events.AssertCalled(suite.T(), "Invalid", address)
-// }
-//
-// func (suite *ConnectorTestSuite) TestHandleConnectingWhenCantDialAddress() {
-//
-// 	// arrange
-// 	address := "136.44.33.12:5523"
-//
-// 	dial := func(string) (net.Conn, error) { return nil, errors.New("cannot dial address") }
-//
-// 	infos := &connectorInfosMock{}
-//
-// 	actions := &connectorActionsMock{}
-// 	actions.On("ClaimSlot").Return(nil)
-// 	actions.On("ReleaseSlot")
-//
-// 	events := &connectorEventsMock{}
-// 	events.On("Failure", address)
-//
-// 	// act
-// 	handleConnecting(suite.log, &suite.wg, &suite.cfg, infos, actions, events, dial, address)
-//
-// 	// assert
-// 	actions.AssertCalled(suite.T(), "ReleaseSlot")
-// 	events.AssertCalled(suite.T(), "Failure", address)
-// }
-//
-// func (suite *ConnectorTestSuite) TestHandleConnectingWhenCantWriteSyn() {
-//
-// 	// arrange
-// 	address := "136.44.33.12:5523"
-// 	syn := append(suite.cfg.network, suite.cfg.nonce...)
-//
-// 	conn := &connMock{}
-// 	conn.On("Close").Return(nil)
-// 	conn.On("Write", syn).Return(0, errors.New("cannot write to connection"))
-//
-// 	dial := func(string) (net.Conn, error) { return conn, nil }
-//
-// 	infos := &connectorInfosMock{}
-//
-// 	actions := &connectorActionsMock{}
-// 	actions.On("ClaimSlot").Return(nil)
-// 	actions.On("ReleaseSlot")
-//
-// 	events := &connectorEventsMock{}
-// 	events.On("Error", address)
-//
-// 	// act
-// 	handleConnecting(suite.log, &suite.wg, &suite.cfg, infos, actions, events, dial, address)
-//
-// 	// assert
-// 	actions.AssertCalled(suite.T(), "ReleaseSlot")
-// 	events.AssertCalled(suite.T(), "Error", address)
-// 	conn.AssertCalled(suite.T(), "Close")
-// }
-//
-// func (suite *ConnectorTestSuite) TestHandleConnectingWhenCantReadAck() {
-//
-// 	// arrange
-// 	address := "136.44.33.12:5523"
-// 	syn := append(suite.cfg.network, suite.cfg.nonce...)
-// 	buf := make([]byte, len(syn))
-//
-// 	conn := &connMock{}
-// 	conn.On("Write", syn).Return(len(syn), nil)
-// 	conn.On("Read", buf).Return(0, errors.New("cannot read from connection"))
-// 	conn.On("Close").Return(nil)
-//
-// 	dial := func(string) (net.Conn, error) { return conn, nil }
-//
-// 	infos := &connectorInfosMock{}
-//
-// 	actions := &connectorActionsMock{}
-// 	actions.On("ClaimSlot").Return(nil)
-// 	actions.On("ReleaseSlot")
-//
-// 	events := &connectorEventsMock{}
-// 	events.On("Error", address)
-//
-// 	// act
-// 	handleConnecting(suite.log, &suite.wg, &suite.cfg, infos, actions, events, dial, address)
-//
-// 	// assert
-// 	actions.AssertCalled(suite.T(), "ReleaseSlot")
-// 	events.AssertCalled(suite.T(), "Error", address)
-// 	conn.AssertCalled(suite.T(), "Close")
-// }
-//
-// func (suite *ConnectorTestSuite) TestHandleConnectingWhenNetworkMismatch() {
-//
-// 	// arrange
-// 	address := "136.44.33.12:5523"
-// 	syn := append(suite.cfg.network, suite.cfg.nonce...)
-// 	buf := make([]byte, len(syn))
-// 	ack := append([]byte{1, 2, 3, 4}, uuid.NewV4().Bytes()...)
-//
-// 	conn := &connMock{}
-// 	conn.On("Write", syn).Return(len(syn), nil)
-// 	conn.On("Read", buf).Run(func(args mock.Arguments) {
-// 		copy(args.Get(0).([]byte), ack)
-// 	}).Return(len(buf), nil)
-// 	conn.On("Close").Return(nil)
-//
-// 	dial := func(string) (net.Conn, error) { return conn, nil }
-//
-// 	infos := &connectorInfosMock{}
-//
-// 	actions := &connectorActionsMock{}
-// 	actions.On("ClaimSlot").Return(nil)
-// 	actions.On("ReleaseSlot")
-//
-// 	events := &connectorEventsMock{}
-// 	events.On("Invalid", address)
-//
-// 	// act
-// 	handleConnecting(suite.log, &suite.wg, &suite.cfg, infos, actions, events, dial, address)
-//
-// 	// assert
-// 	actions.AssertCalled(suite.T(), "ReleaseSlot")
-// 	events.AssertCalled(suite.T(), "Invalid", address)
-// 	conn.AssertCalled(suite.T(), "Close")
-// }
-//
-// func (suite *ConnectorTestSuite) TestHandleConnectingWhenIdenticalNonce() {
-//
-// 	// arrange
-// 	address := "136.44.33.12:5523"
-// 	syn := append(suite.cfg.network, suite.cfg.nonce...)
-// 	buf := make([]byte, len(syn))
-// 	ack := append(suite.cfg.network, suite.cfg.nonce...)
-//
-// 	conn := &connMock{}
-// 	conn.On("Write", syn).Return(len(syn), nil)
-// 	conn.On("Read", buf).Run(func(args mock.Arguments) {
-// 		copy(args.Get(0).([]byte), ack)
-// 	}).Return(len(buf), nil)
-// 	conn.On("Close").Return(nil)
-//
-// 	dial := func(string) (net.Conn, error) { return conn, nil }
-//
-// 	infos := &connectorInfosMock{}
-//
-// 	actions := &connectorActionsMock{}
-// 	actions.On("ClaimSlot").Return(nil)
-// 	actions.On("ReleaseSlot")
-//
-// 	events := &connectorEventsMock{}
-// 	events.On("Invalid", address)
-//
-// 	// act
-// 	handleConnecting(suite.log, &suite.wg, &suite.cfg, infos, actions, events, dial, address)
-//
-// 	// assert
-// 	actions.AssertCalled(suite.T(), "ReleaseSlot")
-// 	events.AssertCalled(suite.T(), "Invalid", address)
-// 	conn.AssertCalled(suite.T(), "Close")
-// }
-//
-// func (suite *ConnectorTestSuite) TestHandleConnectingWhenNonceAlreadyKnown() {
-//
-// 	// arrange
-// 	address := "136.44.33.12:5523"
-// 	nonce := uuid.NewV4().Bytes()
-// 	syn := append(suite.cfg.network, suite.cfg.nonce...)
-// 	buf := make([]byte, len(syn))
-// 	ack := append(suite.cfg.network, nonce...)
-//
-// 	conn := &connMock{}
-// 	conn.On("Write", syn).Return(len(syn), nil)
-// 	conn.On("Read", buf).Run(func(args mock.Arguments) {
-// 		copy(args.Get(0).([]byte), ack)
-// 	}).Return(len(buf), nil)
-// 	conn.On("Close").Return(nil)
-//
-// 	dial := func(string) (net.Conn, error) { return conn, nil }
-//
-// 	infos := &connectorInfosMock{}
-// 	infos.On("KnownNonce", nonce).Return(true)
-//
-// 	actions := &connectorActionsMock{}
-// 	actions.On("ClaimSlot").Return(nil)
-// 	actions.On("ReleaseSlot")
-//
-// 	events := &connectorEventsMock{}
-// 	events.On("Invalid", address)
-//
-// 	// act
-// 	handleConnecting(suite.log, &suite.wg, &suite.cfg, infos, actions, events, dial, address)
-//
-// 	// assert
-// 	actions.AssertCalled(suite.T(), "ReleaseSlot")
-// 	events.AssertCalled(suite.T(), "Invalid", address)
-// 	conn.AssertCalled(suite.T(), "Close")
-// }
-//
-// func (suite *ConnectorTestSuite) TestHandleConnectingWhenCannotAddPeer() {
-//
-// 	// arrange
-// 	address := "136.44.33.12:5523"
-// 	nonce := uuid.NewV4().Bytes()
-// 	syn := append(suite.cfg.network, suite.cfg.nonce...)
-// 	buf := make([]byte, len(syn))
-// 	ack := append(suite.cfg.network, nonce...)
-//
-// 	conn := &connMock{}
-// 	conn.On("Write", syn).Return(len(syn), nil)
-// 	conn.On("Read", buf).Run(func(args mock.Arguments) {
-// 		copy(args.Get(0).([]byte), ack)
-// 	}).Return(len(buf), nil)
-// 	conn.On("Close").Return(nil)
-//
-// 	dial := func(string) (net.Conn, error) { return conn, nil }
-//
-// 	infos := &connectorInfosMock{}
-// 	infos.On("KnownNonce", nonce).Return(false)
-//
-// 	actions := &connectorActionsMock{}
-// 	actions.On("ClaimSlot").Return(nil)
-// 	actions.On("ReleaseSlot")
-// 	actions.On("AddPeer", conn, nonce).Return(errors.New("cannot add peer"))
-//
-// 	events := &connectorEventsMock{}
-// 	events.On("Invalid", address)
-//
-// 	// act
-// 	handleConnecting(suite.log, &suite.wg, &suite.cfg, infos, actions, events, dial, address)
-//
-// 	// assert
-// 	actions.AssertCalled(suite.T(), "ReleaseSlot")
-// 	conn.AssertCalled(suite.T(), "Close")
-// }
-//
-// func (suite *ConnectorTestSuite) TestHandleConnectingWhenSuccess() {
-//
-// 	// arrange
-// 	address := "136.44.33.12:5523"
-// 	nonce := uuid.NewV4().Bytes()
-// 	syn := append(suite.cfg.network, suite.cfg.nonce...)
-// 	buf := make([]byte, len(syn))
-// 	ack := append(suite.cfg.network, nonce...)
-//
-// 	conn := &connMock{}
-// 	conn.On("Write", syn).Return(len(syn), nil)
-// 	conn.On("Read", buf).Run(func(args mock.Arguments) {
-// 		copy(args.Get(0).([]byte), ack)
-// 	}).Return(len(buf), nil)
-// 	conn.On("Close").Return(nil)
-//
-// 	dial := func(string) (net.Conn, error) { return conn, nil }
-//
-// 	infos := &connectorInfosMock{}
-// 	infos.On("KnownNonce", nonce).Return(false)
-//
-// 	actions := &connectorActionsMock{}
-// 	actions.On("ClaimSlot").Return(nil)
-// 	actions.On("ReleaseSlot")
-// 	actions.On("AddPeer", conn, nonce).Return(nil)
-//
-// 	events := &connectorEventsMock{}
-// 	events.On("Success", address)
-//
-// 	// act
-// 	handleConnecting(suite.log, &suite.wg, &suite.cfg, infos, actions, events, dial, address)
-//
-// 	// assert
-// 	actions.AssertCalled(suite.T(), "ReleaseSlot")
-// 	events.AssertCalled(suite.T(), "Success", address)
-// }
-//
-// func TestConnectorTestSuite(t *testing.T) {
-// 	suite.Run(t, new(ConnectorTestSuite))
-// }
-//
-// type connectorEventsMock struct {
-// 	mock.Mock
-// }
-//
-// func (events *connectorEventsMock) Invalid(address string) {
-// 	events.Called(address)
-// }
-//
-// func (events *connectorEventsMock) Error(address string) {
-// 	events.Called(address)
-// }
-//
-// func (events *connectorEventsMock) Success(address string) {
-// 	events.Called(address)
-// }
-//
-// func (events *connectorEventsMock) Failure(address string) {
-// 	events.Called(address)
-// }
-//
-// type connectorActionsMock struct {
-// 	mock.Mock
-// }
-//
-// func (actions *connectorActionsMock) ClaimSlot() error {
-// 	args := actions.Called()
-// 	return args.Error(0)
-// }
-//
-// func (actions *connectorActionsMock) ReleaseSlot() {
-// 	actions.Called()
-// }
-//
-// func (actions *connectorActionsMock) AddPeer(conn net.Conn, nonce []byte) error {
-// 	args := actions.Called(conn, nonce)
-// 	return args.Error(0)
-// }
-//
-// type connectorInfosMock struct {
-// 	mock.Mock
-// }
-//
-// func (infos *connectorInfosMock) KnownNonce(nonce []byte) bool {
-// 	args := infos.Called(nonce)
-// 	return args.Bool(0)
-// }
+import (
+	"errors"
+	"io/ioutil"
+	"sync"
+	"testing"
+
+	"github.com/rs/zerolog"
+	uuid "github.com/satori/go.uuid"
+	"github.com/stretchr/testify/mock"
+	"github.com/stretchr/testify/suite"
+)
+
+type ConnectorTestSuite struct {
+	suite.Suite
+	log zerolog.Logger
+	wg  sync.WaitGroup
+	cfg Config
+}
+
+func (suite *ConnectorTestSuite) SetupTest() {
+	suite.log = zerolog.New(ioutil.Discard)
+	suite.wg = sync.WaitGroup{}
+	suite.wg.Add(1)
+	suite.cfg = Config{
+		network: Odin,
+		nonce:   uuid.NewV4().Bytes(),
+	}
+}
+
+func (suite *ConnectorTestSuite) TestHandleConnectingWhenCantClaimSlot() {
+
+	// arrange
+	address := "136.44.33.12:5523"
+
+	slots := &SlotManagerMock{}
+	slots.On("Claim").Return(errors.New("cannot claim slot"))
+
+	peers := &PeerManagerMock{}
+
+	rep := &ReputationManagerMock{}
+
+	dialer := &DialManagerMock{}
+
+	// act
+	handleConnecting(suite.log, &suite.wg, &suite.cfg, slots, peers, rep, dialer, address)
+
+	// assert
+	slots.AssertCalled(suite.T(), "Claim")
+	slots.AssertNotCalled(suite.T(), "Release")
+}
+
+func (suite *ConnectorTestSuite) TestHandleConnectingWhenCantDialAddress() {
+
+	// arrange
+	address := "136.44.33.12:5523"
+
+	rep := &ReputationManagerMock{}
+	rep.On("Failure", address)
+
+	peers := &PeerManagerMock{}
+
+	slots := &SlotManagerMock{}
+	slots.On("Claim").Return(nil)
+	slots.On("Release").Return(nil)
+
+	dialer := &DialManagerMock{}
+	dialer.On("Dial", address).Return(nil, errors.New("cannot dial address"))
+
+	// act
+	handleConnecting(suite.log, &suite.wg, &suite.cfg, slots, peers, rep, dialer, address)
+
+	// assert
+	slots.AssertCalled(suite.T(), "Claim")
+	slots.AssertCalled(suite.T(), "Release")
+	rep.AssertCalled(suite.T(), "Failure", address)
+}
+
+func (suite *ConnectorTestSuite) TestHandleConnectingWhenCantWriteSyn() {
+
+	// arrange
+	address := "136.44.33.12:5523"
+	syn := append(suite.cfg.network, suite.cfg.nonce...)
+
+	conn := &ConnMock{}
+	conn.On("Close").Return(nil)
+	conn.On("Write", syn).Return(0, errors.New("cannot write to connection"))
+
+	rep := &ReputationManagerMock{}
+	rep.On("Error", address)
+
+	peers := &PeerManagerMock{}
+
+	slots := &SlotManagerMock{}
+	slots.On("Claim").Return(nil)
+	slots.On("Release").Return(nil)
+
+	dialer := &DialManagerMock{}
+	dialer.On("Dial", address).Return(conn, nil)
+
+	// act
+	handleConnecting(suite.log, &suite.wg, &suite.cfg, slots, peers, rep, dialer, address)
+
+	// assert
+	slots.AssertCalled(suite.T(), "Claim")
+	slots.AssertCalled(suite.T(), "Release")
+	rep.AssertCalled(suite.T(), "Error", address)
+	conn.AssertCalled(suite.T(), "Close")
+}
+
+func (suite *ConnectorTestSuite) TestHandleConnectingWhenCantReadAck() {
+
+	// arrange
+	address := "136.44.33.12:5523"
+	syn := append(suite.cfg.network, suite.cfg.nonce...)
+	buf := make([]byte, len(syn))
+
+	conn := &ConnMock{}
+	conn.On("Write", syn).Return(len(syn), nil)
+	conn.On("Read", buf).Return(0, errors.New("cannot read from connection"))
+	conn.On("Close").Return(nil)
+
+	rep := &ReputationManagerMock{}
+	rep.On("Error", address)
+
+	peers := &PeerManagerMock{}
+
+	slots := &SlotManagerMock{}
+	slots.On("Claim").Return(nil)
+	slots.On("Release").Return(nil)
+
+	dialer := &DialManagerMock{}
+	dialer.On("Dial", address).Return(conn, nil)
+
+	// act
+	handleConnecting(suite.log, &suite.wg, &suite.cfg, slots, peers, rep, dialer, address)
+
+	// assert
+	slots.AssertCalled(suite.T(), "Claim")
+	slots.AssertCalled(suite.T(), "Release")
+	rep.AssertCalled(suite.T(), "Error", address)
+	conn.AssertCalled(suite.T(), "Close")
+}
+
+func (suite *ConnectorTestSuite) TestHandleConnectingWhenNetworkMismatch() {
+
+	// arrange
+	address := "136.44.33.12:5523"
+	syn := append(suite.cfg.network, suite.cfg.nonce...)
+	buf := make([]byte, len(syn))
+	ack := append([]byte{1, 2, 3, 4}, uuid.NewV4().Bytes()...)
+
+	conn := &ConnMock{}
+	conn.On("Write", syn).Return(len(syn), nil)
+	conn.On("Read", buf).Run(func(args mock.Arguments) {
+		copy(args.Get(0).([]byte), ack)
+	}).Return(len(buf), nil)
+	conn.On("Close").Return(nil)
+
+	rep := &ReputationManagerMock{}
+	rep.On("Invalid", address)
+
+	peers := &PeerManagerMock{}
+
+	slots := &SlotManagerMock{}
+	slots.On("Claim").Return(nil)
+	slots.On("Release").Return(nil)
+
+	dialer := &DialManagerMock{}
+	dialer.On("Dial", address).Return(conn, nil)
+
+	// act
+	handleConnecting(suite.log, &suite.wg, &suite.cfg, slots, peers, rep, dialer, address)
+
+	// assert
+	slots.AssertCalled(suite.T(), "Claim")
+	slots.AssertCalled(suite.T(), "Release")
+	rep.AssertCalled(suite.T(), "Invalid", address)
+	conn.AssertCalled(suite.T(), "Close")
+}
+
+func (suite *ConnectorTestSuite) TestHandleConnectingWhenIdenticalNonce() {
+
+	// arrange
+	address := "136.44.33.12:5523"
+	syn := append(suite.cfg.network, suite.cfg.nonce...)
+	buf := make([]byte, len(syn))
+	ack := append(suite.cfg.network, suite.cfg.nonce...)
+
+	conn := &ConnMock{}
+	conn.On("Write", syn).Return(len(syn), nil)
+	conn.On("Read", buf).Run(func(args mock.Arguments) {
+		copy(args.Get(0).([]byte), ack)
+	}).Return(len(buf), nil)
+	conn.On("Close").Return(nil)
+
+	rep := &ReputationManagerMock{}
+	rep.On("Invalid", address)
+
+	peers := &PeerManagerMock{}
+
+	slots := &SlotManagerMock{}
+	slots.On("Claim").Return(nil)
+	slots.On("Release").Return(nil)
+
+	dialer := &DialManagerMock{}
+	dialer.On("Dial", address).Return(conn, nil)
+
+	// act
+	handleConnecting(suite.log, &suite.wg, &suite.cfg, slots, peers, rep, dialer, address)
+
+	// assert
+	slots.AssertCalled(suite.T(), "Claim")
+	slots.AssertCalled(suite.T(), "Release")
+	rep.AssertCalled(suite.T(), "Invalid", address)
+	conn.AssertCalled(suite.T(), "Close")
+}
+
+func (suite *ConnectorTestSuite) TestHandleConnectingWhenNonceAlreadyKnown() {
+
+	// arrange
+	address := "136.44.33.12:5523"
+	nonce := uuid.NewV4().Bytes()
+	syn := append(suite.cfg.network, suite.cfg.nonce...)
+	buf := make([]byte, len(syn))
+	ack := append(suite.cfg.network, nonce...)
+
+	conn := &ConnMock{}
+	conn.On("Write", syn).Return(len(syn), nil)
+	conn.On("Read", buf).Run(func(args mock.Arguments) {
+		copy(args.Get(0).([]byte), ack)
+	}).Return(len(buf), nil)
+	conn.On("Close").Return(nil)
+
+	rep := &ReputationManagerMock{}
+	rep.On("Invalid", address)
+
+	peers := &PeerManagerMock{}
+	peers.On("Known", nonce).Return(true)
+
+	slots := &SlotManagerMock{}
+	slots.On("Claim").Return(nil)
+	slots.On("Release").Return(nil)
+
+	dialer := &DialManagerMock{}
+	dialer.On("Dial", address).Return(conn, nil)
+
+	// act
+	handleConnecting(suite.log, &suite.wg, &suite.cfg, slots, peers, rep, dialer, address)
+
+	// assert
+	slots.AssertCalled(suite.T(), "Claim")
+	slots.AssertCalled(suite.T(), "Release")
+	rep.AssertCalled(suite.T(), "Invalid", address)
+	conn.AssertCalled(suite.T(), "Close")
+}
+
+func (suite *ConnectorTestSuite) TestHandleConnectingWhenCannotAddPeer() {
+
+	// arrange
+	address := "136.44.33.12:5523"
+	nonce := uuid.NewV4().Bytes()
+	syn := append(suite.cfg.network, suite.cfg.nonce...)
+	buf := make([]byte, len(syn))
+	ack := append(suite.cfg.network, nonce...)
+
+	conn := &ConnMock{}
+	conn.On("Write", syn).Return(len(syn), nil)
+	conn.On("Read", buf).Run(func(args mock.Arguments) {
+		copy(args.Get(0).([]byte), ack)
+	}).Return(len(buf), nil)
+	conn.On("Close").Return(nil)
+
+	rep := &ReputationManagerMock{}
+	rep.On("Invalid", address)
+
+	peers := &PeerManagerMock{}
+	peers.On("Known", nonce).Return(false)
+	peers.On("Add", conn, nonce).Return(errors.New("cannot add peer"))
+
+	slots := &SlotManagerMock{}
+	slots.On("Claim").Return(nil)
+	slots.On("Release").Return(nil)
+
+	dialer := &DialManagerMock{}
+	dialer.On("Dial", address).Return(conn, nil)
+
+	// act
+	handleConnecting(suite.log, &suite.wg, &suite.cfg, slots, peers, rep, dialer, address)
+
+	// assert
+	slots.AssertCalled(suite.T(), "Claim")
+	slots.AssertCalled(suite.T(), "Release")
+	conn.AssertCalled(suite.T(), "Close")
+}
+
+func (suite *ConnectorTestSuite) TestHandleConnectingWhenSuccess() {
+
+	// arrange
+	address := "136.44.33.12:5523"
+	nonce := uuid.NewV4().Bytes()
+	syn := append(suite.cfg.network, suite.cfg.nonce...)
+	buf := make([]byte, len(syn))
+	ack := append(suite.cfg.network, nonce...)
+
+	conn := &ConnMock{}
+	conn.On("Write", syn).Return(len(syn), nil)
+	conn.On("Read", buf).Run(func(args mock.Arguments) {
+		copy(args.Get(0).([]byte), ack)
+	}).Return(len(buf), nil)
+	conn.On("Close").Return(nil)
+
+	rep := &ReputationManagerMock{}
+	rep.On("Success", address)
+
+	peers := &PeerManagerMock{}
+	peers.On("Known", nonce).Return(false)
+	peers.On("Add", conn, nonce).Return(nil)
+
+	slots := &SlotManagerMock{}
+	slots.On("Claim").Return(nil)
+	slots.On("Release").Return(nil)
+
+	dialer := &DialManagerMock{}
+	dialer.On("Dial", address).Return(conn, nil)
+
+	// act
+	handleConnecting(suite.log, &suite.wg, &suite.cfg, slots, peers, rep, dialer, address)
+
+	// assert
+	slots.AssertCalled(suite.T(), "Claim")
+	slots.AssertCalled(suite.T(), "Release")
+	peers.AssertCalled(suite.T(), "Add", conn, nonce)
+	rep.AssertCalled(suite.T(), "Success", address)
+}
+
+func TestConnectorTestSuite(t *testing.T) {
+	suite.Run(t, new(ConnectorTestSuite))
+}

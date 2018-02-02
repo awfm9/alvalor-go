@@ -69,6 +69,8 @@ func (suite *AcceptorTestSuite) TestHandleAcceptingWhenCantClaimSlot() {
 	handleAccepting(suite.log, &suite.wg, &suite.cfg, slots, peers, rep, conn)
 
 	// assert
+	slots.AssertCalled(suite.T(), "Claim")
+	slots.AssertNotCalled(suite.T(), "Release")
 	conn.AssertCalled(suite.T(), "Close")
 }
 
@@ -99,6 +101,7 @@ func (suite *AcceptorTestSuite) TestHandleAcceptingWhenCantReadSyn() {
 	handleAccepting(suite.log, &suite.wg, &suite.cfg, slots, peers, rep, conn)
 
 	// assert
+	slots.AssertCalled(suite.T(), "Claim")
 	slots.AssertCalled(suite.T(), "Release")
 	rep.AssertCalled(suite.T(), "Error", address)
 	conn.AssertCalled(suite.T(), "Close")
@@ -134,6 +137,7 @@ func (suite *AcceptorTestSuite) TestHandleAcceptingWhenNetworkMismatch() {
 	handleAccepting(suite.log, &suite.wg, &suite.cfg, slots, peers, rep, conn)
 
 	// assert
+	slots.AssertCalled(suite.T(), "Claim")
 	slots.AssertCalled(suite.T(), "Release")
 	rep.AssertCalled(suite.T(), "Invalid", address)
 	conn.AssertCalled(suite.T(), "Close")
@@ -169,6 +173,7 @@ func (suite *AcceptorTestSuite) TestHandleAcceptingWhenIdenticalNonce() {
 	handleAccepting(suite.log, &suite.wg, &suite.cfg, slots, peers, rep, conn)
 
 	// assert
+	slots.AssertCalled(suite.T(), "Claim")
 	slots.AssertCalled(suite.T(), "Release")
 	rep.AssertCalled(suite.T(), "Invalid", address)
 	conn.AssertCalled(suite.T(), "Close")
@@ -206,6 +211,7 @@ func (suite *AcceptorTestSuite) TestHandleAcceptingWhenCantWriteAck() {
 	handleAccepting(suite.log, &suite.wg, &suite.cfg, slots, peers, rep, conn)
 
 	// assert
+	slots.AssertCalled(suite.T(), "Claim")
 	slots.AssertCalled(suite.T(), "Release")
 	rep.AssertCalled(suite.T(), "Error", address)
 	conn.AssertCalled(suite.T(), "Close")
@@ -246,6 +252,7 @@ func (suite *AcceptorTestSuite) TestHandleAcceptingWhenCantAddPeer() {
 	handleAccepting(suite.log, &suite.wg, &suite.cfg, slots, peers, rep, conn)
 
 	// assert
+	slots.AssertCalled(suite.T(), "Claim")
 	slots.AssertCalled(suite.T(), "Release")
 	conn.AssertCalled(suite.T(), "Close")
 }
@@ -284,6 +291,7 @@ func (suite *AcceptorTestSuite) TestHandleAcceptingWhenSuccess() {
 	handleAccepting(suite.log, &suite.wg, &suite.cfg, slots, peers, rep, conn)
 
 	// assert
+	slots.AssertCalled(suite.T(), "Claim")
 	slots.AssertCalled(suite.T(), "Release")
 	peers.AssertCalled(suite.T(), "Add", conn, nonce)
 	rep.AssertCalled(suite.T(), "Success", address)

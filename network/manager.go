@@ -68,6 +68,7 @@ func NewManager(log zerolog.Logger, codec Codec, options ...func(*Config)) *Mana
 		address:    "0.0.0.0:31337",
 		minPeers:   3,
 		maxPeers:   10,
+		maxPending: 16,
 		nonce:      uuid.NewV4().Bytes(),
 		interval:   time.Second * 1,
 		codec:      codec,

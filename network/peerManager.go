@@ -28,9 +28,10 @@ import (
 
 type peerManager interface {
 	Add(conn net.Conn, nonce []byte) error
-	DropAll()
+	Known(nonce []byte) bool
 	Count() uint
 	Addresses() []string
+	DropAll()
 }
 
 type simplePeerManager struct {
