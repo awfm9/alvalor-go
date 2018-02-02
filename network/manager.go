@@ -18,13 +18,10 @@
 package network
 
 import (
-	"bytes"
-	"math/rand"
 	"net"
 	"sync"
 	"time"
 
-	"github.com/pierrec/lz4"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
 	uuid "github.com/satori/go.uuid"
@@ -44,13 +41,15 @@ var dial = func(address string) (net.Conn, error) { return net.Dial("tcp", addre
 
 // Manager represents the manager of all network components.
 type Manager struct {
-	log      zerolog.Logger
-	wg       *sync.WaitGroup
-	cfg      *Config
-	book     *Book
-	registry Registry
-	stop     chan struct{}
-	pending  uint
+	log     zerolog.Logger
+	wg      *sync.WaitGroup
+	cfg     *Config
+	book    *Book
+	slots   slotManager
+	peers   peerManager
+	rep     reputationManager
+	stop    chan struct{}
+	pending uint
 }
 
 // NewManager will initialize the completely wired up networking dependencies.
@@ -82,12 +81,13 @@ func NewManager(log zerolog.Logger, codec Codec, options ...func(*Config)) *Mana
 
 	// initialize the network component with all state
 	mgr := &Manager{
-		log:      log,
-		wg:       wg,
-		cfg:      cfg,
-		book:     NewBook(),
-		registry: NewSimpleRegistry(),
-		stop:     make(chan struct{}),
+		log:   log,
+		wg:    wg,
+		cfg:   cfg,
+		slots: newSimpleSlotManager(cfg.maxPending),
+		peers: newSimplePeerManager(cfg.minPeers, cfg.maxPeers),
+		rep:   newSimpleReputationManager(),
+		stop:  make(chan struct{}),
 	}
 
 	// TODO: separate book package and inject so we can add addresses in main
@@ -98,10 +98,7 @@ func NewManager(log zerolog.Logger, codec Codec, options ...func(*Config)) *Mana
 
 	// initialize the connection dropper, the outgoing connection dialer and
 	// the incoming connection server
-	wg.Add(3)
-	go handleDropping(log, wg, cfg, mgr, mgr, mgr.book, mgr.stop)
-	go handleDialing(log, wg, cfg, mgr, mgr, mgr.stop)
-	go handleServing(log, wg, cfg, mgr, mgr, mgr.stop)
+	// TODO: restart the initial handlers
 
 	return mgr
 }
@@ -109,68 +106,13 @@ func NewManager(log zerolog.Logger, codec Codec, options ...func(*Config)) *Mana
 // Stop will shut down all routines and wait for them to end.
 func (mgr *Manager) Stop() {
 	close(mgr.stop)
-	for _, address := range mgr.registry.List() {
-		go mgr.DropPeer(address)
-	}
+	mgr.peers.DropAll()
 	mgr.wg.Wait()
-}
-
-// GetAddresses will return the addresses of all connected peers.
-func (mgr *Manager) GetAddresses() []string {
-	return mgr.registry.List()
-}
-
-// DropPeer will drop a random peer from our connections.
-func (mgr *Manager) DropPeer(address string) error {
-	peer, ok := mgr.registry.Get(address)
-	if !ok {
-		return errors.New("peer not found")
-	}
-	err := peer.conn.Close()
-	if err != nil {
-		return errors.Wrap(err, "could not close connection")
-	}
-	_ = mgr.registry.Remove(address)
-	return nil
-}
-
-// DropRandomPeer will drop a random peer from our connections.
-func (mgr *Manager) DropRandomPeer() (string, error) {
-	addresses := mgr.registry.List()
-	if len(addresses) == 0 {
-		return "", errors.New("no peers available")
-	}
-	address := addresses[rand.Int()%len(addresses)]
-	err := mgr.DropPeer(address)
-	if err != nil {
-		return "", errors.Wrap(err, "could not drop peer")
-	}
-	return address, nil
-}
-
-// PeerCount returns the number of successfully connected to peers.
-func (mgr *Manager) PeerCount() uint {
-	return mgr.registry.Count()
 }
 
 // PendingCount returns the number of pending peer connections.
 func (mgr *Manager) PendingCount() uint {
 	return mgr.pending
-}
-
-// KnownNonce will let us know if we are already connected to a peer with the
-// given nonce.
-func (mgr *Manager) KnownNonce(nonce []byte) bool {
-	for _, address := range mgr.registry.List() {
-		peer, ok := mgr.registry.Get(address)
-		if !ok {
-			continue
-		}
-		if bytes.Equal(peer.nonce, nonce) {
-			return true
-		}
-	}
-	return false
 }
 
 // ClaimSlot claims one pending connection slot.
@@ -210,7 +152,7 @@ func (mgr *Manager) StartConnector() {
 		return
 	}
 	mgr.wg.Add(1)
-	go handleConnecting(mgr.log, mgr.wg, mgr.cfg, mgr, mgr, mgr.book, dial, addresses[0])
+	// TODO: launch handler to create connection
 }
 
 // StartListener will start a listener on a given port.
@@ -233,34 +175,5 @@ func (mgr *Manager) StartListener(stop <-chan struct{}) {
 // StartAcceptor will start accepting an incoming connection.
 func (mgr *Manager) StartAcceptor(conn net.Conn) {
 	mgr.wg.Add(1)
-	go handleAccepting(mgr.log, mgr.wg, mgr.cfg, mgr, mgr.book, conn)
-}
-
-// AddPeer will launch all necessary processing for a new valid connection.
-func (mgr *Manager) AddPeer(conn net.Conn, nonce []byte) error {
-
-	// create the peer and add to registry
-	peer := &Peer{
-		conn:   conn,
-		input:  make(chan interface{}, mgr.cfg.bufferSize),
-		output: make(chan interface{}, mgr.cfg.bufferSize),
-		nonce:  nonce,
-	}
-	err := mgr.registry.Add(peer)
-	if err != nil {
-		return errors.Wrap(err, "could not add peer to registry")
-	}
-
-	// initialize the readers and writers
-	address := conn.RemoteAddr().String()
-	r := lz4.NewReader(conn)
-	w := lz4.NewWriter(conn)
-
-	// launch the message processing routines
-	mgr.wg.Add(3)
-	go handleSending(mgr.log, mgr.wg, mgr.cfg, mgr, mgr.book, address, peer.output, w)
-	go handleReceiving(mgr.log, mgr.wg, mgr.cfg, mgr, mgr.book, address, r, peer.input)
-	go handleProcessing(mgr.log, mgr.wg, mgr.cfg, mgr, mgr, mgr.book, address, peer.input, peer.output)
-
-	return nil
+	go handleAccepting(mgr.log, mgr.wg, mgr.cfg, mgr.slots, mgr.peers, mgr.rep, conn)
 }
