@@ -45,7 +45,7 @@ func (suite *ProcessorSuite) SetupTest() {
 	suite.wg.Add(1)
 	suite.cfg = Config{
 		interval: 10 * time.Millisecond,
-		address:  "153.66.22.77:5412",
+		address:  "192.0.2.100:1337",
 		listen:   false,
 	}
 }
@@ -53,7 +53,7 @@ func (suite *ProcessorSuite) SetupTest() {
 func (suite *ProcessorSuite) TestProcessingEnabledListenPublishesOwnAddress() {
 
 	// arrange
-	address := "15.77.14.74:5454"
+	address := "192.0.2.200:1337"
 	input := make(chan interface{})
 	output := make(chan interface{}, 16)
 
@@ -83,7 +83,7 @@ func (suite *ProcessorSuite) TestProcessingEnabledListenPublishesOwnAddress() {
 func (suite *ProcessorSuite) TestProcessingPublishesDiscoverNotOwnAddress() {
 
 	// arrange
-	address := "15.77.14.74:5454"
+	address := "192.0.2.200:1337"
 	input := make(chan interface{})
 	output := make(chan interface{}, 16)
 
@@ -109,7 +109,7 @@ func (suite *ProcessorSuite) TestProcessingPublishesDiscoverNotOwnAddress() {
 func (suite *ProcessorSuite) TestProcessingSendsPingEachInterval() {
 
 	// arrange
-	address := "15.77.14.74:5454"
+	address := "192.0.2.200:1337"
 	input := make(chan interface{})
 	output := make(chan interface{}, 16)
 
@@ -137,7 +137,7 @@ func (suite *ProcessorSuite) TestProcessingSendsPingEachInterval() {
 func (suite *ProcessorSuite) TestProcessingRespondsToPingWithPong() {
 
 	// arrange
-	address := "15.77.14.74:5454"
+	address := "192.0.2.200:1337"
 	input := make(chan interface{})
 	output := make(chan interface{}, 16)
 
@@ -166,7 +166,7 @@ func (suite *ProcessorSuite) TestProcessingRespondsToPingWithPong() {
 func (suite *ProcessorSuite) TestProcessingRespondsToDiscoverWithPeers() {
 
 	// arrange
-	address := "15.77.14.74:5454"
+	address := "192.0.2.200:1337"
 	sample := []string{"15.77.14.74:6666", "15.77.14.74:7777", "15.77.14.74:8888"}
 	input := make(chan interface{})
 	output := make(chan interface{}, 16)
@@ -197,7 +197,7 @@ func (suite *ProcessorSuite) TestProcessingRespondsToDiscoverWithPeers() {
 func (suite *ProcessorSuite) TestProcessingAddsPeersAddresses() {
 
 	// arrange
-	address := "15.77.14.74:5454"
+	address := "192.0.2.200:1337"
 	sample := []string{"15.77.14.74:6666", "15.77.14.74:7777", "15.77.14.74:8888"}
 	input := make(chan interface{})
 	output := make(chan interface{}, 16)
@@ -230,7 +230,7 @@ func (suite *ProcessorSuite) TestProcessingAddsPeersAddresses() {
 func (suite *ProcessorSuite) TestProcessingPong() {
 
 	// arrange
-	address := "15.77.14.74:5454"
+	address := "192.0.2.200:1337"
 	input := make(chan interface{})
 	output := make(chan interface{}, 16)
 
@@ -254,7 +254,7 @@ func (suite *ProcessorSuite) TestProcessingPong() {
 func (suite *ProcessorSuite) TestProcessingDropsPeerAfterThreePings() {
 
 	// arrange
-	address := "15.77.14.74:5454"
+	address := "192.0.2.200:1337"
 	input := make(chan interface{})
 	output := make(chan interface{}, 16)
 

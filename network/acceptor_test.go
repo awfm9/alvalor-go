@@ -53,7 +53,7 @@ func (suite *AcceptorSuite) SetupTest() {
 func (suite *AcceptorSuite) TestAcceptorClaimFails() {
 
 	// arrange
-	address := "136.44.33.12:5523"
+	address := "192.0.2.100:1337"
 
 	addr := &AddrMock{}
 	addr.On("String").Return(address)
@@ -81,7 +81,7 @@ func (suite *AcceptorSuite) TestAcceptorClaimFails() {
 func (suite *AcceptorSuite) TestAcceptorReadFails() {
 
 	// arrange
-	address := "136.44.33.12:552"
+	address := "192.0.2.100:1337"
 	buf := make([]byte, len(suite.cfg.network)+len(suite.cfg.nonce))
 
 	addr := &AddrMock{}
@@ -114,7 +114,7 @@ func (suite *AcceptorSuite) TestAcceptorReadFails() {
 func (suite *AcceptorSuite) TestAcceptorNetworkMismatch() {
 
 	// arrange
-	address := "136.44.33.12:5523"
+	address := "192.0.2.100:1337"
 	syn := append([]byte{1, 2, 3, 4}, uuid.NewV4().Bytes()...)
 	buf := make([]byte, len(syn))
 
@@ -150,7 +150,7 @@ func (suite *AcceptorSuite) TestAcceptorNetworkMismatch() {
 func (suite *AcceptorSuite) TestAcceptorNonceIdentical() {
 
 	// arrange
-	address := "136.44.33.12:5523"
+	address := "192.0.2.100:1337"
 	syn := append(suite.cfg.network, suite.cfg.nonce...)
 	buf := make([]byte, len(syn))
 
@@ -186,7 +186,7 @@ func (suite *AcceptorSuite) TestAcceptorNonceIdentical() {
 func (suite *AcceptorSuite) TestAcceptorWriteFails() {
 
 	// arrange
-	address := "136.44.33.12:5523"
+	address := "192.0.2.100:1337"
 	syn := append(suite.cfg.network, uuid.NewV4().Bytes()...)
 	buf := make([]byte, len(syn))
 	ack := append(suite.cfg.network, suite.cfg.nonce...)
@@ -224,7 +224,7 @@ func (suite *AcceptorSuite) TestAcceptorWriteFails() {
 func (suite *AcceptorSuite) TestAcceptorAddPeerFails() {
 
 	// arrange
-	address := "136.44.33.12:5523"
+	address := "192.0.2.100:1337"
 	nonce := uuid.NewV4().Bytes()
 	syn := append(suite.cfg.network, nonce...)
 	buf := make([]byte, len(syn))
@@ -264,7 +264,7 @@ func (suite *AcceptorSuite) TestAcceptorAddPeerFails() {
 func (suite *AcceptorSuite) TestAcceptorSuccess() {
 
 	// arrange
-	address := "136.44.33.12:5523"
+	address := "192.0.2.100:1337"
 	nonce := uuid.NewV4().Bytes()
 	syn := append(suite.cfg.network, nonce...)
 	buf := make([]byte, len(syn))

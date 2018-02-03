@@ -21,7 +21,7 @@ import "testing"
 
 func TestListenWrapperFail(t *testing.T) {
 	listener := &simpleListenWrapper{}
-	_, _ = listener.Listen("bogus address")
+	_, _ = listener.Listen("192.0.2.100:1337")
 }
 
 func TestListenWrapperSuccess(t *testing.T) {

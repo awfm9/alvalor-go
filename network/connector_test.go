@@ -53,7 +53,7 @@ func (suite *ConnectorSuite) SetupTest() {
 func (suite *ConnectorSuite) TestConnectorClaimFails() {
 
 	// arrange
-	address := "136.44.33.12:5523"
+	address := "192.0.2.100:1337"
 
 	slots := &SlotManagerMock{}
 	slots.On("Claim").Return(errors.New("cannot claim slot"))
@@ -75,7 +75,7 @@ func (suite *ConnectorSuite) TestConnectorClaimFails() {
 func (suite *ConnectorSuite) TestConnectorDialFails() {
 
 	// arrange
-	address := "136.44.33.12:5523"
+	address := "192.0.2.100:1337"
 
 	rep := &ReputationManagerMock{}
 	rep.On("Failure", address)
@@ -101,7 +101,7 @@ func (suite *ConnectorSuite) TestConnectorDialFails() {
 func (suite *ConnectorSuite) TestConnectorWriteFails() {
 
 	// arrange
-	address := "136.44.33.12:5523"
+	address := "192.0.2.100:1337"
 	syn := append(suite.cfg.network, suite.cfg.nonce...)
 
 	conn := &ConnMock{}
@@ -133,7 +133,7 @@ func (suite *ConnectorSuite) TestConnectorWriteFails() {
 func (suite *ConnectorSuite) TestConnectorReadFails() {
 
 	// arrange
-	address := "136.44.33.12:5523"
+	address := "192.0.2.100:1337"
 	syn := append(suite.cfg.network, suite.cfg.nonce...)
 	buf := make([]byte, len(syn))
 
@@ -167,7 +167,7 @@ func (suite *ConnectorSuite) TestConnectorReadFails() {
 func (suite *ConnectorSuite) TestConnectorNetworkMismatch() {
 
 	// arrange
-	address := "136.44.33.12:5523"
+	address := "192.0.2.100:1337"
 	syn := append(suite.cfg.network, suite.cfg.nonce...)
 	buf := make([]byte, len(syn))
 	ack := append([]byte{1, 2, 3, 4}, uuid.NewV4().Bytes()...)
@@ -204,7 +204,7 @@ func (suite *ConnectorSuite) TestConnectorNetworkMismatch() {
 func (suite *ConnectorSuite) TestConnectorNonceIdentical() {
 
 	// arrange
-	address := "136.44.33.12:5523"
+	address := "192.0.2.100:1337"
 	syn := append(suite.cfg.network, suite.cfg.nonce...)
 	buf := make([]byte, len(syn))
 	ack := append(suite.cfg.network, suite.cfg.nonce...)
@@ -241,7 +241,7 @@ func (suite *ConnectorSuite) TestConnectorNonceIdentical() {
 func (suite *ConnectorSuite) TestConnectorNonceKnown() {
 
 	// arrange
-	address := "136.44.33.12:5523"
+	address := "192.0.2.100:1337"
 	nonce := uuid.NewV4().Bytes()
 	syn := append(suite.cfg.network, suite.cfg.nonce...)
 	buf := make([]byte, len(syn))
@@ -280,7 +280,7 @@ func (suite *ConnectorSuite) TestConnectorNonceKnown() {
 func (suite *ConnectorSuite) TestConnectorAddPeerFails() {
 
 	// arrange
-	address := "136.44.33.12:5523"
+	address := "192.0.2.100:1337"
 	nonce := uuid.NewV4().Bytes()
 	syn := append(suite.cfg.network, suite.cfg.nonce...)
 	buf := make([]byte, len(syn))
@@ -319,7 +319,7 @@ func (suite *ConnectorSuite) TestConnectorAddPeerFails() {
 func (suite *ConnectorSuite) TestConnectorSuccess() {
 
 	// arrange
-	address := "136.44.33.12:5523"
+	address := "192.0.2.100:1337"
 	nonce := uuid.NewV4().Bytes()
 	syn := append(suite.cfg.network, suite.cfg.nonce...)
 	buf := make([]byte, len(syn))

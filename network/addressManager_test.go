@@ -33,57 +33,57 @@ func TestNewAddressManager(t *testing.T) {
 }
 
 func TestAddressManagerAdd(t *testing.T) {
-	address := "192.168.2.100"
+	address := "192.0.2.100:1337"
 	am := simpleAddressManager{addresses: make(map[string]bool)}
 	am.Add(address)
 	assert.Contains(t, am.addresses, address)
 }
 
 func TestAddressManagerRemove(t *testing.T) {
-	address := "192.168.2.100"
+	address := "192.0.2.100:1337"
 	am := simpleAddressManager{addresses: map[string]bool{address: true}}
 	am.Remove(address)
 	assert.NotContains(t, am.addresses, address)
 }
 
 func TestAddressManagerBlock(t *testing.T) {
-	address := "192.168.2.100"
+	address := "192.0.2.100:1337"
 	am := simpleAddressManager{blacklist: make(map[string]bool)}
 	am.Block(address)
 	assert.Contains(t, am.blacklist, address)
 }
 
 func TestAddressManagerUnblock(t *testing.T) {
-	address := "192.168.2.100"
+	address := "192.0.2.100:1337"
 	am := simpleAddressManager{blacklist: map[string]bool{address: true}}
 	am.Unblock(address)
 	assert.NotContains(t, am.blacklist, address)
 }
 
 func TestAddressManagerPin(t *testing.T) {
-	address := "192.168.2.100"
+	address := "192.0.2.100:1337"
 	am := simpleAddressManager{whitelist: make(map[string]bool)}
 	am.Pin(address)
 	assert.Contains(t, am.whitelist, address)
 }
 
 func TestAddressManagerUnpin(t *testing.T) {
-	address := "192.168.2.100"
+	address := "192.0.2.100:1337"
 	am := simpleAddressManager{whitelist: map[string]bool{address: true}}
 	am.Unpin(address)
 	assert.NotContains(t, am.whitelist, address)
 }
 
 func TestAddressManagerSample(t *testing.T) {
-	address1 := "192.0.2.100"
-	address2 := "192.0.2.101" // blacklist + filter
-	address3 := "192.0.2.102" // blacklist
-	address4 := "192.0.2.103" // filter
-	address5 := "192.0.2.104"
-	address6 := "192.0.2.105" // whitelist
-	address7 := "192.0.2.106"
-	address8 := "192.0.2.107"
-	address9 := "192.0.2.108" // whitelist
+	address1 := "192.0.2.100:1337"
+	address2 := "192.0.2.101:1337" // blacklist + filter
+	address3 := "192.0.2.102:1337" // blacklist
+	address4 := "192.0.2.103:1337" // filter
+	address5 := "192.0.2.104:1337"
+	address6 := "192.0.2.105:1337" // whitelist
+	address7 := "192.0.2.106:1337"
+	address8 := "192.0.2.107:1337"
+	address9 := "192.0.2.108:1337" // whitelist
 	am := simpleAddressManager{
 		blacklist: map[string]bool{
 			address2: true,
@@ -108,7 +108,7 @@ func TestAddressManagerSample(t *testing.T) {
 	// this will make sure we cover both less cases with high probability
 	for i := 0; i < 146; i++ {
 		last := 108 + i
-		address := fmt.Sprintf("192.0.2.%v", last)
+		address := fmt.Sprintf("192.0.2.%v:1337", last)
 		am.addresses[address] = true
 	}
 	filter := func(a string) bool {

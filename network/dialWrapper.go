@@ -17,14 +17,19 @@
 
 package network
 
-import "net"
+import (
+	"net"
+	"time"
+)
 
 type dialWrapper interface {
 	Dial(address string) (net.Conn, error)
 }
 
-type simpleDialWrapper struct{}
+type simpleDialWrapper struct {
+	timeout time.Duration
+}
 
 func (dm simpleDialWrapper) Dial(address string) (net.Conn, error) {
-	return net.Dial("tcp", address)
+	return net.DialTimeout("tcp", address, dm.timeout)
 }

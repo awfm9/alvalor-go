@@ -44,7 +44,7 @@ func (suite *ListenerSuite) SetupTest() {
 	suite.wg = sync.WaitGroup{}
 	suite.wg.Add(1)
 	suite.cfg = Config{
-		address: "66.37.13.55:5643",
+		address: "192.0.2.100:1337",
 	}
 }
 

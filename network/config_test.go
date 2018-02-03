@@ -38,8 +38,8 @@ func TestSetListen(t *testing.T) {
 }
 
 func TestSetAddress(t *testing.T) {
-	cfg := &Config{address: "192.0.2.1:1337"}
-	address := "192.0.2.2:1337"
+	cfg := &Config{address: "192.0.2.100:1337"}
+	address := "192.0.2.200:1337"
 	SetAddress(address)(cfg)
 	assert.Equal(t, address, cfg.address, "Set address did not set address")
 }

@@ -27,7 +27,7 @@ import (
 )
 
 func TestByRandom(t *testing.T) {
-	address := "192.168.2.100"
+	address := "192.0.2.100:1337"
 	sort := byRandom()
 	mismatch := false
 	for i := 0; i < 100; i++ {
@@ -42,8 +42,8 @@ func TestByRandom(t *testing.T) {
 }
 
 func TestByReputation(t *testing.T) {
-	address1 := "192.168.2.100"
-	address2 := "192.168.2.200"
+	address1 := "192.0.2.100:1337"
+	address2 := "192.0.2.200:1337"
 	rep := newSimpleReputationManager()
 	sort := byReputation(rep)
 	vectors := map[string]struct {

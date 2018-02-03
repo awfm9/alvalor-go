@@ -52,7 +52,7 @@ func (suite *DropperSuite) SetupTest() {
 func (suite *DropperSuite) TestDropperSuccess() {
 
 	// arrange
-	address := "33.22.72.33:525"
+	address := "192.0.2.100:1337"
 	stop := make(chan struct{})
 
 	peers := &PeerManagerMock{}
@@ -73,7 +73,7 @@ func (suite *DropperSuite) TestDropperSuccess() {
 func (suite *DropperSuite) TestDropperValidPeerNumber() {
 
 	// arrange
-	address := "33.22.72.33:525"
+	address := "192.0.2.100:1337"
 	stop := make(chan struct{})
 
 	peers := &PeerManagerMock{}
@@ -94,7 +94,7 @@ func (suite *DropperSuite) TestDropperValidPeerNumber() {
 func (suite *DropperSuite) TestDropperDropFails() {
 
 	// arrange
-	address := "33.22.72.33:525"
+	address := "192.0.2.100:1337"
 	stop := make(chan struct{})
 
 	peers := &PeerManagerMock{}

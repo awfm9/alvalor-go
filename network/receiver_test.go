@@ -51,7 +51,7 @@ func (suite *ReceiverSuite) SetupTest() {
 func (suite *ReceiverSuite) TestReceiverEOFError() {
 
 	// arrange
-	address := "15.77.14.74:5454"
+	address := "192.0.2.100:1337"
 	input := make(chan interface{}, 16)
 	r := &bytes.Buffer{}
 
@@ -75,7 +75,7 @@ func (suite *ReceiverSuite) TestReceiverEOFError() {
 func (suite *ReceiverSuite) TestReceiverClosedError() {
 
 	// arrange
-	address := "15.77.14.74:5454"
+	address := "192.0.2.100:1337"
 	input := make(chan interface{}, 16)
 	r := &bytes.Buffer{}
 
@@ -99,7 +99,7 @@ func (suite *ReceiverSuite) TestReceiverClosedError() {
 func (suite *ReceiverSuite) TestReceiverReceiveMessages() {
 
 	// arrange
-	address := "15.77.14.74:5454"
+	address := "192.0.2.100:1337"
 	input := make(chan interface{}, 16)
 	r := &bytes.Buffer{}
 
@@ -135,7 +135,7 @@ func (suite *ReceiverSuite) TestReceiverReceiveMessages() {
 func (suite *ReceiverSuite) TestReceiverDecodeFails() {
 
 	// arrange
-	address := "15.77.14.74:5454"
+	address := "192.0.2.100:1337"
 	message := "some message"
 	input := make(chan interface{}, 16)
 	r := &bytes.Buffer{}

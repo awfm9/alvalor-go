@@ -30,7 +30,7 @@ func TestNewReputationManager(t *testing.T) {
 
 func TestReputationManagerError(t *testing.T) {
 	score := float32(13)
-	address := "192.168.2.100"
+	address := "192.0.2.100:1337"
 	rep := simpleReputationManager{
 		scores: map[string]float32{address: score},
 	}
@@ -40,7 +40,7 @@ func TestReputationManagerError(t *testing.T) {
 
 func TestReputationManagerFailure(t *testing.T) {
 	score := float32(13)
-	address := "192.168.2.100"
+	address := "192.0.2.100:1337"
 	rep := simpleReputationManager{
 		scores: map[string]float32{address: score},
 	}
@@ -50,7 +50,7 @@ func TestReputationManagerFailure(t *testing.T) {
 
 func TestReputationManagerInvalid(t *testing.T) {
 	score := float32(13)
-	address := "192.168.2.100"
+	address := "192.0.2.100:1337"
 	rep := simpleReputationManager{
 		scores: map[string]float32{address: score},
 	}
@@ -60,7 +60,7 @@ func TestReputationManagerInvalid(t *testing.T) {
 
 func TestReputationManagerSuccess(t *testing.T) {
 	score := float32(13)
-	address := "192.168.2.100"
+	address := "192.0.2.100:1337"
 	rep := simpleReputationManager{
 		scores: map[string]float32{address: score},
 	}
@@ -70,7 +70,7 @@ func TestReputationManagerSuccess(t *testing.T) {
 
 func TestReputationManagerScore(t *testing.T) {
 	score := float32(13)
-	address := "192.168.2.100"
+	address := "192.0.2.100:1337"
 	rep := simpleReputationManager{
 		scores: map[string]float32{address: score},
 	}

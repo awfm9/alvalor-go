@@ -17,9 +17,12 @@
 
 package network
 
-import "testing"
+import (
+	"testing"
+	"time"
+)
 
 func TestDialWrapper(t *testing.T) {
-	dialer := &simpleDialWrapper{}
-	_, _ = dialer.Dial("192.168.2.100")
+	dialer := &simpleDialWrapper{timeout: 10 * time.Millisecond}
+	_, _ = dialer.Dial("192.0.2.100:1337")
 }

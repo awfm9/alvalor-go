@@ -31,27 +31,27 @@ func TestIsNot(t *testing.T) {
 	}{
 		"empty filter": {
 			filter:   isNot(nil),
-			entry:    "192.168.2.100",
+			entry:    "192.0.2.100:1337",
 			expected: true,
 		},
 		"one entry filter positive": {
-			filter:   isNot([]string{"192.168.2.100"}),
-			entry:    "192.168.2.100",
+			filter:   isNot([]string{"192.0.2.100:1337"}),
+			entry:    "192.0.2.100:1337",
 			expected: false,
 		},
 		"one entry filter negative": {
-			filter:   isNot([]string{"192.168.2.200"}),
-			entry:    "192.168.2.100",
+			filter:   isNot([]string{"192.168.2.200:1337"}),
+			entry:    "192.0.2.100:1337",
 			expected: true,
 		},
 		"multi entry filter positive": {
-			filter:   isNot([]string{"192.168.2.100", "192.168.2.200", "192.168.2.300"}),
-			entry:    "192.168.2.100",
+			filter:   isNot([]string{"192.0.2.100:1337", "192.168.2.200:1337", "192.168.2.300:1337"}),
+			entry:    "192.0.2.100:1337",
 			expected: false,
 		},
 		"multi entry filter negative": {
-			filter:   isNot([]string{"192.168.2.200", "192.168.2.300", "192.168.2.400"}),
-			entry:    "192.168.2.100",
+			filter:   isNot([]string{"192.168.2.200:1337", "192.168.2.300:1337", "192.168.2.400:1337"}),
+			entry:    "192.0.2.100:1337",
 			expected: true,
 		},
 	}
