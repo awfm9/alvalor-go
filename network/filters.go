@@ -17,14 +17,13 @@
 
 package network
 
-func isAny() func(e *entry) bool {
-	return func(e *entry) bool {
+func isNot(addresses []string) func(string) bool {
+	return func(address string) bool {
+		for _, item := range addresses {
+			if item == address {
+				return false
+			}
+		}
 		return true
-	}
-}
-
-func isActive(active bool) func(e *entry) bool {
-	return func(e *entry) bool {
-		return e.Active == active
 	}
 }

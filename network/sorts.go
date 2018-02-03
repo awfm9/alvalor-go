@@ -24,35 +24,28 @@ import (
 	"net"
 )
 
-func byRandom() func(*entry, *entry) bool {
-	return func(*entry, *entry) bool {
+func byRandom() func(string, string) bool {
+	return func(string, string) bool {
 		return rand.Int()%2 == 0
 	}
 }
 
-func byScore() func(*entry, *entry) bool {
-	return byScoreFunc(func(entry *entry) float64 {
-		score := float64(entry.Success - entry.Failure)
-		return score
-	})
-}
-
-func byScoreFunc(score func(*entry) float64) func(*entry, *entry) bool {
-	return func(e1 *entry, e2 *entry) bool {
-		return score(e1) > score(e2)
+func byReputation(rep reputationManager) func(string, string) bool {
+	return func(address1 string, address2 string) bool {
+		return rep.Score(address1) > rep.Score(address2)
 	}
 }
 
-func byHashFunc(h hash.Hash) func(*entry, *entry) bool {
-	return func(e1 *entry, e2 *entry) bool {
-		ip1, _, _ := net.SplitHostPort(e1.Address)
+func byIPHash(h hash.Hash) func(string, string) bool {
+	return func(address1 string, address2 string) bool {
+		host1, _, _ := net.SplitHostPort(address1)
 		h.Reset()
-		_, _ = h.Write([]byte(ip1))
-		h1 := h.Sum(nil)
-		ip2, _, _ := net.SplitHostPort(e2.Address)
+		_, _ = h.Write([]byte(host1))
+		hash1 := h.Sum(nil)
+		host2, _, _ := net.SplitHostPort(address2)
 		h.Reset()
-		_, _ = h.Write([]byte(ip2))
-		h2 := h.Sum(nil)
-		return bytes.Compare(h1[:], h2[:]) < 0
+		_, _ = h.Write([]byte(host2))
+		hash2 := h.Sum(nil)
+		return bytes.Compare(hash1[:], hash2[:]) < 0
 	}
 }
