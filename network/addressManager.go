@@ -18,7 +18,6 @@
 package network
 
 import (
-	"net"
 	"sort"
 	"sync"
 )
@@ -37,21 +36,21 @@ type simpleAddressManager struct {
 	sync.Mutex
 	blacklist map[string]bool
 	whitelist map[string]bool
-	addresses map[string]struct{}
+	addresses map[string]bool
 }
 
 func newSimpleAddressManager() *simpleAddressManager {
 	return &simpleAddressManager{
 		blacklist: make(map[string]bool),
 		whitelist: make(map[string]bool),
-		addresses: make(map[string]struct{}),
+		addresses: make(map[string]bool),
 	}
 }
 
 func (am *simpleAddressManager) Add(address string) {
 	am.Lock()
 	defer am.Unlock()
-	am.addresses[address] = struct{}{}
+	am.addresses[address] = true
 }
 
 func (am *simpleAddressManager) Remove(address string) {
@@ -88,9 +87,23 @@ func (am *simpleAddressManager) Sample(count uint, params ...interface{}) []stri
 	am.Lock()
 	defer am.Unlock()
 
-	// extract filter & sort parameters
+	// initialize list of filters & sorts
 	var filters []func(string) bool
 	var sorts []func(string, string) bool
+
+	// add blacklist filter
+	blacklist := func(address string) bool {
+		return !am.blacklist[address]
+	}
+	filters = append(filters, blacklist)
+
+	// add whitelist sort
+	whitelist := func(address1 string, address2 string) bool {
+		return am.whitelist[address1] && !am.whitelist[address2]
+	}
+	sorts = append(sorts, whitelist)
+
+	// add custom filters & sorts
 	for _, param := range params {
 		switch f := param.(type) {
 		case func(string) bool:
@@ -99,19 +112,6 @@ func (am *simpleAddressManager) Sample(count uint, params ...interface{}) []stri
 			sorts = append(sorts, f)
 		}
 	}
-
-	// add filter for blacklisted entries
-	blacklist := func(address string) bool {
-		ip, _, _ := net.SplitHostPort(address)
-		return am.blacklist[ip]
-	}
-	filters = append(filters, blacklist)
-
-	// add sort for whitelisted entries
-	whitelist := func(address1 string, address2 string) bool {
-		return am.whitelist[address1] && !am.whitelist[address2]
-	}
-	sorts = append(sorts, whitelist)
 
 	// apply the filters
 	var addresses []string
@@ -130,6 +130,9 @@ Outer:
 		for _, less := range sorts {
 			if less(addresses[i], addresses[j]) {
 				return true
+			}
+			if less(addresses[j], addresses[i]) {
+				return false
 			}
 		}
 		return false
