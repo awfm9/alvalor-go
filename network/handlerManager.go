@@ -17,18 +17,35 @@
 
 package network
 
-import "net"
+import (
+	"io"
+	"net"
+)
 
 type handlerManager interface {
 	Accept(conn net.Conn)
 	Connect()
 	Listen()
+	Send(address string, output <-chan interface{}, w io.Writer)
+	Process(address string, input <-chan interface{}, output chan<- interface{})
+	Receive(address string, r io.Reader, input chan<- interface{})
 }
 
 type simpleHandlerManager struct{}
+
+// TODO: implement constructor which injects all dependencies
+
+// TODO: implement the actual handler launching
 
 func (hm simpleHandlerManager) Accept(conn net.Conn) {}
 
 func (hm simpleHandlerManager) Connect() {}
 
 func (hm simpleHandlerManager) Listen() {}
+
+func (hm simpleHandlerManager) Send(address string, output <-chan interface{}, w io.Writer) {}
+
+func (hm simpleHandlerManager) Process(address string, input <-chan interface{}, output chan<- interface{}) {
+}
+
+func (hm simpleHandlerManager) Receive(address string, r io.Reader, input chan<- interface{}) {}

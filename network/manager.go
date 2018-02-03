@@ -81,11 +81,12 @@ func NewManager(log zerolog.Logger, codec Codec, options ...func(*Config)) *Mana
 
 	// initialize the network component with all state
 	mgr := &Manager{
-		log:       log,
-		wg:        wg,
-		cfg:       cfg,
-		slots:     newSimpleSlotManager(cfg.maxPending),
-		peers:     newSimplePeerManager(cfg.minPeers, cfg.maxPeers),
+		log:   log,
+		wg:    wg,
+		cfg:   cfg,
+		slots: newSimpleSlotManager(cfg.maxPending),
+		// TODO: initialize peers with handlers dependency
+		peers:     newSimplePeerManager(nil, cfg.minPeers, cfg.maxPeers),
 		rep:       newSimpleReputationManager(),
 		addresses: &simpleAddressManager{},
 		handlers:  &simpleHandlerManager{},
@@ -100,7 +101,7 @@ func NewManager(log zerolog.Logger, codec Codec, options ...func(*Config)) *Mana
 
 	// initialize the connection dropper, the outgoing connection dialer and
 	// the incoming connection server
-	// TODO: restart the initial handlers
+	// TODO: restart the dropper, server and dialer
 
 	return mgr
 }

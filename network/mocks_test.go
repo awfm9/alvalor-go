@@ -262,6 +262,18 @@ func (hm *HandlerManagerMock) Listen() {
 	_ = hm.Called()
 }
 
+func (hm *HandlerManagerMock) Send(address string, output <-chan interface{}, w io.Writer) {
+	_ = hm.Called(address, output, w)
+}
+
+func (hm *HandlerManagerMock) Process(address string, input <-chan interface{}, output chan<- interface{}) {
+	_ = hm.Called(address, input, output)
+}
+
+func (hm *HandlerManagerMock) Receive(address string, r io.Reader, input chan<- interface{}) {
+	_ = hm.Called(address, r, input)
+}
+
 type AddressManagerMock struct {
 	mock.Mock
 }
