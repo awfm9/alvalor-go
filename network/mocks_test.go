@@ -266,6 +266,26 @@ func (am *AddressManagerMock) Add(address string) {
 	_ = am.Called(address)
 }
 
+func (am *AddressManagerMock) Remove(address string) {
+	_ = am.Called(address)
+}
+
+func (am *AddressManagerMock) Block(address string) {
+	_ = am.Called(address)
+}
+
+func (am *AddressManagerMock) Unblock(address string) {
+	_ = am.Called(address)
+}
+
+func (am *AddressManagerMock) Pin(address string) {
+	_ = am.Called(address)
+}
+
+func (am *AddressManagerMock) Unpin(address string) {
+	_ = am.Called(address)
+}
+
 func (am *AddressManagerMock) Sample(count uint, params ...interface{}) []string {
 	params = append([]interface{}{int(count)}, params...)
 	args := am.Called(params...)

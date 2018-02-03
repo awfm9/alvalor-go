@@ -43,7 +43,6 @@ type Manager struct {
 	log       zerolog.Logger
 	wg        *sync.WaitGroup
 	cfg       *Config
-	book      *Book
 	slots     slotManager
 	peers     peerManager
 	addresses addressManager
@@ -94,10 +93,10 @@ func NewManager(log zerolog.Logger, codec Codec, options ...func(*Config)) *Mana
 	}
 
 	// TODO: separate book package and inject so we can add addresses in main
-	mgr.book.Found("127.0.0.1:31330")
+	// TODO: add own address to samples
 
 	// blacklist our own address
-	mgr.book.Invalid(cfg.address)
+	// TODO: blacklist our own address for connections
 
 	// initialize the connection dropper, the outgoing connection dialer and
 	// the incoming connection server
