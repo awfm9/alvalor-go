@@ -242,3 +242,21 @@ func (hm *HandlerManagerMock) Accept(conn net.Conn) {
 func (hm *HandlerManagerMock) Connect() {
 	_ = hm.Called()
 }
+
+type AddressManagerMock struct {
+	mock.Mock
+}
+
+func (am *AddressManagerMock) Add(address string) {
+	_ = am.Called(address)
+}
+
+func (am *AddressManagerMock) Sample(count uint, params ...interface{}) []string {
+	params = append([]interface{}{int(count)}, params...)
+	args := am.Called(params...)
+	var sample []string
+	if args.Get(0) != nil {
+		sample = args.Get(0).([]string)
+	}
+	return sample
+}

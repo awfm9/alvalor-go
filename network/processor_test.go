@@ -25,9 +25,12 @@ import (
 
 	"github.com/rs/zerolog"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/suite"
 )
+
+func TestProcessorTestSuite(t *testing.T) {
+	suite.Run(t, new(ProcessorTestSuite))
+}
 
 type ProcessorTestSuite struct {
 	suite.Suite
@@ -41,229 +44,216 @@ func (suite *ProcessorTestSuite) SetupTest() {
 	suite.wg = sync.WaitGroup{}
 	suite.wg.Add(1)
 	suite.cfg = Config{
-		interval: 25 * time.Millisecond,
+		interval: 10 * time.Millisecond,
 		address:  "153.66.22.77:5412",
+		listen:   false,
 	}
 }
 
-func (suite *ProcessorTestSuite) TestProcessingPublishesPeers() {
+func (suite *ProcessorTestSuite) TestProcessingEnabledListenPublishesOwnAddress() {
+
 	// arrange
-	infos := &processorInfosMock{}
-	actions := &processorActionsMock{}
-	events := &processorEventsMock{}
 	address := "15.77.14.74:5454"
-	input := make(chan interface{}, 1)
-	output := make(chan interface{})
-	stop := make(chan struct{})
+	input := make(chan interface{})
+	output := make(chan interface{}, 16)
+
+	addresses := &AddressManagerMock{}
+
+	peers := &PeerManagerMock{}
+
+	// act
 	suite.cfg.listen = true
-
-	go func() {
-		time.Sleep(50 * time.Millisecond)
-		stop <- struct{}{}
-	}()
-
-	// act
-	go handleProcessing(suite.log, &suite.wg, &suite.cfg, infos, actions, events, address, input, output)
-	msg := <-output
+	go handleProcessing(suite.log, &suite.wg, &suite.cfg, addresses, peers, address, input, output)
+	close(input)
+	var msgs []interface{}
+	for msg := range output {
+		msgs = append(msgs, msg)
+	}
+	suite.wg.Wait()
 
 	// assert
-	assert.IsType(suite.T(), &Peers{}, msg)
-	peersMsg := msg.(*Peers)
-	assert.EqualValues(suite.T(), []string{suite.cfg.address}, peersMsg.Addresses)
+	if assert.Len(suite.T(), msgs, 2) {
+		assert.IsType(suite.T(), &Peers{}, msgs[0])
+		assert.IsType(suite.T(), &Discover{}, msgs[1])
+		peersMsg := msgs[0].(*Peers)
+		assert.Equal(suite.T(), []string{suite.cfg.address}, peersMsg.Addresses)
+	}
 }
 
-func (suite *ProcessorTestSuite) TestProcessingPublishesDiscover() {
-	// arrange
-	infos := &processorInfosMock{}
-	actions := &processorActionsMock{}
-	events := &processorEventsMock{}
-	address := "15.77.14.74:5454"
-	input := make(chan interface{}, 1)
-	output := make(chan interface{})
-	stop := make(chan struct{})
-	suite.cfg.listen = false
+func (suite *ProcessorTestSuite) TestProcessingPublishesDiscoverNotOwnAddress() {
 
-	go func() {
-		time.Sleep(50 * time.Millisecond)
-		stop <- struct{}{}
-	}()
+	// arrange
+	address := "15.77.14.74:5454"
+	input := make(chan interface{})
+	output := make(chan interface{}, 16)
+
+	addresses := &AddressManagerMock{}
+
+	peers := &PeerManagerMock{}
 
 	// act
-	go handleProcessing(suite.log, &suite.wg, &suite.cfg, infos, actions, events, address, input, output)
-	msg := <-output
+	go handleProcessing(suite.log, &suite.wg, &suite.cfg, addresses, peers, address, input, output)
+	close(input)
+	var msgs []interface{}
+	for msg := range output {
+		msgs = append(msgs, msg)
+	}
+	suite.wg.Wait()
 
 	// assert
-	assert.IsType(suite.T(), &Discover{}, msg)
+	if assert.Len(suite.T(), msgs, 1) {
+		assert.IsType(suite.T(), &Discover{}, msgs[0])
+	}
 }
 
-func (suite *ProcessorTestSuite) TestProcessingPublishesPing() {
+func (suite *ProcessorTestSuite) TestProcessingSendsPingEachInterval() {
+
 	// arrange
-	infos := &processorInfosMock{}
-	actions := &processorActionsMock{}
-	actions.On("DropPeer", mock.Anything).Return(nil)
-	events := &processorEventsMock{}
-
 	address := "15.77.14.74:5454"
-	input := make(chan interface{}, 1)
-	output := make(chan interface{}, 5)
-	stop := make(chan struct{})
-	suite.cfg.listen = false
+	input := make(chan interface{})
+	output := make(chan interface{}, 16)
 
-	go func() {
-		time.Sleep(50 * time.Millisecond)
-		stop <- struct{}{}
-	}()
+	addresses := &AddressManagerMock{}
+
+	peers := &PeerManagerMock{}
 
 	// act
-	go handleProcessing(suite.log, &suite.wg, &suite.cfg, infos, actions, events, address, input, output)
-	time.Sleep(50 * time.Millisecond)
+	go handleProcessing(suite.log, &suite.wg, &suite.cfg, addresses, peers, address, input, output)
+	time.Sleep(time.Duration(2.5 * float64(suite.cfg.interval)))
+	close(input)
+	var msgs []interface{}
+	for msg := range output {
+		msgs = append(msgs, msg)
+	}
+	suite.wg.Wait()
 
 	// assert
-	_ = <-output
-	msg := <-output
-	assert.IsType(suite.T(), &Ping{}, msg)
+	if assert.Len(suite.T(), msgs, 3) {
+		assert.IsType(suite.T(), &Ping{}, msgs[1])
+		assert.IsType(suite.T(), &Ping{}, msgs[2])
+	}
 }
 
-func (suite *ProcessorTestSuite) TestProcessingPublishesPong() {
-	// arrange
-	infos := &processorInfosMock{}
-	actions := &processorActionsMock{}
-	events := &processorEventsMock{}
-	address := "15.77.14.74:5454"
-	input := make(chan interface{}, 1)
-	output := make(chan interface{})
-	stop := make(chan struct{})
-	suite.cfg.listen = false
+func (suite *ProcessorTestSuite) TestProcessingRespondsToPingWithPong() {
 
-	go func() {
-		time.Sleep(50 * time.Millisecond)
-		stop <- struct{}{}
-	}()
+	// arrange
+	address := "15.77.14.74:5454"
+	input := make(chan interface{})
+	output := make(chan interface{}, 16)
+
+	addresses := &AddressManagerMock{}
+
+	peers := &PeerManagerMock{}
 
 	// act
+	go handleProcessing(suite.log, &suite.wg, &suite.cfg, addresses, peers, address, input, output)
 	input <- &Ping{}
-	go handleProcessing(suite.log, &suite.wg, &suite.cfg, infos, actions, events, address, input, output)
-	_ = <-output
-	msg := <-output
+	input <- &Ping{}
+	close(input)
+	var msgs []interface{}
+	for msg := range output {
+		msgs = append(msgs, msg)
+	}
+	suite.wg.Wait()
 
 	// assert
-	assert.IsType(suite.T(), &Pong{}, msg)
+	if assert.Len(suite.T(), msgs, 3) {
+		assert.IsType(suite.T(), &Pong{}, msgs[1])
+		assert.IsType(suite.T(), &Pong{}, msgs[2])
+	}
 }
 
-func (suite *ProcessorTestSuite) TestProcessingPublishesPeersIfDiscoverReceived() {
+func (suite *ProcessorTestSuite) TestProcessingRespondsToDiscoverWithPeers() {
+
 	// arrange
-	infos := &processorInfosMock{}
-	addresses := []string{"17.63.23.55:5345", "88.22.77.55:3442"}
-	infos.On("AddressSample").Return(addresses, nil)
-
-	actions := &processorActionsMock{}
-	events := &processorEventsMock{}
 	address := "15.77.14.74:5454"
-	input := make(chan interface{}, 1)
-	output := make(chan interface{})
-	stop := make(chan struct{})
-	suite.cfg.listen = false
+	sample := []string{"15.77.14.74:6666", "15.77.14.74:7777", "15.77.14.74:8888"}
+	input := make(chan interface{})
+	output := make(chan interface{}, 16)
 
-	go func() {
-		time.Sleep(50 * time.Millisecond)
-		stop <- struct{}{}
-	}()
+	addresses := &AddressManagerMock{}
+	addresses.On("Sample", 8).Return(sample)
+
+	peers := &PeerManagerMock{}
 
 	// act
+	go handleProcessing(suite.log, &suite.wg, &suite.cfg, addresses, peers, address, input, output)
 	input <- &Discover{}
-	go handleProcessing(suite.log, &suite.wg, &suite.cfg, infos, actions, events, address, input, output)
-	_ = <-output
-	msg := <-output
+	close(input)
+	var msgs []interface{}
+	for msg := range output {
+		msgs = append(msgs, msg)
+	}
+	suite.wg.Wait()
 
 	// assert
-	assert.IsType(suite.T(), &Peers{}, msg)
-	peersMsg := msg.(*Peers)
-	assert.EqualValues(suite.T(), addresses, peersMsg.Addresses)
+	if assert.Len(suite.T(), msgs, 2) {
+		assert.IsType(suite.T(), &Peers{}, msgs[1])
+		peersMsg := msgs[1].(*Peers)
+		assert.Equal(suite.T(), sample, peersMsg.Addresses)
+	}
 }
 
-func (suite *ProcessorTestSuite) TestProcessingPublishesFound() {
+func (suite *ProcessorTestSuite) TestProcessingAddsPeersAddresses() {
+
 	// arrange
-	infos := &processorInfosMock{}
-	actions := &processorActionsMock{}
-	actions.On("DropPeer", mock.Anything).Return(nil)
-	events := &processorEventsMock{}
-	addresses := []string{"17.63.23.55:5345", "88.22.77.55:3442"}
-	events.On("Found", addresses[0])
-	events.On("Found", addresses[1])
-
 	address := "15.77.14.74:5454"
-	input := make(chan interface{}, 1)
-	output := make(chan interface{}, 5)
-	stop := make(chan struct{})
-	suite.cfg.listen = false
+	sample := []string{"15.77.14.74:6666", "15.77.14.74:7777", "15.77.14.74:8888"}
+	input := make(chan interface{})
+	output := make(chan interface{}, 16)
 
-	go func() {
-		time.Sleep(50 * time.Millisecond)
-		stop <- struct{}{}
-	}()
+	addresses := &AddressManagerMock{}
+	addresses.On("Add", sample[0])
+	addresses.On("Add", sample[1])
+	addresses.On("Add", sample[2])
+
+	peers := &PeerManagerMock{}
 
 	// act
-	input <- &Peers{Addresses: addresses}
-	go handleProcessing(suite.log, &suite.wg, &suite.cfg, infos, actions, events, address, input, output)
-	time.Sleep(50 * time.Millisecond)
+	go handleProcessing(suite.log, &suite.wg, &suite.cfg, addresses, peers, address, input, output)
+	input <- &Peers{Addresses: sample}
+	close(input)
+	var msgs []interface{}
+	for msg := range output {
+		msgs = append(msgs, msg)
+	}
+	suite.wg.Wait()
 
 	// assert
-	events.AssertCalled(suite.T(), "Found", addresses[0])
-	events.AssertCalled(suite.T(), "Found", addresses[1])
+	if addresses.AssertNumberOfCalls(suite.T(), "Add", 3) {
+		addresses.AssertCalled(suite.T(), "Add", sample[0])
+		addresses.AssertCalled(suite.T(), "Add", sample[1])
+		addresses.AssertCalled(suite.T(), "Add", sample[2])
+	}
 }
 
-func (suite *ProcessorTestSuite) TestProcessingDropsPeer() {
+func (suite *ProcessorTestSuite) TestProcessingDropsPeerAfterThreePings() {
+
 	// arrange
-	infos := &processorInfosMock{}
-	actions := &processorActionsMock{}
-	actions.On("DropPeer", mock.Anything).Return(nil)
-	events := &processorEventsMock{}
-
 	address := "15.77.14.74:5454"
-	input := make(chan interface{}, 1)
-	output := make(chan interface{}, 5)
-	stop := make(chan struct{})
-	suite.cfg.listen = false
+	input := make(chan interface{})
+	output := make(chan interface{}, 16)
 
-	go func() {
-		time.Sleep(50 * time.Millisecond)
-		stop <- struct{}{}
-	}()
+	addresses := &AddressManagerMock{}
+
+	peers := &PeerManagerMock{}
+	peers.On("Drop", address).Return(nil)
 
 	// act
-	go handleProcessing(suite.log, &suite.wg, &suite.cfg, infos, actions, events, address, input, output)
-	time.Sleep(100 * time.Millisecond)
+	go handleProcessing(suite.log, &suite.wg, &suite.cfg, addresses, peers, address, input, output)
+	time.Sleep(time.Duration(3.75 * float64(suite.cfg.interval)))
+	close(input)
+	var msgs []interface{}
+	for msg := range output {
+		msgs = append(msgs, msg)
+	}
+	suite.wg.Wait()
 
 	// assert
-	actions.AssertCalled(suite.T(), "DropPeer", address)
-}
-
-func TestProcessorTestSuite(t *testing.T) {
-	suite.Run(t, new(ProcessorTestSuite))
-}
-
-type processorInfosMock struct {
-	mock.Mock
-}
-
-func (infos *processorInfosMock) AddressSample() ([]string, error) {
-	args := infos.Called()
-	return args.Get(0).([]string), args.Error(1)
-}
-
-type processorActionsMock struct {
-	mock.Mock
-}
-
-func (actions *processorActionsMock) DropPeer(address string) error {
-	args := actions.Called(address)
-	return args.Error(0)
-}
-
-type processorEventsMock struct {
-	mock.Mock
-}
-
-func (actions *processorEventsMock) Found(address string) {
-	actions.Called(address)
+	if assert.Len(suite.T(), msgs, 4) {
+		assert.IsType(suite.T(), &Ping{}, msgs[1])
+		assert.IsType(suite.T(), &Ping{}, msgs[2])
+		assert.IsType(suite.T(), &Ping{}, msgs[3])
+		peers.AssertCalled(suite.T(), "Drop", address)
+	}
 }
