@@ -227,6 +227,30 @@ func (suite *ProcessorSuite) TestProcessingAddsPeersAddresses() {
 	}
 }
 
+func (suite *ProcessorSuite) TestProcessingPong() {
+
+	// arrange
+	address := "15.77.14.74:5454"
+	input := make(chan interface{})
+	output := make(chan interface{}, 16)
+
+	addresses := &AddressManagerMock{}
+
+	peers := &PeerManagerMock{}
+
+	// act
+	go handleProcessing(suite.log, &suite.wg, &suite.cfg, addresses, peers, address, input, output)
+	input <- &Pong{}
+	close(input)
+	var msgs []interface{}
+	for msg := range output {
+		msgs = append(msgs, msg)
+	}
+	suite.wg.Wait()
+
+	// assert
+}
+
 func (suite *ProcessorSuite) TestProcessingDropsPeerAfterThreePings() {
 
 	// arrange

@@ -52,10 +52,8 @@ Loop:
 			if !ok {
 				break Loop
 			}
-			if !timeout.Stop() {
-				<-timeout.C
-			}
-			timeout.Reset(interval * 3)
+			timeout.Stop()
+			timeout = time.NewTimer(time.Duration(3.5 * float64(interval)))
 			switch msg := message.(type) {
 			case *Ping:
 				log.Debug().Msg("ping received")
