@@ -18,11 +18,15 @@
 package network
 
 import (
+	"bytes"
+	"errors"
+	"io"
 	"io/ioutil"
 	"sync"
 	"testing"
 
 	"github.com/rs/zerolog"
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/suite"
 )
 
@@ -44,12 +48,104 @@ func (suite *SenderSuite) SetupTest() {
 	suite.cfg = Config{}
 }
 
-func (suite *SenderSuite) TestSenderSuccess() {
+func (suite *ReceiverSuite) TestSenderEOFError() {
 
 	// arrange
+	address := "15.77.14.74:5454"
+	output := make(chan interface{}, 16)
+	w := &bytes.Buffer{}
+
+	peers := &PeerManagerMock{}
+
+	rep := &ReputationManagerMock{}
+
+	codec := &CodecMock{}
+	codec.On("Encode", w, mock.Anything).Return(io.EOF).Once()
+	codec.On("Encode", w, mock.Anything).Return(nil)
 
 	// act
+	suite.cfg.codec = codec
+	go handleSending(suite.log, &suite.wg, &suite.cfg, peers, rep, address, output, w)
+	output <- &Ping{}
+	output <- &Pong{}
+	output <- &Discover{}
+	close(output)
+	suite.wg.Wait()
 
 	// assert
+	if codec.AssertNumberOfCalls(suite.T(), "Encode", 1) {
+		codec.AssertCalled(suite.T(), "Encode", w, &Ping{})
+	}
+}
 
+func (suite *ReceiverSuite) TestSenderSendMessages() {
+
+	// arrange
+	address := "15.77.14.74:5454"
+	output := make(chan interface{}, 16)
+	w := &bytes.Buffer{}
+
+	peers := &PeerManagerMock{}
+
+	rep := &ReputationManagerMock{}
+
+	codec := &CodecMock{}
+	codec.On("Encode", w, mock.Anything).Return(nil)
+
+	// act
+	suite.cfg.codec = codec
+	go handleSending(suite.log, &suite.wg, &suite.cfg, peers, rep, address, output, w)
+	output <- &Ping{}
+	output <- &Pong{}
+	output <- &Discover{}
+	output <- &Peers{}
+	close(output)
+	suite.wg.Wait()
+
+	// assert
+	if codec.AssertNumberOfCalls(suite.T(), "Encode", 4) {
+		codec.AssertCalled(suite.T(), "Encode", w, &Ping{})
+		codec.AssertCalled(suite.T(), "Encode", w, &Pong{})
+		codec.AssertCalled(suite.T(), "Encode", w, &Discover{})
+		codec.AssertCalled(suite.T(), "Encode", w, &Peers{})
+	}
+}
+
+func (suite *ReceiverSuite) TestSenderEncodeFails() {
+
+	// arrange
+	address := "15.77.14.74:5454"
+	output := make(chan interface{}, 16)
+	w := &bytes.Buffer{}
+
+	peers := &PeerManagerMock{}
+	peers.On("Drop", address).Return(errors.New("could not drop peer"))
+
+	rep := &ReputationManagerMock{}
+	rep.On("Error", address)
+
+	codec := &CodecMock{}
+	codec.On("Encode", w, mock.Anything).Return(errors.New("could not decode message"))
+	codec.On("Encode", w, mock.Anything).Return(nil).Twice()
+	codec.On("Encode", w, mock.Anything).Return(io.EOF)
+
+	// act
+	suite.cfg.codec = codec
+	go handleSending(suite.log, &suite.wg, &suite.cfg, peers, rep, address, output, w)
+	output <- &Ping{}
+	output <- &Pong{}
+	output <- &Discover{}
+	output <- &Peers{}
+	close(output)
+	suite.wg.Wait()
+
+	// assert
+	rep.AssertCalled(suite.T(), "Error", address)
+	peers.AssertCalled(suite.T(), "Drop", address)
+	if codec.AssertNumberOfCalls(suite.T(), "Encode", 4) {
+		codec.AssertCalled(suite.T(), "Encode", w, &Ping{})
+		codec.AssertCalled(suite.T(), "Encode", w, &Pong{})
+		codec.AssertCalled(suite.T(), "Encode", w, &Discover{})
+		codec.AssertCalled(suite.T(), "Encode", w, &Peers{})
+	}
 }

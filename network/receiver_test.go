@@ -96,7 +96,7 @@ func (suite *ReceiverSuite) TestReceiverClosedError() {
 	assert.False(suite.T(), ok)
 }
 
-func (suite *ReceiverSuite) TestReceiverForwardMessages() {
+func (suite *ReceiverSuite) TestReceiverReceiveMessages() {
 
 	// arrange
 	address := "15.77.14.74:5454"
@@ -132,10 +132,11 @@ func (suite *ReceiverSuite) TestReceiverForwardMessages() {
 	}
 }
 
-func (suite *ReceiverSuite) TestReceiverReadFails() {
+func (suite *ReceiverSuite) TestReceiverDecodeFails() {
 
 	// arrange
 	address := "15.77.14.74:5454"
+	message := "some message"
 	input := make(chan interface{}, 16)
 	r := &bytes.Buffer{}
 
@@ -146,8 +147,7 @@ func (suite *ReceiverSuite) TestReceiverReadFails() {
 	rep.On("Error", address)
 
 	codec := &CodecMock{}
-	message := "message"
-	codec.On("Decode", r).Return(nil, errors.New("could not read")).Once()
+	codec.On("Decode", r).Return(nil, errors.New("could not encode message")).Once()
 	codec.On("Decode", r).Return(message, nil).Once()
 	codec.On("Decode", r).Return(nil, io.EOF)
 
