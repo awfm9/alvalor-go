@@ -16,3 +16,40 @@
 // along with Alvalor.  If not, see <http://www.gnu.org/licenses/>.
 
 package network
+
+import (
+	"io/ioutil"
+	"sync"
+	"testing"
+
+	"github.com/rs/zerolog"
+	"github.com/stretchr/testify/suite"
+)
+
+func TestSender(t *testing.T) {
+	suite.Run(t, new(SenderSuite))
+}
+
+type SenderSuite struct {
+	suite.Suite
+	log zerolog.Logger
+	wg  sync.WaitGroup
+	cfg Config
+}
+
+func (suite *SenderSuite) SetupTest() {
+	suite.log = zerolog.New(ioutil.Discard)
+	suite.wg = sync.WaitGroup{}
+	suite.wg.Add(1)
+	suite.cfg = Config{}
+}
+
+func (suite *SenderSuite) TestSenderSuccess() {
+
+	// arrange
+
+	// act
+
+	// assert
+
+}

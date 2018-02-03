@@ -29,18 +29,18 @@ import (
 	"github.com/stretchr/testify/suite"
 )
 
-func TestConnectorTestSuite(t *testing.T) {
-	suite.Run(t, new(ConnectorTestSuite))
+func TestConnector(t *testing.T) {
+	suite.Run(t, new(ConnectorSuite))
 }
 
-type ConnectorTestSuite struct {
+type ConnectorSuite struct {
 	suite.Suite
 	log zerolog.Logger
 	wg  sync.WaitGroup
 	cfg Config
 }
 
-func (suite *ConnectorTestSuite) SetupTest() {
+func (suite *ConnectorSuite) SetupTest() {
 	suite.log = zerolog.New(ioutil.Discard)
 	suite.wg = sync.WaitGroup{}
 	suite.wg.Add(1)
@@ -50,7 +50,7 @@ func (suite *ConnectorTestSuite) SetupTest() {
 	}
 }
 
-func (suite *ConnectorTestSuite) TestHandleConnectingWhenCantClaimSlot() {
+func (suite *ConnectorSuite) TestConnectorClaimFails() {
 
 	// arrange
 	address := "136.44.33.12:5523"
@@ -72,7 +72,7 @@ func (suite *ConnectorTestSuite) TestHandleConnectingWhenCantClaimSlot() {
 	slots.AssertNotCalled(suite.T(), "Release")
 }
 
-func (suite *ConnectorTestSuite) TestHandleConnectingWhenCantDialAddress() {
+func (suite *ConnectorSuite) TestConnectorDialFails() {
 
 	// arrange
 	address := "136.44.33.12:5523"
@@ -98,7 +98,7 @@ func (suite *ConnectorTestSuite) TestHandleConnectingWhenCantDialAddress() {
 	rep.AssertCalled(suite.T(), "Failure", address)
 }
 
-func (suite *ConnectorTestSuite) TestHandleConnectingWhenCantWriteSyn() {
+func (suite *ConnectorSuite) TestConnectorWriteFails() {
 
 	// arrange
 	address := "136.44.33.12:5523"
@@ -130,7 +130,7 @@ func (suite *ConnectorTestSuite) TestHandleConnectingWhenCantWriteSyn() {
 	conn.AssertCalled(suite.T(), "Close")
 }
 
-func (suite *ConnectorTestSuite) TestHandleConnectingWhenCantReadAck() {
+func (suite *ConnectorSuite) TestConnectorReadFails() {
 
 	// arrange
 	address := "136.44.33.12:5523"
@@ -164,7 +164,7 @@ func (suite *ConnectorTestSuite) TestHandleConnectingWhenCantReadAck() {
 	conn.AssertCalled(suite.T(), "Close")
 }
 
-func (suite *ConnectorTestSuite) TestHandleConnectingWhenNetworkMismatch() {
+func (suite *ConnectorSuite) TestConnectorNetworkMismatch() {
 
 	// arrange
 	address := "136.44.33.12:5523"
@@ -201,7 +201,7 @@ func (suite *ConnectorTestSuite) TestHandleConnectingWhenNetworkMismatch() {
 	conn.AssertCalled(suite.T(), "Close")
 }
 
-func (suite *ConnectorTestSuite) TestHandleConnectingWhenIdenticalNonce() {
+func (suite *ConnectorSuite) TestConnectorNonceIdentical() {
 
 	// arrange
 	address := "136.44.33.12:5523"
@@ -238,7 +238,7 @@ func (suite *ConnectorTestSuite) TestHandleConnectingWhenIdenticalNonce() {
 	conn.AssertCalled(suite.T(), "Close")
 }
 
-func (suite *ConnectorTestSuite) TestHandleConnectingWhenNonceAlreadyKnown() {
+func (suite *ConnectorSuite) TestConnectorNonceKnown() {
 
 	// arrange
 	address := "136.44.33.12:5523"
@@ -277,7 +277,7 @@ func (suite *ConnectorTestSuite) TestHandleConnectingWhenNonceAlreadyKnown() {
 	conn.AssertCalled(suite.T(), "Close")
 }
 
-func (suite *ConnectorTestSuite) TestHandleConnectingWhenCannotAddPeer() {
+func (suite *ConnectorSuite) TestConnectorAddPeerFails() {
 
 	// arrange
 	address := "136.44.33.12:5523"
@@ -316,7 +316,7 @@ func (suite *ConnectorTestSuite) TestHandleConnectingWhenCannotAddPeer() {
 	conn.AssertCalled(suite.T(), "Close")
 }
 
-func (suite *ConnectorTestSuite) TestHandleConnectingWhenSuccess() {
+func (suite *ConnectorSuite) TestConnectorSuccess() {
 
 	// arrange
 	address := "136.44.33.12:5523"

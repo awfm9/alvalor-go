@@ -28,18 +28,18 @@ import (
 	"github.com/stretchr/testify/suite"
 )
 
-func TestDropperTestSuite(t *testing.T) {
-	suite.Run(t, new(DropperTestSuite))
+func TestDropper(t *testing.T) {
+	suite.Run(t, new(DropperSuite))
 }
 
-type DropperTestSuite struct {
+type DropperSuite struct {
 	suite.Suite
 	log zerolog.Logger
 	wg  sync.WaitGroup
 	cfg Config
 }
 
-func (suite *DropperTestSuite) SetupTest() {
+func (suite *DropperSuite) SetupTest() {
 	suite.log = zerolog.New(ioutil.Discard)
 	suite.wg = sync.WaitGroup{}
 	suite.wg.Add(1)
@@ -49,28 +49,7 @@ func (suite *DropperTestSuite) SetupTest() {
 	}
 }
 
-func (suite *DropperTestSuite) TestHandleDroppingDoesNotDropIfPeerCountLessThanMaxPeers() {
-
-	// arrange
-	address := "33.22.72.33:525"
-	stop := make(chan struct{})
-
-	peers := &PeerManagerMock{}
-	peers.On("Count").Return(5)
-	peers.On("Addresses").Return([]string{address})
-	peers.On("Drop", address).Return(nil)
-
-	// act
-	go handleDropping(suite.log, &suite.wg, &suite.cfg, peers, stop)
-	time.Sleep(50 * time.Millisecond)
-	close(stop)
-	suite.wg.Wait()
-
-	// assert
-	peers.AssertNotCalled(suite.T(), "Drop")
-}
-
-func (suite *DropperTestSuite) TestHandleDroppingDropsConnectionIfPeerCountGreaterThanMaxPeers() {
+func (suite *DropperSuite) TestDropperSuccess() {
 
 	// arrange
 	address := "33.22.72.33:525"
@@ -91,7 +70,28 @@ func (suite *DropperTestSuite) TestHandleDroppingDropsConnectionIfPeerCountGreat
 	peers.AssertCalled(suite.T(), "Drop", address)
 }
 
-func (suite *DropperTestSuite) TestHandleDroppingContinuesOnDropError() {
+func (suite *DropperSuite) TestDropperValidPeerNumber() {
+
+	// arrange
+	address := "33.22.72.33:525"
+	stop := make(chan struct{})
+
+	peers := &PeerManagerMock{}
+	peers.On("Count").Return(5)
+	peers.On("Addresses").Return([]string{address})
+	peers.On("Drop", address).Return(nil)
+
+	// act
+	go handleDropping(suite.log, &suite.wg, &suite.cfg, peers, stop)
+	time.Sleep(50 * time.Millisecond)
+	close(stop)
+	suite.wg.Wait()
+
+	// assert
+	peers.AssertNotCalled(suite.T(), "Drop")
+}
+
+func (suite *DropperSuite) TestDropperDropFails() {
 
 	// arrange
 	address := "33.22.72.33:525"

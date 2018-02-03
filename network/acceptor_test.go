@@ -29,18 +29,18 @@ import (
 	"github.com/stretchr/testify/suite"
 )
 
-func TestAcceptorTestSuite(t *testing.T) {
-	suite.Run(t, new(AcceptorTestSuite))
+func TestAcceptor(t *testing.T) {
+	suite.Run(t, new(AcceptorSuite))
 }
 
-type AcceptorTestSuite struct {
+type AcceptorSuite struct {
 	suite.Suite
 	log zerolog.Logger
 	wg  sync.WaitGroup
 	cfg Config
 }
 
-func (suite *AcceptorTestSuite) SetupTest() {
+func (suite *AcceptorSuite) SetupTest() {
 	suite.log = zerolog.New(ioutil.Discard)
 	suite.wg = sync.WaitGroup{}
 	suite.wg.Add(1)
@@ -50,7 +50,7 @@ func (suite *AcceptorTestSuite) SetupTest() {
 	}
 }
 
-func (suite *AcceptorTestSuite) TestHandleAcceptingWhenCantClaimSlot() {
+func (suite *AcceptorSuite) TestAcceptorClaimFails() {
 
 	// arrange
 	address := "136.44.33.12:5523"
@@ -78,7 +78,7 @@ func (suite *AcceptorTestSuite) TestHandleAcceptingWhenCantClaimSlot() {
 	conn.AssertCalled(suite.T(), "Close")
 }
 
-func (suite *AcceptorTestSuite) TestHandleAcceptingWhenCantReadSyn() {
+func (suite *AcceptorSuite) TestAcceptorReadFails() {
 
 	// arrange
 	address := "136.44.33.12:552"
@@ -111,7 +111,7 @@ func (suite *AcceptorTestSuite) TestHandleAcceptingWhenCantReadSyn() {
 	conn.AssertCalled(suite.T(), "Close")
 }
 
-func (suite *AcceptorTestSuite) TestHandleAcceptingWhenNetworkMismatch() {
+func (suite *AcceptorSuite) TestAcceptorNetworkMismatch() {
 
 	// arrange
 	address := "136.44.33.12:5523"
@@ -147,7 +147,7 @@ func (suite *AcceptorTestSuite) TestHandleAcceptingWhenNetworkMismatch() {
 	conn.AssertCalled(suite.T(), "Close")
 }
 
-func (suite *AcceptorTestSuite) TestHandleAcceptingWhenIdenticalNonce() {
+func (suite *AcceptorSuite) TestAcceptorNonceIdentical() {
 
 	// arrange
 	address := "136.44.33.12:5523"
@@ -183,7 +183,7 @@ func (suite *AcceptorTestSuite) TestHandleAcceptingWhenIdenticalNonce() {
 	conn.AssertCalled(suite.T(), "Close")
 }
 
-func (suite *AcceptorTestSuite) TestHandleAcceptingWhenCantWriteAck() {
+func (suite *AcceptorSuite) TestAcceptorWriteFails() {
 
 	// arrange
 	address := "136.44.33.12:5523"
@@ -221,7 +221,7 @@ func (suite *AcceptorTestSuite) TestHandleAcceptingWhenCantWriteAck() {
 	conn.AssertCalled(suite.T(), "Close")
 }
 
-func (suite *AcceptorTestSuite) TestHandleAcceptingWhenCantAddPeer() {
+func (suite *AcceptorSuite) TestAcceptorAddPeerFails() {
 
 	// arrange
 	address := "136.44.33.12:5523"
@@ -261,7 +261,7 @@ func (suite *AcceptorTestSuite) TestHandleAcceptingWhenCantAddPeer() {
 	conn.AssertCalled(suite.T(), "Close")
 }
 
-func (suite *AcceptorTestSuite) TestHandleAcceptingWhenSuccess() {
+func (suite *AcceptorSuite) TestAcceptorSuccess() {
 
 	// arrange
 	address := "136.44.33.12:5523"

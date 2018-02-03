@@ -28,14 +28,18 @@ import (
 	"github.com/stretchr/testify/suite"
 )
 
-type ListenerTestSuite struct {
+func TestListener(t *testing.T) {
+	suite.Run(t, new(ListenerSuite))
+}
+
+type ListenerSuite struct {
 	suite.Suite
 	log zerolog.Logger
 	wg  sync.WaitGroup
 	cfg Config
 }
 
-func (suite *ListenerTestSuite) SetupTest() {
+func (suite *ListenerSuite) SetupTest() {
 	suite.log = zerolog.New(ioutil.Discard)
 	suite.wg = sync.WaitGroup{}
 	suite.wg.Add(1)
@@ -44,49 +48,7 @@ func (suite *ListenerTestSuite) SetupTest() {
 	}
 }
 
-func (suite *ListenerTestSuite) TestHandleListeningReturnsIfListeningFails() {
-
-	// arrange
-	ln := &ListenerMock{}
-
-	listener := &ListenManagerMock{}
-	listener.On("Listen", suite.cfg.address).Return(ln, errors.New("could not listen"))
-
-	handlers := &HandlerManagerMock{}
-
-	// act
-	go handleListening(suite.log, &suite.wg, &suite.cfg, handlers, listener, nil)
-	suite.wg.Wait()
-
-	// assert
-	listener.AssertCalled(suite.T(), "Listen", suite.cfg.address)
-	ln.AssertNotCalled(suite.T(), "Accept")
-	ln.AssertNotCalled(suite.T(), "Close")
-	handlers.AssertNotCalled(suite.T(), "Accept", mock.Anything)
-}
-
-func (suite *ListenerTestSuite) TestHandleListeningDoesNotStartAcceptorIfCantAcceptConnection() {
-
-	// arrange
-	ln := &ListenerMock{}
-	ln.On("SetDeadline", mock.Anything).Return(nil)
-	ln.On("Accept").Return(nil, errors.New("could not accept connection"))
-	ln.On("Close").Return(nil)
-
-	listener := &ListenManagerMock{}
-	listener.On("Listen", suite.cfg.address).Return(ln, nil)
-
-	handlers := &HandlerManagerMock{}
-
-	// act
-	go handleListening(suite.log, &suite.wg, &suite.cfg, handlers, listener, nil)
-	suite.wg.Wait()
-
-	// assert
-	handlers.AssertNotCalled(suite.T(), "Accept", mock.Anything)
-}
-
-func (suite *ListenerTestSuite) TestHandleListeningStartsAcceptor() {
+func (suite *ListenerSuite) TestListenerSuccess() {
 
 	// arrange
 	conn := &ConnMock{}
@@ -111,32 +73,49 @@ func (suite *ListenerTestSuite) TestHandleListeningStartsAcceptor() {
 	handlers.AssertCalled(suite.T(), "Accept", conn)
 }
 
-func (suite *ListenerTestSuite) TestHandleListenerCloseError() {
+func (suite *ListenerSuite) TestListenerListeningFails() {
 
 	// arrange
-	conn := &ConnMock{}
-
 	ln := &ListenerMock{}
-	ln.On("SetDeadline", mock.Anything).Return(nil)
-	ln.On("Accept").Return(conn, nil).Once()
-	ln.On("Accept").Return(nil, errors.New("could not accept connection"))
-	ln.On("Close").Return(errors.New("could not close listener"))
 
 	listener := &ListenManagerMock{}
-	listener.On("Listen", suite.cfg.address).Return(ln, nil)
+	listener.On("Listen", suite.cfg.address).Return(ln, errors.New("could not listen"))
 
 	handlers := &HandlerManagerMock{}
-	handlers.On("Accept", conn)
 
 	// act
 	go handleListening(suite.log, &suite.wg, &suite.cfg, handlers, listener, nil)
 	suite.wg.Wait()
 
 	// assert
-	ln.AssertCalled(suite.T(), "Close")
+	listener.AssertCalled(suite.T(), "Listen", suite.cfg.address)
+	ln.AssertNotCalled(suite.T(), "Accept")
+	ln.AssertNotCalled(suite.T(), "Close")
+	handlers.AssertNotCalled(suite.T(), "Accept", mock.Anything)
 }
 
-func (suite *ListenerTestSuite) TestListenerClosedChannelBreaksLoop() {
+func (suite *ListenerSuite) TestListenerAcceptFails() {
+
+	// arrange
+	ln := &ListenerMock{}
+	ln.On("SetDeadline", mock.Anything).Return(nil)
+	ln.On("Accept").Return(nil, errors.New("could not accept connection"))
+	ln.On("Close").Return(nil)
+
+	listener := &ListenManagerMock{}
+	listener.On("Listen", suite.cfg.address).Return(ln, nil)
+
+	handlers := &HandlerManagerMock{}
+
+	// act
+	go handleListening(suite.log, &suite.wg, &suite.cfg, handlers, listener, nil)
+	suite.wg.Wait()
+
+	// assert
+	handlers.AssertNotCalled(suite.T(), "Accept", mock.Anything)
+}
+
+func (suite *ListenerSuite) TestListenerShutdown() {
 
 	// arrange
 	stop := make(chan struct{})
@@ -158,7 +137,7 @@ func (suite *ListenerTestSuite) TestListenerClosedChannelBreaksLoop() {
 	ln.AssertCalled(suite.T(), "Close")
 }
 
-func (suite *ListenerTestSuite) TestListenerTimeoutContinuesLoop() {
+func (suite *ListenerSuite) TestListenerTimeout() {
 
 	// arrange
 	conn := &ConnMock{}
@@ -189,6 +168,27 @@ func (suite *ListenerTestSuite) TestListenerTimeoutContinuesLoop() {
 	handlers.AssertCalled(suite.T(), "Accept", conn)
 }
 
-func TestListenerTestSuite(t *testing.T) {
-	suite.Run(t, new(ListenerTestSuite))
+func (suite *ListenerSuite) TestListenerCloseFails() {
+
+	// arrange
+	conn := &ConnMock{}
+
+	ln := &ListenerMock{}
+	ln.On("SetDeadline", mock.Anything).Return(nil)
+	ln.On("Accept").Return(conn, nil).Once()
+	ln.On("Accept").Return(nil, errors.New("could not accept connection"))
+	ln.On("Close").Return(errors.New("could not close listener"))
+
+	listener := &ListenManagerMock{}
+	listener.On("Listen", suite.cfg.address).Return(ln, nil)
+
+	handlers := &HandlerManagerMock{}
+	handlers.On("Accept", conn)
+
+	// act
+	go handleListening(suite.log, &suite.wg, &suite.cfg, handlers, listener, nil)
+	suite.wg.Wait()
+
+	// assert
+	ln.AssertCalled(suite.T(), "Close")
 }

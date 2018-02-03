@@ -27,18 +27,18 @@ import (
 	"github.com/stretchr/testify/suite"
 )
 
-func TestDialerTestSuite(t *testing.T) {
-	suite.Run(t, new(DialerTestSuite))
+func TestDialer(t *testing.T) {
+	suite.Run(t, new(DialerSuite))
 }
 
-type DialerTestSuite struct {
+type DialerSuite struct {
 	suite.Suite
 	log zerolog.Logger
 	wg  sync.WaitGroup
 	cfg Config
 }
 
-func (suite *DialerTestSuite) SetupTest() {
+func (suite *DialerSuite) SetupTest() {
 	suite.log = zerolog.New(ioutil.Discard)
 	suite.wg = sync.WaitGroup{}
 	suite.wg.Add(1)
@@ -49,7 +49,31 @@ func (suite *DialerTestSuite) SetupTest() {
 	}
 }
 
-func (suite *DialerTestSuite) TestHandleDialingDoesNotDialIfMinAmountOfPeersConnected() {
+func (suite *DialerSuite) TestDialerSuccess() {
+
+	// arrange
+	stop := make(chan struct{})
+
+	peers := &PeerManagerMock{}
+	peers.On("Count").Return(3)
+
+	slots := &SlotManagerMock{}
+	slots.On("Pending").Return(5)
+
+	handlers := &HandlerManagerMock{}
+	handlers.On("Connect")
+
+	// act
+	go handleDialing(suite.log, &suite.wg, &suite.cfg, peers, slots, handlers, stop)
+	time.Sleep(50 * time.Millisecond)
+	close(stop)
+	suite.wg.Wait()
+
+	// assert
+	handlers.AssertCalled(suite.T(), "Connect")
+}
+
+func (suite *DialerSuite) TestDialerEnoughPeers() {
 
 	// arrange
 	stop := make(chan struct{})
@@ -73,7 +97,7 @@ func (suite *DialerTestSuite) TestHandleDialingDoesNotDialIfMinAmountOfPeersConn
 	handlers.AssertNotCalled(suite.T(), "Connect")
 }
 
-func (suite *DialerTestSuite) TestHandleDialingDoesNotDialIfPendingAlreadyConnecting() {
+func (suite *DialerSuite) TestDialerMaximumPendingPeers() {
 
 	// arrange
 	stop := make(chan struct{})
@@ -95,28 +119,4 @@ func (suite *DialerTestSuite) TestHandleDialingDoesNotDialIfPendingAlreadyConnec
 
 	// assert
 	handlers.AssertNotCalled(suite.T(), "Connect")
-}
-
-func (suite *DialerTestSuite) TestHandleDialingDialsIfMinAmountOfPeersNotConnected() {
-
-	// arrange
-	stop := make(chan struct{})
-
-	peers := &PeerManagerMock{}
-	peers.On("Count").Return(3)
-
-	slots := &SlotManagerMock{}
-	slots.On("Pending").Return(5)
-
-	handlers := &HandlerManagerMock{}
-	handlers.On("Connect")
-
-	// act
-	go handleDialing(suite.log, &suite.wg, &suite.cfg, peers, slots, handlers, stop)
-	time.Sleep(50 * time.Millisecond)
-	close(stop)
-	suite.wg.Wait()
-
-	// assert
-	handlers.AssertCalled(suite.T(), "Connect")
 }

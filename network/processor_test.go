@@ -28,18 +28,18 @@ import (
 	"github.com/stretchr/testify/suite"
 )
 
-func TestProcessorTestSuite(t *testing.T) {
-	suite.Run(t, new(ProcessorTestSuite))
+func TestProcessor(t *testing.T) {
+	suite.Run(t, new(ProcessorSuite))
 }
 
-type ProcessorTestSuite struct {
+type ProcessorSuite struct {
 	suite.Suite
 	log zerolog.Logger
 	wg  sync.WaitGroup
 	cfg Config
 }
 
-func (suite *ProcessorTestSuite) SetupTest() {
+func (suite *ProcessorSuite) SetupTest() {
 	suite.log = zerolog.New(ioutil.Discard)
 	suite.wg = sync.WaitGroup{}
 	suite.wg.Add(1)
@@ -50,7 +50,7 @@ func (suite *ProcessorTestSuite) SetupTest() {
 	}
 }
 
-func (suite *ProcessorTestSuite) TestProcessingEnabledListenPublishesOwnAddress() {
+func (suite *ProcessorSuite) TestProcessingEnabledListenPublishesOwnAddress() {
 
 	// arrange
 	address := "15.77.14.74:5454"
@@ -80,7 +80,7 @@ func (suite *ProcessorTestSuite) TestProcessingEnabledListenPublishesOwnAddress(
 	}
 }
 
-func (suite *ProcessorTestSuite) TestProcessingPublishesDiscoverNotOwnAddress() {
+func (suite *ProcessorSuite) TestProcessingPublishesDiscoverNotOwnAddress() {
 
 	// arrange
 	address := "15.77.14.74:5454"
@@ -106,7 +106,7 @@ func (suite *ProcessorTestSuite) TestProcessingPublishesDiscoverNotOwnAddress() 
 	}
 }
 
-func (suite *ProcessorTestSuite) TestProcessingSendsPingEachInterval() {
+func (suite *ProcessorSuite) TestProcessingSendsPingEachInterval() {
 
 	// arrange
 	address := "15.77.14.74:5454"
@@ -134,7 +134,7 @@ func (suite *ProcessorTestSuite) TestProcessingSendsPingEachInterval() {
 	}
 }
 
-func (suite *ProcessorTestSuite) TestProcessingRespondsToPingWithPong() {
+func (suite *ProcessorSuite) TestProcessingRespondsToPingWithPong() {
 
 	// arrange
 	address := "15.77.14.74:5454"
@@ -163,7 +163,7 @@ func (suite *ProcessorTestSuite) TestProcessingRespondsToPingWithPong() {
 	}
 }
 
-func (suite *ProcessorTestSuite) TestProcessingRespondsToDiscoverWithPeers() {
+func (suite *ProcessorSuite) TestProcessingRespondsToDiscoverWithPeers() {
 
 	// arrange
 	address := "15.77.14.74:5454"
@@ -194,7 +194,7 @@ func (suite *ProcessorTestSuite) TestProcessingRespondsToDiscoverWithPeers() {
 	}
 }
 
-func (suite *ProcessorTestSuite) TestProcessingAddsPeersAddresses() {
+func (suite *ProcessorSuite) TestProcessingAddsPeersAddresses() {
 
 	// arrange
 	address := "15.77.14.74:5454"
@@ -227,7 +227,7 @@ func (suite *ProcessorTestSuite) TestProcessingAddsPeersAddresses() {
 	}
 }
 
-func (suite *ProcessorTestSuite) TestProcessingDropsPeerAfterThreePings() {
+func (suite *ProcessorSuite) TestProcessingDropsPeerAfterThreePings() {
 
 	// arrange
 	address := "15.77.14.74:5454"

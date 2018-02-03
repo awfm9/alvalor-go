@@ -22,7 +22,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
 	uuid "github.com/satori/go.uuid"
 )
@@ -41,16 +40,16 @@ var dial = func(address string) (net.Conn, error) { return net.Dial("tcp", addre
 
 // Manager represents the manager of all network components.
 type Manager struct {
-	log      zerolog.Logger
-	wg       *sync.WaitGroup
-	cfg      *Config
-	book     *Book
-	slots    slotManager
-	peers    peerManager
-	rep      reputationManager
-	handlers handlerManager
-	stop     chan struct{}
-	pending  uint
+	log       zerolog.Logger
+	wg        *sync.WaitGroup
+	cfg       *Config
+	book      *Book
+	slots     slotManager
+	peers     peerManager
+	addresses addressManager
+	rep       reputationManager
+	handlers  handlerManager
+	stop      chan struct{}
 }
 
 // NewManager will initialize the completely wired up networking dependencies.
@@ -83,14 +82,15 @@ func NewManager(log zerolog.Logger, codec Codec, options ...func(*Config)) *Mana
 
 	// initialize the network component with all state
 	mgr := &Manager{
-		log:      log,
-		wg:       wg,
-		cfg:      cfg,
-		slots:    newSimpleSlotManager(cfg.maxPending),
-		peers:    newSimplePeerManager(cfg.minPeers, cfg.maxPeers),
-		rep:      newSimpleReputationManager(),
-		handlers: &simpleHandlerManager{},
-		stop:     make(chan struct{}),
+		log:       log,
+		wg:        wg,
+		cfg:       cfg,
+		slots:     newSimpleSlotManager(cfg.maxPending),
+		peers:     newSimplePeerManager(cfg.minPeers, cfg.maxPeers),
+		rep:       newSimpleReputationManager(),
+		addresses: &simpleAddressManager{},
+		handlers:  &simpleHandlerManager{},
+		stop:      make(chan struct{}),
 	}
 
 	// TODO: separate book package and inject so we can add addresses in main
@@ -111,62 +111,4 @@ func (mgr *Manager) Stop() {
 	close(mgr.stop)
 	mgr.peers.DropAll()
 	mgr.wg.Wait()
-}
-
-// PendingCount returns the number of pending peer connections.
-func (mgr *Manager) PendingCount() uint {
-	return mgr.pending
-}
-
-// ClaimSlot claims one pending connection slot.
-func (mgr *Manager) ClaimSlot() error {
-	mgr.pending++
-	return nil
-}
-
-// ReleaseSlot releases one pending connection slot.
-func (mgr *Manager) ReleaseSlot() {
-	mgr.pending--
-}
-
-// GetAddress returns a random address for connection.
-func (mgr *Manager) GetAddress() (string, error) {
-	addresses := mgr.book.Sample(1, isActive(false), byRandom())
-	if len(addresses) == 0 {
-		return "", errors.New("no inactive addresses in book")
-	}
-	return addresses[0], nil
-}
-
-// AddressSample returns a random address sample.
-func (mgr *Manager) AddressSample() ([]string, error) {
-	addresses := mgr.book.Sample(16, isAny(), byRandom())
-	if len(addresses) == 0 {
-		return nil, errors.New("no addresses in book")
-	}
-	return addresses, nil
-}
-
-// StartConnector will try to launch a new connection attempt.
-func (mgr *Manager) StartConnector() {
-	addresses := mgr.book.Sample(1, isActive(false), byRandom())
-	if len(addresses) == 0 {
-		mgr.log.Error().Msg("could not get address for connector")
-		return
-	}
-	mgr.wg.Add(1)
-	// TODO: launch handler to create connection
-}
-
-// StartListener will start a listener on a given port.
-func (mgr *Manager) StartListener(stop <-chan struct{}) {
-	mgr.wg.Add(1)
-	listener := &simpleListenManager{}
-	go handleListening(mgr.log, mgr.wg, mgr.cfg, mgr.handlers, listener, stop)
-}
-
-// StartAcceptor will start accepting an incoming connection.
-func (mgr *Manager) StartAcceptor(conn net.Conn) {
-	mgr.wg.Add(1)
-	go handleAccepting(mgr.log, mgr.wg, mgr.cfg, mgr.slots, mgr.peers, mgr.rep, conn)
 }
