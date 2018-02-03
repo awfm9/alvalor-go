@@ -68,8 +68,8 @@ func TestByReputation(t *testing.T) {
 		},
 	}
 	for name, vector := range vectors {
-		rep.rep[address1] = vector.score1
-		rep.rep[address2] = vector.score2
+		rep.scores[address1] = vector.score1
+		rep.scores[address2] = vector.score2
 		actual := sort(address1, address2)
 		assert.Equalf(t, vector.expected, actual, "By reputation sort wrong result for %v", name)
 	}
