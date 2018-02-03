@@ -30,6 +30,7 @@ type peerManager interface {
 	Add(conn net.Conn, nonce []byte) error
 	Known(nonce []byte) bool
 	Count() uint
+	Drop(address string) error
 	Addresses() []string
 	DropAll()
 }
@@ -87,6 +88,10 @@ func (pm *simplePeerManager) DropAll() {
 	for _, peer := range pm.reg {
 		peer.conn.Close()
 	}
+}
+
+func (pm *simplePeerManager) Drop(address string) error {
+	return nil
 }
 
 func (pm *simplePeerManager) Count() uint {

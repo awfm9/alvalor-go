@@ -18,16 +18,19 @@
 package network
 
 import (
+	"errors"
 	"io/ioutil"
 	"sync"
 	"testing"
 	"time"
 
-	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
-	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/suite"
 )
+
+func TestDropperTestSuite(t *testing.T) {
+	suite.Run(t, new(DropperTestSuite))
+}
 
 type DropperTestSuite struct {
 	suite.Suite
@@ -41,110 +44,71 @@ func (suite *DropperTestSuite) SetupTest() {
 	suite.wg = sync.WaitGroup{}
 	suite.wg.Add(1)
 	suite.cfg = Config{
-		interval: 5 * time.Millisecond,
+		interval: 10 * time.Millisecond,
 		maxPeers: 15,
 	}
 }
 
 func (suite *DropperTestSuite) TestHandleDroppingDoesNotDropIfPeerCountLessThanMaxPeers() {
+
 	// arrange
-	infos := &dropperInfosMock{}
-	actions := &dropperActionsMock{}
-	events := &dropperEventsMock{}
+	address := "33.22.72.33:525"
 	stop := make(chan struct{})
 
-	addr := "33.22.72.33:525"
-	actions.On("DropRandomPeer").Return(addr, nil)
-	infos.On("PeerCount").Return(uint(5))
-	events.On("Dropped", addr)
-
-	go func() {
-		time.Sleep(50 * time.Millisecond)
-		stop <- struct{}{}
-	}()
+	peers := &PeerManagerMock{}
+	peers.On("Count").Return(5)
+	peers.On("Addresses").Return([]string{address})
+	peers.On("Drop", address).Return(nil)
 
 	// act
-	handleDropping(suite.log, &suite.wg, &suite.cfg, infos, actions, events, stop)
+	go handleDropping(suite.log, &suite.wg, &suite.cfg, peers, stop)
+	time.Sleep(50 * time.Millisecond)
+	close(stop)
+	suite.wg.Wait()
 
 	// assert
-	actions.AssertNotCalled(suite.T(), "DropRandomPeer")
+	peers.AssertNotCalled(suite.T(), "Drop")
 }
 
 func (suite *DropperTestSuite) TestHandleDroppingDropsConnectionIfPeerCountGreaterThanMaxPeers() {
+
 	// arrange
-	infos := &dropperInfosMock{}
-	actions := &dropperActionsMock{}
-	events := &dropperEventsMock{}
+	address := "33.22.72.33:525"
 	stop := make(chan struct{})
 
-	addr := "33.22.72.33:525"
-	actions.On("DropRandomPeer").Return(addr, nil)
-	infos.On("PeerCount").Return(uint(16))
-	events.On("Dropped", addr)
-
-	go func() {
-		time.Sleep(50 * time.Millisecond)
-		stop <- struct{}{}
-	}()
+	peers := &PeerManagerMock{}
+	peers.On("Count").Return(16)
+	peers.On("Addresses").Return([]string{address})
+	peers.On("Drop", address).Return(nil)
 
 	// act
-	handleDropping(suite.log, &suite.wg, &suite.cfg, infos, actions, events, stop)
+	go handleDropping(suite.log, &suite.wg, &suite.cfg, peers, stop)
+	time.Sleep(50 * time.Millisecond)
+	close(stop)
+	suite.wg.Wait()
 
 	// assert
-	actions.AssertCalled(suite.T(), "DropRandomPeer")
-	events.AssertCalled(suite.T(), "Dropped", addr)
+	peers.AssertCalled(suite.T(), "Drop", address)
 }
 
-func (suite *DropperTestSuite) TestHandleDroppingDoesNotPublishEventIfDropNotSuccessful() {
+func (suite *DropperTestSuite) TestHandleDroppingContinuesOnDropError() {
+
 	// arrange
-	infos := &dropperInfosMock{}
-	actions := &dropperActionsMock{}
-	events := &dropperEventsMock{}
+	address := "33.22.72.33:525"
 	stop := make(chan struct{})
 
-	addr := ""
-	actions.On("DropRandomPeer").Return(addr, errors.New("Can't drop any peer"))
-	infos.On("PeerCount").Return(uint(16))
-	events.On("Dropped", addr)
-
-	go func() {
-		time.Sleep(50 * time.Millisecond)
-		stop <- struct{}{}
-	}()
+	peers := &PeerManagerMock{}
+	peers.On("Count").Return(16)
+	peers.On("Addresses").Return([]string{address})
+	peers.On("Drop", address).Return(errors.New("could not drop peer"))
 
 	// act
-	handleDropping(suite.log, &suite.wg, &suite.cfg, infos, actions, events, stop)
+	go handleDropping(suite.log, &suite.wg, &suite.cfg, peers, stop)
+	time.Sleep(25 * time.Millisecond)
+	close(stop)
+	suite.wg.Wait()
 
 	// assert
-	events.AssertNotCalled(suite.T(), "Dropped", addr)
-}
-
-func TestDropperTestSuite(t *testing.T) {
-	suite.Run(t, new(DropperTestSuite))
-}
-
-type dropperInfosMock struct {
-	mock.Mock
-}
-
-func (infos *dropperInfosMock) PeerCount() uint {
-	args := infos.Called()
-	return args.Get(0).(uint)
-}
-
-type dropperActionsMock struct {
-	mock.Mock
-}
-
-func (actions *dropperActionsMock) DropRandomPeer() (string, error) {
-	args := actions.Called()
-	return args.String(0), args.Error(1)
-}
-
-type dropperEventsMock struct {
-	mock.Mock
-}
-
-func (events *dropperEventsMock) Dropped(addr string) {
-	events.Called(addr)
+	peers.AssertCalled(suite.T(), "Drop", address)
+	peers.AssertNumberOfCalls(suite.T(), "Drop", 2)
 }

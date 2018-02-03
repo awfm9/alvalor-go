@@ -24,9 +24,12 @@ import (
 	"time"
 
 	"github.com/rs/zerolog"
-	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/suite"
 )
+
+func TestDialerTestSuite(t *testing.T) {
+	suite.Run(t, new(DialerTestSuite))
+}
 
 type DialerTestSuite struct {
 	suite.Suite
@@ -47,93 +50,73 @@ func (suite *DialerTestSuite) SetupTest() {
 }
 
 func (suite *DialerTestSuite) TestHandleDialingDoesNotDialIfMinAmountOfPeersConnected() {
+
 	// arrange
-	infos := &dialerInfosMock{}
-	actions := &dialerActionsMock{}
 	stop := make(chan struct{})
 
-	actions.On("StartConnector")
-	infos.On("PeerCount").Return(uint(5))
-	infos.On("PendingCount").Return(uint(3))
+	peers := &PeerManagerMock{}
+	peers.On("Count").Return(5)
 
-	go func() {
-		time.Sleep(50 * time.Millisecond)
-		stop <- struct{}{}
-	}()
+	slots := &SlotManagerMock{}
+	slots.On("Pending").Return(3)
+
+	handlers := &HandlerManagerMock{}
+	handlers.On("Connect")
 
 	// act
-	handleDialing(suite.log, &suite.wg, &suite.cfg, infos, actions, stop)
+	go handleDialing(suite.log, &suite.wg, &suite.cfg, peers, slots, handlers, stop)
+	time.Sleep(50 * time.Millisecond)
+	close(stop)
+	suite.wg.Wait()
 
 	// assert
-	actions.AssertNotCalled(suite.T(), "StartConnector")
+	handlers.AssertNotCalled(suite.T(), "Connect")
 }
 
 func (suite *DialerTestSuite) TestHandleDialingDoesNotDialIfPendingAlreadyConnecting() {
+
 	// arrange
-	infos := &dialerInfosMock{}
-	actions := &dialerActionsMock{}
 	stop := make(chan struct{})
 
-	actions.On("StartConnector")
-	infos.On("PeerCount").Return(uint(3))
-	infos.On("PendingCount").Return(uint(12))
+	peers := &PeerManagerMock{}
+	peers.On("Count").Return(3)
 
-	go func() {
-		time.Sleep(50 * time.Millisecond)
-		stop <- struct{}{}
-	}()
+	slots := &SlotManagerMock{}
+	slots.On("Pending").Return(12)
+
+	handlers := &HandlerManagerMock{}
+	handlers.On("Connect")
 
 	// act
-	handleDialing(suite.log, &suite.wg, &suite.cfg, infos, actions, stop)
+	go handleDialing(suite.log, &suite.wg, &suite.cfg, peers, slots, handlers, stop)
+	time.Sleep(50 * time.Millisecond)
+	close(stop)
+	suite.wg.Wait()
 
 	// assert
-	actions.AssertNotCalled(suite.T(), "StartConnector")
+	handlers.AssertNotCalled(suite.T(), "Connect")
 }
 
 func (suite *DialerTestSuite) TestHandleDialingDialsIfMinAmountOfPeersNotConnected() {
+
 	// arrange
-	infos := &dialerInfosMock{}
-	actions := &dialerActionsMock{}
 	stop := make(chan struct{})
 
-	actions.On("StartConnector")
-	infos.On("PeerCount").Return(uint(3))
-	infos.On("PendingCount").Return(uint(5))
+	peers := &PeerManagerMock{}
+	peers.On("Count").Return(3)
 
-	go func() {
-		time.Sleep(50 * time.Millisecond)
-		stop <- struct{}{}
-	}()
+	slots := &SlotManagerMock{}
+	slots.On("Pending").Return(5)
+
+	handlers := &HandlerManagerMock{}
+	handlers.On("Connect")
 
 	// act
-	handleDialing(suite.log, &suite.wg, &suite.cfg, infos, actions, stop)
+	go handleDialing(suite.log, &suite.wg, &suite.cfg, peers, slots, handlers, stop)
+	time.Sleep(50 * time.Millisecond)
+	close(stop)
+	suite.wg.Wait()
 
 	// assert
-	actions.AssertCalled(suite.T(), "StartConnector")
-}
-
-func TestDialerTestSuite(t *testing.T) {
-	suite.Run(t, new(DialerTestSuite))
-}
-
-type dialerInfosMock struct {
-	mock.Mock
-}
-
-func (infos *dialerInfosMock) PeerCount() uint {
-	args := infos.Called()
-	return args.Get(0).(uint)
-}
-
-func (infos *dialerInfosMock) PendingCount() uint {
-	args := infos.Called()
-	return args.Get(0).(uint)
-}
-
-type dialerActionsMock struct {
-	mock.Mock
-}
-
-func (actions *dialerActionsMock) StartConnector() {
-	actions.Called()
+	handlers.AssertCalled(suite.T(), "Connect")
 }

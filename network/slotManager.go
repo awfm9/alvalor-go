@@ -25,6 +25,7 @@ import (
 type slotManager interface {
 	Claim() error
 	Release() error
+	Pending() uint
 }
 
 type simpleSlotManager struct {
@@ -57,4 +58,11 @@ func (slots *simpleSlotManager) Release() error {
 	}
 	slots.available++
 	return nil
+}
+
+// Pending will return the number of currently pending slots.
+func (slots *simpleSlotManager) Pending() uint {
+	slots.Lock()
+	defer slots.Unlock()
+	return slots.initial - slots.available
 }

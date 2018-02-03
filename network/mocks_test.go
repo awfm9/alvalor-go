@@ -164,12 +164,22 @@ func (sm *SlotManagerMock) Release() error {
 	return args.Error(0)
 }
 
+func (sm *SlotManagerMock) Pending() uint {
+	args := sm.Called()
+	return uint(args.Int(0))
+}
+
 type PeerManagerMock struct {
 	mock.Mock
 }
 
 func (pm *PeerManagerMock) Add(conn net.Conn, nonce []byte) error {
 	args := pm.Called(conn, nonce)
+	return args.Error(0)
+}
+
+func (pm *PeerManagerMock) Drop(address string) error {
+	args := pm.Called(address)
 	return args.Error(0)
 }
 
@@ -227,4 +237,8 @@ type HandlerManagerMock struct {
 
 func (hm *HandlerManagerMock) Accept(conn net.Conn) {
 	_ = hm.Called(conn)
+}
+
+func (hm *HandlerManagerMock) Connect() {
+	_ = hm.Called()
 }

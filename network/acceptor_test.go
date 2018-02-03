@@ -29,6 +29,10 @@ import (
 	"github.com/stretchr/testify/suite"
 )
 
+func TestAcceptorTestSuite(t *testing.T) {
+	suite.Run(t, new(AcceptorTestSuite))
+}
+
 type AcceptorTestSuite struct {
 	suite.Suite
 	log zerolog.Logger
@@ -295,8 +299,4 @@ func (suite *AcceptorTestSuite) TestHandleAcceptingWhenSuccess() {
 	slots.AssertCalled(suite.T(), "Release")
 	peers.AssertCalled(suite.T(), "Add", conn, nonce)
 	rep.AssertCalled(suite.T(), "Success", address)
-}
-
-func TestAcceptorTestSuite(t *testing.T) {
-	suite.Run(t, new(AcceptorTestSuite))
 }
