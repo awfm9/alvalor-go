@@ -35,12 +35,19 @@ type peerManager interface {
 	DropAll()
 }
 
+type peer struct {
+	conn   net.Conn
+	input  chan interface{}
+	output chan interface{}
+	nonce  []byte
+}
+
 type simplePeerManager struct {
 	sync.Mutex
 	min    uint
 	max    uint
 	buffer uint
-	reg    map[string]*Peer
+	reg    map[string]*peer
 	lookup map[string]string
 }
 
@@ -48,7 +55,8 @@ func newSimplePeerManager(min uint, max uint) *simplePeerManager {
 	return &simplePeerManager{
 		min:    min,
 		max:    max,
-		reg:    make(map[string]*Peer),
+		buffer: 16,
+		reg:    make(map[string]*peer),
 		lookup: make(map[string]string),
 	}
 }
@@ -59,12 +67,12 @@ func (pm *simplePeerManager) Add(conn net.Conn, nonce []byte) error {
 	if uint(len(pm.reg)) >= pm.max {
 		return errors.New("maximum number of peers reached")
 	}
-	hexNonce := hex.EncodeToString(nonce)
-	_, ok := pm.reg[hexNonce]
+	address := conn.RemoteAddr().String()
+	_, ok := pm.reg[address]
 	if ok {
 		return errors.New("peer with nonce already known")
 	}
-	peer := &Peer{
+	p := &peer{
 		conn:   conn,
 		input:  make(chan interface{}, pm.buffer),
 		output: make(chan interface{}, pm.buffer),
@@ -78,7 +86,7 @@ func (pm *simplePeerManager) Add(conn net.Conn, nonce []byte) error {
 	// launch the message processing routines
 	// TODO: launch handlers to send, receive & process messages
 
-	pm.reg[hexNonce] = peer
+	pm.reg[address] = p
 	return nil
 }
 

@@ -18,12 +18,12 @@
 package network
 
 func isNot(addresses []string) func(string) bool {
+	lookup := make(map[string]struct{})
+	for _, address := range addresses {
+		lookup[address] = struct{}{}
+	}
 	return func(address string) bool {
-		for _, item := range addresses {
-			if item == address {
-				return false
-			}
-		}
-		return true
+		_, ok := lookup[address]
+		return !ok
 	}
 }

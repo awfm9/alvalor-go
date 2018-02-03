@@ -22,6 +22,7 @@ import "net"
 type handlerManager interface {
 	Accept(conn net.Conn)
 	Connect()
+	Listen()
 }
 
 type simpleHandlerManager struct{}
@@ -29,3 +30,5 @@ type simpleHandlerManager struct{}
 func (hm simpleHandlerManager) Accept(conn net.Conn) {}
 
 func (hm simpleHandlerManager) Connect() {}
+
+func (hm simpleHandlerManager) Listen() {}

@@ -258,6 +258,10 @@ func (hm *HandlerManagerMock) Connect() {
 	_ = hm.Called()
 }
 
+func (hm *HandlerManagerMock) Listen() {
+	_ = hm.Called()
+}
+
 type AddressManagerMock struct {
 	mock.Mock
 }
