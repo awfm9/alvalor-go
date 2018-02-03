@@ -24,7 +24,7 @@ import (
 	"github.com/rs/zerolog"
 )
 
-func handleConnecting(log zerolog.Logger, wg *sync.WaitGroup, cfg *Config, slots slotManager, peers peerManager, rep reputationManager, dialer dialManager, address string) {
+func handleConnecting(log zerolog.Logger, wg *sync.WaitGroup, cfg *Config, slots slotManager, peers peerManager, rep reputationManager, dialer dialWrapper, address string) {
 	defer wg.Done()
 
 	// extract the variables from the config we are interested in

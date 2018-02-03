@@ -17,30 +17,14 @@
 
 package network
 
-import (
-	"net"
-	"time"
+import "net"
 
-	"github.com/pkg/errors"
-)
-
-// Listener defines our own listener as the standard library interface doesn't have the deadline functions.
-type Listener interface {
-	Accept() (net.Conn, error)
-	Close() error
-	SetDeadline(t time.Time) error
+type dialWrapper interface {
+	Dial(address string) (net.Conn, error)
 }
 
-type listenManager interface {
-	Listen(address string) (Listener, error)
-}
+type simpleDialWrapper struct{}
 
-type simpleListenManager struct{}
-
-func (lm simpleListenManager) Listen(address string) (Listener, error) {
-	ln, err := net.Listen("tcp", address)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not listen")
-	}
-	return ln.(*net.TCPListener), nil
+func (dm simpleDialWrapper) Dial(address string) (net.Conn, error) {
+	return net.Dial("tcp", address)
 }

@@ -17,14 +17,9 @@
 
 package network
 
-import "net"
+import "testing"
 
-type dialManager interface {
-	Dial(address string) (net.Conn, error)
-}
-
-type simpleDialManager struct{}
-
-func (dm simpleDialManager) Dial(address string) (net.Conn, error) {
-	return net.Dial("tcp", address)
+func TestDialWrapper(t *testing.T) {
+	dialer := &simpleDialWrapper{}
+	_, _ = dialer.Dial("192.168.2.100")
 }

@@ -25,7 +25,7 @@ import (
 	"github.com/rs/zerolog"
 )
 
-func handleListening(log zerolog.Logger, wg *sync.WaitGroup, cfg *Config, handlers handlerManager, listener listenManager, stop <-chan struct{}) {
+func handleListening(log zerolog.Logger, wg *sync.WaitGroup, cfg *Config, handlers handlerManager, listener listenWrapper, stop <-chan struct{}) {
 	defer wg.Done()
 
 	// extract the config parameters we are interested in
