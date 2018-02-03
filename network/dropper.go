@@ -18,6 +18,7 @@
 package network
 
 import (
+	"math/rand"
 	"sync"
 	"time"
 
@@ -36,7 +37,7 @@ type dropperEvents interface {
 	Dropped(address string)
 }
 
-func handleDropping(log zerolog.Logger, wg *sync.WaitGroup, cfg *Config, infos dropperInfos, actions dropperActions, events dropperEvents, stop <-chan struct{}) {
+func handleDropping(log zerolog.Logger, wg *sync.WaitGroup, cfg *Config, peers peerManager, stop <-chan struct{}) {
 	defer wg.Done()
 
 	// extract desired configuration parameters
@@ -59,14 +60,15 @@ func handleDropping(log zerolog.Logger, wg *sync.WaitGroup, cfg *Config, infos d
 			return
 		case <-ticker.C:
 		}
-		if infos.PeerCount() <= maxPeers {
+		if peers.Count() <= maxPeers {
 			continue
 		}
-		address, err := actions.DropRandomPeer()
+		addresses := peers.Addresses()
+		address := addresses[rand.Int()%len(addresses)]
+		err := peers.Drop(address)
 		if err != nil {
 			log.Error().Err(err).Msg("could not drop peer")
 			continue
 		}
-		events.Dropped(address)
 	}
 }

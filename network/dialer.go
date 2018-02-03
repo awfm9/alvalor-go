@@ -24,16 +24,7 @@ import (
 	"github.com/rs/zerolog"
 )
 
-type dialerInfos interface {
-	PeerCount() uint
-	PendingCount() uint
-}
-
-type dialerActions interface {
-	StartConnector()
-}
-
-func handleDialing(log zerolog.Logger, wg *sync.WaitGroup, cfg *Config, infos dialerInfos, actions dialerActions, stop <-chan struct{}) {
+func handleDialing(log zerolog.Logger, wg *sync.WaitGroup, cfg *Config, peers peerManager, slots slotManager, handlers handlerManager, stop <-chan struct{}) {
 	defer wg.Done()
 
 	// extract needed configuration parameters
@@ -58,14 +49,14 @@ func handleDialing(log zerolog.Logger, wg *sync.WaitGroup, cfg *Config, infos di
 			return
 		case <-ticker.C:
 		}
-		peerCount := infos.PeerCount()
-		pendingCount := infos.PendingCount()
+		peerCount := peers.Count()
+		pendingCount := slots.Pending()
 		if peerCount >= minPeers {
 			continue
 		}
 		if peerCount+pendingCount >= maxPeers {
 			continue
 		}
-		actions.StartConnector()
+		handlers.Connect()
 	}
 }

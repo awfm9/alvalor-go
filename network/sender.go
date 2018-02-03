@@ -25,15 +25,7 @@ import (
 	"github.com/rs/zerolog"
 )
 
-type senderActions interface {
-	DropPeer(address string) error
-}
-
-type senderEvents interface {
-	Error(address string)
-}
-
-func handleSending(log zerolog.Logger, wg *sync.WaitGroup, cfg *Config, actions senderActions, events senderEvents, address string, output <-chan interface{}, w io.Writer) {
+func handleSending(log zerolog.Logger, wg *sync.WaitGroup, cfg *Config, peers peerManager, rep reputationManager, address string, output <-chan interface{}, w io.Writer) {
 	defer wg.Done()
 
 	// extract configuration parameters
@@ -55,8 +47,11 @@ func handleSending(log zerolog.Logger, wg *sync.WaitGroup, cfg *Config, actions 
 		}
 		if err != nil {
 			log.Error().Err(err).Msg("could not write message")
-			events.Error(address)
-			actions.DropPeer(address)
+			rep.Error(address)
+			err = peers.Drop(address)
+			if err != nil {
+				log.Error().Err(err).Msg("could not drop peer")
+			}
 			continue
 		}
 	}

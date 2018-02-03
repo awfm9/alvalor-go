@@ -1,43 +1,45 @@
-// Copyright (c) 2017 The Alvalor Authors
+// // Copyright (c) 2017 The Alvalor Authors
+// //
+// // This file is part of Alvalor.
+// //
+// // Alvalor is free software: you can redistribute it and/or modify
+// // it under the terms of the GNU Affero General Public License as published by
+// // the Free Software Foundation, either version 3 of the License, or
+// // (at your option) any later version.
+// //
+// // Alvalor is distributed in the hope that it will be useful,
+// // but WITHOUT ANY WARRANTY; without even the implied warranty of
+// // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// // GNU Affero General Public License for more detailb.
+// //
+// // You should have received a copy of the GNU Affero General Public License
+// // along with Alvalor.  If not, see <http://www.gnu.org/licenses/>.
 //
-// This file is part of Alvalor.
-//
-// Alvalor is free software: you can redistribute it and/or modify
-// it under the terms of the GNU Affero General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// Alvalor is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU Affero General Public License for more detailb.
-//
-// You should have received a copy of the GNU Affero General Public License
-// along with Alvalor.  If not, see <http://www.gnu.org/licenses/>.
-
 package network
 
 import (
+	"errors"
 	"io/ioutil"
-	"net"
 	"sync"
 	"testing"
-	"time"
 
-	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/suite"
 )
 
-type ListenerTestSuite struct {
+func TestListener(t *testing.T) {
+	suite.Run(t, new(ListenerSuite))
+}
+
+type ListenerSuite struct {
 	suite.Suite
 	log zerolog.Logger
 	wg  sync.WaitGroup
 	cfg Config
 }
 
-func (suite *ListenerTestSuite) SetupTest() {
+func (suite *ListenerSuite) SetupTest() {
 	suite.log = zerolog.New(ioutil.Discard)
 	suite.wg = sync.WaitGroup{}
 	suite.wg.Add(1)
@@ -46,87 +48,147 @@ func (suite *ListenerTestSuite) SetupTest() {
 	}
 }
 
-func (suite *ListenerTestSuite) TestHandleListeningDoesNotStartAcceptorIfCantAcceptConnection() {
+func (suite *ListenerSuite) TestListenerSuccess() {
+
 	// arrange
-	conn := &connMock{}
+	conn := &ConnMock{}
 
-	actions := &listenerActionsMock{}
-	actions.On("StartAcceptor", conn)
+	ln := &ListenerMock{}
+	ln.On("SetDeadline", mock.Anything).Return(nil)
+	ln.On("Accept").Return(conn, nil).Once()
+	ln.On("Accept").Return(nil, errors.New("could not accept connection"))
+	ln.On("Close").Return(nil)
 
-	stop := make(chan struct{})
+	listener := &ListenManagerMock{}
+	listener.On("Listen", suite.cfg.address).Return(ln, nil)
 
-	listener := &listenerMock{}
-	listener.On("SetDeadline", mock.Anything).Return(nil)
-	//err := &net.OpError{Op: "read", Err: errors.New("Error while accepting connection")}
-	listener.On("Accept").Return(conn, errors.New("Error while accepting connection"))
-	listener.On("Close").Return(nil)
-
-	go func() {
-		time.Sleep(50 * time.Millisecond)
-		stop <- struct{}{}
-	}()
+	handlers := &HandlerManagerMock{}
+	handlers.On("Accept", conn)
 
 	// act
-	handleListening(suite.log, &suite.wg, &suite.cfg, actions, func(addr *net.TCPAddr) (Listener, error) { return listener, nil }, stop)
+	go handleListening(suite.log, &suite.wg, &suite.cfg, handlers, listener, nil)
+	suite.wg.Wait()
 
 	// assert
-	actions.AssertNotCalled(suite.T(), "StartAcceptor", conn)
+	handlers.AssertCalled(suite.T(), "Accept", conn)
 }
 
-func (suite *ListenerTestSuite) TestHandleListeningStartsAcceptor() {
+func (suite *ListenerSuite) TestListenerListeningFails() {
+
 	// arrange
-	conn := &connMock{}
+	ln := &ListenerMock{}
 
-	actions := &listenerActionsMock{}
-	actions.On("StartAcceptor", conn)
+	listener := &ListenManagerMock{}
+	listener.On("Listen", suite.cfg.address).Return(ln, errors.New("could not listen"))
 
-	stop := make(chan struct{})
-
-	listener := &listenerMock{}
-	listener.On("SetDeadline", mock.Anything).Return(nil)
-	listener.On("Accept").Return(conn, nil)
-	listener.On("Close").Return(nil)
-
-	go func() {
-		time.Sleep(50 * time.Millisecond)
-		stop <- struct{}{}
-	}()
+	handlers := &HandlerManagerMock{}
 
 	// act
-	handleListening(suite.log, &suite.wg, &suite.cfg, actions, func(addr *net.TCPAddr) (Listener, error) { return listener, nil }, stop)
+	go handleListening(suite.log, &suite.wg, &suite.cfg, handlers, listener, nil)
+	suite.wg.Wait()
 
 	// assert
-	actions.AssertCalled(suite.T(), "StartAcceptor", conn)
-	listener.AssertCalled(suite.T(), "Close")
+	listener.AssertCalled(suite.T(), "Listen", suite.cfg.address)
+	ln.AssertNotCalled(suite.T(), "Accept")
+	ln.AssertNotCalled(suite.T(), "Close")
+	handlers.AssertNotCalled(suite.T(), "Accept", mock.Anything)
 }
 
-func TestListenerTestSuite(t *testing.T) {
-	suite.Run(t, new(ListenerTestSuite))
+func (suite *ListenerSuite) TestListenerAcceptFails() {
+
+	// arrange
+	ln := &ListenerMock{}
+	ln.On("SetDeadline", mock.Anything).Return(nil)
+	ln.On("Accept").Return(nil, errors.New("could not accept connection"))
+	ln.On("Close").Return(nil)
+
+	listener := &ListenManagerMock{}
+	listener.On("Listen", suite.cfg.address).Return(ln, nil)
+
+	handlers := &HandlerManagerMock{}
+
+	// act
+	go handleListening(suite.log, &suite.wg, &suite.cfg, handlers, listener, nil)
+	suite.wg.Wait()
+
+	// assert
+	handlers.AssertNotCalled(suite.T(), "Accept", mock.Anything)
 }
 
-type listenerActionsMock struct {
-	mock.Mock
+func (suite *ListenerSuite) TestListenerShutdown() {
+
+	// arrange
+	stop := make(chan struct{})
+	close(stop)
+
+	ln := &ListenerMock{}
+	ln.On("Close").Return(errors.New("could not close listener"))
+
+	listener := &ListenManagerMock{}
+	listener.On("Listen", suite.cfg.address).Return(ln, nil)
+
+	handlers := &HandlerManagerMock{}
+
+	// act
+	go handleListening(suite.log, &suite.wg, &suite.cfg, handlers, listener, stop)
+	suite.wg.Wait()
+
+	// assert
+	ln.AssertCalled(suite.T(), "Close")
 }
 
-func (actions *listenerActionsMock) StartAcceptor(conn net.Conn) {
-	actions.Called(conn)
+func (suite *ListenerSuite) TestListenerTimeout() {
+
+	// arrange
+	conn := &ConnMock{}
+
+	err := &ErrorMock{}
+	err.On("Error").Return("error")
+	err.On("Timeout").Return(true)
+
+	ln := &ListenerMock{}
+	ln.On("SetDeadline", mock.Anything).Return(nil)
+	ln.On("Accept").Return(nil, err).Once()
+	ln.On("Accept").Return(conn, nil).Once()
+	ln.On("Accept").Return(nil, errors.New("could not accept connection"))
+	ln.On("Close").Return(nil)
+
+	listener := &ListenManagerMock{}
+	listener.On("Listen", suite.cfg.address).Return(ln, nil)
+
+	handlers := &HandlerManagerMock{}
+	handlers.On("Accept", conn)
+
+	// act
+	go handleListening(suite.log, &suite.wg, &suite.cfg, handlers, listener, nil)
+	suite.wg.Wait()
+
+	// assert
+	ln.AssertCalled(suite.T(), "Accept")
+	handlers.AssertCalled(suite.T(), "Accept", conn)
 }
 
-type listenerMock struct {
-	mock.Mock
-}
+func (suite *ListenerSuite) TestListenerCloseFails() {
 
-func (listener *listenerMock) Accept() (net.Conn, error) {
-	args := listener.Called()
-	return args.Get(0).(net.Conn), args.Error(1)
-}
+	// arrange
+	conn := &ConnMock{}
 
-func (listener *listenerMock) Close() error {
-	args := listener.Called()
-	return args.Error(0)
-}
+	ln := &ListenerMock{}
+	ln.On("SetDeadline", mock.Anything).Return(nil)
+	ln.On("Accept").Return(conn, nil).Once()
+	ln.On("Accept").Return(nil, errors.New("could not accept connection"))
+	ln.On("Close").Return(errors.New("could not close listener"))
 
-func (listener *listenerMock) SetDeadline(time time.Time) error {
-	args := listener.Called(time)
-	return args.Error(0)
+	listener := &ListenManagerMock{}
+	listener.On("Listen", suite.cfg.address).Return(ln, nil)
+
+	handlers := &HandlerManagerMock{}
+	handlers.On("Accept", conn)
+
+	// act
+	go handleListening(suite.log, &suite.wg, &suite.cfg, handlers, listener, nil)
+	suite.wg.Wait()
+
+	// assert
+	ln.AssertCalled(suite.T(), "Close")
 }

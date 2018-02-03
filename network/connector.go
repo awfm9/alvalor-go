@@ -19,32 +19,12 @@ package network
 
 import (
 	"bytes"
-	"net"
 	"sync"
 
 	"github.com/rs/zerolog"
 )
 
-type connectorInfos interface {
-	KnownNonce(nonce []byte) bool
-}
-
-type connectorActions interface {
-	ClaimSlot() error
-	ReleaseSlot()
-	AddPeer(conn net.Conn, nonce []byte) error
-}
-
-type connectorEvents interface {
-	Error(address string)
-	Invalid(address string)
-	Success(address string)
-	Failure(address string)
-}
-
-type dialFunc func(address string) (net.Conn, error)
-
-func handleConnecting(log zerolog.Logger, wg *sync.WaitGroup, cfg *Config, infos connectorInfos, actions connectorActions, events connectorEvents, dial dialFunc, address string) {
+func handleConnecting(log zerolog.Logger, wg *sync.WaitGroup, cfg *Config, slots slotManager, peers peerManager, rep reputationManager, dialer dialManager, address string) {
 	defer wg.Done()
 
 	// extract the variables from the config we are interested in
@@ -59,24 +39,18 @@ func handleConnecting(log zerolog.Logger, wg *sync.WaitGroup, cfg *Config, infos
 	defer log.Info().Msg("connecting routine stopped")
 
 	// claim a free connection slot and set the release
-	err := actions.ClaimSlot()
+	err := slots.Claim()
 	if err != nil {
 		log.Error().Err(err).Msg("could not claim slot")
 		return
 	}
-	defer actions.ReleaseSlot()
+	defer slots.Release()
 
 	// resolve the address and dial the connection
-	_, err = net.ResolveTCPAddr("tcp", address)
-	if err != nil {
-		log.Error().Err(err).Msg("could not resolve address")
-		events.Invalid(address)
-		return
-	}
-	conn, err := dial(address)
+	conn, err := dialer.Dial(address)
 	if err != nil {
 		log.Debug().Err(err).Msg("could not dial address")
-		events.Failure(address)
+		rep.Failure(address)
 		return
 	}
 
@@ -87,44 +61,44 @@ func handleConnecting(log zerolog.Logger, wg *sync.WaitGroup, cfg *Config, infos
 	if err != nil {
 		log.Error().Err(err).Msg("could not write syn packet")
 		conn.Close()
-		events.Error(address)
+		rep.Error(address)
 		return
 	}
 	_, err = conn.Read(ack)
 	if err != nil {
 		log.Error().Err(err).Msg("could not read ack packet")
 		conn.Close()
-		events.Error(address)
+		rep.Error(address)
 		return
 	}
 	networkIn := ack[:len(network)]
 	if !bytes.Equal(networkIn, network) {
 		log.Error().Bytes("network", network).Bytes("network_in", networkIn).Msg("network mismatch")
 		conn.Close()
-		events.Invalid(address)
+		rep.Invalid(address)
 		return
 	}
 	nonceIn := ack[len(network):]
 	if bytes.Equal(nonceIn, nonce) {
 		log.Error().Bytes("nonce", nonce).Msg("identical nonce")
 		conn.Close()
-		events.Invalid(address)
+		rep.Invalid(address)
 		return
 	}
-	if infos.KnownNonce(nonceIn) {
+	if peers.Known(nonceIn) {
 		log.Error().Bytes("nonce", nonce).Msg("nonce already known")
 		conn.Close()
-		events.Invalid(address)
+		rep.Invalid(address)
 		return
 	}
 
 	// create the peer for the valid connection
-	err = actions.AddPeer(conn, nonceIn)
+	err = peers.Add(conn, nonceIn)
 	if err != nil {
 		log.Error().Err(err).Msg("could not add peer")
 		conn.Close()
 		return
 	}
 
-	events.Success(address)
+	rep.Success(address)
 }

@@ -24,19 +24,7 @@ import (
 	"github.com/rs/zerolog"
 )
 
-type processorInfos interface {
-	AddressSample() ([]string, error)
-}
-
-type processorActions interface {
-	DropPeer(address string) error
-}
-
-type processorEvents interface {
-	Found(address string)
-}
-
-func handleProcessing(log zerolog.Logger, wg *sync.WaitGroup, cfg *Config, infos processorInfos, actions processorActions, events processorEvents, address string, input <-chan interface{}, output chan<- interface{}) {
+func handleProcessing(log zerolog.Logger, wg *sync.WaitGroup, cfg *Config, addresses addressManager, peers peerManager, address string, input <-chan interface{}, output chan<- interface{}) {
 	defer wg.Done()
 
 	// configuration parameters
@@ -52,7 +40,7 @@ func handleProcessing(log zerolog.Logger, wg *sync.WaitGroup, cfg *Config, infos
 	defer log.Info().Msg("processing routine stopped")
 
 	// for each message, handle it as adequate
-	timeout := time.NewTimer(interval * 3)
+	timeout := time.NewTimer(time.Duration(3.5 * float64(interval)))
 	if listen {
 		output <- &Peers{Addresses: []string{laddress}}
 	}
@@ -64,10 +52,8 @@ Loop:
 			if !ok {
 				break Loop
 			}
-			if !timeout.Stop() {
-				<-timeout.C
-			}
-			timeout.Reset(interval * 3)
+			timeout.Stop()
+			timeout = time.NewTimer(time.Duration(3.5 * float64(interval)))
 			switch msg := message.(type) {
 			case *Ping:
 				log.Debug().Msg("ping received")
@@ -76,22 +62,20 @@ Loop:
 				log.Debug().Msg("pong received")
 			case *Discover:
 				log.Debug().Msg("discover received")
-				addresses, err := infos.AddressSample()
-				if err != nil {
-					log.Error().Err(err).Msg("could not get address sample")
-					continue
-				}
-				output <- &Peers{Addresses: addresses}
+				sample := addresses.Sample(8)
+				output <- &Peers{Addresses: sample}
 			case *Peers:
 				log.Debug().Msg("peer received")
 				for _, address := range msg.Addresses {
-					events.Found(address)
+					addresses.Add(address)
 				}
 			}
 		case <-time.After(interval):
+			log.Debug().Msg("sending heartbeat")
 			output <- &Ping{}
 		case <-timeout.C:
-			actions.DropPeer(address)
+			log.Info().Msg("peer timed out, dropping")
+			peers.Drop(address)
 		}
 	}
 	close(output)

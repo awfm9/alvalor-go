@@ -28,6 +28,7 @@ type Config struct {
 	address    string
 	minPeers   uint
 	maxPeers   uint
+	maxPending uint
 	interval   time.Duration
 	codec      Codec
 	bufferSize uint

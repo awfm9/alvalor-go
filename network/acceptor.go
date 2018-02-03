@@ -25,41 +25,27 @@ import (
 	"github.com/rs/zerolog"
 )
 
-type acceptorActions interface {
-	ClaimSlot() error
-	ReleaseSlot()
-	AddPeer(conn net.Conn, nonce []byte) error
-}
+func handleAccepting(log zerolog.Logger, wg *sync.WaitGroup, cfg *Config, slots slotManager, peers peerManager, rep reputationManager, conn net.Conn) {
 
-type acceptorEvents interface {
-	Error(address string)
-	Invalid(address string)
-	Success(address string)
-}
-
-func handleAccepting(log zerolog.Logger, wg *sync.WaitGroup, cfg *Config, actions acceptorActions, events acceptorEvents, conn net.Conn) {
+	// synchronization, configuration & logging
 	defer wg.Done()
-
-	// extract configuration parameters we care about
 	var (
 		network = cfg.network
 		nonce   = cfg.nonce
 		address = conn.RemoteAddr().String()
 	)
-
-	// set up logging with start/stop messages
 	log = log.With().Str("component", "acceptor").Str("address", address).Logger()
 	log.Info().Msg("accepting routine started")
 	defer log.Info().Msg("accepting routine stopped")
 
 	// first make sure we can claim a connection slot
-	err := actions.ClaimSlot()
+	err := slots.Claim()
 	if err != nil {
 		log.Error().Err(err).Msg("could not claim connection slot")
 		conn.Close()
 		return
 	}
-	defer actions.ReleaseSlot()
+	defer slots.Release()
 
 	// execute the handshake on the incoming connection
 	ack := append(network, nonce...)
@@ -68,38 +54,38 @@ func handleAccepting(log zerolog.Logger, wg *sync.WaitGroup, cfg *Config, action
 	if err != nil {
 		log.Error().Err(err).Msg("could not read syn packet")
 		conn.Close()
-		events.Error(address)
+		rep.Error(address)
 		return
 	}
 	networkIn := syn[:len(network)]
 	if !bytes.Equal(networkIn, network) {
 		log.Error().Bytes("network", network).Bytes("network_in", networkIn).Msg("network mismatch")
 		conn.Close()
-		events.Invalid(address)
+		rep.Invalid(address)
 		return
 	}
 	nonceIn := syn[len(network):]
 	if bytes.Equal(nonceIn, nonce) {
 		log.Error().Bytes("nonce", nonce).Msg("identical nonce")
 		conn.Close()
-		events.Invalid(address)
+		rep.Invalid(address)
 		return
 	}
 	_, err = conn.Write(ack)
 	if err != nil {
 		log.Error().Err(err).Msg("could not write ack packet")
 		conn.Close()
-		events.Error(address)
+		rep.Error(address)
 		return
 	}
 
 	// submit the connection for a new peer creation
-	err = actions.AddPeer(conn, nonceIn)
+	err = peers.Add(conn, nonceIn)
 	if err != nil {
 		log.Error().Err(err).Msg("could not add peer")
 		conn.Close()
 		return
 	}
 
-	events.Success(address)
+	rep.Success(address)
 }
