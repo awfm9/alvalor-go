@@ -18,6 +18,7 @@
 package network
 
 import (
+	"io"
 	"net"
 	"time"
 
@@ -122,6 +123,20 @@ func (lm *ListenerMock) Close() error {
 func (lm *ListenerMock) SetDeadline(t time.Time) error {
 	args := lm.Called(t)
 	return args.Error(0)
+}
+
+type CodecMock struct {
+	mock.Mock
+}
+
+func (cm *CodecMock) Encode(w io.Writer, i interface{}) error {
+	args := cm.Called(w, i)
+	return args.Error(0)
+}
+
+func (cm *CodecMock) Decode(r io.Reader) (interface{}, error) {
+	args := cm.Called(r)
+	return args.Get(0), args.Error(1)
 }
 
 type DialManagerMock struct {

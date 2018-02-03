@@ -18,11 +18,15 @@
 package network
 
 import (
+	"bytes"
+	"errors"
+	"io"
 	"io/ioutil"
 	"sync"
 	"testing"
 
 	"github.com/rs/zerolog"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"
 )
 
@@ -44,12 +48,122 @@ func (suite *ReceiverSuite) SetupTest() {
 	suite.cfg = Config{}
 }
 
-func (suite *ReceiverSuite) TestReceiverSuccess() {
+func (suite *ReceiverSuite) TestReceiverEOFError() {
 
 	// arrange
+	address := "15.77.14.74:5454"
+	input := make(chan interface{}, 16)
+	r := &bytes.Buffer{}
+
+	peers := &PeerManagerMock{}
+
+	rep := &ReputationManagerMock{}
+
+	codec := &CodecMock{}
+	codec.On("Decode", r).Return(nil, io.EOF)
 
 	// act
+	suite.cfg.codec = codec
+	go handleReceiving(suite.log, &suite.wg, &suite.cfg, peers, rep, address, r, input)
+	suite.wg.Wait()
 
 	// assert
+	_, ok := <-input
+	assert.False(suite.T(), ok)
+}
 
+func (suite *ReceiverSuite) TestReceiverClosedError() {
+
+	// arrange
+	address := "15.77.14.74:5454"
+	input := make(chan interface{}, 16)
+	r := &bytes.Buffer{}
+
+	peers := &PeerManagerMock{}
+
+	rep := &ReputationManagerMock{}
+
+	codec := &CodecMock{}
+	codec.On("Decode", r).Return(nil, errors.New("use of closed network connection"))
+
+	// act
+	suite.cfg.codec = codec
+	go handleReceiving(suite.log, &suite.wg, &suite.cfg, peers, rep, address, r, input)
+	suite.wg.Wait()
+
+	// assert
+	_, ok := <-input
+	assert.False(suite.T(), ok)
+}
+
+func (suite *ReceiverSuite) TestReceiverForwardMessages() {
+
+	// arrange
+	address := "15.77.14.74:5454"
+	input := make(chan interface{}, 16)
+	r := &bytes.Buffer{}
+
+	peers := &PeerManagerMock{}
+
+	rep := &ReputationManagerMock{}
+
+	codec := &CodecMock{}
+	codec.On("Decode", r).Return(&Ping{}, nil).Once()
+	codec.On("Decode", r).Return(&Pong{}, nil).Once()
+	codec.On("Decode", r).Return(&Discover{}, nil).Once()
+	codec.On("Decode", r).Return(&Peers{}, nil).Once()
+	codec.On("Decode", r).Return(nil, io.EOF)
+
+	// act
+	suite.cfg.codec = codec
+	go handleReceiving(suite.log, &suite.wg, &suite.cfg, peers, rep, address, r, input)
+	var msgs []interface{}
+	for msg := range input {
+		msgs = append(msgs, msg)
+	}
+	suite.wg.Wait()
+
+	// assert
+	if assert.Len(suite.T(), msgs, 4) {
+		assert.IsType(suite.T(), &Ping{}, msgs[0])
+		assert.IsType(suite.T(), &Pong{}, msgs[1])
+		assert.IsType(suite.T(), &Discover{}, msgs[2])
+		assert.IsType(suite.T(), &Peers{}, msgs[3])
+	}
+}
+
+func (suite *ReceiverSuite) TestReceiverReadFails() {
+
+	// arrange
+	address := "15.77.14.74:5454"
+	input := make(chan interface{}, 16)
+	r := &bytes.Buffer{}
+
+	peers := &PeerManagerMock{}
+	peers.On("Drop", address).Return(errors.New("dropping failed"))
+
+	rep := &ReputationManagerMock{}
+	rep.On("Error", address)
+
+	codec := &CodecMock{}
+	message := "message"
+	codec.On("Decode", r).Return(nil, errors.New("could not read")).Once()
+	codec.On("Decode", r).Return(message, nil).Once()
+	codec.On("Decode", r).Return(nil, io.EOF)
+
+	// act
+	suite.cfg.codec = codec
+	go handleReceiving(suite.log, &suite.wg, &suite.cfg, peers, rep, address, r, input)
+	var msgs []interface{}
+	for msg := range input {
+		msgs = append(msgs, msg)
+	}
+	suite.wg.Wait()
+
+	// assert
+	rep.AssertCalled(suite.T(), "Error", address)
+	peers.AssertCalled(suite.T(), "Drop", address)
+	if assert.Len(suite.T(), msgs, 1) {
+		assert.Equal(suite.T(), message, msgs[0])
+	}
 }
