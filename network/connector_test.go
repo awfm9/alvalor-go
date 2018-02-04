@@ -44,9 +44,10 @@ func (suite *ConnectorSuite) SetupTest() {
 	suite.log = zerolog.New(ioutil.Discard)
 	suite.wg = sync.WaitGroup{}
 	suite.wg.Add(1)
+	v4, _ := uuid.NewV4()
 	suite.cfg = Config{
 		network: Odin,
-		nonce:   uuid.NewV4().Bytes(),
+		nonce:   v4.Bytes(),
 	}
 }
 
@@ -170,7 +171,8 @@ func (suite *ConnectorSuite) TestConnectorNetworkMismatch() {
 	address := "136.44.33.12:5523"
 	syn := append(suite.cfg.network, suite.cfg.nonce...)
 	buf := make([]byte, len(syn))
-	ack := append([]byte{1, 2, 3, 4}, uuid.NewV4().Bytes()...)
+	v4, _ := uuid.NewV4()
+	ack := append([]byte{1, 2, 3, 4}, v4.Bytes()...)
 
 	conn := &ConnMock{}
 	conn.On("Write", syn).Return(len(syn), nil)
@@ -242,7 +244,8 @@ func (suite *ConnectorSuite) TestConnectorNonceKnown() {
 
 	// arrange
 	address := "136.44.33.12:5523"
-	nonce := uuid.NewV4().Bytes()
+	v4, _ := uuid.NewV4()
+	nonce := v4.Bytes()
 	syn := append(suite.cfg.network, suite.cfg.nonce...)
 	buf := make([]byte, len(syn))
 	ack := append(suite.cfg.network, nonce...)
@@ -281,7 +284,8 @@ func (suite *ConnectorSuite) TestConnectorAddPeerFails() {
 
 	// arrange
 	address := "136.44.33.12:5523"
-	nonce := uuid.NewV4().Bytes()
+	v4, _ := uuid.NewV4()
+	nonce := v4.Bytes()
 	syn := append(suite.cfg.network, suite.cfg.nonce...)
 	buf := make([]byte, len(syn))
 	ack := append(suite.cfg.network, nonce...)
@@ -320,7 +324,8 @@ func (suite *ConnectorSuite) TestConnectorSuccess() {
 
 	// arrange
 	address := "136.44.33.12:5523"
-	nonce := uuid.NewV4().Bytes()
+	v4, _ := uuid.NewV4()
+	nonce := v4.Bytes()
 	syn := append(suite.cfg.network, suite.cfg.nonce...)
 	buf := make([]byte, len(syn))
 	ack := append(suite.cfg.network, nonce...)

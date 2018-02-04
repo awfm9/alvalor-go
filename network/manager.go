@@ -61,6 +61,8 @@ func NewManager(log zerolog.Logger, codec Codec, options ...func(*Config)) *Mana
 	// initialize the package-wide waitgroup
 	wg := &sync.WaitGroup{}
 
+	v4, _ := uuid.NewV4()
+
 	// initialize the default configuration and apply custom options
 	cfg := &Config{
 		network:    Odin,
@@ -69,7 +71,7 @@ func NewManager(log zerolog.Logger, codec Codec, options ...func(*Config)) *Mana
 		minPeers:   3,
 		maxPeers:   10,
 		maxPending: 16,
-		nonce:      uuid.NewV4().Bytes(),
+		nonce:      v4.Bytes(),
 		interval:   time.Second * 1,
 		codec:      codec,
 		bufferSize: 16,
