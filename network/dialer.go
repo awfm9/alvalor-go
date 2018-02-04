@@ -57,6 +57,8 @@ func handleDialing(log zerolog.Logger, wg *sync.WaitGroup, cfg *Config, peers pe
 		if peerCount+pendingCount >= maxPeers {
 			continue
 		}
-		handlers.Connect()
+		var address string
+		// TODO: select random address sorted by reputation
+		handlers.Connect(address)
 	}
 }

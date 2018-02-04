@@ -18,7 +18,6 @@
 package network
 
 import (
-	"net"
 	"sync"
 	"time"
 
@@ -35,30 +34,24 @@ var (
 	Loki = []byte{76, 79, 75, 73}
 )
 
-// wrapper around the standard dial function
-var dial = func(address string) (net.Conn, error) { return net.Dial("tcp", address) }
-
-// Manager represents the manager of all network components.
-type Manager struct {
-	log       zerolog.Logger
-	wg        *sync.WaitGroup
-	cfg       *Config
-	slots     slotManager
-	peers     peerManager
-	addresses addressManager
-	rep       reputationManager
-	handlers  handlerManager
-	stop      chan struct{}
+// Network represents a wrapper around the network package to provide the API.
+type Network interface {
+	Stop()
 }
 
-// NewManager will initialize the completely wired up networking dependencies.
-func NewManager(log zerolog.Logger, codec Codec, options ...func(*Config)) *Manager {
+// New will initialize the network component.
+func New(log zerolog.Logger, codec Codec, options ...func(*Config)) Network {
+
+	// initialize the launcher for all handlers
+	handlers := &simpleHandlerManager{}
 
 	// add the package information to the top package level logger
 	log = log.With().Str("package", "network").Logger()
+	handlers.log = log
 
 	// initialize the package-wide waitgroup
 	wg := &sync.WaitGroup{}
+	handlers.wg = wg
 
 	// initialize the default configuration and apply custom options
 	cfg := &Config{
@@ -76,39 +69,33 @@ func NewManager(log zerolog.Logger, codec Codec, options ...func(*Config)) *Mana
 	for _, option := range options {
 		option(cfg)
 	}
+	handlers.cfg = cfg
 
-	// TODO: validate the configuration parameters
+	// initialize the address manager that handles outgoing addresses
+	addresses := newSimpleAddressManager()
+	addresses.Block(cfg.address)
+	handlers.addresses = addresses
 
-	// initialize the network component with all state
-	mgr := &Manager{
-		log:   log,
-		wg:    wg,
-		cfg:   cfg,
-		slots: newSimpleSlotManager(cfg.maxPending),
-		// TODO: initialize peers with handlers dependency
-		peers:     newSimplePeerManager(nil, cfg.minPeers, cfg.maxPeers),
-		rep:       newSimpleReputationManager(),
-		addresses: &simpleAddressManager{},
-		handlers:  &simpleHandlerManager{},
-		stop:      make(chan struct{}),
-	}
+	// initialize the slots manager that handles connection slots
+	slots := newSimpleSlotManager(cfg.maxPending)
+	handlers.slots = slots
 
-	// TODO: separate book package and inject so we can add addresses in main
-	// TODO: add own address to samples
+	// initialize the peer manager that handles connected peers
+	peers := newSimplePeerManager(handlers, cfg.minPeers, cfg.maxPeers)
+	handlers.peers = peers
 
-	// blacklist our own address
-	// TODO: blacklist our own address for connections
+	// initialize the reputation manager that handles reputation of peers
+	rep := newSimpleReputationManager()
+	handlers.rep = rep
 
-	// initialize the connection dropper, the outgoing connection dialer and
-	// the incoming connection server
-	// TODO: restart the dropper, server and dialer
+	// create the channel that will shut everything down
+	stop := make(chan struct{})
+	handlers.stop = stop
 
-	return mgr
-}
+	// initialize the initial handlers
+	handlers.Drop()
+	handlers.Serve()
+	handlers.Dial()
 
-// Stop will shut down all routines and wait for them to end.
-func (mgr *Manager) Stop() {
-	close(mgr.stop)
-	mgr.peers.DropAll()
-	mgr.wg.Wait()
+	return handlers
 }

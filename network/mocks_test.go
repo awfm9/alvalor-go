@@ -250,15 +250,27 @@ type HandlerManagerMock struct {
 	mock.Mock
 }
 
-func (hm *HandlerManagerMock) Accept(conn net.Conn) {
-	_ = hm.Called(conn)
+func (hm *HandlerManagerMock) Drop() {
+	_ = hm.Called()
 }
 
-func (hm *HandlerManagerMock) Connect() {
+func (hm *HandlerManagerMock) Serve() {
+	_ = hm.Called()
+}
+
+func (hm *HandlerManagerMock) Dial() {
 	_ = hm.Called()
 }
 
 func (hm *HandlerManagerMock) Listen() {
+	_ = hm.Called()
+}
+
+func (hm *HandlerManagerMock) Accept(conn net.Conn) {
+	_ = hm.Called(conn)
+}
+
+func (hm *HandlerManagerMock) Connect(address string) {
 	_ = hm.Called()
 }
 

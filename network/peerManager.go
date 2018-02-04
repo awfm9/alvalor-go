@@ -90,7 +90,6 @@ func (pm *simplePeerManager) Add(conn net.Conn, nonce []byte) error {
 	w := lz4.NewWriter(conn)
 
 	// launch the message processing routines
-	// TODO: figure out if it's cleaner & better for testing to pass address & rest or just conn
 	pm.handlers.Send(address, p.output, w)
 	pm.handlers.Process(address, p.input, p.output)
 	pm.handlers.Receive(address, r, p.input)
