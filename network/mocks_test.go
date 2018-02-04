@@ -207,10 +207,6 @@ func (pm *PeerManagerMock) Drop(address string) error {
 	return args.Error(0)
 }
 
-func (pm *PeerManagerMock) DropAll() {
-	_ = pm.Called()
-}
-
 func (pm *PeerManagerMock) Known(nonce []byte) bool {
 	args := pm.Called(nonce)
 	return args.Bool(0)

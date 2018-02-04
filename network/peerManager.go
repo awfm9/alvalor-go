@@ -28,18 +28,10 @@ import (
 
 type peerManager interface {
 	Add(conn net.Conn, nonce []byte) error
-	Known(nonce []byte) bool
-	Count() uint
 	Drop(address string) error
+	Count() uint
+	Known(nonce []byte) bool
 	Addresses() []string
-	DropAll()
-}
-
-type peer struct {
-	conn   net.Conn
-	input  chan interface{}
-	output chan interface{}
-	nonce  []byte
 }
 
 type simplePeerManager struct {
@@ -98,14 +90,6 @@ func (pm *simplePeerManager) Add(conn net.Conn, nonce []byte) error {
 	return nil
 }
 
-func (pm *simplePeerManager) DropAll() {
-	pm.Lock()
-	defer pm.Unlock()
-	for address := range pm.reg {
-		pm.Drop(address)
-	}
-}
-
 func (pm *simplePeerManager) Drop(address string) error {
 	pm.Lock()
 	defer pm.Unlock()
@@ -117,6 +101,7 @@ func (pm *simplePeerManager) Drop(address string) error {
 	if err != nil {
 		return errors.Wrap(err, "could not close peer connection")
 	}
+	delete(pm.reg, address)
 	return nil
 }
 
@@ -141,8 +126,8 @@ func (pm *simplePeerManager) Addresses() []string {
 	pm.Lock()
 	defer pm.Unlock()
 	addresses := make([]string, 0, len(pm.reg))
-	for _, peer := range pm.reg {
-		addresses = append(addresses, peer.conn.RemoteAddr().String())
+	for address := range pm.reg {
+		addresses = append(addresses, address)
 	}
 	return addresses
 }

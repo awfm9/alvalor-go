@@ -85,5 +85,9 @@ func (hm *simpleHandlerManager) Receive(address string, r io.Reader, input chan<
 
 func (hm *simpleHandlerManager) Stop() {
 	close(hm.stop)
+	addresses := hm.peers.Addresses()
+	for _, address := range addresses {
+		hm.peers.Drop(address)
+	}
 	hm.wg.Wait()
 }
