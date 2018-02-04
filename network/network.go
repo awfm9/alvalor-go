@@ -77,8 +77,8 @@ func New(log zerolog.Logger, codec Codec, options ...func(*Config)) Network {
 	handlers.addresses = addresses
 
 	// initialize the slots manager that handles connection slots
-	slots := newSimpleSlotManager(cfg.maxPending)
-	handlers.slots = slots
+	pending := newSimplePendingManager(cfg.maxPending)
+	handlers.pending = pending
 
 	// initialize the peer manager that handles connected peers
 	peers := newSimplePeerManager(handlers, cfg.minPeers, cfg.maxPeers)

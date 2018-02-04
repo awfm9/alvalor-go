@@ -24,7 +24,7 @@ import (
 	"github.com/rs/zerolog"
 )
 
-func handleConnecting(log zerolog.Logger, wg *sync.WaitGroup, cfg *Config, slots slotManager, peers peerManager, rep reputationManager, dialer dialWrapper, address string) {
+func handleConnecting(log zerolog.Logger, wg *sync.WaitGroup, cfg *Config, pending pendingManager, peers peerManager, rep reputationManager, dialer dialWrapper, address string) {
 	defer wg.Done()
 
 	// extract the variables from the config we are interested in
@@ -39,12 +39,12 @@ func handleConnecting(log zerolog.Logger, wg *sync.WaitGroup, cfg *Config, slots
 	defer log.Info().Msg("connecting routine stopped")
 
 	// claim a free connection slot and set the release
-	err := slots.Claim()
+	err := pending.Claim(address)
 	if err != nil {
 		log.Error().Err(err).Msg("could not claim slot")
 		return
 	}
-	defer slots.Release()
+	defer pending.Release(address)
 
 	// resolve the address and dial the connection
 	conn, err := dialer.Dial(address)

@@ -24,6 +24,7 @@ import (
 	"time"
 
 	"github.com/rs/zerolog"
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/suite"
 )
 
@@ -43,7 +44,7 @@ func (suite *DialerSuite) SetupTest() {
 	suite.wg = sync.WaitGroup{}
 	suite.wg.Add(1)
 	suite.cfg = Config{
-		interval: 5 * time.Millisecond,
+		interval: 10 * time.Millisecond,
 		minPeers: 5,
 		maxPeers: 15,
 	}
@@ -52,25 +53,76 @@ func (suite *DialerSuite) SetupTest() {
 func (suite *DialerSuite) TestDialerSuccess() {
 
 	// arrange
+	address := "192.0.2.101:1337"
 	stop := make(chan struct{})
 
 	peers := &PeerManagerMock{}
 	peers.On("Count").Return(3)
+	peers.On("Addresses").Return([]string{})
 
-	slots := &SlotManagerMock{}
-	slots.On("Pending").Return(5)
+	pending := &PendingManagerMock{}
+	pending.On("Count").Return(5)
+	pending.On("Addresses").Return([]string{})
+
+	rep := &ReputationManagerMock{}
+
+	addresses := &AddressManagerMock{}
+	addresses.On("Sample", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return([]string{address})
 
 	handlers := &HandlerManagerMock{}
-	handlers.On("Connect")
+	handlers.On("Connect", address)
 
 	// act
-	go handleDialing(suite.log, &suite.wg, &suite.cfg, peers, slots, handlers, stop)
-	time.Sleep(50 * time.Millisecond)
+	go handleDialing(suite.log, &suite.wg, &suite.cfg, peers, pending, addresses, rep, handlers, stop)
+	time.Sleep(15 * time.Millisecond)
 	close(stop)
 	suite.wg.Wait()
 
 	// assert
-	handlers.AssertCalled(suite.T(), "Connect")
+	addresses.AssertCalled(suite.T(), "Sample", 1,
+		mock.AnythingOfType("func(string) bool"),
+		mock.AnythingOfType("func(string) bool"),
+		mock.AnythingOfType("func(string, string) bool"),
+		mock.AnythingOfType("func(string, string) bool"),
+	)
+	handlers.AssertCalled(suite.T(), "Connect", address)
+}
+
+func (suite *DialerSuite) TestDialerNoAddresses() {
+
+	// arrange
+	stop := make(chan struct{})
+
+	peers := &PeerManagerMock{}
+	peers.On("Count").Return(3)
+	peers.On("Addresses").Return([]string{})
+
+	pending := &PendingManagerMock{}
+	pending.On("Count").Return(5)
+	pending.On("Addresses").Return([]string{})
+
+	rep := &ReputationManagerMock{}
+
+	addresses := &AddressManagerMock{}
+	addresses.On("Sample", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return([]string{})
+
+	handlers := &HandlerManagerMock{}
+	handlers.On("Connect", mock.Anything)
+
+	// act
+	go handleDialing(suite.log, &suite.wg, &suite.cfg, peers, pending, addresses, rep, handlers, stop)
+	time.Sleep(15 * time.Millisecond)
+	close(stop)
+	suite.wg.Wait()
+
+	// assert
+	addresses.AssertCalled(suite.T(), "Sample", 1,
+		mock.AnythingOfType("func(string) bool"),
+		mock.AnythingOfType("func(string) bool"),
+		mock.AnythingOfType("func(string, string) bool"),
+		mock.AnythingOfType("func(string, string) bool"),
+	)
+	handlers.AssertNotCalled(suite.T(), "Connect")
 }
 
 func (suite *DialerSuite) TestDialerEnoughPeers() {
@@ -81,19 +133,24 @@ func (suite *DialerSuite) TestDialerEnoughPeers() {
 	peers := &PeerManagerMock{}
 	peers.On("Count").Return(5)
 
-	slots := &SlotManagerMock{}
-	slots.On("Pending").Return(3)
+	pending := &PendingManagerMock{}
+	pending.On("Count").Return(3)
+
+	addresses := &AddressManagerMock{}
+
+	rep := &ReputationManagerMock{}
 
 	handlers := &HandlerManagerMock{}
-	handlers.On("Connect")
+	handlers.On("Connect", mock.Anything)
 
 	// act
-	go handleDialing(suite.log, &suite.wg, &suite.cfg, peers, slots, handlers, stop)
-	time.Sleep(50 * time.Millisecond)
+	go handleDialing(suite.log, &suite.wg, &suite.cfg, peers, pending, addresses, rep, handlers, stop)
+	time.Sleep(15 * time.Millisecond)
 	close(stop)
 	suite.wg.Wait()
 
 	// assert
+	addresses.AssertNotCalled(suite.T(), "Sample")
 	handlers.AssertNotCalled(suite.T(), "Connect")
 }
 
@@ -105,18 +162,23 @@ func (suite *DialerSuite) TestDialerMaximumPendingPeers() {
 	peers := &PeerManagerMock{}
 	peers.On("Count").Return(3)
 
-	slots := &SlotManagerMock{}
-	slots.On("Pending").Return(12)
+	pending := &PendingManagerMock{}
+	pending.On("Count").Return(12)
+
+	addresses := &AddressManagerMock{}
+
+	rep := &ReputationManagerMock{}
 
 	handlers := &HandlerManagerMock{}
-	handlers.On("Connect")
+	handlers.On("Connect", mock.Anything)
 
 	// act
-	go handleDialing(suite.log, &suite.wg, &suite.cfg, peers, slots, handlers, stop)
-	time.Sleep(50 * time.Millisecond)
+	go handleDialing(suite.log, &suite.wg, &suite.cfg, peers, pending, addresses, rep, handlers, stop)
+	time.Sleep(15 * time.Millisecond)
 	close(stop)
 	suite.wg.Wait()
 
 	// assert
+	addresses.AssertNotCalled(suite.T(), "Sample")
 	handlers.AssertNotCalled(suite.T(), "Connect")
 }

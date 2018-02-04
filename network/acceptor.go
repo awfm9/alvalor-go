@@ -25,7 +25,7 @@ import (
 	"github.com/rs/zerolog"
 )
 
-func handleAccepting(log zerolog.Logger, wg *sync.WaitGroup, cfg *Config, slots slotManager, peers peerManager, rep reputationManager, conn net.Conn) {
+func handleAccepting(log zerolog.Logger, wg *sync.WaitGroup, cfg *Config, pending pendingManager, peers peerManager, rep reputationManager, conn net.Conn) {
 
 	// synchronization, configuration & logging
 	defer wg.Done()
@@ -39,13 +39,13 @@ func handleAccepting(log zerolog.Logger, wg *sync.WaitGroup, cfg *Config, slots 
 	defer log.Info().Msg("accepting routine stopped")
 
 	// first make sure we can claim a connection slot
-	err := slots.Claim()
+	err := pending.Claim(address)
 	if err != nil {
 		log.Error().Err(err).Msg("could not claim connection slot")
 		conn.Close()
 		return
 	}
-	defer slots.Release()
+	defer pending.Release(address)
 
 	// execute the handshake on the incoming connection
 	ack := append(network, nonce...)

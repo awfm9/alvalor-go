@@ -41,7 +41,7 @@ type simpleHandlerManager struct {
 	dialer    dialWrapper
 	listener  listenWrapper
 	addresses addressManager
-	slots     slotManager
+	pending   pendingManager
 	peers     peerManager
 	rep       reputationManager
 	stop      chan struct{}
@@ -56,7 +56,7 @@ func (hm *simpleHandlerManager) Serve() {
 }
 
 func (hm *simpleHandlerManager) Dial() {
-	go handleDialing(hm.log, hm.wg, hm.cfg, hm.peers, hm.slots, hm, hm.stop)
+	go handleDialing(hm.log, hm.wg, hm.cfg, hm.peers, hm.pending, hm.addresses, hm.rep, hm, hm.stop)
 }
 
 func (hm *simpleHandlerManager) Listen() {
@@ -64,11 +64,11 @@ func (hm *simpleHandlerManager) Listen() {
 }
 
 func (hm *simpleHandlerManager) Accept(conn net.Conn) {
-	go handleAccepting(hm.log, hm.wg, hm.cfg, hm.slots, hm.peers, hm.rep, conn)
+	go handleAccepting(hm.log, hm.wg, hm.cfg, hm.pending, hm.peers, hm.rep, conn)
 }
 
 func (hm *simpleHandlerManager) Connect(address string) {
-	go handleConnecting(hm.log, hm.wg, hm.cfg, hm.slots, hm.peers, hm.rep, hm.dialer, address)
+	go handleConnecting(hm.log, hm.wg, hm.cfg, hm.pending, hm.peers, hm.rep, hm.dialer, address)
 }
 
 func (hm *simpleHandlerManager) Send(address string, output <-chan interface{}, w io.Writer) {

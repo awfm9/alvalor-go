@@ -165,23 +165,32 @@ func (lm *ListenManagerMock) Listen(address string) (Listener, error) {
 	return ln, args.Error(1)
 }
 
-type SlotManagerMock struct {
+type PendingManagerMock struct {
 	mock.Mock
 }
 
-func (sm *SlotManagerMock) Claim() error {
-	args := sm.Called()
+func (pm *PendingManagerMock) Claim(address string) error {
+	args := pm.Called(address)
 	return args.Error(0)
 }
 
-func (sm *SlotManagerMock) Release() error {
-	args := sm.Called()
+func (pm *PendingManagerMock) Release(address string) error {
+	args := pm.Called(address)
 	return args.Error(0)
 }
 
-func (sm *SlotManagerMock) Pending() uint {
-	args := sm.Called()
+func (pm *PendingManagerMock) Count() uint {
+	args := pm.Called()
 	return uint(args.Int(0))
+}
+
+func (pm *PendingManagerMock) Addresses() []string {
+	args := pm.Called()
+	var addresses []string
+	if args.Get(0) != nil {
+		addresses = args.Get(0).([]string)
+	}
+	return addresses
 }
 
 type PeerManagerMock struct {
@@ -271,7 +280,7 @@ func (hm *HandlerManagerMock) Accept(conn net.Conn) {
 }
 
 func (hm *HandlerManagerMock) Connect(address string) {
-	_ = hm.Called()
+	_ = hm.Called(address)
 }
 
 func (hm *HandlerManagerMock) Send(address string, output <-chan interface{}, w io.Writer) {
