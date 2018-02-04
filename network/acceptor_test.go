@@ -53,7 +53,7 @@ func (suite *AcceptorSuite) SetupTest() {
 func (suite *AcceptorSuite) TestAcceptorClaimFails() {
 
 	// arrange
-	address := "136.44.33.12:5523"
+	address := "192.0.2.100:1337"
 
 	addr := &AddrMock{}
 	addr.On("String").Return(address)
@@ -62,26 +62,26 @@ func (suite *AcceptorSuite) TestAcceptorClaimFails() {
 	conn.On("RemoteAddr").Return(addr)
 	conn.On("Close").Return(nil)
 
-	slots := &SlotManagerMock{}
-	slots.On("Claim").Return(errors.New("cannot claim slot"))
+	pending := &PendingManagerMock{}
+	pending.On("Claim", address).Return(errors.New("cannot claim slot"))
 
 	peers := &PeerManagerMock{}
 
 	rep := &ReputationManagerMock{}
 
 	// act
-	handleAccepting(suite.log, &suite.wg, &suite.cfg, slots, peers, rep, conn)
+	handleAccepting(suite.log, &suite.wg, &suite.cfg, pending, peers, rep, conn)
 
 	// assert
-	slots.AssertCalled(suite.T(), "Claim")
-	slots.AssertNotCalled(suite.T(), "Release")
+	pending.AssertCalled(suite.T(), "Claim", address)
+	pending.AssertNotCalled(suite.T(), "Release", address)
 	conn.AssertCalled(suite.T(), "Close")
 }
 
 func (suite *AcceptorSuite) TestAcceptorReadFails() {
 
 	// arrange
-	address := "136.44.33.12:552"
+	address := "192.0.2.100:1337"
 	buf := make([]byte, len(suite.cfg.network)+len(suite.cfg.nonce))
 
 	addr := &AddrMock{}
@@ -92,9 +92,9 @@ func (suite *AcceptorSuite) TestAcceptorReadFails() {
 	conn.On("Read", buf).Return(1, errors.New("cannot read from connection"))
 	conn.On("Close").Return(nil)
 
-	slots := &SlotManagerMock{}
-	slots.On("Claim").Return(nil)
-	slots.On("Release").Return(nil)
+	pending := &PendingManagerMock{}
+	pending.On("Claim", address).Return(nil)
+	pending.On("Release", address).Return(nil)
 
 	peers := &PeerManagerMock{}
 
@@ -102,11 +102,11 @@ func (suite *AcceptorSuite) TestAcceptorReadFails() {
 	rep.On("Error", address)
 
 	// act
-	handleAccepting(suite.log, &suite.wg, &suite.cfg, slots, peers, rep, conn)
+	handleAccepting(suite.log, &suite.wg, &suite.cfg, pending, peers, rep, conn)
 
 	// assert
-	slots.AssertCalled(suite.T(), "Claim")
-	slots.AssertCalled(suite.T(), "Release")
+	pending.AssertCalled(suite.T(), "Claim", address)
+	pending.AssertCalled(suite.T(), "Release", address)
 	rep.AssertCalled(suite.T(), "Error", address)
 	conn.AssertCalled(suite.T(), "Close")
 }
@@ -114,7 +114,7 @@ func (suite *AcceptorSuite) TestAcceptorReadFails() {
 func (suite *AcceptorSuite) TestAcceptorNetworkMismatch() {
 
 	// arrange
-	address := "136.44.33.12:5523"
+	address := "192.0.2.100:1337"
 	syn := append([]byte{1, 2, 3, 4}, uuid.NewV4().Bytes()...)
 	buf := make([]byte, len(syn))
 
@@ -128,9 +128,9 @@ func (suite *AcceptorSuite) TestAcceptorNetworkMismatch() {
 	}).Return(len(buf), nil)
 	conn.On("Close").Return(nil)
 
-	slots := &SlotManagerMock{}
-	slots.On("Claim").Return(nil)
-	slots.On("Release").Return(nil)
+	pending := &PendingManagerMock{}
+	pending.On("Claim", address).Return(nil)
+	pending.On("Release", address).Return(nil)
 
 	peers := &PeerManagerMock{}
 
@@ -138,11 +138,11 @@ func (suite *AcceptorSuite) TestAcceptorNetworkMismatch() {
 	rep.On("Invalid", address)
 
 	// act
-	handleAccepting(suite.log, &suite.wg, &suite.cfg, slots, peers, rep, conn)
+	handleAccepting(suite.log, &suite.wg, &suite.cfg, pending, peers, rep, conn)
 
 	// assert
-	slots.AssertCalled(suite.T(), "Claim")
-	slots.AssertCalled(suite.T(), "Release")
+	pending.AssertCalled(suite.T(), "Claim", address)
+	pending.AssertCalled(suite.T(), "Release", address)
 	rep.AssertCalled(suite.T(), "Invalid", address)
 	conn.AssertCalled(suite.T(), "Close")
 }
@@ -150,7 +150,7 @@ func (suite *AcceptorSuite) TestAcceptorNetworkMismatch() {
 func (suite *AcceptorSuite) TestAcceptorNonceIdentical() {
 
 	// arrange
-	address := "136.44.33.12:5523"
+	address := "192.0.2.100:1337"
 	syn := append(suite.cfg.network, suite.cfg.nonce...)
 	buf := make([]byte, len(syn))
 
@@ -164,9 +164,9 @@ func (suite *AcceptorSuite) TestAcceptorNonceIdentical() {
 	}).Return(len(buf), nil)
 	conn.On("Close").Return(nil)
 
-	slots := &SlotManagerMock{}
-	slots.On("Claim").Return(nil)
-	slots.On("Release").Return(nil)
+	pending := &PendingManagerMock{}
+	pending.On("Claim", address).Return(nil)
+	pending.On("Release", address).Return(nil)
 
 	peers := &PeerManagerMock{}
 
@@ -174,11 +174,11 @@ func (suite *AcceptorSuite) TestAcceptorNonceIdentical() {
 	rep.On("Invalid", address)
 
 	// act
-	handleAccepting(suite.log, &suite.wg, &suite.cfg, slots, peers, rep, conn)
+	handleAccepting(suite.log, &suite.wg, &suite.cfg, pending, peers, rep, conn)
 
 	// assert
-	slots.AssertCalled(suite.T(), "Claim")
-	slots.AssertCalled(suite.T(), "Release")
+	pending.AssertCalled(suite.T(), "Claim", address)
+	pending.AssertCalled(suite.T(), "Release", address)
 	rep.AssertCalled(suite.T(), "Invalid", address)
 	conn.AssertCalled(suite.T(), "Close")
 }
@@ -186,7 +186,7 @@ func (suite *AcceptorSuite) TestAcceptorNonceIdentical() {
 func (suite *AcceptorSuite) TestAcceptorWriteFails() {
 
 	// arrange
-	address := "136.44.33.12:5523"
+	address := "192.0.2.100:1337"
 	syn := append(suite.cfg.network, uuid.NewV4().Bytes()...)
 	buf := make([]byte, len(syn))
 	ack := append(suite.cfg.network, suite.cfg.nonce...)
@@ -202,9 +202,9 @@ func (suite *AcceptorSuite) TestAcceptorWriteFails() {
 	conn.On("Write", ack).Return(0, errors.New("cannot write to connection"))
 	conn.On("Close").Return(nil)
 
-	slots := &SlotManagerMock{}
-	slots.On("Claim").Return(nil)
-	slots.On("Release").Return(nil)
+	pending := &PendingManagerMock{}
+	pending.On("Claim", address).Return(nil)
+	pending.On("Release", address).Return(nil)
 
 	peers := &PeerManagerMock{}
 
@@ -212,11 +212,11 @@ func (suite *AcceptorSuite) TestAcceptorWriteFails() {
 	rep.On("Error", address)
 
 	// act
-	handleAccepting(suite.log, &suite.wg, &suite.cfg, slots, peers, rep, conn)
+	handleAccepting(suite.log, &suite.wg, &suite.cfg, pending, peers, rep, conn)
 
 	// assert
-	slots.AssertCalled(suite.T(), "Claim")
-	slots.AssertCalled(suite.T(), "Release")
+	pending.AssertCalled(suite.T(), "Claim", address)
+	pending.AssertCalled(suite.T(), "Release", address)
 	rep.AssertCalled(suite.T(), "Error", address)
 	conn.AssertCalled(suite.T(), "Close")
 }
@@ -224,7 +224,7 @@ func (suite *AcceptorSuite) TestAcceptorWriteFails() {
 func (suite *AcceptorSuite) TestAcceptorAddPeerFails() {
 
 	// arrange
-	address := "136.44.33.12:5523"
+	address := "192.0.2.100:1337"
 	nonce := uuid.NewV4().Bytes()
 	syn := append(suite.cfg.network, nonce...)
 	buf := make([]byte, len(syn))
@@ -236,9 +236,9 @@ func (suite *AcceptorSuite) TestAcceptorAddPeerFails() {
 	conn := &ConnMock{}
 	conn.On("RemoteAddr").Return(addr)
 
-	slots := &SlotManagerMock{}
-	slots.On("Claim").Return(nil)
-	slots.On("Release").Return(nil)
+	pending := &PendingManagerMock{}
+	pending.On("Claim", address).Return(nil)
+	pending.On("Release", address).Return(nil)
 
 	peers := &PeerManagerMock{}
 	peers.On("Add", conn, nonce).Return(errors.New("cannot add peer"))
@@ -253,18 +253,18 @@ func (suite *AcceptorSuite) TestAcceptorAddPeerFails() {
 	conn.On("Close").Return(nil)
 
 	// act
-	handleAccepting(suite.log, &suite.wg, &suite.cfg, slots, peers, rep, conn)
+	handleAccepting(suite.log, &suite.wg, &suite.cfg, pending, peers, rep, conn)
 
 	// assert
-	slots.AssertCalled(suite.T(), "Claim")
-	slots.AssertCalled(suite.T(), "Release")
+	pending.AssertCalled(suite.T(), "Claim", address)
+	pending.AssertCalled(suite.T(), "Release", address)
 	conn.AssertCalled(suite.T(), "Close")
 }
 
 func (suite *AcceptorSuite) TestAcceptorSuccess() {
 
 	// arrange
-	address := "136.44.33.12:5523"
+	address := "192.0.2.100:1337"
 	nonce := uuid.NewV4().Bytes()
 	syn := append(suite.cfg.network, nonce...)
 	buf := make([]byte, len(syn))
@@ -281,9 +281,9 @@ func (suite *AcceptorSuite) TestAcceptorSuccess() {
 	conn.On("Write", ack).Return(len(ack), nil)
 	conn.On("Close").Return(nil)
 
-	slots := &SlotManagerMock{}
-	slots.On("Claim").Return(nil)
-	slots.On("Release").Return(nil)
+	pending := &PendingManagerMock{}
+	pending.On("Claim", address).Return(nil)
+	pending.On("Release", address).Return(nil)
 
 	peers := &PeerManagerMock{}
 	peers.On("Add", conn, nonce).Return(nil)
@@ -292,11 +292,11 @@ func (suite *AcceptorSuite) TestAcceptorSuccess() {
 	rep.On("Success", address)
 
 	// act
-	handleAccepting(suite.log, &suite.wg, &suite.cfg, slots, peers, rep, conn)
+	handleAccepting(suite.log, &suite.wg, &suite.cfg, pending, peers, rep, conn)
 
 	// assert
-	slots.AssertCalled(suite.T(), "Claim")
-	slots.AssertCalled(suite.T(), "Release")
+	pending.AssertCalled(suite.T(), "Claim", address)
+	pending.AssertCalled(suite.T(), "Release", address)
 	peers.AssertCalled(suite.T(), "Add", conn, nonce)
 	rep.AssertCalled(suite.T(), "Success", address)
 }

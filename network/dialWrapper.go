@@ -18,34 +18,18 @@
 package network
 
 import (
-	"bytes"
-	"hash"
-	"math/rand"
 	"net"
+	"time"
 )
 
-func byRandom() func(string, string) bool {
-	return func(string, string) bool {
-		return rand.Int()%2 == 0
-	}
+type dialWrapper interface {
+	Dial(address string) (net.Conn, error)
 }
 
-func byReputation(rep reputationManager) func(string, string) bool {
-	return func(address1 string, address2 string) bool {
-		return rep.Score(address1) > rep.Score(address2)
-	}
+type simpleDialWrapper struct {
+	timeout time.Duration
 }
 
-func byIPHash(h hash.Hash) func(string, string) bool {
-	return func(address1 string, address2 string) bool {
-		host1, _, _ := net.SplitHostPort(address1)
-		h.Reset()
-		_, _ = h.Write([]byte(host1))
-		hash1 := h.Sum(nil)
-		host2, _, _ := net.SplitHostPort(address2)
-		h.Reset()
-		_, _ = h.Write([]byte(host2))
-		hash2 := h.Sum(nil)
-		return bytes.Compare(hash1[:], hash2[:]) < 0
-	}
+func (dm simpleDialWrapper) Dial(address string) (net.Conn, error) {
+	return net.DialTimeout("tcp", address, dm.timeout)
 }

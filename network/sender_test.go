@@ -51,7 +51,7 @@ func (suite *SenderSuite) SetupTest() {
 func (suite *ReceiverSuite) TestSenderEOFError() {
 
 	// arrange
-	address := "15.77.14.74:5454"
+	address := "192.0.2.100:1337"
 	output := make(chan interface{}, 16)
 	w := &bytes.Buffer{}
 
@@ -81,7 +81,7 @@ func (suite *ReceiverSuite) TestSenderEOFError() {
 func (suite *ReceiverSuite) TestSenderSendMessages() {
 
 	// arrange
-	address := "15.77.14.74:5454"
+	address := "192.0.2.100:1337"
 	output := make(chan interface{}, 16)
 	w := &bytes.Buffer{}
 
@@ -114,7 +114,7 @@ func (suite *ReceiverSuite) TestSenderSendMessages() {
 func (suite *ReceiverSuite) TestSenderEncodeFails() {
 
 	// arrange
-	address := "15.77.14.74:5454"
+	address := "192.0.2.100:1337"
 	output := make(chan interface{}, 16)
 	w := &bytes.Buffer{}
 

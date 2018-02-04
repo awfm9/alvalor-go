@@ -17,14 +17,13 @@
 
 package network
 
-func isAny() func(e *entry) bool {
-	return func(e *entry) bool {
-		return true
+func isNot(addresses []string) func(string) bool {
+	lookup := make(map[string]struct{})
+	for _, address := range addresses {
+		lookup[address] = struct{}{}
 	}
-}
-
-func isActive(active bool) func(e *entry) bool {
-	return func(e *entry) bool {
-		return e.Active == active
+	return func(address string) bool {
+		_, ok := lookup[address]
+		return !ok
 	}
 }

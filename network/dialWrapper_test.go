@@ -17,11 +17,12 @@
 
 package network
 
-// etry represents an entry in the address book, containing the address, whether the peer is
-// currently active and how many successes/failures we had on the connection.
-type entry struct {
-	Address string
-	Active  bool
-	Success int
-	Failure int
+import (
+	"testing"
+	"time"
+)
+
+func TestDialWrapper(t *testing.T) {
+	dialer := &simpleDialWrapper{timeout: 10 * time.Millisecond}
+	_, _ = dialer.Dial("192.0.2.100:1337")
 }

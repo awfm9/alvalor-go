@@ -23,58 +23,40 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestIsAny(t *testing.T) {
+func TestIsNot(t *testing.T) {
 	vectors := map[string]struct {
-		filter   func(e *entry) bool
-		entry    *entry
+		filter   func(string) bool
+		entry    string
 		expected bool
 	}{
-		"active entry": {
-			filter:   isAny(),
-			entry:    &entry{Active: true},
+		"empty filter": {
+			filter:   isNot(nil),
+			entry:    "192.0.2.100:1337",
 			expected: true,
 		},
-		"inactive entry": {
-			filter:   isAny(),
-			entry:    &entry{Active: false},
+		"one entry filter positive": {
+			filter:   isNot([]string{"192.0.2.100:1337"}),
+			entry:    "192.0.2.100:1337",
+			expected: false,
+		},
+		"one entry filter negative": {
+			filter:   isNot([]string{"192.168.2.200:1337"}),
+			entry:    "192.0.2.100:1337",
+			expected: true,
+		},
+		"multi entry filter positive": {
+			filter:   isNot([]string{"192.0.2.100:1337", "192.168.2.200:1337", "192.168.2.300:1337"}),
+			entry:    "192.0.2.100:1337",
+			expected: false,
+		},
+		"multi entry filter negative": {
+			filter:   isNot([]string{"192.168.2.200:1337", "192.168.2.300:1337", "192.168.2.400:1337"}),
+			entry:    "192.0.2.100:1337",
 			expected: true,
 		},
 	}
 	for name, vector := range vectors {
 		actual := vector.filter(vector.entry)
-		assert.Equalf(t, vector.expected, actual, "Is any filter wrong result for %v", name)
-	}
-}
-
-func TestIsActive(t *testing.T) {
-	vectors := map[string]struct {
-		filter   func(e *entry) bool
-		entry    *entry
-		expected bool
-	}{
-		"active entry & active filter": {
-			filter:   isActive(true),
-			entry:    &entry{Active: true},
-			expected: true,
-		},
-		"inactive entry & active filter": {
-			filter:   isActive(true),
-			entry:    &entry{Active: false},
-			expected: false,
-		},
-		"active entry & inactive filter": {
-			filter:   isActive(false),
-			entry:    &entry{Active: true},
-			expected: false,
-		},
-		"inactive entry & inactive filter": {
-			filter:   isActive(false),
-			entry:    &entry{Active: false},
-			expected: true,
-		},
-	}
-	for name, vector := range vectors {
-		actual := vector.filter(vector.entry)
-		assert.Equalf(t, vector.expected, actual, "Is active filter wrong result for %v", name)
+		assert.Equalf(t, vector.expected, actual, "Is not filter wrong result for %v", name)
 	}
 }

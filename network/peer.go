@@ -19,8 +19,7 @@ package network
 
 import "net"
 
-// Peer contains the data on a given peer.
-type Peer struct {
+type peer struct {
 	conn   net.Conn
 	input  chan interface{}
 	output chan interface{}

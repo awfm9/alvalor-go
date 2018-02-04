@@ -18,53 +18,59 @@
 package network
 
 import (
-	"encoding/hex"
-	"errors"
+	"bytes"
 	"net"
 	"sync"
 
 	"github.com/pierrec/lz4"
+	"github.com/pkg/errors"
 )
 
 type peerManager interface {
 	Add(conn net.Conn, nonce []byte) error
-	Known(nonce []byte) bool
-	Count() uint
 	Drop(address string) error
+	Count() uint
+	Known(nonce []byte) bool
 	Addresses() []string
-	DropAll()
 }
 
 type simplePeerManager struct {
 	sync.Mutex
-	min    uint
-	max    uint
-	buffer uint
-	reg    map[string]*Peer
-	lookup map[string]string
+	handlers handlerManager
+	min      uint
+	max      uint
+	buffer   uint
+	reg      map[string]*peer
 }
 
-func newSimplePeerManager(min uint, max uint) *simplePeerManager {
+func newSimplePeerManager(handlers handlerManager, min uint, max uint) *simplePeerManager {
 	return &simplePeerManager{
-		min:    min,
-		max:    max,
-		reg:    make(map[string]*Peer),
-		lookup: make(map[string]string),
+		handlers: handlers,
+		min:      min,
+		max:      max,
+		buffer:   16,
+		reg:      make(map[string]*peer),
 	}
 }
 
 func (pm *simplePeerManager) Add(conn net.Conn, nonce []byte) error {
 	pm.Lock()
 	defer pm.Unlock()
+
+	// make sure we can still add peers
 	if uint(len(pm.reg)) >= pm.max {
 		return errors.New("maximum number of peers reached")
 	}
-	hexNonce := hex.EncodeToString(nonce)
-	_, ok := pm.reg[hexNonce]
+
+	// check if we already know the peer
+	address := conn.RemoteAddr().String()
+	_, ok := pm.reg[address]
 	if ok {
 		return errors.New("peer with nonce already known")
 	}
-	peer := &Peer{
+
+	// initialize the peer
+	p := &peer{
 		conn:   conn,
 		input:  make(chan interface{}, pm.buffer),
 		output: make(chan interface{}, pm.buffer),
@@ -72,25 +78,30 @@ func (pm *simplePeerManager) Add(conn net.Conn, nonce []byte) error {
 	}
 
 	// initialize the readers and writers
-	_ = lz4.NewReader(conn)
-	_ = lz4.NewWriter(conn)
+	r := lz4.NewReader(conn)
+	w := lz4.NewWriter(conn)
 
 	// launch the message processing routines
-	// TODO: launch handlers to send, receive & process messages
+	pm.handlers.Send(address, p.output, w)
+	pm.handlers.Process(address, p.input, p.output)
+	pm.handlers.Receive(address, r, p.input)
 
-	pm.reg[hexNonce] = peer
+	pm.reg[address] = p
 	return nil
 }
 
-func (pm *simplePeerManager) DropAll() {
+func (pm *simplePeerManager) Drop(address string) error {
 	pm.Lock()
 	defer pm.Unlock()
-	for _, peer := range pm.reg {
-		peer.conn.Close()
+	p, ok := pm.reg[address]
+	if !ok {
+		return errors.New("peer unknown")
 	}
-}
-
-func (pm *simplePeerManager) Drop(address string) error {
+	err := p.conn.Close()
+	if err != nil {
+		return errors.Wrap(err, "could not close peer connection")
+	}
+	delete(pm.reg, address)
 	return nil
 }
 
@@ -101,15 +112,22 @@ func (pm *simplePeerManager) Count() uint {
 }
 
 func (pm *simplePeerManager) Known(nonce []byte) bool {
-	hexNonce := hex.EncodeToString(nonce)
-	_, ok := pm.reg[hexNonce]
-	return ok
+	pm.Lock()
+	defer pm.Unlock()
+	for _, p := range pm.reg {
+		if bytes.Equal(p.nonce, nonce) {
+			return true
+		}
+	}
+	return false
 }
 
 func (pm *simplePeerManager) Addresses() []string {
+	pm.Lock()
+	defer pm.Unlock()
 	addresses := make([]string, 0, len(pm.reg))
-	for _, peer := range pm.reg {
-		addresses = append(addresses, peer.conn.RemoteAddr().String())
+	for address := range pm.reg {
+		addresses = append(addresses, address)
 	}
 	return addresses
 }

@@ -18,13 +18,14 @@
 package network
 
 import (
+	"crypto/sha256"
 	"sync"
 	"time"
 
 	"github.com/rs/zerolog"
 )
 
-func handleDialing(log zerolog.Logger, wg *sync.WaitGroup, cfg *Config, peers peerManager, slots slotManager, handlers handlerManager, stop <-chan struct{}) {
+func handleDialing(log zerolog.Logger, wg *sync.WaitGroup, cfg *Config, peers peerManager, pending pendingManager, addresses addressManager, rep reputationManager, handlers handlerManager, stop <-chan struct{}) {
 	defer wg.Done()
 
 	// extract needed configuration parameters
@@ -50,13 +51,23 @@ func handleDialing(log zerolog.Logger, wg *sync.WaitGroup, cfg *Config, peers pe
 		case <-ticker.C:
 		}
 		peerCount := peers.Count()
-		pendingCount := slots.Pending()
+		pendingCount := pending.Count()
 		if peerCount >= minPeers {
 			continue
 		}
 		if peerCount+pendingCount >= maxPeers {
 			continue
 		}
-		handlers.Connect()
+		sample := addresses.Sample(1,
+			isNot(pending.Addresses()),
+			isNot(peers.Addresses()),
+			byReputation(rep),
+			byIPHash(sha256.New()),
+		)
+		if len(sample) == 0 {
+			log.Info().Msg("could not get address to connect")
+			continue
+		}
+		handlers.Connect(sample[0])
 	}
 }

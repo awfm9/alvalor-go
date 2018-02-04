@@ -68,3 +68,10 @@ func SetMaxPeers(maxPeers uint) func(*Config) {
 		cfg.maxPeers = maxPeers
 	}
 }
+
+// SetMaxPending allows us to configure the custom number for maximum pending.
+func SetMaxPending(maxPending uint) func(*Config) {
+	return func(cfg *Config) {
+		cfg.maxPending = maxPending
+	}
+}

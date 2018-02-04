@@ -38,8 +38,8 @@ func TestSetListen(t *testing.T) {
 }
 
 func TestSetAddress(t *testing.T) {
-	cfg := &Config{address: "192.0.2.1:1337"}
-	address := "192.0.2.2:1337"
+	cfg := &Config{address: "192.0.2.100:1337"}
+	address := "192.0.2.200:1337"
 	SetAddress(address)(cfg)
 	assert.Equal(t, address, cfg.address, "Set address did not set address")
 }
@@ -56,4 +56,11 @@ func TestMaxPeers(t *testing.T) {
 	maxPeers := uint(1)
 	SetMaxPeers(maxPeers)(cfg)
 	assert.Equal(t, maxPeers, cfg.maxPeers, "Set max peers did not set max peers")
+}
+
+func TestMaxPending(t *testing.T) {
+	cfg := &Config{maxPending: 0}
+	maxPending := uint(1)
+	SetMaxPending(maxPending)(cfg)
+	assert.Equal(t, maxPending, cfg.maxPending, "Set max pending did not set max pending")
 }

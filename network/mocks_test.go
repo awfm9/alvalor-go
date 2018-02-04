@@ -165,23 +165,32 @@ func (lm *ListenManagerMock) Listen(address string) (Listener, error) {
 	return ln, args.Error(1)
 }
 
-type SlotManagerMock struct {
+type PendingManagerMock struct {
 	mock.Mock
 }
 
-func (sm *SlotManagerMock) Claim() error {
-	args := sm.Called()
+func (pm *PendingManagerMock) Claim(address string) error {
+	args := pm.Called(address)
 	return args.Error(0)
 }
 
-func (sm *SlotManagerMock) Release() error {
-	args := sm.Called()
+func (pm *PendingManagerMock) Release(address string) error {
+	args := pm.Called(address)
 	return args.Error(0)
 }
 
-func (sm *SlotManagerMock) Pending() uint {
-	args := sm.Called()
+func (pm *PendingManagerMock) Count() uint {
+	args := pm.Called()
 	return uint(args.Int(0))
+}
+
+func (pm *PendingManagerMock) Addresses() []string {
+	args := pm.Called()
+	var addresses []string
+	if args.Get(0) != nil {
+		addresses = args.Get(0).([]string)
+	}
+	return addresses
 }
 
 type PeerManagerMock struct {
@@ -196,10 +205,6 @@ func (pm *PeerManagerMock) Add(conn net.Conn, nonce []byte) error {
 func (pm *PeerManagerMock) Drop(address string) error {
 	args := pm.Called(address)
 	return args.Error(0)
-}
-
-func (pm *PeerManagerMock) DropAll() {
-	_ = pm.Called()
 }
 
 func (pm *PeerManagerMock) Known(nonce []byte) bool {
@@ -250,12 +255,40 @@ type HandlerManagerMock struct {
 	mock.Mock
 }
 
+func (hm *HandlerManagerMock) Drop() {
+	_ = hm.Called()
+}
+
+func (hm *HandlerManagerMock) Serve() {
+	_ = hm.Called()
+}
+
+func (hm *HandlerManagerMock) Dial() {
+	_ = hm.Called()
+}
+
+func (hm *HandlerManagerMock) Listen() {
+	_ = hm.Called()
+}
+
 func (hm *HandlerManagerMock) Accept(conn net.Conn) {
 	_ = hm.Called(conn)
 }
 
-func (hm *HandlerManagerMock) Connect() {
-	_ = hm.Called()
+func (hm *HandlerManagerMock) Connect(address string) {
+	_ = hm.Called(address)
+}
+
+func (hm *HandlerManagerMock) Send(address string, output <-chan interface{}, w io.Writer) {
+	_ = hm.Called(address, output, w)
+}
+
+func (hm *HandlerManagerMock) Process(address string, input <-chan interface{}, output chan<- interface{}) {
+	_ = hm.Called(address, input, output)
+}
+
+func (hm *HandlerManagerMock) Receive(address string, r io.Reader, input chan<- interface{}) {
+	_ = hm.Called(address, r, input)
 }
 
 type AddressManagerMock struct {
@@ -263,6 +296,26 @@ type AddressManagerMock struct {
 }
 
 func (am *AddressManagerMock) Add(address string) {
+	_ = am.Called(address)
+}
+
+func (am *AddressManagerMock) Remove(address string) {
+	_ = am.Called(address)
+}
+
+func (am *AddressManagerMock) Block(address string) {
+	_ = am.Called(address)
+}
+
+func (am *AddressManagerMock) Unblock(address string) {
+	_ = am.Called(address)
+}
+
+func (am *AddressManagerMock) Pin(address string) {
+	_ = am.Called(address)
+}
+
+func (am *AddressManagerMock) Unpin(address string) {
 	_ = am.Called(address)
 }
 

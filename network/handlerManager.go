@@ -17,15 +17,77 @@
 
 package network
 
-import "net"
+import (
+	"io"
+	"net"
+	"sync"
+
+	"github.com/rs/zerolog"
+)
 
 type handlerManager interface {
+	Listen()
 	Accept(conn net.Conn)
-	Connect()
+	Connect(address string)
+	Send(address string, output <-chan interface{}, w io.Writer)
+	Process(address string, input <-chan interface{}, output chan<- interface{})
+	Receive(address string, r io.Reader, input chan<- interface{})
 }
 
-type simpleHandlerManager struct{}
+type simpleHandlerManager struct {
+	log       zerolog.Logger
+	wg        *sync.WaitGroup
+	cfg       *Config
+	dialer    dialWrapper
+	listener  listenWrapper
+	addresses addressManager
+	pending   pendingManager
+	peers     peerManager
+	rep       reputationManager
+	stop      chan struct{}
+}
 
-func (hm simpleHandlerManager) Accept(conn net.Conn) {}
+func (hm *simpleHandlerManager) Drop() {
+	go handleDropping(hm.log, hm.wg, hm.cfg, hm.peers, hm.stop)
+}
 
-func (hm simpleHandlerManager) Connect() {}
+func (hm *simpleHandlerManager) Serve() {
+	go handleServing(hm.log, hm.wg, hm.cfg, hm.peers, hm, hm.stop)
+}
+
+func (hm *simpleHandlerManager) Dial() {
+	go handleDialing(hm.log, hm.wg, hm.cfg, hm.peers, hm.pending, hm.addresses, hm.rep, hm, hm.stop)
+}
+
+func (hm *simpleHandlerManager) Listen() {
+	go handleListening(hm.log, hm.wg, hm.cfg, hm, hm.listener, hm.stop)
+}
+
+func (hm *simpleHandlerManager) Accept(conn net.Conn) {
+	go handleAccepting(hm.log, hm.wg, hm.cfg, hm.pending, hm.peers, hm.rep, conn)
+}
+
+func (hm *simpleHandlerManager) Connect(address string) {
+	go handleConnecting(hm.log, hm.wg, hm.cfg, hm.pending, hm.peers, hm.rep, hm.dialer, address)
+}
+
+func (hm *simpleHandlerManager) Send(address string, output <-chan interface{}, w io.Writer) {
+	go handleSending(hm.log, hm.wg, hm.cfg, hm.peers, hm.rep, address, output, w)
+}
+
+func (hm *simpleHandlerManager) Process(address string, input <-chan interface{}, output chan<- interface{}) {
+	go handleProcessing(hm.log, hm.wg, hm.cfg, hm.addresses, hm.peers, address, input, output)
+}
+
+func (hm *simpleHandlerManager) Receive(address string, r io.Reader, input chan<- interface{}) {
+	go handleReceiving(hm.log, hm.wg, hm.cfg, hm.peers, hm.rep, address, r, input)
+}
+
+func (hm *simpleHandlerManager) Stop() {
+	close(hm.stop)
+	addresses := hm.peers.Addresses()
+	for _, address := range addresses {
+		hm.peers.Drop(address)
+	}
+	hm.wg.Wait()
+}
