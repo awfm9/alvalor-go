@@ -57,3 +57,10 @@ func TestMaxPeers(t *testing.T) {
 	SetMaxPeers(maxPeers)(cfg)
 	assert.Equal(t, maxPeers, cfg.maxPeers, "Set max peers did not set max peers")
 }
+
+func TestMaxPending(t *testing.T) {
+	cfg := &Config{maxPending: 0}
+	maxPending := uint(1)
+	SetMaxPending(maxPending)(cfg)
+	assert.Equal(t, maxPending, cfg.maxPending, "Set max pending did not set max pending")
+}
