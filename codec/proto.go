@@ -24,6 +24,7 @@ import (
 	capnp "zombiezen.com/go/capnproto2"
 
 	"github.com/alvalor/alvalor-go/network"
+	"github.com/alvalor/alvalor-go/types"
 )
 
 // Proto represents the capnproto serialization module.
@@ -77,7 +78,10 @@ func (p Proto) Encode(w io.Writer, i interface{}) error {
 			return errors.Wrap(err, "could not create address list")
 		}
 		for i, address := range v.Addresses {
-			addrs.Set(i, address)
+			err = addrs.Set(i, address)
+			if err != nil {
+				return errors.Wrap(err, "could not set address")
+			}
 		}
 	case string:
 		err = z.SetText(v)
@@ -88,6 +92,64 @@ func (p Proto) Encode(w io.Writer, i interface{}) error {
 		err = z.SetData(v)
 		if err != nil {
 			return errors.Wrap(err, "could not create proto data")
+		}
+	case *types.Transaction:
+		var transaction Transaction
+		transaction, err = z.NewTransaction()
+		if err != nil {
+			return errors.Wrap(err, "could not create proto transaction")
+		}
+		var transfers Transfer_List
+		transfers, err = transaction.NewTransfers(int32(len(v.Transfers)))
+		if err != nil {
+			return errors.Wrap(err, "could not create transaction list")
+		}
+		for i, item := range v.Transfers {
+			var transfer Transfer
+			transfer, err = NewTransfer(seg)
+			if err != nil {
+				return errors.Wrap(err, "could not create proto transfer")
+			}
+			transfer.SetFrom(item.From)
+			transfer.SetTo(item.To)
+			transfer.SetAmount(item.Amount)
+			err = transfers.Set(i, transfer)
+			if err != nil {
+				return errors.Wrap(err, "could not set transfer")
+			}
+		}
+		var fees Fee_List
+		fees, err = transaction.NewFees(int32(len(v.Fees)))
+		if err != nil {
+			return errors.Wrap(err, "could not create fee list")
+		}
+		for i, item := range v.Fees {
+			var fee Fee
+			fee, err = NewFee(seg)
+			if err != nil {
+				return errors.Wrap(err, "could not create proto fee")
+			}
+			fee.SetFrom(item.From)
+			fee.SetAmount(item.Amount)
+			err = fees.Set(i, fee)
+			if err != nil {
+				return errors.Wrap(err, "could not set fee")
+			}
+		}
+		err = transaction.SetData(v.Data)
+		if err != nil {
+			return errors.Wrap(err, "could not set transaction data")
+		}
+		var sigs capnp.DataList
+		sigs, err = transaction.NewSignatures(int32(len(v.Signatures)))
+		if err != nil {
+			return errors.Wrap(err, "could not create signature list")
+		}
+		for i, sig := range v.Signatures {
+			err = sigs.Set(i, sig)
+			if err != nil {
+				return errors.Wrap(err, "could not set signature")
+			}
 		}
 	default:
 		return errors.Errorf("unknown proto type (%T)", i)
@@ -136,11 +198,11 @@ func (p Proto) Decode(r io.Reader) (interface{}, error) {
 		if err != nil {
 			return nil, errors.Wrap(err, "could not read proto peers")
 		}
-		v := network.Peers{}
 		addrs, err := peers.Addresses()
 		if err != nil {
 			return nil, errors.Wrap(err, "could not read address list")
 		}
+		v := network.Peers{}
 		for i := 0; i < addrs.Len(); i++ {
 			addr, _ := addrs.At(i)
 			v.Addresses = append(v.Addresses, addr)
@@ -158,6 +220,72 @@ func (p Proto) Decode(r io.Reader) (interface{}, error) {
 			return nil, errors.Wrap(err, "could not read proto data")
 		}
 		return data, nil
+	case Z_Which_transaction:
+		transaction, err := z.Transaction()
+		if err != nil {
+			return nil, errors.Wrap(err, "could not read proto transaction")
+		}
+		transfers, err := transaction.Transfers()
+		if err != nil {
+			return nil, errors.Wrap(err, "could not read transfer list")
+		}
+		fees, err := transaction.Fees()
+		if err != nil {
+			return nil, errors.Wrap(err, "could not read fee list")
+		}
+		data, err := transaction.Data()
+		if err != nil {
+			return nil, errors.Wrap(err, "could not read data")
+		}
+		sigs, err := transaction.Signatures()
+		if err != nil {
+			return nil, errors.Wrap(err, "could not read sigs")
+		}
+		v := types.Transaction{
+			Transfers:  make([]types.Transfer, 0, transfers.Len()),
+			Fees:       make([]types.Fee, 0, fees.Len()),
+			Data:       data,
+			Signatures: make([][]byte, 0, sigs.Len()),
+		}
+		for i := 0; i < transfers.Len(); i++ {
+			transfer := transfers.At(i)
+			from, err := transfer.From()
+			if err != nil {
+				return nil, errors.Wrap(err, "could not read transfer from")
+			}
+			to, err := transfer.To()
+			if err != nil {
+				return nil, errors.Wrap(err, "could not read transfer to")
+			}
+			amount := transfer.Amount()
+			item := types.Transfer{
+				From:   from,
+				To:     to,
+				Amount: amount,
+			}
+			v.Transfers = append(v.Transfers, item)
+		}
+		for i := 0; i < fees.Len(); i++ {
+			fee := fees.At(i)
+			from, err := fee.From()
+			if err != nil {
+				return nil, errors.Wrap(err, "could not read fee from")
+			}
+			amount := fee.Amount()
+			item := types.Fee{
+				From:   from,
+				Amount: amount,
+			}
+			v.Fees = append(v.Fees, item)
+		}
+		for i := 0; i < sigs.Len(); i++ {
+			sig, err := sigs.At(i)
+			if err != nil {
+				return nil, errors.Wrap(err, "could not read signature")
+			}
+			v.Signatures = append(v.Signatures, sig)
+		}
+		return &v, nil
 	default:
 		return nil, errors.Errorf("invalid proto code (%v)", z.Which())
 	}

@@ -19,21 +19,9 @@ using Go = import "/go.capnp";
 $Go.package("codec");
 $Go.import("codec");
 
-using Ping = import "ping.capnp".Ping;
-using Pong = import "pong.capnp".Pong;
-using Discover = import "discover.capnp".Discover;
-using Peers = import "peers.capnp".Peers;
-using Transaction = import "transaction.capnp".Transaction;
-
-@0x904d4f3f728c7f04;
-struct Z {
-	union {
-		ping @0 :Ping;
-		pong @1 :Pong;
-		discover @2: Discover;
-		peers @3: Peers;
-		transaction @4: Transaction;
-		# header @5: Header;
-		# block @6: Block;
-	}
+@0xb660749b49284997;
+struct Transfer {
+  from @0 :Data;
+  to @1 :Data;
+  amount @2 :UInt64;
 }

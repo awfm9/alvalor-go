@@ -13,16 +13,17 @@ type Z struct{ capnp.Struct }
 type Z_Which uint16
 
 const (
-	Z_Which_ping     Z_Which = 0
-	Z_Which_pong     Z_Which = 1
-	Z_Which_discover Z_Which = 2
-	Z_Which_peers    Z_Which = 3
-	Z_Which_text     Z_Which = 4
-	Z_Which_data     Z_Which = 5
+	Z_Which_ping        Z_Which = 0
+	Z_Which_pong        Z_Which = 1
+	Z_Which_discover    Z_Which = 2
+	Z_Which_peers       Z_Which = 3
+	Z_Which_text        Z_Which = 4
+	Z_Which_data        Z_Which = 5
+	Z_Which_transaction Z_Which = 6
 )
 
 func (w Z_Which) String() string {
-	const s = "pingpongdiscoverpeerstextdata"
+	const s = "pingpongdiscoverpeerstextdatatransaction"
 	switch w {
 	case Z_Which_ping:
 		return s[0:4]
@@ -36,6 +37,8 @@ func (w Z_Which) String() string {
 		return s[21:25]
 	case Z_Which_data:
 		return s[25:29]
+	case Z_Which_transaction:
+		return s[29:40]
 
 	}
 	return "Z_Which(" + strconv.FormatUint(uint64(w), 10) + ")"
@@ -246,6 +249,39 @@ func (s Z) SetData(v []byte) error {
 	return s.Struct.SetData(0, v)
 }
 
+func (s Z) Transaction() (Transaction, error) {
+	if s.Struct.Uint16(0) != 6 {
+		panic("Which() != transaction")
+	}
+	p, err := s.Struct.Ptr(0)
+	return Transaction{Struct: p.Struct()}, err
+}
+
+func (s Z) HasTransaction() bool {
+	if s.Struct.Uint16(0) != 6 {
+		return false
+	}
+	p, err := s.Struct.Ptr(0)
+	return p.IsValid() || err != nil
+}
+
+func (s Z) SetTransaction(v Transaction) error {
+	s.Struct.SetUint16(0, 6)
+	return s.Struct.SetPtr(0, v.Struct.ToPtr())
+}
+
+// NewTransaction sets the transaction field to a newly
+// allocated Transaction struct, preferring placement in s's segment.
+func (s Z) NewTransaction() (Transaction, error) {
+	s.Struct.SetUint16(0, 6)
+	ss, err := NewTransaction(s.Struct.Segment())
+	if err != nil {
+		return Transaction{}, err
+	}
+	err = s.Struct.SetPtr(0, ss.Struct.ToPtr())
+	return ss, err
+}
+
 // Z_List is a list of Z.
 type Z_List struct{ capnp.List }
 
@@ -288,26 +324,32 @@ func (p Z_Promise) Peers() Peers_Promise {
 	return Peers_Promise{Pipeline: p.Pipeline.GetPipeline(0)}
 }
 
-const schema_904d4f3f728c7f04 = "x\xda4\xcc\xbfK\x1ba\x1c\xc7\xf1\xcf\xe7y\xee\x92" +
-	"\x0e9rGn(\x856S(-\xb4\xd0\xa4\xed\xd0" +
-	"\xa5Y\x0aE\x90\xf8d\x11t\x0a\xc9!\x19L\x8e$" +
-	"Hp\xc9\xe4\x12\x1c\x1c\x1ct\x10\"\x04Q\x88\xa0\x10" +
-	"E\x047\xfd\x0f\x9c\x1c\xdc\x02\x0eN\xba\xc5\x1f_9" +
-	"\x89\xeb\xeb\x0do\xf7.\xaf~\xd8\x1d\x0b0?\xed\x98" +
-	"\x9c~\xba\xcc}\xfe\xb58\x84yG\x8a\xd5Ym\xfc" +
-	"-L\xaf\xe1\x1f\xe31 \x95Q\xc5\xd4\x17\x15\x07r" +
-	"\x195K\xac\xc8\xf2\xf7r)\xac\x85\x7f\xc0\xb9\x19\xd2" +
-	"\xbc\xd7VB\xc4\"\xe0m~\x05\xcc\xba\xa6\xe9):" +
-	"|\x16\x9f\x91nE\xba\xa1i\xfa\x8a\x8ez\x12\x9f\x0a" +
-	"\xf0\xb6\xa7\x00\xd3\xd34\x03EG?\x8aO\x0dx{" +
-	"Y\xc0\xf45\xcd\x81\xa2c=\x88O\x0b\xf0\xf6\xa3\xc3" +
-	"\xae\xa6\x19*:\xf6X|\xda\x80w\x18\xe9@\xd3\x9c" +
-	"(&\xc3jm\x81\xae\x8c\xd2W\xf7\xd7\xff\xcf\xfb\x00" +
-	"\xe9\x82\xc9\xb0\xfe\xca\xf2\xadW\x90\xec\xd1h\xc2R\xa9" +
-	"6\xcb\xf5\xa5\xa0\x01\x80\xae\xb4\x8fw~\xdf\xe4o\xbb" +
-	"\x93\x9a\x0e\x83\xa0\xd1\xa4+\x1f\x8a\xf3\x17\x1f\xc7\xdd\xb3" +
-	"\xb7Y+h\xb7\x98\x80b\x02LVJ\xad\x12\x1d(" +
-	":\xe0K\x00\x00\x00\xff\xff\x08\xedU\xbe"
+func (p Z_Promise) Transaction() Transaction_Promise {
+	return Transaction_Promise{Pipeline: p.Pipeline.GetPipeline(0)}
+}
+
+const schema_904d4f3f728c7f04 = "x\xda4\xcc\xbb\x8b\x13Q\x1c\xc5\xf1s\xee\x9d\x87E" +
+	".\x99a\xa7\x12uKQ\x88\xb8\xbbha\xe3\x16\x0a" +
+	"\"\xcaz\xb7\xd4B\xc6\xec )\x9c\x0c\x93A\x82\x8d" +
+	"}\x10\xe2\x7f\xa0\x85X[$\x82\x92@\x8a\x04#(" +
+	"$\x90F\x11\xbb\x80E:+\xe3\xe3'#\xb1\xfd\x1c" +
+	"\xce\xf7\xfc\x15\xee\xab\x1d\xb7\xeb\x01\xf6\x86\xeb\xc9\xdbS" +
+	"\x8b\xbd\xd3\x17\x1e\xf4`\x8f\x91\xe2<~\x92_>\xb8" +
+	"\xf9\x14W\xe9\xfb\xc0VM\x1fn\xedh\x1f\xd8\xab\xe9" +
+	".\xf1N\x1e\x9d\xab\xc7Y\x9a]\x02o\xdf\"\xed\x09" +
+	"\xedTD\x1c\x02a\xff,`_i\xda\x81\xa2\xe1\x1f" +
+	"\x89X\xea\x9bR{\x9av\xa4h\xd4o\x89\xa8\x80p" +
+	"x\x1d\xb0\x03M;U4\xfa\x97D\xd4@8\xd9\x05" +
+	"\xecH\xd3~P4\xceO\x89\xe8\x00\xe1\xfb\xb20\xd6" +
+	"\xb43E\xe3\xae%\xa2\x0b\x84\x1fK\x9dj\xda\x85\xa2" +
+	"\xf1~HD\x0f\x08\xe7\xf7\x00;\xd3\xb4_\x14\xabY" +
+	"#\xbd\xcf@\x96\xdb\x9f\xbf\x7f\xbd6~\x01\x90\x01X" +
+	"\xcd\x9a\xffXj\xcf\x0fd\xb7\xbf\xdc\xb0\x1c5Z\xf5" +
+	"\xe6\xc3$\x07\xc0@\xda\xaf_^\xfc\xb6\xbf\xeal\xd6" +
+	"\xed,I\xf2\x16\x039~xgrr\xdd\x19\xfe\x8f" +
+	"\x15I\xbb`\x05\x8a\x15\xb0z\x14\x171\x0d\x14\x0d(" +
+	"E\x1e\xa7\xad\xb8^\xc0o4S\x06rW\x9f\x99{" +
+	"\x9f\x9e\xad6\xcf\xbf\x01\x00\x00\xff\xff\x9b\xabhA"
 
 func init() {
 	schemas.Register(schema_904d4f3f728c7f04,
