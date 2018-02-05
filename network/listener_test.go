@@ -63,14 +63,14 @@ func (suite *ListenerSuite) TestListenerSuccess() {
 	listener.On("Listen", suite.cfg.address).Return(ln, nil)
 
 	handlers := &HandlerManagerMock{}
-	handlers.On("Accept", conn)
+	handlers.On("Acceptor", conn)
 
 	// act
 	go handleListening(suite.log, &suite.wg, &suite.cfg, handlers, listener, nil)
 	suite.wg.Wait()
 
 	// assert
-	handlers.AssertCalled(suite.T(), "Accept", conn)
+	handlers.AssertCalled(suite.T(), "Acceptor", conn)
 }
 
 func (suite *ListenerSuite) TestListenerListeningFails() {
@@ -91,7 +91,7 @@ func (suite *ListenerSuite) TestListenerListeningFails() {
 	listener.AssertCalled(suite.T(), "Listen", suite.cfg.address)
 	ln.AssertNotCalled(suite.T(), "Accept")
 	ln.AssertNotCalled(suite.T(), "Close")
-	handlers.AssertNotCalled(suite.T(), "Accept", mock.Anything)
+	handlers.AssertNotCalled(suite.T(), "Acceptor")
 }
 
 func (suite *ListenerSuite) TestListenerAcceptFails() {
@@ -112,7 +112,7 @@ func (suite *ListenerSuite) TestListenerAcceptFails() {
 	suite.wg.Wait()
 
 	// assert
-	handlers.AssertNotCalled(suite.T(), "Accept", mock.Anything)
+	handlers.AssertNotCalled(suite.T(), "Acceptor")
 }
 
 func (suite *ListenerSuite) TestListenerShutdown() {
@@ -157,7 +157,7 @@ func (suite *ListenerSuite) TestListenerTimeout() {
 	listener.On("Listen", suite.cfg.address).Return(ln, nil)
 
 	handlers := &HandlerManagerMock{}
-	handlers.On("Accept", conn)
+	handlers.On("Acceptor", conn)
 
 	// act
 	go handleListening(suite.log, &suite.wg, &suite.cfg, handlers, listener, nil)
@@ -165,7 +165,7 @@ func (suite *ListenerSuite) TestListenerTimeout() {
 
 	// assert
 	ln.AssertCalled(suite.T(), "Accept")
-	handlers.AssertCalled(suite.T(), "Accept", conn)
+	handlers.AssertCalled(suite.T(), "Acceptor", conn)
 }
 
 func (suite *ListenerSuite) TestListenerCloseFails() {
@@ -183,7 +183,7 @@ func (suite *ListenerSuite) TestListenerCloseFails() {
 	listener.On("Listen", suite.cfg.address).Return(ln, nil)
 
 	handlers := &HandlerManagerMock{}
-	handlers.On("Accept", conn)
+	handlers.On("Acceptor", conn)
 
 	// act
 	go handleListening(suite.log, &suite.wg, &suite.cfg, handlers, listener, nil)

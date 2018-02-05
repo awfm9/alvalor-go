@@ -25,18 +25,6 @@ import (
 	"github.com/rs/zerolog"
 )
 
-type dropperInfos interface {
-	PeerCount() uint
-}
-
-type dropperActions interface {
-	DropRandomPeer() (string, error)
-}
-
-type dropperEvents interface {
-	Dropped(address string)
-}
-
 func handleDropping(log zerolog.Logger, wg *sync.WaitGroup, cfg *Config, peers peerManager, stop <-chan struct{}) {
 	defer wg.Done()
 

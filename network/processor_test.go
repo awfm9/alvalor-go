@@ -63,7 +63,7 @@ func (suite *ProcessorSuite) TestProcessingEnabledListenPublishesOwnAddress() {
 
 	// act
 	suite.cfg.listen = true
-	go handleProcessing(suite.log, &suite.wg, &suite.cfg, addresses, peers, address, input, output)
+	go handleProcessing(suite.log, &suite.wg, &suite.cfg, addresses, peers, nil, address, input, output)
 	close(input)
 	var msgs []interface{}
 	for msg := range output {
@@ -92,7 +92,7 @@ func (suite *ProcessorSuite) TestProcessingPublishesDiscoverNotOwnAddress() {
 	peers := &PeerManagerMock{}
 
 	// act
-	go handleProcessing(suite.log, &suite.wg, &suite.cfg, addresses, peers, address, input, output)
+	go handleProcessing(suite.log, &suite.wg, &suite.cfg, addresses, peers, nil, address, input, output)
 	close(input)
 	var msgs []interface{}
 	for msg := range output {
@@ -118,7 +118,7 @@ func (suite *ProcessorSuite) TestProcessingSendsPingEachInterval() {
 	peers := &PeerManagerMock{}
 
 	// act
-	go handleProcessing(suite.log, &suite.wg, &suite.cfg, addresses, peers, address, input, output)
+	go handleProcessing(suite.log, &suite.wg, &suite.cfg, addresses, peers, nil, address, input, output)
 	time.Sleep(time.Duration(2.5 * float64(suite.cfg.interval)))
 	close(input)
 	var msgs []interface{}
@@ -146,7 +146,7 @@ func (suite *ProcessorSuite) TestProcessingRespondsToPingWithPong() {
 	peers := &PeerManagerMock{}
 
 	// act
-	go handleProcessing(suite.log, &suite.wg, &suite.cfg, addresses, peers, address, input, output)
+	go handleProcessing(suite.log, &suite.wg, &suite.cfg, addresses, peers, nil, address, input, output)
 	input <- &Ping{}
 	input <- &Ping{}
 	close(input)
@@ -177,7 +177,7 @@ func (suite *ProcessorSuite) TestProcessingRespondsToDiscoverWithPeers() {
 	peers := &PeerManagerMock{}
 
 	// act
-	go handleProcessing(suite.log, &suite.wg, &suite.cfg, addresses, peers, address, input, output)
+	go handleProcessing(suite.log, &suite.wg, &suite.cfg, addresses, peers, nil, address, input, output)
 	input <- &Discover{}
 	close(input)
 	var msgs []interface{}
@@ -210,7 +210,7 @@ func (suite *ProcessorSuite) TestProcessingAddsPeersAddresses() {
 	peers := &PeerManagerMock{}
 
 	// act
-	go handleProcessing(suite.log, &suite.wg, &suite.cfg, addresses, peers, address, input, output)
+	go handleProcessing(suite.log, &suite.wg, &suite.cfg, addresses, peers, nil, address, input, output)
 	input <- &Peers{Addresses: sample}
 	close(input)
 	var msgs []interface{}
@@ -239,7 +239,7 @@ func (suite *ProcessorSuite) TestProcessingPong() {
 	peers := &PeerManagerMock{}
 
 	// act
-	go handleProcessing(suite.log, &suite.wg, &suite.cfg, addresses, peers, address, input, output)
+	go handleProcessing(suite.log, &suite.wg, &suite.cfg, addresses, peers, nil, address, input, output)
 	input <- &Pong{}
 	close(input)
 	var msgs []interface{}
@@ -264,7 +264,7 @@ func (suite *ProcessorSuite) TestProcessingDropsPeerAfterThreePings() {
 	peers.On("Drop", address).Return(nil)
 
 	// act
-	go handleProcessing(suite.log, &suite.wg, &suite.cfg, addresses, peers, address, input, output)
+	go handleProcessing(suite.log, &suite.wg, &suite.cfg, addresses, peers, nil, address, input, output)
 	time.Sleep(time.Duration(3.75 * float64(suite.cfg.interval)))
 	close(input)
 	var msgs []interface{}
@@ -279,5 +279,57 @@ func (suite *ProcessorSuite) TestProcessingDropsPeerAfterThreePings() {
 		assert.IsType(suite.T(), &Ping{}, msgs[2])
 		assert.IsType(suite.T(), &Ping{}, msgs[3])
 		peers.AssertCalled(suite.T(), "Drop", address)
+	}
+}
+
+func (suite *ProcessorSuite) TestProcessingForwardsCustomMessages() {
+
+	// arrange
+	address := "192.0.2.200:1337"
+	input := make(chan interface{})
+	output := make(chan interface{}, 16)
+	subscriber := make(chan interface{}, 5)
+
+	addresses := &AddressManagerMock{}
+
+	peers := &PeerManagerMock{}
+
+	// act
+	go handleProcessing(suite.log, &suite.wg, &suite.cfg, addresses, peers, subscriber, address, input, output)
+	messages := []interface{}{
+		1337,
+		"some message",
+		[]byte{1, 2, 3, 4, 5},
+		map[string]bool{"field": true},
+		&struct{ field int }{field: 7},
+		true, // discarded
+		true, // discarded
+		true, // discarded
+	}
+	for _, message := range messages {
+		input <- message
+	}
+	close(input)
+	suite.wg.Wait()
+	var receiveds []interface{}
+Loop:
+	for {
+		select {
+		case received := <-subscriber:
+			receiveds = append(receiveds, received)
+		default:
+			break Loop
+		}
+	}
+
+	// assert
+	if assert.Len(suite.T(), receiveds, 5) {
+		msgs := make([]interface{}, 0, 5)
+		for _, rcvd := range receiveds {
+			assert.IsType(suite.T(), &Received{}, rcvd)
+			received := rcvd.(*Received)
+			msgs = append(msgs, received.Message)
+		}
+		assert.Equal(suite.T(), messages[:5], msgs)
 	}
 }

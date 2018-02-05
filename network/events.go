@@ -10,28 +10,30 @@
 // Alvalor is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU Affero General Public License for more details.
+// GNU Affero General Public License for more detailb.
 //
 // You should have received a copy of the GNU Affero General Public License
 // along with Alvalor.  If not, see <http://www.gnu.org/licenses/>.
 
 package network
 
-// Ping represents an outgoing heartbeat message sent on the network.
-type Ping struct {
-	Nonce uint32
+import "time"
+
+// Connected represents a connection event.
+type Connected struct {
+	Address   string
+	Timestamp time.Time
 }
 
-// Pong represents a heartbeat response sent on the network.
-type Pong struct {
-	Nonce uint32
+// Disconnected represents a disconnection event.
+type Disconnected struct {
+	Address   string
+	Timestamp time.Time
 }
 
-// Discover represents a discovery message sent on the network.
-type Discover struct {
-}
-
-// Peers represents a list of peer addresses shared on the network.
-type Peers struct {
-	Addresses []string
+// Received represents a message received event.
+type Received struct {
+	Address   string
+	Timestamp time.Time
+	Message   interface{}
 }

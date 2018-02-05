@@ -30,6 +30,7 @@ func handleDialing(log zerolog.Logger, wg *sync.WaitGroup, cfg *Config, peers pe
 
 	// extract needed configuration parameters
 	var (
+		address  = cfg.address
 		interval = cfg.interval
 		minPeers = cfg.minPeers
 		maxPeers = cfg.maxPeers
@@ -59,6 +60,7 @@ func handleDialing(log zerolog.Logger, wg *sync.WaitGroup, cfg *Config, peers pe
 			continue
 		}
 		sample := addresses.Sample(1,
+			isNot([]string{address}),
 			isNot(pending.Addresses()),
 			isNot(peers.Addresses()),
 			byReputation(rep),
@@ -68,6 +70,6 @@ func handleDialing(log zerolog.Logger, wg *sync.WaitGroup, cfg *Config, peers pe
 			log.Info().Msg("could not get address to connect")
 			continue
 		}
-		handlers.Connect(sample[0])
+		handlers.Connector(sample[0])
 	}
 }

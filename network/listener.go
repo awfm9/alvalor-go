@@ -71,7 +71,7 @@ Loop:
 
 		// we should handle onboarding on a new goroutine to avoid blocking
 		// on listening, and as well so we can release slots with defer
-		handlers.Accept(conn)
+		handlers.Acceptor(conn)
 	}
 
 	// ordered to quit, we close the listener down
