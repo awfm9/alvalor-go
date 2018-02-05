@@ -57,7 +57,7 @@ func (suite *Server) TestServerSuccess() {
 	peers.On("Count").Return(4)
 
 	handlers := &HandlerManagerMock{}
-	handlers.On("Listen")
+	handlers.On("Listener")
 
 	// act
 	suite.cfg.listen = true
@@ -67,7 +67,7 @@ func (suite *Server) TestServerSuccess() {
 	suite.wg.Wait()
 
 	// assert
-	handlers.AssertNumberOfCalls(suite.T(), "Listen", 1)
+	handlers.AssertNumberOfCalls(suite.T(), "Listener", 1)
 }
 
 func (suite *Server) TestServerMaxPeersNotRunning() {
@@ -79,7 +79,7 @@ func (suite *Server) TestServerMaxPeersNotRunning() {
 	peers.On("Count").Return(5)
 
 	handlers := &HandlerManagerMock{}
-	handlers.On("Listen")
+	handlers.On("Listener")
 
 	// act
 	suite.cfg.listen = true
@@ -89,7 +89,7 @@ func (suite *Server) TestServerMaxPeersNotRunning() {
 	suite.wg.Wait()
 
 	// assert
-	handlers.AssertNotCalled(suite.T(), "Listen")
+	handlers.AssertNotCalled(suite.T(), "Listener")
 }
 
 func (suite *Server) TestServerNotListening() {
@@ -101,7 +101,7 @@ func (suite *Server) TestServerNotListening() {
 	peers.On("Count").Return(4)
 
 	handlers := &HandlerManagerMock{}
-	handlers.On("Listen")
+	handlers.On("Listener")
 
 	// act
 	suite.cfg.listen = false
@@ -111,7 +111,7 @@ func (suite *Server) TestServerNotListening() {
 	suite.wg.Wait()
 
 	// assert
-	handlers.AssertNotCalled(suite.T(), "Listen")
+	handlers.AssertNotCalled(suite.T(), "Listener")
 }
 
 func (suite *Server) TestServerMaxPeersRunning() {
@@ -124,7 +124,7 @@ func (suite *Server) TestServerMaxPeersRunning() {
 	peers.On("Count").Return(5)
 
 	handlers := &HandlerManagerMock{}
-	handlers.On("Listen")
+	handlers.On("Listener")
 
 	// act
 	suite.cfg.listen = true
@@ -134,5 +134,5 @@ func (suite *Server) TestServerMaxPeersRunning() {
 	suite.wg.Wait()
 
 	// assert
-	handlers.AssertNumberOfCalls(suite.T(), "Listen", 1)
+	handlers.AssertNumberOfCalls(suite.T(), "Listener", 1)
 }

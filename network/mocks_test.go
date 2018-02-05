@@ -202,6 +202,15 @@ func (pm *PeerManagerMock) Add(conn net.Conn, nonce []byte) error {
 	return args.Error(0)
 }
 
+func (pm *PeerManagerMock) Output(address string) (chan<- interface{}, error) {
+	args := pm.Called(address)
+	var output chan interface{}
+	if args.Get(0) != nil {
+		output = args.Get(0).(chan interface{})
+	}
+	return output, args.Error(1)
+}
+
 func (pm *PeerManagerMock) Drop(address string) error {
 	args := pm.Called(address)
 	return args.Error(0)
@@ -255,39 +264,39 @@ type HandlerManagerMock struct {
 	mock.Mock
 }
 
-func (hm *HandlerManagerMock) Drop() {
+func (hm *HandlerManagerMock) Dropper() {
 	_ = hm.Called()
 }
 
-func (hm *HandlerManagerMock) Serve() {
+func (hm *HandlerManagerMock) Server() {
 	_ = hm.Called()
 }
 
-func (hm *HandlerManagerMock) Dial() {
+func (hm *HandlerManagerMock) Dialer() {
 	_ = hm.Called()
 }
 
-func (hm *HandlerManagerMock) Listen() {
+func (hm *HandlerManagerMock) Listener() {
 	_ = hm.Called()
 }
 
-func (hm *HandlerManagerMock) Accept(conn net.Conn) {
+func (hm *HandlerManagerMock) Acceptor(conn net.Conn) {
 	_ = hm.Called(conn)
 }
 
-func (hm *HandlerManagerMock) Connect(address string) {
+func (hm *HandlerManagerMock) Connector(address string) {
 	_ = hm.Called(address)
 }
 
-func (hm *HandlerManagerMock) Send(address string, output <-chan interface{}, w io.Writer) {
+func (hm *HandlerManagerMock) Sender(address string, output <-chan interface{}, w io.Writer) {
 	_ = hm.Called(address, output, w)
 }
 
-func (hm *HandlerManagerMock) Process(address string, input <-chan interface{}, output chan<- interface{}) {
+func (hm *HandlerManagerMock) Processor(address string, input <-chan interface{}, output chan<- interface{}) {
 	_ = hm.Called(address, input, output)
 }
 
-func (hm *HandlerManagerMock) Receive(address string, r io.Reader, input chan<- interface{}) {
+func (hm *HandlerManagerMock) Receiver(address string, r io.Reader, input chan<- interface{}) {
 	_ = hm.Called(address, r, input)
 }
 

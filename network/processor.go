@@ -24,7 +24,7 @@ import (
 	"github.com/rs/zerolog"
 )
 
-func handleProcessing(log zerolog.Logger, wg *sync.WaitGroup, cfg *Config, addresses addressManager, peers peerManager, address string, input <-chan interface{}, output chan<- interface{}) {
+func handleProcessing(log zerolog.Logger, wg *sync.WaitGroup, cfg *Config, addresses addressManager, peers peerManager, subscriber chan<- interface{}, address string, input <-chan interface{}, output chan<- interface{}) {
 	defer wg.Done()
 
 	// configuration parameters
@@ -68,6 +68,20 @@ Loop:
 				log.Debug().Msg("peer received")
 				for _, address := range msg.Addresses {
 					addresses.Add(address)
+				}
+			default:
+				log.Debug().Msg("custom received")
+				received := &Received{
+					Address:   address,
+					Timestamp: time.Now(),
+					Message:   message,
+				}
+				select {
+				case subscriber <- received:
+					// success
+				default:
+					log.Debug().Msg("subscriber stalling")
+					// no subscriber of subscriber stalling
 				}
 			}
 		case <-time.After(interval):

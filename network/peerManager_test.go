@@ -45,9 +45,9 @@ func TestPeerManagerAdd(t *testing.T) {
 	conn := &ConnMock{}
 	conn.On("RemoteAddr").Return(addr)
 	handlers := &HandlerManagerMock{}
-	handlers.On("Send", mock.Anything, mock.Anything, mock.Anything)
-	handlers.On("Process", mock.Anything, mock.Anything, mock.Anything)
-	handlers.On("Receive", mock.Anything, mock.Anything, mock.Anything)
+	handlers.On("Sender", mock.Anything, mock.Anything, mock.Anything)
+	handlers.On("Processor", mock.Anything, mock.Anything, mock.Anything)
+	handlers.On("Receiver", mock.Anything, mock.Anything, mock.Anything)
 	peers := &simplePeerManager{
 		reg:      make(map[string]*peer),
 		handlers: handlers,
@@ -71,9 +71,9 @@ func TestPeerManagerAdd(t *testing.T) {
 		p := peers.reg[address]
 		assert.Equal(t, conn, p.conn)
 		assert.Equal(t, nonce, p.nonce)
-		handlers.AssertCalled(t, "Send", address, mock.Anything, mock.Anything)
-		handlers.AssertCalled(t, "Process", address, mock.Anything, mock.Anything)
-		handlers.AssertCalled(t, "Receive", address, mock.Anything, mock.Anything)
+		handlers.AssertCalled(t, "Sender", address, mock.Anything, mock.Anything)
+		handlers.AssertCalled(t, "Processor", address, mock.Anything, mock.Anything)
+		handlers.AssertCalled(t, "Receiver", address, mock.Anything, mock.Anything)
 	}
 }
 

@@ -54,7 +54,7 @@ Loop:
 		peerCount := peers.Count()
 		if peerCount < maxPeers && !running && listen {
 			done = make(chan struct{})
-			handlers.Listen()
+			handlers.Listener()
 			running = true
 		} else if peerCount >= maxPeers && running {
 			close(done)

@@ -28,6 +28,7 @@ import (
 
 type peerManager interface {
 	Add(conn net.Conn, nonce []byte) error
+	Output(address string) (chan<- interface{}, error)
 	Drop(address string) error
 	Count() uint
 	Known(nonce []byte) bool
@@ -82,12 +83,22 @@ func (pm *simplePeerManager) Add(conn net.Conn, nonce []byte) error {
 	w := lz4.NewWriter(conn)
 
 	// launch the message processing routines
-	pm.handlers.Send(address, p.output, w)
-	pm.handlers.Process(address, p.input, p.output)
-	pm.handlers.Receive(address, r, p.input)
+	pm.handlers.Sender(address, p.output, w)
+	pm.handlers.Processor(address, p.input, p.output)
+	pm.handlers.Receiver(address, r, p.input)
 
 	pm.reg[address] = p
 	return nil
+}
+
+func (pm *simplePeerManager) Output(address string) (chan<- interface{}, error) {
+	pm.Lock()
+	defer pm.Unlock()
+	p, ok := pm.reg[address]
+	if !ok {
+		return nil, errors.New("peer unknown")
+	}
+	return p.output, nil
 }
 
 func (pm *simplePeerManager) Drop(address string) error {

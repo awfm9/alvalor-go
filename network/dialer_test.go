@@ -67,10 +67,10 @@ func (suite *DialerSuite) TestDialerSuccess() {
 	rep := &ReputationManagerMock{}
 
 	addresses := &AddressManagerMock{}
-	addresses.On("Sample", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return([]string{address})
+	addresses.On("Sample", 1, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return([]string{address})
 
 	handlers := &HandlerManagerMock{}
-	handlers.On("Connect", address)
+	handlers.On("Connector", address)
 
 	// act
 	go handleDialing(suite.log, &suite.wg, &suite.cfg, peers, pending, addresses, rep, handlers, stop)
@@ -82,10 +82,11 @@ func (suite *DialerSuite) TestDialerSuccess() {
 	addresses.AssertCalled(suite.T(), "Sample", 1,
 		mock.AnythingOfType("func(string) bool"),
 		mock.AnythingOfType("func(string) bool"),
+		mock.AnythingOfType("func(string) bool"),
 		mock.AnythingOfType("func(string, string) bool"),
 		mock.AnythingOfType("func(string, string) bool"),
 	)
-	handlers.AssertCalled(suite.T(), "Connect", address)
+	handlers.AssertCalled(suite.T(), "Connector", address)
 }
 
 func (suite *DialerSuite) TestDialerNoAddresses() {
@@ -104,10 +105,10 @@ func (suite *DialerSuite) TestDialerNoAddresses() {
 	rep := &ReputationManagerMock{}
 
 	addresses := &AddressManagerMock{}
-	addresses.On("Sample", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return([]string{})
+	addresses.On("Sample", 1, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return([]string{})
 
 	handlers := &HandlerManagerMock{}
-	handlers.On("Connect", mock.Anything)
+	handlers.On("Connector", mock.Anything)
 
 	// act
 	go handleDialing(suite.log, &suite.wg, &suite.cfg, peers, pending, addresses, rep, handlers, stop)
@@ -119,10 +120,11 @@ func (suite *DialerSuite) TestDialerNoAddresses() {
 	addresses.AssertCalled(suite.T(), "Sample", 1,
 		mock.AnythingOfType("func(string) bool"),
 		mock.AnythingOfType("func(string) bool"),
+		mock.AnythingOfType("func(string) bool"),
 		mock.AnythingOfType("func(string, string) bool"),
 		mock.AnythingOfType("func(string, string) bool"),
 	)
-	handlers.AssertNotCalled(suite.T(), "Connect")
+	handlers.AssertNotCalled(suite.T(), "Connector")
 }
 
 func (suite *DialerSuite) TestDialerEnoughPeers() {
@@ -141,7 +143,7 @@ func (suite *DialerSuite) TestDialerEnoughPeers() {
 	rep := &ReputationManagerMock{}
 
 	handlers := &HandlerManagerMock{}
-	handlers.On("Connect", mock.Anything)
+	handlers.On("Connector", mock.Anything)
 
 	// act
 	go handleDialing(suite.log, &suite.wg, &suite.cfg, peers, pending, addresses, rep, handlers, stop)
@@ -151,7 +153,7 @@ func (suite *DialerSuite) TestDialerEnoughPeers() {
 
 	// assert
 	addresses.AssertNotCalled(suite.T(), "Sample")
-	handlers.AssertNotCalled(suite.T(), "Connect")
+	handlers.AssertNotCalled(suite.T(), "Connector")
 }
 
 func (suite *DialerSuite) TestDialerMaximumPendingPeers() {
@@ -170,7 +172,7 @@ func (suite *DialerSuite) TestDialerMaximumPendingPeers() {
 	rep := &ReputationManagerMock{}
 
 	handlers := &HandlerManagerMock{}
-	handlers.On("Connect", mock.Anything)
+	handlers.On("Connector", mock.Anything)
 
 	// act
 	go handleDialing(suite.log, &suite.wg, &suite.cfg, peers, pending, addresses, rep, handlers, stop)
@@ -180,5 +182,5 @@ func (suite *DialerSuite) TestDialerMaximumPendingPeers() {
 
 	// assert
 	addresses.AssertNotCalled(suite.T(), "Sample")
-	handlers.AssertNotCalled(suite.T(), "Connect")
+	handlers.AssertNotCalled(suite.T(), "Connector")
 }
