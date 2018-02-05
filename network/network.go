@@ -39,7 +39,7 @@ var (
 
 // Network represents a wrapper around the network package to provide the API.
 type Network interface {
-	Broadcast(i interface{})
+	Broadcast(i interface{}, exclude ...string)
 	Send(address string, i interface{}) error
 	Subscribe() <-chan interface{}
 	Stop()
@@ -176,9 +176,17 @@ func (net *simpleNetwork) Subscribe() <-chan interface{} {
 }
 
 // Broadcast broadcasts a message to all peers.
-func (net *simpleNetwork) Broadcast(i interface{}) {
+func (net *simpleNetwork) Broadcast(i interface{}, exclude ...string) {
 	addresses := net.peers.Addresses()
+	lookup := make(map[string]struct{})
+	for _, address := range exclude {
+		lookup[address] = struct{}{}
+	}
 	for _, address := range addresses {
+		_, ok := lookup[address]
+		if ok {
+			continue
+		}
 		output, err := net.peers.Output(address)
 		if err != nil {
 			net.log.Error().Err(err).Str("address", address).Msg("could not broadcast to peer")
