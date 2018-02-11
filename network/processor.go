@@ -89,7 +89,13 @@ Loop:
 			output <- &Ping{}
 		case <-timeout.C:
 			log.Info().Msg("peer timed out, dropping")
-			peers.Drop(address)
+			err := peers.Drop(address)
+			if err != nil {
+				log.Error().Err(err).Msg("could not drop peer")
+			} else {
+				subscriber <- Disconnected{Address: address, Timestamp: time.Now()}
+			}
+
 		}
 	}
 	close(output)

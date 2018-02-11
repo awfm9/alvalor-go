@@ -126,7 +126,7 @@ func New(log zerolog.Logger, codec Codec, options ...func(*Config)) Network {
 }
 
 func (net *simpleNetwork) Dropper() {
-	go handleDropping(net.log, net.wg, net.cfg, net.peers, net.stop)
+	go handleDropping(net.log, net.wg, net.cfg, net.peers, net.stop, net.subscriber)
 }
 
 func (net *simpleNetwork) Server() {
@@ -142,15 +142,15 @@ func (net *simpleNetwork) Listener() {
 }
 
 func (net *simpleNetwork) Acceptor(conn net.Conn) {
-	go handleAccepting(net.log, net.wg, net.cfg, net.pending, net.peers, net.rep, conn)
+	go handleAccepting(net.log, net.wg, net.cfg, net.pending, net.peers, net.rep, conn, net.subscriber)
 }
 
 func (net *simpleNetwork) Connector(address string) {
-	go handleConnecting(net.log, net.wg, net.cfg, net.pending, net.peers, net.rep, net.dialer, address)
+	go handleConnecting(net.log, net.wg, net.cfg, net.pending, net.peers, net.rep, net.dialer, address, net.subscriber)
 }
 
 func (net *simpleNetwork) Sender(address string, output <-chan interface{}, w io.Writer) {
-	go handleSending(net.log, net.wg, net.cfg, net.peers, net.rep, address, output, w)
+	go handleSending(net.log, net.wg, net.cfg, net.peers, net.rep, address, output, w, net.subscriber)
 }
 
 func (net *simpleNetwork) Processor(address string, input <-chan interface{}, output chan<- interface{}) {
@@ -158,7 +158,7 @@ func (net *simpleNetwork) Processor(address string, input <-chan interface{}, ou
 }
 
 func (net *simpleNetwork) Receiver(address string, r io.Reader, input chan<- interface{}) {
-	go handleReceiving(net.log, net.wg, net.cfg, net.peers, net.rep, address, r, input)
+	go handleReceiving(net.log, net.wg, net.cfg, net.peers, net.rep, address, r, input, net.subscriber)
 }
 
 func (net *simpleNetwork) Stop() {

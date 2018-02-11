@@ -21,11 +21,12 @@ import (
 	"bytes"
 	"net"
 	"sync"
+	"time"
 
 	"github.com/rs/zerolog"
 )
 
-func handleAccepting(log zerolog.Logger, wg *sync.WaitGroup, cfg *Config, pending pendingManager, peers peerManager, rep reputationManager, conn net.Conn) {
+func handleAccepting(log zerolog.Logger, wg *sync.WaitGroup, cfg *Config, pending pendingManager, peers peerManager, rep reputationManager, conn net.Conn, subscriber chan<- interface{}) {
 
 	// synchronization, configuration & logging
 	defer wg.Done()
@@ -87,5 +88,6 @@ func handleAccepting(log zerolog.Logger, wg *sync.WaitGroup, cfg *Config, pendin
 		return
 	}
 
+	subscriber <- Connected{Address: address, Timestamp: time.Now()}
 	rep.Success(address)
 }

@@ -61,9 +61,11 @@ func (suite *ProcessorSuite) TestProcessingEnabledListenPublishesOwnAddress() {
 
 	peers := &PeerManagerMock{}
 
+	subscriber := make(chan interface{}, 15)
+
 	// act
 	suite.cfg.listen = true
-	go handleProcessing(suite.log, &suite.wg, &suite.cfg, addresses, peers, nil, address, input, output)
+	go handleProcessing(suite.log, &suite.wg, &suite.cfg, addresses, peers, subscriber, address, input, output)
 	close(input)
 	var msgs []interface{}
 	for msg := range output {
@@ -91,8 +93,10 @@ func (suite *ProcessorSuite) TestProcessingPublishesDiscoverNotOwnAddress() {
 
 	peers := &PeerManagerMock{}
 
+	subscriber := make(chan interface{}, 15)
+
 	// act
-	go handleProcessing(suite.log, &suite.wg, &suite.cfg, addresses, peers, nil, address, input, output)
+	go handleProcessing(suite.log, &suite.wg, &suite.cfg, addresses, peers, subscriber, address, input, output)
 	close(input)
 	var msgs []interface{}
 	for msg := range output {
@@ -117,8 +121,10 @@ func (suite *ProcessorSuite) TestProcessingSendsPingEachInterval() {
 
 	peers := &PeerManagerMock{}
 
+	subscriber := make(chan interface{}, 15)
+
 	// act
-	go handleProcessing(suite.log, &suite.wg, &suite.cfg, addresses, peers, nil, address, input, output)
+	go handleProcessing(suite.log, &suite.wg, &suite.cfg, addresses, peers, subscriber, address, input, output)
 	time.Sleep(time.Duration(2.5 * float64(suite.cfg.interval)))
 	close(input)
 	var msgs []interface{}
@@ -145,8 +151,10 @@ func (suite *ProcessorSuite) TestProcessingRespondsToPingWithPong() {
 
 	peers := &PeerManagerMock{}
 
+	subscriber := make(chan interface{}, 15)
+
 	// act
-	go handleProcessing(suite.log, &suite.wg, &suite.cfg, addresses, peers, nil, address, input, output)
+	go handleProcessing(suite.log, &suite.wg, &suite.cfg, addresses, peers, subscriber, address, input, output)
 	input <- &Ping{}
 	input <- &Ping{}
 	close(input)
@@ -176,8 +184,10 @@ func (suite *ProcessorSuite) TestProcessingRespondsToDiscoverWithPeers() {
 
 	peers := &PeerManagerMock{}
 
+	subscriber := make(chan interface{}, 15)
+
 	// act
-	go handleProcessing(suite.log, &suite.wg, &suite.cfg, addresses, peers, nil, address, input, output)
+	go handleProcessing(suite.log, &suite.wg, &suite.cfg, addresses, peers, subscriber, address, input, output)
 	input <- &Discover{}
 	close(input)
 	var msgs []interface{}
@@ -209,8 +219,10 @@ func (suite *ProcessorSuite) TestProcessingAddsPeersAddresses() {
 
 	peers := &PeerManagerMock{}
 
+	subscriber := make(chan interface{}, 15)
+
 	// act
-	go handleProcessing(suite.log, &suite.wg, &suite.cfg, addresses, peers, nil, address, input, output)
+	go handleProcessing(suite.log, &suite.wg, &suite.cfg, addresses, peers, subscriber, address, input, output)
 	input <- &Peers{Addresses: sample}
 	close(input)
 	var msgs []interface{}
@@ -238,8 +250,10 @@ func (suite *ProcessorSuite) TestProcessingPong() {
 
 	peers := &PeerManagerMock{}
 
+	subscriber := make(chan interface{}, 15)
+
 	// act
-	go handleProcessing(suite.log, &suite.wg, &suite.cfg, addresses, peers, nil, address, input, output)
+	go handleProcessing(suite.log, &suite.wg, &suite.cfg, addresses, peers, subscriber, address, input, output)
 	input <- &Pong{}
 	close(input)
 	var msgs []interface{}
@@ -263,8 +277,10 @@ func (suite *ProcessorSuite) TestProcessingDropsPeerAfterThreePings() {
 	peers := &PeerManagerMock{}
 	peers.On("Drop", address).Return(nil)
 
+	subscriber := make(chan interface{}, 15)
+
 	// act
-	go handleProcessing(suite.log, &suite.wg, &suite.cfg, addresses, peers, nil, address, input, output)
+	go handleProcessing(suite.log, &suite.wg, &suite.cfg, addresses, peers, subscriber, address, input, output)
 	time.Sleep(time.Duration(3.75 * float64(suite.cfg.interval)))
 	close(input)
 	var msgs []interface{}
@@ -279,6 +295,9 @@ func (suite *ProcessorSuite) TestProcessingDropsPeerAfterThreePings() {
 		assert.IsType(suite.T(), &Ping{}, msgs[2])
 		assert.IsType(suite.T(), &Ping{}, msgs[3])
 		peers.AssertCalled(suite.T(), "Drop", address)
+		event := <-subscriber
+		disconnected := event.(Disconnected)
+		assert.Equal(suite.T(), address, disconnected.Address)
 	}
 }
 

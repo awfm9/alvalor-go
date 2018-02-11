@@ -25,6 +25,7 @@ import (
 
 	"github.com/rs/zerolog"
 	uuid "github.com/satori/go.uuid"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/suite"
 )
@@ -64,8 +65,10 @@ func (suite *ConnectorSuite) TestConnectorClaimFails() {
 
 	dialer := &DialManagerMock{}
 
+	subscriber := make(chan interface{}, 1)
+
 	// act
-	handleConnecting(suite.log, &suite.wg, &suite.cfg, pending, peers, rep, dialer, address)
+	handleConnecting(suite.log, &suite.wg, &suite.cfg, pending, peers, rep, dialer, address, subscriber)
 
 	// assert
 	pending.AssertCalled(suite.T(), "Claim", address)
@@ -89,8 +92,10 @@ func (suite *ConnectorSuite) TestConnectorDialFails() {
 	dialer := &DialManagerMock{}
 	dialer.On("Dial", address).Return(nil, errors.New("cannot dial address"))
 
+	subscriber := make(chan interface{}, 1)
+
 	// act
-	handleConnecting(suite.log, &suite.wg, &suite.cfg, pending, peers, rep, dialer, address)
+	handleConnecting(suite.log, &suite.wg, &suite.cfg, pending, peers, rep, dialer, address, subscriber)
 
 	// assert
 	pending.AssertCalled(suite.T(), "Claim", address)
@@ -120,8 +125,10 @@ func (suite *ConnectorSuite) TestConnectorWriteFails() {
 	dialer := &DialManagerMock{}
 	dialer.On("Dial", address).Return(conn, nil)
 
+	subscriber := make(chan interface{}, 1)
+
 	// act
-	handleConnecting(suite.log, &suite.wg, &suite.cfg, pending, peers, rep, dialer, address)
+	handleConnecting(suite.log, &suite.wg, &suite.cfg, pending, peers, rep, dialer, address, subscriber)
 
 	// assert
 	pending.AssertCalled(suite.T(), "Claim", address)
@@ -154,8 +161,10 @@ func (suite *ConnectorSuite) TestConnectorReadFails() {
 	dialer := &DialManagerMock{}
 	dialer.On("Dial", address).Return(conn, nil)
 
+	subscriber := make(chan interface{}, 1)
+
 	// act
-	handleConnecting(suite.log, &suite.wg, &suite.cfg, pending, peers, rep, dialer, address)
+	handleConnecting(suite.log, &suite.wg, &suite.cfg, pending, peers, rep, dialer, address, subscriber)
 
 	// assert
 	pending.AssertCalled(suite.T(), "Claim", address)
@@ -191,8 +200,10 @@ func (suite *ConnectorSuite) TestConnectorNetworkMismatch() {
 	dialer := &DialManagerMock{}
 	dialer.On("Dial", address).Return(conn, nil)
 
+	subscriber := make(chan interface{}, 1)
+
 	// act
-	handleConnecting(suite.log, &suite.wg, &suite.cfg, pending, peers, rep, dialer, address)
+	handleConnecting(suite.log, &suite.wg, &suite.cfg, pending, peers, rep, dialer, address, subscriber)
 
 	// assert
 	pending.AssertCalled(suite.T(), "Claim", address)
@@ -228,8 +239,10 @@ func (suite *ConnectorSuite) TestConnectorNonceIdentical() {
 	dialer := &DialManagerMock{}
 	dialer.On("Dial", address).Return(conn, nil)
 
+	subscriber := make(chan interface{}, 1)
+
 	// act
-	handleConnecting(suite.log, &suite.wg, &suite.cfg, pending, peers, rep, dialer, address)
+	handleConnecting(suite.log, &suite.wg, &suite.cfg, pending, peers, rep, dialer, address, subscriber)
 
 	// assert
 	pending.AssertCalled(suite.T(), "Claim", address)
@@ -267,8 +280,10 @@ func (suite *ConnectorSuite) TestConnectorNonceKnown() {
 	dialer := &DialManagerMock{}
 	dialer.On("Dial", address).Return(conn, nil)
 
+	subscriber := make(chan interface{}, 1)
+
 	// act
-	handleConnecting(suite.log, &suite.wg, &suite.cfg, pending, peers, rep, dialer, address)
+	handleConnecting(suite.log, &suite.wg, &suite.cfg, pending, peers, rep, dialer, address, subscriber)
 
 	// assert
 	pending.AssertCalled(suite.T(), "Claim", address)
@@ -307,8 +322,10 @@ func (suite *ConnectorSuite) TestConnectorAddPeerFails() {
 	dialer := &DialManagerMock{}
 	dialer.On("Dial", address).Return(conn, nil)
 
+	subscriber := make(chan interface{}, 1)
+
 	// act
-	handleConnecting(suite.log, &suite.wg, &suite.cfg, pending, peers, rep, dialer, address)
+	handleConnecting(suite.log, &suite.wg, &suite.cfg, pending, peers, rep, dialer, address, subscriber)
 
 	// assert
 	pending.AssertCalled(suite.T(), "Claim", address)
@@ -346,12 +363,17 @@ func (suite *ConnectorSuite) TestConnectorSuccess() {
 	dialer := &DialManagerMock{}
 	dialer.On("Dial", address).Return(conn, nil)
 
+	subscriber := make(chan interface{}, 1)
+
 	// act
-	handleConnecting(suite.log, &suite.wg, &suite.cfg, pending, peers, rep, dialer, address)
+	handleConnecting(suite.log, &suite.wg, &suite.cfg, pending, peers, rep, dialer, address, subscriber)
 
 	// assert
 	pending.AssertCalled(suite.T(), "Claim", address)
 	pending.AssertCalled(suite.T(), "Release", address)
 	peers.AssertCalled(suite.T(), "Add", conn, nonce)
 	rep.AssertCalled(suite.T(), "Success", address)
+	event := <-subscriber
+	connected := event.(Connected)
+	assert.Equal(suite.T(), address, connected.Address)
 }

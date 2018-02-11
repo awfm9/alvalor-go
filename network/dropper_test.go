@@ -25,6 +25,7 @@ import (
 	"time"
 
 	"github.com/rs/zerolog"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"
 )
 
@@ -60,14 +61,19 @@ func (suite *DropperSuite) TestDropperSuccess() {
 	peers.On("Addresses").Return([]string{address})
 	peers.On("Drop", address).Return(nil)
 
+	subscriber := make(chan interface{}, 15)
+
 	// act
-	go handleDropping(suite.log, &suite.wg, &suite.cfg, peers, stop)
+	go handleDropping(suite.log, &suite.wg, &suite.cfg, peers, stop, subscriber)
 	time.Sleep(50 * time.Millisecond)
 	close(stop)
 	suite.wg.Wait()
 
 	// assert
 	peers.AssertCalled(suite.T(), "Drop", address)
+	event := <-subscriber
+	disconnected := event.(Disconnected)
+	assert.Equal(suite.T(), address, disconnected.Address)
 }
 
 func (suite *DropperSuite) TestDropperValidPeerNumber() {
@@ -80,9 +86,10 @@ func (suite *DropperSuite) TestDropperValidPeerNumber() {
 	peers.On("Count").Return(5)
 	peers.On("Addresses").Return([]string{address})
 	peers.On("Drop", address).Return(nil)
+	subscriber := make(chan interface{}, 15)
 
 	// act
-	go handleDropping(suite.log, &suite.wg, &suite.cfg, peers, stop)
+	go handleDropping(suite.log, &suite.wg, &suite.cfg, peers, stop, subscriber)
 	time.Sleep(50 * time.Millisecond)
 	close(stop)
 	suite.wg.Wait()
@@ -101,9 +108,10 @@ func (suite *DropperSuite) TestDropperDropFails() {
 	peers.On("Count").Return(16)
 	peers.On("Addresses").Return([]string{address})
 	peers.On("Drop", address).Return(errors.New("could not drop peer"))
+	subscriber := make(chan interface{}, 15)
 
 	// act
-	go handleDropping(suite.log, &suite.wg, &suite.cfg, peers, stop)
+	go handleDropping(suite.log, &suite.wg, &suite.cfg, peers, stop, subscriber)
 	time.Sleep(25 * time.Millisecond)
 	close(stop)
 	suite.wg.Wait()

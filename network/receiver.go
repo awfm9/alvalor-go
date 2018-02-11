@@ -20,12 +20,13 @@ package network
 import (
 	"io"
 	"sync"
+	"time"
 
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
 )
 
-func handleReceiving(log zerolog.Logger, wg *sync.WaitGroup, cfg *Config, peers peerManager, rep reputationManager, address string, r io.Reader, input chan<- interface{}) {
+func handleReceiving(log zerolog.Logger, wg *sync.WaitGroup, cfg *Config, peers peerManager, rep reputationManager, address string, r io.Reader, input chan<- interface{}, subscriber chan<- interface{}) {
 	defer wg.Done()
 
 	// extract configuration as needed
@@ -51,10 +52,13 @@ func handleReceiving(log zerolog.Logger, wg *sync.WaitGroup, cfg *Config, peers 
 			err = peers.Drop(address)
 			if err != nil {
 				log.Error().Err(err).Msg("could not drop peer")
+			} else {
+				subscriber <- Disconnected{Address: address, Timestamp: time.Now()}
 			}
 			continue
 		}
 		input <- msg
+		subscriber <- Received{Address: address, Message: msg, Timestamp: time.Now()}
 	}
 	close(input)
 }

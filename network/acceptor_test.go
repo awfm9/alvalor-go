@@ -23,6 +23,8 @@ import (
 	"sync"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+
 	"github.com/rs/zerolog"
 	uuid "github.com/satori/go.uuid"
 	"github.com/stretchr/testify/mock"
@@ -69,8 +71,10 @@ func (suite *AcceptorSuite) TestAcceptorClaimFails() {
 
 	rep := &ReputationManagerMock{}
 
+	subscriber := make(chan interface{}, 1)
+
 	// act
-	handleAccepting(suite.log, &suite.wg, &suite.cfg, pending, peers, rep, conn)
+	handleAccepting(suite.log, &suite.wg, &suite.cfg, pending, peers, rep, conn, subscriber)
 
 	// assert
 	pending.AssertCalled(suite.T(), "Claim", address)
@@ -101,8 +105,10 @@ func (suite *AcceptorSuite) TestAcceptorReadFails() {
 	rep := &ReputationManagerMock{}
 	rep.On("Error", address)
 
+	subscriber := make(chan interface{}, 1)
+
 	// act
-	handleAccepting(suite.log, &suite.wg, &suite.cfg, pending, peers, rep, conn)
+	handleAccepting(suite.log, &suite.wg, &suite.cfg, pending, peers, rep, conn, subscriber)
 
 	// assert
 	pending.AssertCalled(suite.T(), "Claim", address)
@@ -137,8 +143,10 @@ func (suite *AcceptorSuite) TestAcceptorNetworkMismatch() {
 	rep := &ReputationManagerMock{}
 	rep.On("Invalid", address)
 
+	subscriber := make(chan interface{}, 1)
+
 	// act
-	handleAccepting(suite.log, &suite.wg, &suite.cfg, pending, peers, rep, conn)
+	handleAccepting(suite.log, &suite.wg, &suite.cfg, pending, peers, rep, conn, subscriber)
 
 	// assert
 	pending.AssertCalled(suite.T(), "Claim", address)
@@ -172,9 +180,10 @@ func (suite *AcceptorSuite) TestAcceptorNonceIdentical() {
 
 	rep := &ReputationManagerMock{}
 	rep.On("Invalid", address)
+	subscriber := make(chan interface{}, 1)
 
 	// act
-	handleAccepting(suite.log, &suite.wg, &suite.cfg, pending, peers, rep, conn)
+	handleAccepting(suite.log, &suite.wg, &suite.cfg, pending, peers, rep, conn, subscriber)
 
 	// assert
 	pending.AssertCalled(suite.T(), "Claim", address)
@@ -211,8 +220,10 @@ func (suite *AcceptorSuite) TestAcceptorWriteFails() {
 	rep := &ReputationManagerMock{}
 	rep.On("Error", address)
 
+	subscriber := make(chan interface{}, 1)
+
 	// act
-	handleAccepting(suite.log, &suite.wg, &suite.cfg, pending, peers, rep, conn)
+	handleAccepting(suite.log, &suite.wg, &suite.cfg, pending, peers, rep, conn, subscriber)
 
 	// assert
 	pending.AssertCalled(suite.T(), "Claim", address)
@@ -252,8 +263,10 @@ func (suite *AcceptorSuite) TestAcceptorAddPeerFails() {
 	conn.On("Write", ack).Return(len(ack), nil)
 	conn.On("Close").Return(nil)
 
+	subscriber := make(chan interface{}, 1)
+
 	// act
-	handleAccepting(suite.log, &suite.wg, &suite.cfg, pending, peers, rep, conn)
+	handleAccepting(suite.log, &suite.wg, &suite.cfg, pending, peers, rep, conn, subscriber)
 
 	// assert
 	pending.AssertCalled(suite.T(), "Claim", address)
@@ -291,12 +304,17 @@ func (suite *AcceptorSuite) TestAcceptorSuccess() {
 	rep := &ReputationManagerMock{}
 	rep.On("Success", address)
 
+	subscriber := make(chan interface{}, 1)
+
 	// act
-	handleAccepting(suite.log, &suite.wg, &suite.cfg, pending, peers, rep, conn)
+	handleAccepting(suite.log, &suite.wg, &suite.cfg, pending, peers, rep, conn, subscriber)
 
 	// assert
 	pending.AssertCalled(suite.T(), "Claim", address)
 	pending.AssertCalled(suite.T(), "Release", address)
 	peers.AssertCalled(suite.T(), "Add", conn, nonce)
 	rep.AssertCalled(suite.T(), "Success", address)
+	event := <-subscriber
+	connected := event.(Connected)
+	assert.Equal(suite.T(), address, connected.Address)
 }

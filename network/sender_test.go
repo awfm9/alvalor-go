@@ -26,6 +26,7 @@ import (
 	"testing"
 
 	"github.com/rs/zerolog"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/suite"
 )
@@ -37,20 +38,19 @@ func TestSender(t *testing.T) {
 type SenderSuite struct {
 	suite.Suite
 	log zerolog.Logger
-	wg  sync.WaitGroup
 	cfg Config
 }
 
 func (suite *SenderSuite) SetupTest() {
 	suite.log = zerolog.New(ioutil.Discard)
-	suite.wg = sync.WaitGroup{}
-	suite.wg.Add(1)
 	suite.cfg = Config{}
 }
 
-func (suite *ReceiverSuite) TestSenderEOFError() {
+func (suite *SenderSuite) TestSenderEOFError() {
 
 	// arrange
+	wg := sync.WaitGroup{}
+	wg.Add(1)
 	address := "192.0.2.100:1337"
 	output := make(chan interface{}, 16)
 	w := &bytes.Buffer{}
@@ -63,14 +63,16 @@ func (suite *ReceiverSuite) TestSenderEOFError() {
 	codec.On("Encode", w, mock.Anything).Return(io.EOF).Once()
 	codec.On("Encode", w, mock.Anything).Return(nil)
 
+	subscriber := make(chan interface{}, 15)
+
 	// act
 	suite.cfg.codec = codec
-	go handleSending(suite.log, &suite.wg, &suite.cfg, peers, rep, address, output, w)
+	go handleSending(suite.log, &wg, &suite.cfg, peers, rep, address, output, w, subscriber)
 	output <- &Ping{}
 	output <- &Pong{}
 	output <- &Discover{}
 	close(output)
-	suite.wg.Wait()
+	wg.Wait()
 
 	// assert
 	if codec.AssertNumberOfCalls(suite.T(), "Encode", 1) {
@@ -78,9 +80,11 @@ func (suite *ReceiverSuite) TestSenderEOFError() {
 	}
 }
 
-func (suite *ReceiverSuite) TestSenderSendMessages() {
+func (suite *SenderSuite) TestSenderSendMessages() {
 
 	// arrange
+	wg := sync.WaitGroup{}
+	wg.Add(1)
 	address := "192.0.2.100:1337"
 	output := make(chan interface{}, 16)
 	w := &bytes.Buffer{}
@@ -92,15 +96,17 @@ func (suite *ReceiverSuite) TestSenderSendMessages() {
 	codec := &CodecMock{}
 	codec.On("Encode", w, mock.Anything).Return(nil)
 
+	subscriber := make(chan interface{}, 15)
+
 	// act
 	suite.cfg.codec = codec
-	go handleSending(suite.log, &suite.wg, &suite.cfg, peers, rep, address, output, w)
+	go handleSending(suite.log, &wg, &suite.cfg, peers, rep, address, output, w, subscriber)
 	output <- &Ping{}
 	output <- &Pong{}
 	output <- &Discover{}
 	output <- &Peers{}
 	close(output)
-	suite.wg.Wait()
+	wg.Wait()
 
 	// assert
 	if codec.AssertNumberOfCalls(suite.T(), "Encode", 4) {
@@ -111,9 +117,11 @@ func (suite *ReceiverSuite) TestSenderSendMessages() {
 	}
 }
 
-func (suite *ReceiverSuite) TestSenderEncodeFails() {
+func (suite *SenderSuite) TestSenderEncodeFails() {
 
 	// arrange
+	wg := sync.WaitGroup{}
+	wg.Add(1)
 	address := "192.0.2.100:1337"
 	output := make(chan interface{}, 16)
 	w := &bytes.Buffer{}
@@ -129,19 +137,24 @@ func (suite *ReceiverSuite) TestSenderEncodeFails() {
 	codec.On("Encode", w, mock.Anything).Return(nil).Twice()
 	codec.On("Encode", w, mock.Anything).Return(io.EOF)
 
+	subscriber := make(chan interface{}, 15)
+
 	// act
 	suite.cfg.codec = codec
-	go handleSending(suite.log, &suite.wg, &suite.cfg, peers, rep, address, output, w)
+	go handleSending(suite.log, &wg, &suite.cfg, peers, rep, address, output, w, subscriber)
 	output <- &Ping{}
 	output <- &Pong{}
 	output <- &Discover{}
 	output <- &Peers{}
 	close(output)
-	suite.wg.Wait()
+	wg.Wait()
 
 	// assert
 	rep.AssertCalled(suite.T(), "Error", address)
 	peers.AssertCalled(suite.T(), "Drop", address)
+	event := <-subscriber
+	disconnected := event.(Disconnected)
+	assert.Equal(suite.T(), address, disconnected.Address)
 	if codec.AssertNumberOfCalls(suite.T(), "Encode", 4) {
 		codec.AssertCalled(suite.T(), "Encode", w, &Ping{})
 		codec.AssertCalled(suite.T(), "Encode", w, &Pong{})

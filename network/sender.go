@@ -25,7 +25,7 @@ import (
 	"github.com/rs/zerolog"
 )
 
-func handleSending(log zerolog.Logger, wg *sync.WaitGroup, cfg *Config, peers peerManager, rep reputationManager, address string, output <-chan interface{}, w io.Writer) {
+func handleSending(log zerolog.Logger, wg *sync.WaitGroup, cfg *Config, peers peerManager, rep reputationManager, address string, output <-chan interface{}, w io.Writer, subscriber chan<- interface{}) {
 	defer wg.Done()
 
 	// extract configuration parameters
@@ -51,7 +51,10 @@ func handleSending(log zerolog.Logger, wg *sync.WaitGroup, cfg *Config, peers pe
 			err = peers.Drop(address)
 			if err != nil {
 				log.Error().Err(err).Msg("could not drop peer")
+			} else {
+				//subscriber <- Disconnected{Address: address, Timestamp: time.Now()}
 			}
+
 			continue
 		}
 	}
