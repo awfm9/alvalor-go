@@ -39,6 +39,7 @@ var (
 
 // Network represents a wrapper around the network package to provide the API.
 type Network interface {
+	Add(address string)
 	Broadcast(i interface{}, exclude ...string)
 	Send(address string, i interface{}) error
 	Subscribe() <-chan interface{}
@@ -159,6 +160,10 @@ func (net *simpleNetwork) Processor(address string, input <-chan interface{}, ou
 
 func (net *simpleNetwork) Receiver(address string, r io.Reader, input chan<- interface{}) {
 	go handleReceiving(net.log, net.wg, net.cfg, net.peers, net.rep, address, r, input)
+}
+
+func (net *simpleNetwork) Add(address string) {
+	net.addresses.Add(address)
 }
 
 func (net *simpleNetwork) Stop() {
