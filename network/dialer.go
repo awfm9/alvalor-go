@@ -67,6 +67,7 @@ func handleDialing(log zerolog.Logger, wg *sync.WaitGroup, cfg *Config, peers pe
 			byIPHash(sha256.New()),
 		)
 		if len(sample) == 0 {
+			handlers.Discoverer()
 			log.Info().Msg("could not get address to connect")
 			continue
 		}

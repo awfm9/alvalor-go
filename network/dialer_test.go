@@ -71,6 +71,7 @@ func (suite *DialerSuite) TestDialerSuccess() {
 
 	handlers := &HandlerManagerMock{}
 	handlers.On("Connector", address)
+	handlers.On("Discoverer")
 
 	// act
 	go handleDialing(suite.log, &suite.wg, &suite.cfg, peers, pending, addresses, rep, handlers, stop)
@@ -87,6 +88,7 @@ func (suite *DialerSuite) TestDialerSuccess() {
 		mock.AnythingOfType("func(string, string) bool"),
 	)
 	handlers.AssertCalled(suite.T(), "Connector", address)
+	handlers.AssertNotCalled(suite.T(), "Discoverer")
 }
 
 func (suite *DialerSuite) TestDialerNoAddresses() {
@@ -109,6 +111,7 @@ func (suite *DialerSuite) TestDialerNoAddresses() {
 
 	handlers := &HandlerManagerMock{}
 	handlers.On("Connector", mock.Anything)
+	handlers.On("Discoverer")
 
 	// act
 	go handleDialing(suite.log, &suite.wg, &suite.cfg, peers, pending, addresses, rep, handlers, stop)
@@ -125,6 +128,7 @@ func (suite *DialerSuite) TestDialerNoAddresses() {
 		mock.AnythingOfType("func(string, string) bool"),
 	)
 	handlers.AssertNotCalled(suite.T(), "Connector")
+	handlers.AssertCalled(suite.T(), "Discoverer")
 }
 
 func (suite *DialerSuite) TestDialerEnoughPeers() {
@@ -144,6 +148,7 @@ func (suite *DialerSuite) TestDialerEnoughPeers() {
 
 	handlers := &HandlerManagerMock{}
 	handlers.On("Connector", mock.Anything)
+	handlers.On("Discoverer")
 
 	// act
 	go handleDialing(suite.log, &suite.wg, &suite.cfg, peers, pending, addresses, rep, handlers, stop)
@@ -154,6 +159,7 @@ func (suite *DialerSuite) TestDialerEnoughPeers() {
 	// assert
 	addresses.AssertNotCalled(suite.T(), "Sample")
 	handlers.AssertNotCalled(suite.T(), "Connector")
+	handlers.AssertNotCalled(suite.T(), "Discoverer")
 }
 
 func (suite *DialerSuite) TestDialerMaximumPendingPeers() {
@@ -173,6 +179,7 @@ func (suite *DialerSuite) TestDialerMaximumPendingPeers() {
 
 	handlers := &HandlerManagerMock{}
 	handlers.On("Connector", mock.Anything)
+	handlers.On("Discoverer")
 
 	// act
 	go handleDialing(suite.log, &suite.wg, &suite.cfg, peers, pending, addresses, rep, handlers, stop)
@@ -183,4 +190,5 @@ func (suite *DialerSuite) TestDialerMaximumPendingPeers() {
 	// assert
 	addresses.AssertNotCalled(suite.T(), "Sample")
 	handlers.AssertNotCalled(suite.T(), "Connector")
+	handlers.AssertNotCalled(suite.T(), "Discoverer")
 }

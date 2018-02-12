@@ -141,6 +141,10 @@ func (net *simpleNetwork) Listener() {
 	go handleListening(net.log, net.wg, net.cfg, net, net.listener, net.stop)
 }
 
+func (net *simpleNetwork) Discoverer() {
+	go handleDiscovering(net.log, net.wg, net.cfg, net.peers)
+}
+
 func (net *simpleNetwork) Acceptor(conn net.Conn) {
 	go handleAccepting(net.log, net.wg, net.cfg, net.pending, net.peers, net.rep, conn)
 }
