@@ -20,6 +20,7 @@ package network
 import (
 	"io"
 	"sync"
+	"time"
 
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
@@ -52,7 +53,7 @@ func handleSending(log zerolog.Logger, wg *sync.WaitGroup, cfg *Config, peers pe
 			if err != nil {
 				log.Error().Err(err).Msg("could not drop peer")
 			} else {
-				//subscriber <- Disconnected{Address: address, Timestamp: time.Now()}
+				subscriber <- Disconnected{Address: address, Timestamp: time.Now()}
 			}
 
 			continue
