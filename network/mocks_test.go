@@ -280,6 +280,10 @@ func (hm *HandlerManagerMock) Listener() {
 	_ = hm.Called()
 }
 
+func (hm *HandlerManagerMock) Discoverer() {
+	_ = hm.Called()
+}
+
 func (hm *HandlerManagerMock) Acceptor(conn net.Conn) {
 	_ = hm.Called(conn)
 }

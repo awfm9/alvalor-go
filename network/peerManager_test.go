@@ -138,3 +138,17 @@ func TestPeerManagerAddresses(t *testing.T) {
 	addresses = peers.Addresses()
 	assert.ElementsMatch(t, []string{address1, address2}, addresses)
 }
+
+func TestPeerManagerOutput(t *testing.T) {
+	peers := &simplePeerManager{reg: make(map[string]*peer)}
+
+	address := "192.0.2.100:1337"
+	_, err := peers.Output(address)
+	assert.NotNil(t, err)
+
+	p := &peer{output: make(chan interface{})}
+	peers.reg[address] = p
+	output, err := peers.Output(address)
+	assert.Nil(t, err)
+	assert.Equal(t, output, (chan<- interface{})(p.output))
+}

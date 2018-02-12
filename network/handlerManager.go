@@ -27,6 +27,7 @@ type handlerManager interface {
 	Server()
 	Dialer()
 	Listener()
+	Discoverer()
 	Acceptor(conn net.Conn)
 	Connector(address string)
 	Sender(address string, output <-chan interface{}, w io.Writer)
