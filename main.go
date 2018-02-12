@@ -18,40 +18,40 @@
 package main
 
 import (
-	"flag"
-	"fmt"
 	"math/rand"
 	"os"
 	"os/signal"
-	"sync"
 	"time"
 
-	"github.com/alvalor/alvalor-go/codec/simple"
-	"github.com/alvalor/alvalor-go/network"
 	"github.com/rs/zerolog"
+
+	"github.com/alvalor/alvalor-go/codec"
+	"github.com/alvalor/alvalor-go/network"
 )
 
 func main() {
 
+	// set up a channel to catch system signals to cleanly shut down
+	sig := make(chan os.Signal)
+	signal.Notify(sig, os.Interrupt)
+
+	// seed the random generator
 	rand.Seed(time.Now().UnixNano())
 
-	c := make(chan os.Signal)
-	signal.Notify(c, os.Interrupt)
-
+	// initialize the logger to standard error as output
 	log := zerolog.New(os.Stderr)
 
-	port := flag.Int("port", 31337, "server port number")
-	flag.Parse()
+	// use our efficient capnproto codec for network communication
+	cod := codec.NewProto()
 
-	wg := &sync.WaitGroup{}
-	mgr := network.NewManager(log, simple.New(),
-		network.SetListen(true),
-		network.SetAddress(fmt.Sprintf("127.0.0.1:%v", *port)),
-	)
+	// initialize the network component to create our p2p network node
+	net := network.New(log, cod)
 
-	<-c
+	// wait for a stop signal to initialize shutdown
+	<-sig
+	signal.Stop(sig)
+	close(sig)
 
-	mgr.Stop()
-
-	wg.Wait()
+	// shut down the p2p network node
+	net.Stop()
 }
