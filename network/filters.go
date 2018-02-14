@@ -36,8 +36,8 @@ func isScoreAbove(rep reputationManager, threshold float32) func(string) bool {
 	}
 }
 
-func isLastBefore(rep reputationManager, cutoff time.Time) func(string) bool {
+func isFailBefore(rep reputationManager, cutoff time.Time) func(string) bool {
 	return func(address string) bool {
-		return rep.Last(address).Before(cutoff)
+		return rep.Fail(address).Before(cutoff)
 	}
 }

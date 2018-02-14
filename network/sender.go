@@ -20,6 +20,7 @@ package network
 import (
 	"io"
 	"sync"
+	"time"
 
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
@@ -30,7 +31,8 @@ func handleSending(log zerolog.Logger, wg *sync.WaitGroup, cfg *Config, rep repu
 
 	// extract configuration parameters
 	var (
-		codec = cfg.codec
+		codec    = cfg.codec
+		interval = cfg.interval
 	)
 
 	// configure logger and add stop/start messages
@@ -38,8 +40,23 @@ func handleSending(log zerolog.Logger, wg *sync.WaitGroup, cfg *Config, rep repu
 	log.Info().Msg("sending routine started")
 	defer log.Info().Msg("sending routine stopped")
 
-	// read messages from output channel and write to connection
-	for msg := range output {
+	// we keep reading messages from the output channel and writing them to the network connection
+	var msg interface{}
+	var ok bool
+Loop:
+	for {
+
+		// if we don't have a message for a while, we send a heartbeat ping
+		select {
+		case msg, ok = <-output:
+			if !ok {
+				break Loop
+			}
+		case <-time.After(interval):
+			msg = &Ping{}
+		}
+
+		// send the message, break the loop on closed connection, register other failures
 		err := codec.Encode(w, msg)
 		if errors.Cause(err) == io.EOF || isClosedErr(err) {
 			log.Info().Msg("network connection closed")
@@ -51,7 +68,8 @@ func handleSending(log zerolog.Logger, wg *sync.WaitGroup, cfg *Config, rep repu
 			continue
 		}
 	}
+
+	// drain the channel in case we broke on closed connection & wait until cascade arrives
 	for _ = range output {
-		// draining the channel
 	}
 }

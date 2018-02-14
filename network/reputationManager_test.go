@@ -27,28 +27,27 @@ import (
 func TestNewReputationManager(t *testing.T) {
 	rep := newSimpleReputationManager()
 	assert.NotNil(t, rep.scores)
+	assert.NotNil(t, rep.fails)
 }
 
 func TestReputationManagerFailure(t *testing.T) {
 	address := "192.0.2.100:1337"
 	rep := simpleReputationManager{
 		scores: make(map[string]float32),
-		lasts:  make(map[string]time.Time),
+		fails:  make(map[string]time.Time),
 	}
 	rep.Failure(address)
 	assert.Equal(t, float32(-1), rep.scores[address])
-	assert.WithinDuration(t, time.Now(), rep.lasts[address], time.Second)
+	assert.WithinDuration(t, time.Now(), rep.fails[address], time.Second)
 }
 
 func TestReputationManagerSuccess(t *testing.T) {
 	address := "192.0.2.100:1337"
 	rep := simpleReputationManager{
 		scores: make(map[string]float32),
-		lasts:  make(map[string]time.Time),
 	}
 	rep.Success(address)
 	assert.Equal(t, float32(1), rep.scores[address])
-	assert.WithinDuration(t, time.Now(), rep.lasts[address], time.Second)
 }
 
 func TestReputationManagerScore(t *testing.T) {
@@ -65,8 +64,8 @@ func TestReputationManagerLast(t *testing.T) {
 	last := time.Now()
 	address := "192.0.2.100:1337"
 	rep := simpleReputationManager{
-		lasts: map[string]time.Time{address: last},
+		fails: map[string]time.Time{address: last},
 	}
-	assert.Equal(t, last, rep.Last(address))
-	assert.Equal(t, time.Time{}, rep.Last("whatever"))
+	assert.Equal(t, last, rep.Fail(address))
+	assert.Equal(t, time.Time{}, rep.Fail("whatever"))
 }

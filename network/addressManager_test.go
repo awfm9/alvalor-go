@@ -28,7 +28,6 @@ import (
 func TestNewAddressManager(t *testing.T) {
 	am := newSimpleAddressManager()
 	assert.NotNil(t, am.blacklist)
-	assert.NotNil(t, am.whitelist)
 	assert.NotNil(t, am.addresses)
 }
 
@@ -60,38 +59,18 @@ func TestAddressManagerUnblock(t *testing.T) {
 	assert.NotContains(t, am.blacklist, address)
 }
 
-func TestAddressManagerPin(t *testing.T) {
-	address := "192.0.2.100:1337"
-	am := simpleAddressManager{whitelist: make(map[string]bool)}
-	am.Pin(address)
-	assert.Contains(t, am.whitelist, address)
-}
-
-func TestAddressManagerUnpin(t *testing.T) {
-	address := "192.0.2.100:1337"
-	am := simpleAddressManager{whitelist: map[string]bool{address: true}}
-	am.Unpin(address)
-	assert.NotContains(t, am.whitelist, address)
-}
-
 func TestAddressManagerSample(t *testing.T) {
 	address1 := "192.0.2.100:1337"
 	address2 := "192.0.2.101:1337" // blacklist + filter
 	address3 := "192.0.2.102:1337" // blacklist
 	address4 := "192.0.2.103:1337" // filter
 	address5 := "192.0.2.104:1337"
-	address6 := "192.0.2.105:1337" // whitelist
-	address7 := "192.0.2.106:1337"
-	address8 := "192.0.2.107:1337"
-	address9 := "192.0.2.108:1337" // whitelist
+	address6 := "192.0.2.106:1337"
+	address7 := "192.0.2.107:1337"
 	am := simpleAddressManager{
 		blacklist: map[string]bool{
 			address2: true,
 			address3: true,
-		},
-		whitelist: map[string]bool{
-			address6: true,
-			address9: true,
 		},
 		addresses: map[string]bool{
 			address1: true,
@@ -101,8 +80,6 @@ func TestAddressManagerSample(t *testing.T) {
 			address5: true,
 			address6: true,
 			address7: true,
-			address8: true,
-			address9: true,
 		},
 	}
 	// this will make sure we cover both less cases with high probability
@@ -124,13 +101,12 @@ func TestAddressManagerSample(t *testing.T) {
 		return false
 	}
 	expected := []string{
-		address6,
-		address9,
 		address1,
 		address5,
+		address6,
 		address7,
 	}
-	sample := am.Sample(5, filter, less)
+	sample := am.Sample(4, filter, less)
 	assert.Equal(t, expected, sample)
 	sample = am.Sample(1, filter)
 	assert.Contains(t, am.addresses, sample[0])

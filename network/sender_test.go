@@ -24,6 +24,7 @@ import (
 	"io/ioutil"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/rs/zerolog"
 	"github.com/stretchr/testify/mock"
@@ -45,10 +46,12 @@ func (suite *SenderSuite) SetupTest() {
 	suite.log = zerolog.New(ioutil.Discard)
 	suite.wg = sync.WaitGroup{}
 	suite.wg.Add(1)
-	suite.cfg = Config{}
+	suite.cfg = Config{
+		interval: 2 * time.Millisecond,
+	}
 }
 
-func (suite *ReceiverSuite) TestSenderSuccess() {
+func (suite *SenderSuite) TestSenderSuccess() {
 
 	// arrange
 	address := "192.0.2.100:1337"
@@ -82,7 +85,7 @@ func (suite *ReceiverSuite) TestSenderSuccess() {
 	}
 }
 
-func (suite *ReceiverSuite) TestSenderEOF() {
+func (suite *SenderSuite) TestSenderEOF() {
 
 	// arrange
 	address := "192.0.2.100:1337"
@@ -112,7 +115,35 @@ func (suite *ReceiverSuite) TestSenderEOF() {
 	}
 }
 
-func (suite *ReceiverSuite) TestSenderEncodeFails() {
+func (suite *SenderSuite) TestSenderHeartbeat() {
+
+	// arrange
+	address := "192.0.2.100:1337"
+	output := make(chan interface{}, 5)
+	w := &bytes.Buffer{}
+
+	rep := &ReputationManagerMock{}
+	rep.On("Failure", mock.Anything)
+
+	codec := &CodecMock{}
+	codec.On("Encode", mock.Anything, mock.Anything).Return(nil)
+
+	// act
+	suite.cfg.codec = codec
+	go handleSending(suite.log, &suite.wg, &suite.cfg, rep, address, output, w)
+	time.Sleep(time.Duration(1.5 * float64(suite.cfg.interval)))
+	close(output)
+	suite.wg.Wait()
+
+	// assert
+	t := suite.T()
+
+	if codec.AssertNumberOfCalls(t, "Encode", 1) {
+		codec.AssertCalled(t, "Encode", w, &Ping{})
+	}
+}
+
+func (suite *SenderSuite) TestSenderEncodeFails() {
 
 	// arrange
 	address := "192.0.2.100:1337"
