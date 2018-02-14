@@ -45,7 +45,7 @@ func (suite *ConnectorSuite) SetupTest() {
 	suite.wg = sync.WaitGroup{}
 	suite.wg.Add(1)
 	suite.cfg = Config{
-		network: Odin,
+		network: []byte{1, 3, 3, 7},
 		nonce:   uuid.NewV4().Bytes(),
 	}
 }
@@ -237,8 +237,8 @@ func (suite *ConnectorSuite) TestConnectorWriteFails() {
 	conn.AssertCalled(t, "Close")
 	rep.AssertCalled(t, "Failure", address)
 
-	peers.AssertCalled(t, "Add")
-	rep.AssertCalled(t, "Success")
+	peers.AssertNotCalled(t, "Add")
+	rep.AssertNotCalled(t, "Success")
 	book.AssertNotCalled(t, "Block")
 }
 
@@ -404,7 +404,7 @@ func (suite *ConnectorSuite) TestConnectorNonceKnown() {
 	rep.On("Failure", mock.Anything)
 
 	peers := &PeerManagerMock{}
-	peers.On("Known", mock.Anything).Return(false)
+	peers.On("Known", mock.Anything).Return(true)
 	peers.On("Add", mock.Anything, mock.Anything).Return(nil)
 
 	pending := &PendingManagerMock{}
@@ -453,7 +453,7 @@ func (suite *ConnectorSuite) TestConnectorAddPeerFails() {
 
 	peers := &PeerManagerMock{}
 	peers.On("Known", mock.Anything).Return(false)
-	peers.On("Add", mock.Anything, mock.Anything).Return(nil)
+	peers.On("Add", mock.Anything, mock.Anything).Return(errors.New("could not add peer"))
 
 	pending := &PendingManagerMock{}
 	pending.On("Claim", mock.Anything).Return(nil)

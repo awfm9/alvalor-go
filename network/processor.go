@@ -30,8 +30,6 @@ func handleProcessing(log zerolog.Logger, wg *sync.WaitGroup, cfg *Config, book 
 	// configuration parameters
 	var (
 		interval = cfg.interval
-		listen   = cfg.listen
-		laddress = cfg.address
 	)
 
 	// configure logger and add start/stop messages
@@ -41,9 +39,6 @@ func handleProcessing(log zerolog.Logger, wg *sync.WaitGroup, cfg *Config, book 
 
 	// for each message, handle it as adequate
 	timeout := time.NewTimer(time.Duration(3.5 * float64(interval)))
-	if listen {
-		output <- &Peers{Addresses: []string{laddress}}
-	}
 	output <- &Discover{}
 Loop:
 	for {
