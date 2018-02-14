@@ -25,6 +25,7 @@ import (
 	"time"
 
 	"github.com/rs/zerolog"
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/suite"
 )
 
@@ -67,7 +68,9 @@ func (suite *DropperSuite) TestDropperSuccess() {
 	suite.wg.Wait()
 
 	// assert
-	peers.AssertCalled(suite.T(), "Drop", address)
+	t := suite.T()
+
+	peers.AssertCalled(t, "Drop", address)
 }
 
 func (suite *DropperSuite) TestDropperValidPeerNumber() {
@@ -88,7 +91,9 @@ func (suite *DropperSuite) TestDropperValidPeerNumber() {
 	suite.wg.Wait()
 
 	// assert
-	peers.AssertNotCalled(suite.T(), "Drop")
+	t := suite.T()
+
+	peers.AssertNotCalled(t, "Drop", mock.Anything)
 }
 
 func (suite *DropperSuite) TestDropperDropFails() {
@@ -109,6 +114,8 @@ func (suite *DropperSuite) TestDropperDropFails() {
 	suite.wg.Wait()
 
 	// assert
-	peers.AssertCalled(suite.T(), "Drop", address)
-	peers.AssertNumberOfCalls(suite.T(), "Drop", 2)
+	t := suite.T()
+
+	peers.AssertCalled(t, "Drop", address)
+	peers.AssertNumberOfCalls(t, "Drop", 2)
 }

@@ -117,7 +117,7 @@ func (suite *DialerSuite) TestDialerNoAddresses() {
 
 	handlers.AssertCalled(t, "Discoverer")
 
-	handlers.AssertNotCalled(t, "Connector")
+	handlers.AssertNotCalled(t, "Connector", mock.Anything)
 }
 
 func (suite *DialerSuite) TestDialerEnoughPeers() {
@@ -151,6 +151,6 @@ func (suite *DialerSuite) TestDialerEnoughPeers() {
 	// assert
 	t := suite.T()
 
-	handlers.AssertNotCalled(t, "Connector")
+	handlers.AssertNotCalled(t, "Connector", mock.Anything)
 	handlers.AssertNotCalled(t, "Discoverer")
 }

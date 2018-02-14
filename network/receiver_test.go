@@ -85,7 +85,7 @@ func (suite *ReceiverSuite) TestReceiverSuccess() {
 		assert.IsType(t, &Peers{}, msgs[3])
 	}
 
-	rep.AssertNotCalled(t, "Failure")
+	rep.AssertNotCalled(t, "Failure", mock.Anything)
 }
 
 func (suite *ReceiverSuite) TestReceiverEOF() {
@@ -112,7 +112,7 @@ func (suite *ReceiverSuite) TestReceiverEOF() {
 	_, ok := <-input
 	assert.False(t, ok)
 
-	rep.AssertNotCalled(t, "Failure", address)
+	rep.AssertNotCalled(t, "Failure", mock.Anything)
 }
 
 func (suite *ReceiverSuite) TestReceiverError() {

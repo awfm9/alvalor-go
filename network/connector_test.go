@@ -94,8 +94,8 @@ func (suite *ConnectorSuite) TestConnectorSuccess() {
 	rep.AssertCalled(t, "Success", address)
 
 	conn.AssertNotCalled(t, "Close")
-	rep.AssertNotCalled(t, "Failure")
-	book.AssertNotCalled(t, "Block")
+	rep.AssertNotCalled(t, "Failure", mock.Anything)
+	book.AssertNotCalled(t, "Block", mock.Anything)
 }
 
 func (suite *ConnectorSuite) TestConnectorClaimFails() {

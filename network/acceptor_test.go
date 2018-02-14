@@ -94,8 +94,8 @@ func (suite *AcceptorSuite) TestAcceptorSuccess() {
 	rep.AssertCalled(t, "Success", address)
 
 	conn.AssertNotCalled(t, "Close")
-	rep.AssertNotCalled(t, "Failure")
-	book.AssertNotCalled(t, "Block")
+	rep.AssertNotCalled(t, "Failure", mock.Anything)
+	book.AssertNotCalled(t, "Block", mock.Anything)
 }
 
 func (suite *AcceptorSuite) TestAcceptorClaimFails() {
@@ -139,11 +139,11 @@ func (suite *AcceptorSuite) TestAcceptorClaimFails() {
 	pending.AssertCalled(t, "Claim", address)
 	conn.AssertCalled(t, "Close")
 
-	pending.AssertNotCalled(t, "Release")
-	peers.AssertNotCalled(t, "Add")
-	rep.AssertNotCalled(t, "Success")
-	rep.AssertNotCalled(t, "Failure")
-	book.AssertNotCalled(t, "Block")
+	pending.AssertNotCalled(t, "Release", mock.Anything)
+	peers.AssertNotCalled(t, "Add", mock.Anything, mock.Anything)
+	rep.AssertNotCalled(t, "Success", mock.Anything)
+	rep.AssertNotCalled(t, "Failure", mock.Anything)
+	book.AssertNotCalled(t, "Block", mock.Anything)
 }
 
 func (suite *AcceptorSuite) TestAcceptorReadFails() {
@@ -189,9 +189,9 @@ func (suite *AcceptorSuite) TestAcceptorReadFails() {
 	rep.AssertCalled(t, "Failure", address)
 	conn.AssertCalled(t, "Close")
 
-	peers.AssertNotCalled(t, "Add")
-	rep.AssertNotCalled(t, "Success")
-	book.AssertNotCalled(t, "Block")
+	peers.AssertNotCalled(t, "Add", mock.Anything, mock.Anything)
+	rep.AssertNotCalled(t, "Success", mock.Anything)
+	book.AssertNotCalled(t, "Block", mock.Anything)
 }
 
 func (suite *AcceptorSuite) TestAcceptorNetworkMismatch() {
@@ -237,9 +237,9 @@ func (suite *AcceptorSuite) TestAcceptorNetworkMismatch() {
 	book.AssertCalled(t, "Block", address)
 	conn.AssertCalled(t, "Close")
 
-	rep.AssertNotCalled(t, "Success")
-	peers.AssertNotCalled(t, "Add")
-	rep.AssertNotCalled(t, "Failure")
+	peers.AssertNotCalled(t, "Add", mock.Anything, mock.Anything)
+	rep.AssertNotCalled(t, "Success", mock.Anything)
+	rep.AssertNotCalled(t, "Failure", mock.Anything)
 }
 
 func (suite *AcceptorSuite) TestAcceptorNonceIdentical() {
@@ -284,9 +284,9 @@ func (suite *AcceptorSuite) TestAcceptorNonceIdentical() {
 	book.AssertCalled(t, "Block", address)
 	conn.AssertCalled(t, "Close")
 
-	rep.AssertNotCalled(t, "Success")
-	peers.AssertNotCalled(t, "Add")
-	rep.AssertNotCalled(t, "Failure")
+	peers.AssertNotCalled(t, "Add", mock.Anything, mock.Anything)
+	rep.AssertNotCalled(t, "Success", mock.Anything)
+	rep.AssertNotCalled(t, "Failure", mock.Anything)
 }
 
 func (suite *AcceptorSuite) TestAcceptorWriteFails() {
@@ -332,9 +332,9 @@ func (suite *AcceptorSuite) TestAcceptorWriteFails() {
 	rep.AssertCalled(t, "Failure", address)
 	conn.AssertCalled(t, "Close")
 
-	peers.AssertNotCalled(t, "Add")
-	rep.AssertNotCalled(t, "Success")
-	book.AssertNotCalled(t, "Block")
+	peers.AssertNotCalled(t, "Add", mock.Anything, mock.Anything)
+	rep.AssertNotCalled(t, "Success", mock.Anything)
+	book.AssertNotCalled(t, "Block", mock.Anything)
 }
 
 func (suite *AcceptorSuite) TestAcceptorAddPeerFails() {
@@ -380,7 +380,7 @@ func (suite *AcceptorSuite) TestAcceptorAddPeerFails() {
 	peers.AssertCalled(t, "Add", conn, nonce)
 	conn.AssertCalled(t, "Close")
 
-	rep.AssertNotCalled(t, "Success")
-	rep.AssertNotCalled(t, "Failure")
-	book.AssertNotCalled(t, "Block")
+	rep.AssertNotCalled(t, "Success", mock.Anything)
+	rep.AssertNotCalled(t, "Failure", mock.Anything)
+	book.AssertNotCalled(t, "Block", mock.Anything)
 }
