@@ -17,6 +17,8 @@
 
 package network
 
+import "time"
+
 func isNot(addresses []string) func(string) bool {
 	lookup := make(map[string]struct{})
 	for _, address := range addresses {
@@ -28,8 +30,14 @@ func isNot(addresses []string) func(string) bool {
 	}
 }
 
-func isAbove(rep reputationManager, threshold float32) func(string) bool {
+func isScoreAbove(rep reputationManager, threshold float32) func(string) bool {
 	return func(address string) bool {
 		return rep.Score(address) > threshold
+	}
+}
+
+func isLastBefore(rep reputationManager, cutoff time.Time) func(string) bool {
+	return func(address string) bool {
+		return rep.Last(address).Before(cutoff)
 	}
 }

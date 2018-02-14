@@ -235,15 +235,7 @@ type ReputationManagerMock struct {
 	mock.Mock
 }
 
-func (rm *ReputationManagerMock) Error(address string) {
-	_ = rm.Called(address)
-}
-
 func (rm *ReputationManagerMock) Failure(address string) {
-	_ = rm.Called(address)
-}
-
-func (rm *ReputationManagerMock) Invalid(address string) {
 	_ = rm.Called(address)
 }
 
@@ -254,6 +246,11 @@ func (rm *ReputationManagerMock) Success(address string) {
 func (rm *ReputationManagerMock) Score(address string) float32 {
 	args := rm.Called(address)
 	return float32(args.Get(0).(float64))
+}
+
+func (rm *ReputationManagerMock) Last(address string) time.Time {
+	args := rm.Called(address)
+	return args.Get(0).(time.Time)
 }
 
 type HandlerManagerMock struct {

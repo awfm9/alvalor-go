@@ -30,7 +30,7 @@ func byRandom() func(string, string) bool {
 	}
 }
 
-func byReputation(rep reputationManager) func(string, string) bool {
+func byScore(rep reputationManager) func(string, string) bool {
 	return func(address1 string, address2 string) bool {
 		return rep.Score(address1) > rep.Score(address2)
 	}

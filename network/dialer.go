@@ -58,8 +58,9 @@ func handleDialing(log zerolog.Logger, wg *sync.WaitGroup, cfg *Config, peers pe
 			isNot([]string{address}),
 			isNot(pending.Addresses()),
 			isNot(peers.Addresses()),
-			isAbove(rep, -5),
-			byReputation(rep),
+			isScoreAbove(rep, -5),
+			isLastBefore(rep, time.Now().Add(-15*time.Minute)),
+			byScore(rep),
 			byIPHash(sha256.New()),
 		)
 		if len(sample) == 0 {
