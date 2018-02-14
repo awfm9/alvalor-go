@@ -141,16 +141,28 @@ func TestPeerManagerAddresses(t *testing.T) {
 }
 
 func TestPeerManagerSend(t *testing.T) {
-	// TODO
-	// peers := &simplePeerManager{reg: make(map[string]*peer)}
-	//
-	// address := "192.0.2.100:1337"
-	// err := peers.Output(address, msg)
-	// assert.NotNil(t, err)
-	//
-	// p := &peer{output: make(chan interface{})}
-	// peers.reg[address] = p
-	// err := peers.Output(address, msg)
-	// assert.Nil(t, err)
-	// assert.Equal(t, output, (chan<- interface{})(p.output))
+
+	msg := "message"
+	address := "192.0.2.100:1337"
+
+	peers := &simplePeerManager{reg: make(map[string]*peer)}
+
+	err := peers.Send(address, msg)
+	assert.NotNil(t, err)
+
+	output := make(chan interface{}, 1)
+	p := &peer{output: output}
+	peers.reg[address] = p
+	err = peers.Send(address, msg)
+	assert.Nil(t, err)
+	select {
+	case received := <-output:
+		assert.Equal(t, msg, received)
+	default:
+		t.Error("no message in output channel")
+	}
+
+	peers.reg[address].output = nil
+	err = peers.Send(address, msg)
+	assert.NotNil(t, err)
 }
