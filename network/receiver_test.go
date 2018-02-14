@@ -67,6 +67,7 @@ func (suite *ReceiverSuite) TestReceiverSuccess() {
 	codec.On("Decode", r).Return(nil, io.EOF)
 
 	peers := &PeerManagerMock{}
+	peers.On("Drop", mock.Anything).Return(nil)
 
 	// act
 	suite.cfg.codec = codec
@@ -87,6 +88,8 @@ func (suite *ReceiverSuite) TestReceiverSuccess() {
 		assert.IsType(t, &Peers{}, msgs[3])
 	}
 
+	peers.AssertCalled(t, "Drop", address)
+
 	rep.AssertNotCalled(t, "Failure", mock.Anything)
 }
 
@@ -104,6 +107,7 @@ func (suite *ReceiverSuite) TestReceiverEOF() {
 	codec.On("Decode", r).Return(nil, io.EOF)
 
 	peers := &PeerManagerMock{}
+	peers.On("Drop", mock.Anything).Return(nil)
 
 	// act
 	suite.cfg.codec = codec
@@ -115,6 +119,8 @@ func (suite *ReceiverSuite) TestReceiverEOF() {
 
 	_, ok := <-input
 	assert.False(t, ok)
+
+	peers.AssertCalled(t, "Drop", address)
 
 	rep.AssertNotCalled(t, "Failure", mock.Anything)
 }
@@ -137,6 +143,7 @@ func (suite *ReceiverSuite) TestReceiverError() {
 	codec.On("Decode", r).Return(nil, io.EOF)
 
 	peers := &PeerManagerMock{}
+	peers.On("Drop", mock.Anything).Return(nil)
 
 	// act
 	suite.cfg.codec = codec
@@ -150,8 +157,10 @@ func (suite *ReceiverSuite) TestReceiverError() {
 	// assert
 	t := suite.T()
 
-	rep.AssertCalled(t, "Failure", address)
 	if assert.Len(t, msgs, 1) {
 		assert.Equal(t, message, msgs[0])
 	}
+
+	rep.AssertCalled(t, "Failure", address)
+	peers.AssertCalled(t, "Drop", address)
 }

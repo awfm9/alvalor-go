@@ -101,12 +101,12 @@ func TestAddressManagerSample(t *testing.T) {
 		return false
 	}
 	expected := []string{
-		address6,
 		address1,
 		address5,
+		address6,
 		address7,
 	}
-	sample := am.Sample(5, filter, less)
+	sample := am.Sample(4, filter, less)
 	assert.Equal(t, expected, sample)
 	sample = am.Sample(1, filter)
 	assert.Contains(t, am.addresses, sample[0])

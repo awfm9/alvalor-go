@@ -63,9 +63,6 @@ func (suite *ProcessorSuite) TestProcessorSuccess() {
 	book.On("Add", mock.Anything)
 	book.On("Sample", mock.Anything, mock.Anything).Return(sample)
 
-	peers := &PeerManagerMock{}
-	peers.On("Drop", mock.Anything).Return(nil)
-
 	// act
 	go handleProcessing(suite.log, &suite.wg, &suite.cfg, book, subscriber, address, input, output)
 	close(input)
@@ -81,46 +78,6 @@ func (suite *ProcessorSuite) TestProcessorSuccess() {
 	if assert.Len(t, msgs, 1) {
 		assert.IsType(t, &Discover{}, msgs[0])
 	}
-
-	peers.AssertNotCalled(t, "Drop", mock.Anything)
-}
-
-func (suite *ProcessorSuite) TestProcessorHeartbeat() {
-
-	// arrange
-	address := "192.0.2.100:1337"
-	sample := []string{"192.0.2.200:1337", "192.0.2.201:1337", "192.0.2.202:1337"}
-
-	input := make(chan interface{})
-	output := make(chan interface{}, 5)
-	subscriber := make(chan interface{}, 5)
-
-	book := &AddressManagerMock{}
-	book.On("Add", mock.Anything)
-	book.On("Sample", mock.Anything, mock.Anything).Return(sample)
-
-	peers := &PeerManagerMock{}
-	peers.On("Drop", mock.Anything).Return(nil)
-
-	// act
-	go handleProcessing(suite.log, &suite.wg, &suite.cfg, book, subscriber, address, input, output)
-	time.Sleep(time.Duration(2.5 * float64(suite.cfg.interval)))
-	close(input)
-	var msgs []interface{}
-	for msg := range output {
-		msgs = append(msgs, msg)
-	}
-	suite.wg.Wait()
-
-	// assert
-	t := suite.T()
-
-	if assert.Len(t, msgs, 3) {
-		assert.IsType(t, &Ping{}, msgs[1])
-		assert.IsType(t, &Ping{}, msgs[2])
-	}
-
-	peers.AssertNotCalled(t, "Drop", mock.Anything)
 }
 
 func (suite *ProcessorSuite) TestProcessorTimeout() {
@@ -137,9 +94,6 @@ func (suite *ProcessorSuite) TestProcessorTimeout() {
 	book.On("Add", mock.Anything)
 	book.On("Sample", mock.Anything, mock.Anything).Return(sample)
 
-	peers := &PeerManagerMock{}
-	peers.On("Drop", mock.Anything).Return(nil)
-
 	// act
 	go handleProcessing(suite.log, &suite.wg, &suite.cfg, book, subscriber, address, input, output)
 	time.Sleep(time.Duration(4.5 * float64(suite.cfg.interval)))
@@ -151,10 +105,6 @@ func (suite *ProcessorSuite) TestProcessorTimeout() {
 	suite.wg.Wait()
 
 	// assert
-	t := suite.T()
-
-	assert.Len(t, msgs, 4)
-	peers.AssertCalled(t, "Drop", address)
 }
 
 func (suite *ProcessorSuite) TestProcessorUnknownMessage() {
@@ -343,34 +293,4 @@ func (suite *ProcessorSuite) TestProcessorPong() {
 	suite.wg.Wait()
 
 	// assert
-}
-
-func (suite *ProcessorSuite) TestProcessorDropFails() {
-
-	// arrange
-	address := "192.0.2.100:1337"
-	sample := []string{"192.0.2.200:1337", "192.0.2.201:1337", "192.0.2.202:1337"}
-
-	input := make(chan interface{})
-	output := make(chan interface{}, 5)
-	subscriber := make(chan interface{}, 5)
-
-	book := &AddressManagerMock{}
-	book.On("Add", mock.Anything)
-	book.On("Sample", mock.Anything, mock.Anything).Return(sample)
-
-	// act
-	go handleProcessing(suite.log, &suite.wg, &suite.cfg, book, subscriber, address, input, output)
-	time.Sleep(time.Duration(4.5 * float64(suite.cfg.interval)))
-	close(input)
-	var msgs []interface{}
-	for msg := range output {
-		msgs = append(msgs, msg)
-	}
-	suite.wg.Wait()
-
-	// assert
-	t := suite.T()
-
-	assert.Len(t, msgs, 4)
 }

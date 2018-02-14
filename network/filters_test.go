@@ -100,7 +100,7 @@ func TestIsLastBefore(t *testing.T) {
 	now := time.Now()
 
 	rep := &ReputationManagerMock{}
-	rep.On("Last", address).Return(now)
+	rep.On("Fail", address).Return(now)
 
 	vectors := map[string]struct {
 		cutoff   time.Time
