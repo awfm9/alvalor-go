@@ -54,10 +54,7 @@ func handleReceiving(log zerolog.Logger, wg *sync.WaitGroup, cfg *Config, rep re
 	}
 
 	// at this point, we should drop the peer, so that we don't risk sends on closed channels
-	err := peers.Drop(address)
-	if err != nil {
-		log.Error().Err(err).Msg("could not drop peer")
-	}
+	peers.Drop(address)
 
 	// once we had a closed network connection, we get here; cascade the shutdown to the processor
 	close(input)
