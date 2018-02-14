@@ -90,9 +90,10 @@ func TestPeerManagerDrop(t *testing.T) {
 	peers.reg[address] = p
 	err = peers.Drop(address)
 	assert.NotNil(t, err)
-	assert.Contains(t, peers.reg, address)
+	assert.Empty(t, peers.reg)
 
 	conn.On("Close").Return(nil)
+	peers.reg[address] = p
 	err = peers.Drop(address)
 	assert.Nil(t, err)
 	assert.Empty(t, peers.reg)
