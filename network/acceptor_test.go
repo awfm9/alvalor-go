@@ -69,8 +69,10 @@ func (suite *AcceptorSuite) TestAcceptorClaimFails() {
 
 	rep := &ReputationManagerMock{}
 
+	book := &AddressManagerMock{}
+
 	// act
-	handleAccepting(suite.log, &suite.wg, &suite.cfg, pending, peers, rep, conn)
+	handleAccepting(suite.log, &suite.wg, &suite.cfg, pending, peers, rep, book, conn)
 
 	// assert
 	pending.AssertCalled(suite.T(), "Claim", address)
@@ -101,8 +103,10 @@ func (suite *AcceptorSuite) TestAcceptorReadFails() {
 	rep := &ReputationManagerMock{}
 	rep.On("Error", address)
 
+	book := &AddressManagerMock{}
+
 	// act
-	handleAccepting(suite.log, &suite.wg, &suite.cfg, pending, peers, rep, conn)
+	handleAccepting(suite.log, &suite.wg, &suite.cfg, pending, peers, rep, book, conn)
 
 	// assert
 	pending.AssertCalled(suite.T(), "Claim", address)
@@ -137,8 +141,10 @@ func (suite *AcceptorSuite) TestAcceptorNetworkMismatch() {
 	rep := &ReputationManagerMock{}
 	rep.On("Invalid", address)
 
+	book := &AddressManagerMock{}
+
 	// act
-	handleAccepting(suite.log, &suite.wg, &suite.cfg, pending, peers, rep, conn)
+	handleAccepting(suite.log, &suite.wg, &suite.cfg, pending, peers, rep, book, conn)
 
 	// assert
 	pending.AssertCalled(suite.T(), "Claim", address)
@@ -173,8 +179,10 @@ func (suite *AcceptorSuite) TestAcceptorNonceIdentical() {
 	rep := &ReputationManagerMock{}
 	rep.On("Invalid", address)
 
+	book := &AddressManagerMock{}
+
 	// act
-	handleAccepting(suite.log, &suite.wg, &suite.cfg, pending, peers, rep, conn)
+	handleAccepting(suite.log, &suite.wg, &suite.cfg, pending, peers, rep, book, conn)
 
 	// assert
 	pending.AssertCalled(suite.T(), "Claim", address)
@@ -211,8 +219,10 @@ func (suite *AcceptorSuite) TestAcceptorWriteFails() {
 	rep := &ReputationManagerMock{}
 	rep.On("Error", address)
 
+	book := &AddressManagerMock{}
+
 	// act
-	handleAccepting(suite.log, &suite.wg, &suite.cfg, pending, peers, rep, conn)
+	handleAccepting(suite.log, &suite.wg, &suite.cfg, pending, peers, rep, book, conn)
 
 	// assert
 	pending.AssertCalled(suite.T(), "Claim", address)
@@ -252,8 +262,10 @@ func (suite *AcceptorSuite) TestAcceptorAddPeerFails() {
 	conn.On("Write", ack).Return(len(ack), nil)
 	conn.On("Close").Return(nil)
 
+	book := &AddressManagerMock{}
+
 	// act
-	handleAccepting(suite.log, &suite.wg, &suite.cfg, pending, peers, rep, conn)
+	handleAccepting(suite.log, &suite.wg, &suite.cfg, pending, peers, rep, book, conn)
 
 	// assert
 	pending.AssertCalled(suite.T(), "Claim", address)
@@ -291,8 +303,10 @@ func (suite *AcceptorSuite) TestAcceptorSuccess() {
 	rep := &ReputationManagerMock{}
 	rep.On("Success", address)
 
+	book := &AddressManagerMock{}
+
 	// act
-	handleAccepting(suite.log, &suite.wg, &suite.cfg, pending, peers, rep, conn)
+	handleAccepting(suite.log, &suite.wg, &suite.cfg, pending, peers, rep, book, conn)
 
 	// assert
 	pending.AssertCalled(suite.T(), "Claim", address)

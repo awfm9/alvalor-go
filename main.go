@@ -42,6 +42,7 @@ func main() {
 
 	// apply the command line parameters to configuration
 	pflag.Uint16Var(&cfg.Port, "port", 21517, "listen port for incoming connections")
+	pflag.Parse()
 
 	// seed the random generator
 	rand.Seed(time.Now().UnixNano())
@@ -56,7 +57,13 @@ func main() {
 	net := network.New(log, cod,
 		network.SetListen(cfg.Listen),
 		network.SetAddress(fmt.Sprintf("%v:%v", cfg.IP, cfg.Port)),
+		network.SetMinPeers(1),
 	)
+
+	// add the bootstrapping nodes
+	for _, address := range cfg.Bootstrap {
+		net.Add(address)
+	}
 
 	// wait for a stop signal to initialize shutdown
 	<-sig

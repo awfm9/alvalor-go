@@ -20,9 +20,7 @@ package network
 import "sync"
 
 type reputationManager interface {
-	Error(address string)
 	Failure(address string)
-	Invalid(address string)
 	Success(address string)
 	Score(address string) float32
 }
@@ -38,22 +36,10 @@ func newSimpleReputationManager() *simpleReputationManager {
 	}
 }
 
-func (rm *simpleReputationManager) Error(address string) {
-	rm.Lock()
-	defer rm.Unlock()
-	rm.scores[address]--
-}
-
 func (rm *simpleReputationManager) Failure(address string) {
 	rm.Lock()
 	defer rm.Unlock()
 	rm.scores[address]--
-}
-
-func (rm *simpleReputationManager) Invalid(address string) {
-	rm.Lock()
-	defer rm.Unlock()
-	rm.scores[address] = 0
 }
 
 func (rm *simpleReputationManager) Success(address string) {

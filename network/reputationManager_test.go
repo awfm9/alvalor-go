@@ -28,16 +28,6 @@ func TestNewReputationManager(t *testing.T) {
 	assert.NotNil(t, rep.scores)
 }
 
-func TestReputationManagerError(t *testing.T) {
-	score := float32(13)
-	address := "192.0.2.100:1337"
-	rep := simpleReputationManager{
-		scores: map[string]float32{address: score},
-	}
-	rep.Error(address)
-	assert.Equal(t, score-1, rep.scores[address])
-}
-
 func TestReputationManagerFailure(t *testing.T) {
 	score := float32(13)
 	address := "192.0.2.100:1337"
@@ -46,16 +36,6 @@ func TestReputationManagerFailure(t *testing.T) {
 	}
 	rep.Failure(address)
 	assert.Equal(t, score-1, rep.scores[address])
-}
-
-func TestReputationManagerInvalid(t *testing.T) {
-	score := float32(13)
-	address := "192.0.2.100:1337"
-	rep := simpleReputationManager{
-		scores: map[string]float32{address: score},
-	}
-	rep.Invalid(address)
-	assert.Equal(t, float32(0), rep.scores[address])
 }
 
 func TestReputationManagerSuccess(t *testing.T) {

@@ -47,11 +47,7 @@ func handleSending(log zerolog.Logger, wg *sync.WaitGroup, cfg *Config, peers pe
 		}
 		if err != nil {
 			log.Error().Err(err).Msg("could not write message")
-			rep.Error(address)
-			err = peers.Drop(address)
-			if err != nil {
-				log.Error().Err(err).Msg("could not drop peer")
-			}
+			rep.Failure(address)
 			continue
 		}
 	}

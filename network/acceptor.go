@@ -19,13 +19,14 @@ package network
 
 import (
 	"bytes"
+	"encoding/hex"
 	"net"
 	"sync"
 
 	"github.com/rs/zerolog"
 )
 
-func handleAccepting(log zerolog.Logger, wg *sync.WaitGroup, cfg *Config, pending pendingManager, peers peerManager, rep reputationManager, conn net.Conn) {
+func handleAccepting(log zerolog.Logger, wg *sync.WaitGroup, cfg *Config, pending pendingManager, peers peerManager, rep reputationManager, book addressManager, conn net.Conn) {
 
 	// synchronization, configuration & logging
 	defer wg.Done()
@@ -54,28 +55,28 @@ func handleAccepting(log zerolog.Logger, wg *sync.WaitGroup, cfg *Config, pendin
 	if err != nil {
 		log.Error().Err(err).Msg("could not read syn packet")
 		conn.Close()
-		rep.Error(address)
+		rep.Failure(address)
 		return
 	}
 	networkIn := syn[:len(network)]
 	if !bytes.Equal(networkIn, network) {
 		log.Error().Bytes("network", network).Bytes("network_in", networkIn).Msg("network mismatch")
 		conn.Close()
-		rep.Invalid(address)
+		book.Block(address)
 		return
 	}
 	nonceIn := syn[len(network):]
 	if bytes.Equal(nonceIn, nonce) {
-		log.Error().Bytes("nonce", nonce).Msg("identical nonce")
+		log.Error().Str("nonce", hex.EncodeToString(nonce)).Msg("identical nonce")
 		conn.Close()
-		rep.Invalid(address)
+		book.Block(address)
 		return
 	}
 	_, err = conn.Write(ack)
 	if err != nil {
 		log.Error().Err(err).Msg("could not write ack packet")
 		conn.Close()
-		rep.Error(address)
+		rep.Failure(address)
 		return
 	}
 

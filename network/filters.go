@@ -27,3 +27,9 @@ func isNot(addresses []string) func(string) bool {
 		return !ok
 	}
 }
+
+func isAbove(rep reputationManager, threshold float32) func(string) bool {
+	return func(address string) bool {
+		return rep.Score(address) > threshold
+	}
+}

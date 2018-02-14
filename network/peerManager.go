@@ -28,7 +28,7 @@ import (
 
 type peerManager interface {
 	Add(conn net.Conn, nonce []byte) error
-	Output(address string) (chan<- interface{}, error)
+	Send(address string, msg interface{}) error
 	Drop(address string) error
 	Count() uint
 	Known(nonce []byte) bool
@@ -91,14 +91,19 @@ func (pm *simplePeerManager) Add(conn net.Conn, nonce []byte) error {
 	return nil
 }
 
-func (pm *simplePeerManager) Output(address string) (chan<- interface{}, error) {
+func (pm *simplePeerManager) Send(address string, msg interface{}) error {
 	pm.Lock()
 	defer pm.Unlock()
 	p, ok := pm.reg[address]
 	if !ok {
-		return nil, errors.New("peer unknown")
+		return errors.New("peer unknown")
 	}
-	return p.output, nil
+	select {
+	case p.output <- msg:
+		return nil
+	default:
+		return errors.New("peer stalling")
+	}
 }
 
 func (pm *simplePeerManager) Drop(address string) error {

@@ -43,15 +43,15 @@ func handleReceiving(log zerolog.Logger, wg *sync.WaitGroup, cfg *Config, peers 
 		msg, err := codec.Decode(r)
 		if errors.Cause(err) == io.EOF || isClosedErr(err) {
 			log.Info().Msg("network connection closed")
-			break
-		}
-		if err != nil {
-			log.Error().Err(err).Msg("could not read message")
-			rep.Error(address)
 			err = peers.Drop(address)
 			if err != nil {
 				log.Error().Err(err).Msg("could not drop peer")
 			}
+			break
+		}
+		if err != nil {
+			log.Error().Err(err).Msg("could not read message")
+			rep.Failure(address)
 			continue
 		}
 		input <- msg

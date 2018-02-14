@@ -62,10 +62,12 @@ func (suite *ConnectorSuite) TestConnectorClaimFails() {
 
 	rep := &ReputationManagerMock{}
 
+	book := &AddressManagerMock{}
+
 	dialer := &DialManagerMock{}
 
 	// act
-	handleConnecting(suite.log, &suite.wg, &suite.cfg, pending, peers, rep, dialer, address)
+	handleConnecting(suite.log, &suite.wg, &suite.cfg, pending, peers, rep, book, dialer, address)
 
 	// assert
 	pending.AssertCalled(suite.T(), "Claim", address)
@@ -86,11 +88,13 @@ func (suite *ConnectorSuite) TestConnectorDialFails() {
 	pending.On("Claim", address).Return(nil)
 	pending.On("Release", address).Return(nil)
 
+	book := &AddressManagerMock{}
+
 	dialer := &DialManagerMock{}
 	dialer.On("Dial", address).Return(nil, errors.New("cannot dial address"))
 
 	// act
-	handleConnecting(suite.log, &suite.wg, &suite.cfg, pending, peers, rep, dialer, address)
+	handleConnecting(suite.log, &suite.wg, &suite.cfg, pending, peers, rep, book, dialer, address)
 
 	// assert
 	pending.AssertCalled(suite.T(), "Claim", address)
@@ -117,11 +121,13 @@ func (suite *ConnectorSuite) TestConnectorWriteFails() {
 	pending.On("Claim", address).Return(nil)
 	pending.On("Release", address).Return(nil)
 
+	book := &AddressManagerMock{}
+
 	dialer := &DialManagerMock{}
 	dialer.On("Dial", address).Return(conn, nil)
 
 	// act
-	handleConnecting(suite.log, &suite.wg, &suite.cfg, pending, peers, rep, dialer, address)
+	handleConnecting(suite.log, &suite.wg, &suite.cfg, pending, peers, rep, book, dialer, address)
 
 	// assert
 	pending.AssertCalled(suite.T(), "Claim", address)
@@ -151,11 +157,13 @@ func (suite *ConnectorSuite) TestConnectorReadFails() {
 	pending.On("Claim", address).Return(nil)
 	pending.On("Release", address).Return(nil)
 
+	book := &AddressManagerMock{}
+
 	dialer := &DialManagerMock{}
 	dialer.On("Dial", address).Return(conn, nil)
 
 	// act
-	handleConnecting(suite.log, &suite.wg, &suite.cfg, pending, peers, rep, dialer, address)
+	handleConnecting(suite.log, &suite.wg, &suite.cfg, pending, peers, rep, book, dialer, address)
 
 	// assert
 	pending.AssertCalled(suite.T(), "Claim", address)
@@ -188,11 +196,13 @@ func (suite *ConnectorSuite) TestConnectorNetworkMismatch() {
 	pending.On("Claim", address).Return(nil)
 	pending.On("Release", address).Return(nil)
 
+	book := &AddressManagerMock{}
+
 	dialer := &DialManagerMock{}
 	dialer.On("Dial", address).Return(conn, nil)
 
 	// act
-	handleConnecting(suite.log, &suite.wg, &suite.cfg, pending, peers, rep, dialer, address)
+	handleConnecting(suite.log, &suite.wg, &suite.cfg, pending, peers, rep, book, dialer, address)
 
 	// assert
 	pending.AssertCalled(suite.T(), "Claim", address)
@@ -225,11 +235,13 @@ func (suite *ConnectorSuite) TestConnectorNonceIdentical() {
 	pending.On("Claim", address).Return(nil)
 	pending.On("Release", address).Return(nil)
 
+	book := &AddressManagerMock{}
+
 	dialer := &DialManagerMock{}
 	dialer.On("Dial", address).Return(conn, nil)
 
 	// act
-	handleConnecting(suite.log, &suite.wg, &suite.cfg, pending, peers, rep, dialer, address)
+	handleConnecting(suite.log, &suite.wg, &suite.cfg, pending, peers, rep, book, dialer, address)
 
 	// assert
 	pending.AssertCalled(suite.T(), "Claim", address)
@@ -264,11 +276,13 @@ func (suite *ConnectorSuite) TestConnectorNonceKnown() {
 	pending.On("Claim", address).Return(nil)
 	pending.On("Release", address).Return(nil)
 
+	book := &AddressManagerMock{}
+
 	dialer := &DialManagerMock{}
 	dialer.On("Dial", address).Return(conn, nil)
 
 	// act
-	handleConnecting(suite.log, &suite.wg, &suite.cfg, pending, peers, rep, dialer, address)
+	handleConnecting(suite.log, &suite.wg, &suite.cfg, pending, peers, rep, book, dialer, address)
 
 	// assert
 	pending.AssertCalled(suite.T(), "Claim", address)
@@ -304,11 +318,13 @@ func (suite *ConnectorSuite) TestConnectorAddPeerFails() {
 	pending.On("Claim", address).Return(nil)
 	pending.On("Release", address).Return(nil)
 
+	book := &AddressManagerMock{}
+
 	dialer := &DialManagerMock{}
 	dialer.On("Dial", address).Return(conn, nil)
 
 	// act
-	handleConnecting(suite.log, &suite.wg, &suite.cfg, pending, peers, rep, dialer, address)
+	handleConnecting(suite.log, &suite.wg, &suite.cfg, pending, peers, rep, book, dialer, address)
 
 	// assert
 	pending.AssertCalled(suite.T(), "Claim", address)
@@ -343,11 +359,13 @@ func (suite *ConnectorSuite) TestConnectorSuccess() {
 	pending.On("Claim", address).Return(nil)
 	pending.On("Release", address).Return(nil)
 
+	book := &AddressManagerMock{}
+
 	dialer := &DialManagerMock{}
 	dialer.On("Dial", address).Return(conn, nil)
 
 	// act
-	handleConnecting(suite.log, &suite.wg, &suite.cfg, pending, peers, rep, dialer, address)
+	handleConnecting(suite.log, &suite.wg, &suite.cfg, pending, peers, rep, book, dialer, address)
 
 	// assert
 	pending.AssertCalled(suite.T(), "Claim", address)

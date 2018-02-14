@@ -25,7 +25,7 @@ import (
 	"github.com/rs/zerolog"
 )
 
-func handleDialing(log zerolog.Logger, wg *sync.WaitGroup, cfg *Config, peers peerManager, pending pendingManager, addresses addressManager, rep reputationManager, handlers handlerManager, stop <-chan struct{}) {
+func handleDialing(log zerolog.Logger, wg *sync.WaitGroup, cfg *Config, peers peerManager, pending pendingManager, book addressManager, rep reputationManager, handlers handlerManager, stop <-chan struct{}) {
 	defer wg.Done()
 
 	// extract needed configuration parameters
@@ -59,10 +59,11 @@ func handleDialing(log zerolog.Logger, wg *sync.WaitGroup, cfg *Config, peers pe
 		if peerCount+pendingCount >= maxPeers {
 			continue
 		}
-		sample := addresses.Sample(1,
+		sample := book.Sample(1,
 			isNot([]string{address}),
 			isNot(pending.Addresses()),
 			isNot(peers.Addresses()),
+			isAbove(rep, -5),
 			byReputation(rep),
 			byIPHash(sha256.New()),
 		)

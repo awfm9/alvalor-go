@@ -202,13 +202,9 @@ func (pm *PeerManagerMock) Add(conn net.Conn, nonce []byte) error {
 	return args.Error(0)
 }
 
-func (pm *PeerManagerMock) Output(address string) (chan<- interface{}, error) {
-	args := pm.Called(address)
-	var output chan interface{}
-	if args.Get(0) != nil {
-		output = args.Get(0).(chan interface{})
-	}
-	return output, args.Error(1)
+func (pm *PeerManagerMock) Send(address string, msg interface{}) error {
+	args := pm.Called(address, msg)
+	return args.Error(0)
 }
 
 func (pm *PeerManagerMock) Drop(address string) error {
