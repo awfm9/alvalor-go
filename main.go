@@ -58,6 +58,7 @@ func main() {
 		network.SetListen(cfg.Listen),
 		network.SetAddress(fmt.Sprintf("%v:%v", cfg.IP, cfg.Port)),
 		network.SetMinPeers(1),
+		network.SetMaxPeers(16),
 	)
 
 	// add the bootstrapping nodes
