@@ -337,3 +337,11 @@ func (am *AddressManagerMock) Sample(count uint, params ...interface{}) []string
 	}
 	return sample
 }
+
+type EventManagerMock struct {
+	mock.Mock
+}
+
+func (eventMgr *EventManagerMock) Disconnected(address string) {
+	_ = eventMgr.Called(address)
+}

@@ -150,7 +150,7 @@ func (net *simpleNetwork) Connector(address string) {
 }
 
 func (net *simpleNetwork) Sender(address string, output <-chan interface{}, w io.Writer) {
-	go handleSending(net.log, net.wg, net.cfg, net.peers, net.rep, address, output, w, net.subscriber)
+	go handleSending(net.log, net.wg, net.cfg, net.peers, net.rep, address, output, w, nil)
 }
 
 func (net *simpleNetwork) Processor(address string, input <-chan interface{}, output chan<- interface{}) {
