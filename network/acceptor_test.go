@@ -50,6 +50,54 @@ func (suite *AcceptorSuite) SetupTest() {
 	}
 }
 
+func (suite *AcceptorSuite) TestAcceptorSuccess() {
+
+	// arrange
+	address := "192.0.2.100:1337"
+	nonce := uuid.NewV4().Bytes()
+	syn := append(suite.cfg.network, nonce...)
+
+	addr := &AddrMock{}
+	addr.On("String").Return(address)
+
+	conn := &ConnMock{}
+	conn.On("RemoteAddr").Return(addr)
+	conn.On("Read", mock.Anything).Run(func(args mock.Arguments) {
+		copy(args.Get(0).([]byte), syn)
+	}).Return(0, nil)
+	conn.On("Write", mock.Anything).Return(0, nil)
+	conn.On("Close").Return(nil)
+
+	pending := &PendingManagerMock{}
+	pending.On("Claim", mock.Anything).Return(nil)
+	pending.On("Release", mock.Anything).Return(nil)
+
+	peers := &PeerManagerMock{}
+	peers.On("Add", mock.Anything, mock.Anything).Return(nil)
+
+	rep := &ReputationManagerMock{}
+	rep.On("Failure", mock.Anything)
+	rep.On("Success", mock.Anything)
+
+	book := &AddressManagerMock{}
+	book.On("Block", mock.Anything)
+
+	// act
+	handleAccepting(suite.log, &suite.wg, &suite.cfg, pending, peers, rep, book, conn)
+
+	// assert
+	t := suite.T()
+
+	pending.AssertCalled(t, "Claim", address)
+	pending.AssertCalled(t, "Release", address)
+	peers.AssertCalled(t, "Add", conn, nonce)
+	rep.AssertCalled(t, "Success", address)
+
+	conn.AssertNotCalled(t, "Close")
+	rep.AssertNotCalled(t, "Failure")
+	book.AssertNotCalled(t, "Block")
+}
+
 func (suite *AcceptorSuite) TestAcceptorClaimFails() {
 
 	// arrange
@@ -333,54 +381,6 @@ func (suite *AcceptorSuite) TestAcceptorAddPeerFails() {
 	conn.AssertCalled(t, "Close")
 
 	rep.AssertNotCalled(t, "Success")
-	rep.AssertNotCalled(t, "Failure")
-	book.AssertNotCalled(t, "Block")
-}
-
-func (suite *AcceptorSuite) TestAcceptorSuccess() {
-
-	// arrange
-	address := "192.0.2.100:1337"
-	nonce := uuid.NewV4().Bytes()
-	syn := append(suite.cfg.network, nonce...)
-
-	addr := &AddrMock{}
-	addr.On("String").Return(address)
-
-	conn := &ConnMock{}
-	conn.On("RemoteAddr").Return(addr)
-	conn.On("Read", mock.Anything).Run(func(args mock.Arguments) {
-		copy(args.Get(0).([]byte), syn)
-	}).Return(0, nil)
-	conn.On("Write", mock.Anything).Return(0, nil)
-	conn.On("Close").Return(nil)
-
-	pending := &PendingManagerMock{}
-	pending.On("Claim", mock.Anything).Return(nil)
-	pending.On("Release", mock.Anything).Return(nil)
-
-	peers := &PeerManagerMock{}
-	peers.On("Add", mock.Anything, mock.Anything).Return(nil)
-
-	rep := &ReputationManagerMock{}
-	rep.On("Failure", mock.Anything)
-	rep.On("Success", mock.Anything)
-
-	book := &AddressManagerMock{}
-	book.On("Block", mock.Anything)
-
-	// act
-	handleAccepting(suite.log, &suite.wg, &suite.cfg, pending, peers, rep, book, conn)
-
-	// assert
-	t := suite.T()
-
-	pending.AssertCalled(t, "Claim", address)
-	pending.AssertCalled(t, "Release", address)
-	peers.AssertCalled(t, "Add", conn, nonce)
-	rep.AssertCalled(t, "Success", address)
-
-	conn.AssertNotCalled(t, "Close")
 	rep.AssertNotCalled(t, "Failure")
 	book.AssertNotCalled(t, "Block")
 }
