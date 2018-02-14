@@ -33,7 +33,6 @@ func handleDialing(log zerolog.Logger, wg *sync.WaitGroup, cfg *Config, peers pe
 		address  = cfg.address
 		interval = cfg.interval
 		minPeers = cfg.minPeers
-		maxPeers = cfg.maxPeers
 	)
 
 	// configure logger and add start/stop messages
@@ -52,11 +51,7 @@ func handleDialing(log zerolog.Logger, wg *sync.WaitGroup, cfg *Config, peers pe
 		case <-ticker.C:
 		}
 		peerCount := peers.Count()
-		pendingCount := pending.Count()
 		if peerCount >= minPeers {
-			continue
-		}
-		if peerCount+pendingCount >= maxPeers {
 			continue
 		}
 		sample := book.Sample(1,

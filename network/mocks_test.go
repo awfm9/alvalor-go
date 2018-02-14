@@ -329,8 +329,7 @@ func (am *AddressManagerMock) Unpin(address string) {
 }
 
 func (am *AddressManagerMock) Sample(count uint, params ...interface{}) []string {
-	params = append([]interface{}{int(count)}, params...)
-	args := am.Called(params...)
+	args := am.Called(count, params)
 	var sample []string
 	if args.Get(0) != nil {
 		sample = args.Get(0).([]string)
