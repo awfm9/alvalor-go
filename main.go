@@ -18,12 +18,14 @@
 package main
 
 import (
+	"fmt"
 	"math/rand"
 	"os"
 	"os/signal"
 	"time"
 
 	"github.com/rs/zerolog"
+	"github.com/spf13/pflag"
 
 	"github.com/alvalor/alvalor-go/codec"
 	"github.com/alvalor/alvalor-go/network"
@@ -35,6 +37,12 @@ func main() {
 	sig := make(chan os.Signal)
 	signal.Notify(sig, os.Interrupt)
 
+	// initialize default configuration
+	cfg := DefaultConfig
+
+	// apply the command line parameters to configuration
+	pflag.Uint16Var(&cfg.Port, "port", 21517, "listen port for incoming connections")
+
 	// seed the random generator
 	rand.Seed(time.Now().UnixNano())
 
@@ -45,7 +53,10 @@ func main() {
 	cod := codec.NewProto()
 
 	// initialize the network component to create our p2p network node
-	net := network.New(log, cod)
+	net := network.New(log, cod,
+		network.SetListen(cfg.Listen),
+		network.SetAddress(fmt.Sprintf("%v:%v", cfg.IP, cfg.Port)),
+	)
 
 	// wait for a stop signal to initialize shutdown
 	<-sig
