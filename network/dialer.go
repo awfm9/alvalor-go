@@ -25,7 +25,7 @@ import (
 	"github.com/rs/zerolog"
 )
 
-func handleDialing(log zerolog.Logger, wg *sync.WaitGroup, cfg *Config, peers peerManager, pending pendingManager, addresses addressManager, rep reputationManager, handlers handlerManager, stop <-chan struct{}) {
+func handleDialing(log zerolog.Logger, wg *sync.WaitGroup, cfg *Config, peers peerManager, pending pendingManager, book addressManager, rep reputationManager, handlers handlerManager, stop <-chan struct{}) {
 	defer wg.Done()
 
 	// extract needed configuration parameters
@@ -33,7 +33,6 @@ func handleDialing(log zerolog.Logger, wg *sync.WaitGroup, cfg *Config, peers pe
 		address  = cfg.address
 		interval = cfg.interval
 		minPeers = cfg.minPeers
-		maxPeers = cfg.maxPeers
 	)
 
 	// configure logger and add start/stop messages
@@ -52,21 +51,20 @@ func handleDialing(log zerolog.Logger, wg *sync.WaitGroup, cfg *Config, peers pe
 		case <-ticker.C:
 		}
 		peerCount := peers.Count()
-		pendingCount := pending.Count()
 		if peerCount >= minPeers {
 			continue
 		}
-		if peerCount+pendingCount >= maxPeers {
-			continue
-		}
-		sample := addresses.Sample(1,
+		sample := book.Sample(1,
 			isNot([]string{address}),
 			isNot(pending.Addresses()),
 			isNot(peers.Addresses()),
-			byReputation(rep),
+			isScoreAbove(rep, -5),
+			isFailBefore(rep, time.Now().Add(-15*time.Minute)),
+			byScore(rep),
 			byIPHash(sha256.New()),
 		)
 		if len(sample) == 0 {
+			handlers.Discoverer()
 			log.Info().Msg("could not get address to connect")
 			continue
 		}

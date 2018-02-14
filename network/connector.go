@@ -19,13 +19,14 @@ package network
 
 import (
 	"bytes"
+	"encoding/hex"
 	"sync"
 	"time"
 
 	"github.com/rs/zerolog"
 )
 
-func handleConnecting(log zerolog.Logger, wg *sync.WaitGroup, cfg *Config, pending pendingManager, peers peerManager, rep reputationManager, dialer dialWrapper, address string, subscriber chan<- interface{}) {
+func handleConnecting(log zerolog.Logger, wg *sync.WaitGroup, cfg *Config, pending pendingManager, peers peerManager, rep reputationManager, book addressManager, dialer dialWrapper, address string) {
 	defer wg.Done()
 
 	// extract the variables from the config we are interested in
@@ -62,34 +63,34 @@ func handleConnecting(log zerolog.Logger, wg *sync.WaitGroup, cfg *Config, pendi
 	if err != nil {
 		log.Error().Err(err).Msg("could not write syn packet")
 		conn.Close()
-		rep.Error(address)
+		rep.Failure(address)
 		return
 	}
 	_, err = conn.Read(ack)
 	if err != nil {
 		log.Error().Err(err).Msg("could not read ack packet")
 		conn.Close()
-		rep.Error(address)
+		rep.Failure(address)
 		return
 	}
 	networkIn := ack[:len(network)]
 	if !bytes.Equal(networkIn, network) {
 		log.Error().Bytes("network", network).Bytes("network_in", networkIn).Msg("network mismatch")
 		conn.Close()
-		rep.Invalid(address)
+		book.Block(address)
 		return
 	}
 	nonceIn := ack[len(network):]
 	if bytes.Equal(nonceIn, nonce) {
-		log.Error().Bytes("nonce", nonce).Msg("identical nonce")
+		log.Error().Str("nonce", hex.EncodeToString(nonce)).Msg("identical nonce")
 		conn.Close()
-		rep.Invalid(address)
+		book.Block(address)
 		return
 	}
 	if peers.Known(nonceIn) {
-		log.Error().Bytes("nonce", nonce).Msg("nonce already known")
+		log.Error().Str("nonce", hex.EncodeToString(nonce)).Msg("nonce already known")
 		conn.Close()
-		rep.Invalid(address)
+		book.Block(address)
 		return
 	}
 

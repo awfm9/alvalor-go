@@ -41,11 +41,11 @@ func TestByRandom(t *testing.T) {
 	assert.True(t, mismatch, "By random sort always returns same result")
 }
 
-func TestByReputation(t *testing.T) {
+func TestByScore(t *testing.T) {
 	address1 := "192.0.2.100:1337"
 	address2 := "192.0.2.200:1337"
 	rep := newSimpleReputationManager()
-	sort := byReputation(rep)
+	sort := byScore(rep)
 	vectors := map[string]struct {
 		score1   float32
 		score2   float32

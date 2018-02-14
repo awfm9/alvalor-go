@@ -15,37 +15,24 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with Alvalor.  If not, see <http://www.gnu.org/licenses/>.
 
-package network
+package main
 
-import (
-	"bytes"
-	"hash"
-	"math/rand"
-	"net"
-)
+import "net"
 
-func byRandom() func(string, string) bool {
-	return func(string, string) bool {
-		return rand.Int()%2 == 0
-	}
+// DefaultConfig sets the default configuration parameters for our node.
+var DefaultConfig = Config{
+	Listen: true,
+	IP:     net.IPv4(127, 0, 0, 1),
+	Port:   21517,
+	Bootstrap: []string{
+		"127.0.0.1:21517",
+	},
 }
 
-func byScore(rep reputationManager) func(string, string) bool {
-	return func(address1 string, address2 string) bool {
-		return rep.Score(address1) > rep.Score(address2)
-	}
-}
-
-func byIPHash(h hash.Hash) func(string, string) bool {
-	return func(address1 string, address2 string) bool {
-		host1, _, _ := net.SplitHostPort(address1)
-		h.Reset()
-		_, _ = h.Write([]byte(host1))
-		hash1 := h.Sum(nil)
-		host2, _, _ := net.SplitHostPort(address2)
-		h.Reset()
-		_, _ = h.Write([]byte(host2))
-		hash2 := h.Sum(nil)
-		return bytes.Compare(hash1[:], hash2[:]) < 0
-	}
+// Config represents the configuration of the Alvalor node.
+type Config struct {
+	Listen    bool
+	IP        net.IP
+	Port      uint16
+	Bootstrap []string
 }

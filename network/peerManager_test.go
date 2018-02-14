@@ -90,9 +90,10 @@ func TestPeerManagerDrop(t *testing.T) {
 	peers.reg[address] = p
 	err = peers.Drop(address)
 	assert.NotNil(t, err)
-	assert.Contains(t, peers.reg, address)
+	assert.Empty(t, peers.reg)
 
 	conn.On("Close").Return(nil)
+	peers.reg[address] = p
 	err = peers.Drop(address)
 	assert.Nil(t, err)
 	assert.Empty(t, peers.reg)
@@ -137,4 +138,31 @@ func TestPeerManagerAddresses(t *testing.T) {
 	peers.reg[address2] = &peer{}
 	addresses = peers.Addresses()
 	assert.ElementsMatch(t, []string{address1, address2}, addresses)
+}
+
+func TestPeerManagerSend(t *testing.T) {
+
+	msg := "message"
+	address := "192.0.2.100:1337"
+
+	peers := &simplePeerManager{reg: make(map[string]*peer)}
+
+	err := peers.Send(address, msg)
+	assert.NotNil(t, err)
+
+	output := make(chan interface{}, 1)
+	p := &peer{output: output}
+	peers.reg[address] = p
+	err = peers.Send(address, msg)
+	assert.Nil(t, err)
+	select {
+	case received := <-output:
+		assert.Equal(t, msg, received)
+	default:
+		t.Error("no message in output channel")
+	}
+
+	peers.reg[address].output = nil
+	err = peers.Send(address, msg)
+	assert.NotNil(t, err)
 }

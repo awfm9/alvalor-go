@@ -24,14 +24,12 @@ import (
 	"github.com/rs/zerolog"
 )
 
-func handleProcessing(log zerolog.Logger, wg *sync.WaitGroup, cfg *Config, addresses addressManager, peers peerManager, subscriber chan<- interface{}, address string, input <-chan interface{}, output chan<- interface{}) {
+func handleProcessing(log zerolog.Logger, wg *sync.WaitGroup, cfg *Config, book addressManager, subscriber chan<- interface{}, address string, input <-chan interface{}, output chan<- interface{}) {
 	defer wg.Done()
 
 	// configuration parameters
 	var (
 		interval = cfg.interval
-		listen   = cfg.listen
-		laddress = cfg.address
 	)
 
 	// configure logger and add start/stop messages
@@ -39,21 +37,24 @@ func handleProcessing(log zerolog.Logger, wg *sync.WaitGroup, cfg *Config, addre
 	log.Info().Msg("processing routine started")
 	defer log.Info().Msg("processing routine stopped")
 
-	// for each message, handle it as adequate
-	timeout := time.NewTimer(time.Duration(3.5 * float64(interval)))
-	if listen {
-		output <- &Peers{Addresses: []string{laddress}}
-	}
+	// the timeout is set to the duration of three heartbeats plus a bit
+	timeout := time.Duration(3.5 * float64(interval))
+
+	// start with a discover so we get a picture of the network
 	output <- &Discover{}
+
+	// keep processing incoming messages & reply adequately
 Loop:
 	for {
 		select {
+
+		// if the cascade arrives (input is closed) we break the loop
 		case message, ok := <-input:
 			if !ok {
 				break Loop
 			}
-			timeout.Stop()
-			timeout = time.NewTimer(time.Duration(3.5 * float64(interval)))
+
+			// if we receive a message, we process it adequately depending on type
 			switch msg := message.(type) {
 			case *Ping:
 				log.Debug().Msg("ping received")
@@ -62,13 +63,15 @@ Loop:
 				log.Debug().Msg("pong received")
 			case *Discover:
 				log.Debug().Msg("discover received")
-				sample := addresses.Sample(8)
+				sample := book.Sample(8)
 				output <- &Peers{Addresses: sample}
 			case *Peers:
 				log.Debug().Msg("peer received")
 				for _, address := range msg.Addresses {
-					addresses.Add(address)
+					book.Add(address)
 				}
+
+			// custom messages should go to the subscriber, but we drop it if the subscriber is stalling
 			default:
 				log.Debug().Msg("custom received")
 				received := &Received{
@@ -78,25 +81,22 @@ Loop:
 				}
 				select {
 				case subscriber <- received:
-					// success
 				default:
 					log.Debug().Msg("subscriber stalling")
-					// no subscriber of subscriber stalling
 				}
 			}
-		case <-time.After(interval):
-			log.Debug().Msg("sending heartbeat")
-			output <- &Ping{}
-		case <-timeout.C:
-			log.Info().Msg("peer timed out, dropping")
-			err := peers.Drop(address)
-			if err != nil {
-				log.Error().Err(err).Msg("could not drop peer")
-			} else {
-				subscriber <- Disconnected{Address: address, Timestamp: time.Now()}
-			}
 
+		// if this case is triggered, we didn't receive a message in a while and we can drop the peer
+		case <-time.After(timeout):
+			log.Info().Msg("peer timed out")
+			break Loop
 		}
 	}
+
+	// once we are here, we want to wait for the cascade in case we broke due to timeout
+	for _ = range input {
+	}
+
+	// then we propagate the cascade to the sender
 	close(output)
 }

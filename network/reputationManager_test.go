@@ -19,6 +19,7 @@ package network
 
 import (
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -26,46 +27,27 @@ import (
 func TestNewReputationManager(t *testing.T) {
 	rep := newSimpleReputationManager()
 	assert.NotNil(t, rep.scores)
-}
-
-func TestReputationManagerError(t *testing.T) {
-	score := float32(13)
-	address := "192.0.2.100:1337"
-	rep := simpleReputationManager{
-		scores: map[string]float32{address: score},
-	}
-	rep.Error(address)
-	assert.Equal(t, score-1, rep.scores[address])
+	assert.NotNil(t, rep.fails)
 }
 
 func TestReputationManagerFailure(t *testing.T) {
-	score := float32(13)
 	address := "192.0.2.100:1337"
 	rep := simpleReputationManager{
-		scores: map[string]float32{address: score},
+		scores: make(map[string]float32),
+		fails:  make(map[string]time.Time),
 	}
 	rep.Failure(address)
-	assert.Equal(t, score-1, rep.scores[address])
-}
-
-func TestReputationManagerInvalid(t *testing.T) {
-	score := float32(13)
-	address := "192.0.2.100:1337"
-	rep := simpleReputationManager{
-		scores: map[string]float32{address: score},
-	}
-	rep.Invalid(address)
-	assert.Equal(t, float32(0), rep.scores[address])
+	assert.Equal(t, float32(-1), rep.scores[address])
+	assert.WithinDuration(t, time.Now(), rep.fails[address], time.Second)
 }
 
 func TestReputationManagerSuccess(t *testing.T) {
-	score := float32(13)
 	address := "192.0.2.100:1337"
 	rep := simpleReputationManager{
-		scores: map[string]float32{address: score},
+		scores: make(map[string]float32),
 	}
 	rep.Success(address)
-	assert.Equal(t, score+1, rep.scores[address])
+	assert.Equal(t, float32(1), rep.scores[address])
 }
 
 func TestReputationManagerScore(t *testing.T) {
@@ -75,4 +57,15 @@ func TestReputationManagerScore(t *testing.T) {
 		scores: map[string]float32{address: score},
 	}
 	assert.Equal(t, score, rep.Score(address))
+	assert.Equal(t, float32(0), rep.Score("whatever"))
+}
+
+func TestReputationManagerLast(t *testing.T) {
+	last := time.Now()
+	address := "192.0.2.100:1337"
+	rep := simpleReputationManager{
+		fails: map[string]time.Time{address: last},
+	}
+	assert.Equal(t, last, rep.Fail(address))
+	assert.Equal(t, time.Time{}, rep.Fail("whatever"))
 }

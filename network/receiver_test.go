@@ -27,6 +27,7 @@ import (
 
 	"github.com/rs/zerolog"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/suite"
 )
 
@@ -45,35 +46,7 @@ func (suite *ReceiverSuite) SetupTest() {
 	suite.cfg = Config{}
 }
 
-func (suite *ReceiverSuite) TestReceiverEOFError() {
-	// arrange
-	wg := sync.WaitGroup{}
-	wg.Add(1)
-
-	address := "192.0.2.100:1337"
-	input := make(chan interface{}, 16)
-	r := &bytes.Buffer{}
-
-	peers := &PeerManagerMock{}
-
-	rep := &ReputationManagerMock{}
-
-	codec := &CodecMock{}
-	codec.On("Decode", r).Return(nil, io.EOF)
-
-	subscriber := make(chan interface{}, 15)
-
-	// act
-	suite.cfg.codec = codec
-	go handleReceiving(suite.log, &wg, &suite.cfg, peers, rep, address, r, input, subscriber)
-	wg.Wait()
-
-	// assert
-	_, ok := <-input
-	assert.False(suite.T(), ok)
-}
-
-func (suite *ReceiverSuite) TestReceiverClosedError() {
+func (suite *ReceiverSuite) TestReceiverSuccess() {
 
 	// arrange
 	wg := sync.WaitGroup{}
@@ -83,39 +56,8 @@ func (suite *ReceiverSuite) TestReceiverClosedError() {
 	input := make(chan interface{}, 16)
 	r := &bytes.Buffer{}
 
-	peers := &PeerManagerMock{}
-
 	rep := &ReputationManagerMock{}
-
-	codec := &CodecMock{}
-	codec.On("Decode", r).Return(nil, errors.New("use of closed network connection"))
-	subscriber := make(chan interface{}, 15)
-
-	// act
-	suite.cfg.codec = codec
-	go handleReceiving(suite.log, &wg, &suite.cfg, peers, rep, address, r, input, subscriber)
-	wg.Wait()
-
-	// assert
-	_, ok := <-input
-	assert.False(suite.T(), ok)
-	event := <-subscriber
-	disconnected := event.(Disconnected)
-	assert.Equal(suite.T(), address, disconnected.Address)
-}
-
-func (suite *ReceiverSuite) TestReceiverReceiveMessages() {
-
-	// arrange
-	wg := sync.WaitGroup{}
-	wg.Add(1)
-	address := "192.0.2.100:1337"
-	input := make(chan interface{}, 16)
-	r := &bytes.Buffer{}
-
-	peers := &PeerManagerMock{}
-
-	rep := &ReputationManagerMock{}
+	rep.On("Failure", mock.Anything)
 
 	codec := &CodecMock{}
 	codec.On("Decode", r).Return(&Ping{}, nil).Once()
@@ -124,44 +66,80 @@ func (suite *ReceiverSuite) TestReceiverReceiveMessages() {
 	codec.On("Decode", r).Return(&Peers{}, nil).Once()
 	codec.On("Decode", r).Return(nil, io.EOF)
 
-	subscriber := make(chan interface{}, 15)
+	peers := &PeerManagerMock{}
+	peers.On("Drop", mock.Anything).Return(nil)
 
 	// act
 	suite.cfg.codec = codec
-	go handleReceiving(suite.log, &wg, &suite.cfg, peers, rep, address, r, input, subscriber)
+	go handleReceiving(suite.log, &suite.wg, &suite.cfg, rep, peers, address, r, input)
 	var msgs []interface{}
 	for msg := range input {
 		msgs = append(msgs, msg)
 	}
-	wg.Wait()
+	suite.wg.Wait()
 
 	// assert
-	if assert.Len(suite.T(), msgs, 4) {
-		assert.IsType(suite.T(), &Ping{}, msgs[0])
-		assert.IsType(suite.T(), &Pong{}, msgs[1])
-		assert.IsType(suite.T(), &Discover{}, msgs[2])
-		assert.IsType(suite.T(), &Peers{}, msgs[3])
+	t := suite.T()
+
+	if assert.Len(t, msgs, 4) {
+		assert.IsType(t, &Ping{}, msgs[0])
+		assert.IsType(t, &Pong{}, msgs[1])
+		assert.IsType(t, &Discover{}, msgs[2])
+		assert.IsType(t, &Peers{}, msgs[3])
 	}
-	event := <-subscriber
-	disconnected := event.(Received)
-	assert.Equal(suite.T(), address, disconnected.Address)
+
+	peers.AssertCalled(t, "Drop", address)
+
+	rep.AssertNotCalled(t, "Failure", mock.Anything)
 }
 
-func (suite *ReceiverSuite) TestReceiverDecodeFails() {
+func (suite *ReceiverSuite) TestReceiverEOF() {
 
 	// arrange
 	wg := sync.WaitGroup{}
 	wg.Add(1)
 	address := "192.0.2.100:1337"
-	message := "some message"
 	input := make(chan interface{}, 16)
 	r := &bytes.Buffer{}
 
+	rep := &ReputationManagerMock{}
+	rep.On("Failure", mock.Anything)
+
+	codec := &CodecMock{}
+	codec.On("Decode", r).Return(nil, io.EOF)
+
 	peers := &PeerManagerMock{}
-	peers.On("Drop", address).Return(errors.New("dropping failed"))
+	peers.On("Drop", mock.Anything).Return(nil)
+
+	// act
+	suite.cfg.codec = codec
+	go handleReceiving(suite.log, &suite.wg, &suite.cfg, rep, peers, address, r, input)
+	suite.wg.Wait()
+
+	// assert
+	t := suite.T()
+
+	_, ok := <-input
+	assert.False(t, ok)
+
+	peers.AssertCalled(t, "Drop", address)
+
+	rep.AssertNotCalled(t, "Failure", mock.Anything)
+}
+
+func (suite *ReceiverSuite) TestReceiverError() {
+
+	// arrange
+	wg := sync.WaitGroup{}
+	wg.Add(1)
+	address := "192.0.2.100:1337"
+	input := make(chan interface{}, 16)
+	r := &bytes.Buffer{}
+
+	message := "message"
 
 	rep := &ReputationManagerMock{}
-	rep.On("Error", address)
+	rep.On("Failure", mock.Anything)
 
 	codec := &CodecMock{}
 	codec.On("Decode", r).Return(nil, errors.New("could not encode message")).Once()
@@ -169,9 +147,12 @@ func (suite *ReceiverSuite) TestReceiverDecodeFails() {
 	codec.On("Decode", r).Return(nil, io.EOF)
 	subscriber := make(chan interface{}, 15)
 
+	peers := &PeerManagerMock{}
+	peers.On("Drop", mock.Anything).Return(nil)
+
 	// act
 	suite.cfg.codec = codec
-	go handleReceiving(suite.log, &wg, &suite.cfg, peers, rep, address, r, input, subscriber)
+	go handleReceiving(suite.log, &suite.wg, &suite.cfg, rep, peers, address, r, input)
 	var msgs []interface{}
 	for msg := range input {
 		msgs = append(msgs, msg)
@@ -179,9 +160,12 @@ func (suite *ReceiverSuite) TestReceiverDecodeFails() {
 	wg.Wait()
 
 	// assert
-	rep.AssertCalled(suite.T(), "Error", address)
-	peers.AssertCalled(suite.T(), "Drop", address)
-	if assert.Len(suite.T(), msgs, 1) {
-		assert.Equal(suite.T(), message, msgs[0])
+	t := suite.T()
+
+	if assert.Len(t, msgs, 1) {
+		assert.Equal(t, message, msgs[0])
 	}
+
+	rep.AssertCalled(t, "Failure", address)
+	peers.AssertCalled(t, "Drop", address)
 }

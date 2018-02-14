@@ -17,43 +17,36 @@
 
 package network
 
-import "sync"
+import (
+	"sync"
+	"time"
+)
 
 type reputationManager interface {
-	Error(address string)
 	Failure(address string)
-	Invalid(address string)
 	Success(address string)
 	Score(address string) float32
+	Fail(address string) time.Time
 }
 
 type simpleReputationManager struct {
 	sync.Mutex
 	scores map[string]float32
+	fails  map[string]time.Time
 }
 
 func newSimpleReputationManager() *simpleReputationManager {
 	return &simpleReputationManager{
 		scores: make(map[string]float32),
+		fails:  make(map[string]time.Time),
 	}
-}
-
-func (rm *simpleReputationManager) Error(address string) {
-	rm.Lock()
-	defer rm.Unlock()
-	rm.scores[address]--
 }
 
 func (rm *simpleReputationManager) Failure(address string) {
 	rm.Lock()
 	defer rm.Unlock()
 	rm.scores[address]--
-}
-
-func (rm *simpleReputationManager) Invalid(address string) {
-	rm.Lock()
-	defer rm.Unlock()
-	rm.scores[address] = 0
+	rm.fails[address] = time.Now()
 }
 
 func (rm *simpleReputationManager) Success(address string) {
@@ -66,4 +59,10 @@ func (rm *simpleReputationManager) Score(address string) float32 {
 	rm.Lock()
 	defer rm.Unlock()
 	return rm.scores[address]
+}
+
+func (rm *simpleReputationManager) Fail(address string) time.Time {
+	rm.Lock()
+	defer rm.Unlock()
+	return rm.fails[address]
 }

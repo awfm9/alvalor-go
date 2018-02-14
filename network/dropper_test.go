@@ -25,7 +25,7 @@ import (
 	"time"
 
 	"github.com/rs/zerolog"
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/suite"
 )
 
@@ -45,7 +45,7 @@ func (suite *DropperSuite) SetupTest() {
 	suite.wg = sync.WaitGroup{}
 	suite.wg.Add(1)
 	suite.cfg = Config{
-		interval: 10 * time.Millisecond,
+		interval: 2 * time.Millisecond,
 		maxPeers: 15,
 	}
 }
@@ -64,16 +64,15 @@ func (suite *DropperSuite) TestDropperSuccess() {
 	subscriber := make(chan interface{}, 15)
 
 	// act
-	go handleDropping(suite.log, &suite.wg, &suite.cfg, peers, stop, subscriber)
-	time.Sleep(50 * time.Millisecond)
+	go handleDropping(suite.log, &suite.wg, &suite.cfg, peers, stop)
+	time.Sleep(time.Duration(1.5 * float64(suite.cfg.interval)))
 	close(stop)
 	suite.wg.Wait()
 
 	// assert
-	peers.AssertCalled(suite.T(), "Drop", address)
-	event := <-subscriber
-	disconnected := event.(Disconnected)
-	assert.Equal(suite.T(), address, disconnected.Address)
+	t := suite.T()
+
+	peers.AssertCalled(t, "Drop", address)
 }
 
 func (suite *DropperSuite) TestDropperValidPeerNumber() {
@@ -89,13 +88,15 @@ func (suite *DropperSuite) TestDropperValidPeerNumber() {
 	subscriber := make(chan interface{}, 15)
 
 	// act
-	go handleDropping(suite.log, &suite.wg, &suite.cfg, peers, stop, subscriber)
-	time.Sleep(50 * time.Millisecond)
+	go handleDropping(suite.log, &suite.wg, &suite.cfg, peers, stop)
+	time.Sleep(time.Duration(1.5 * float64(suite.cfg.interval)))
 	close(stop)
 	suite.wg.Wait()
 
 	// assert
-	peers.AssertNotCalled(suite.T(), "Drop")
+	t := suite.T()
+
+	peers.AssertNotCalled(t, "Drop", mock.Anything)
 }
 
 func (suite *DropperSuite) TestDropperDropFails() {
@@ -111,12 +112,14 @@ func (suite *DropperSuite) TestDropperDropFails() {
 	subscriber := make(chan interface{}, 15)
 
 	// act
-	go handleDropping(suite.log, &suite.wg, &suite.cfg, peers, stop, subscriber)
-	time.Sleep(25 * time.Millisecond)
+	go handleDropping(suite.log, &suite.wg, &suite.cfg, peers, stop)
+	time.Sleep(time.Duration(2.5 * float64(suite.cfg.interval)))
 	close(stop)
 	suite.wg.Wait()
 
 	// assert
-	peers.AssertCalled(suite.T(), "Drop", address)
-	peers.AssertNumberOfCalls(suite.T(), "Drop", 2)
+	t := suite.T()
+
+	peers.AssertCalled(t, "Drop", address)
+	peers.AssertNumberOfCalls(t, "Drop", 2)
 }

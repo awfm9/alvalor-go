@@ -70,7 +70,9 @@ func (suite *ListenerSuite) TestListenerSuccess() {
 	suite.wg.Wait()
 
 	// assert
-	handlers.AssertCalled(suite.T(), "Acceptor", conn)
+	t := suite.T()
+
+	handlers.AssertCalled(t, "Acceptor", conn)
 }
 
 func (suite *ListenerSuite) TestListenerListeningFails() {
@@ -82,16 +84,20 @@ func (suite *ListenerSuite) TestListenerListeningFails() {
 	listener.On("Listen", suite.cfg.address).Return(ln, errors.New("could not listen"))
 
 	handlers := &HandlerManagerMock{}
+	handlers.On("Acceptor", mock.Anything)
 
 	// act
 	go handleListening(suite.log, &suite.wg, &suite.cfg, handlers, listener, nil)
 	suite.wg.Wait()
 
 	// assert
-	listener.AssertCalled(suite.T(), "Listen", suite.cfg.address)
-	ln.AssertNotCalled(suite.T(), "Accept")
-	ln.AssertNotCalled(suite.T(), "Close")
-	handlers.AssertNotCalled(suite.T(), "Acceptor")
+	t := suite.T()
+
+	listener.AssertCalled(t, "Listen", suite.cfg.address)
+
+	ln.AssertNotCalled(t, "Accept")
+	ln.AssertNotCalled(t, "Close")
+	handlers.AssertNotCalled(t, "Acceptor", mock.Anything)
 }
 
 func (suite *ListenerSuite) TestListenerAcceptFails() {
@@ -112,7 +118,9 @@ func (suite *ListenerSuite) TestListenerAcceptFails() {
 	suite.wg.Wait()
 
 	// assert
-	handlers.AssertNotCalled(suite.T(), "Acceptor")
+	t := suite.T()
+
+	handlers.AssertNotCalled(t, "Acceptor", mock.Anything)
 }
 
 func (suite *ListenerSuite) TestListenerShutdown() {
@@ -134,7 +142,9 @@ func (suite *ListenerSuite) TestListenerShutdown() {
 	suite.wg.Wait()
 
 	// assert
-	ln.AssertCalled(suite.T(), "Close")
+	t := suite.T()
+
+	ln.AssertCalled(t, "Close")
 }
 
 func (suite *ListenerSuite) TestListenerTimeout() {
@@ -164,8 +174,10 @@ func (suite *ListenerSuite) TestListenerTimeout() {
 	suite.wg.Wait()
 
 	// assert
-	ln.AssertCalled(suite.T(), "Accept")
-	handlers.AssertCalled(suite.T(), "Acceptor", conn)
+	t := suite.T()
+
+	ln.AssertCalled(t, "Accept")
+	handlers.AssertCalled(t, "Acceptor", conn)
 }
 
 func (suite *ListenerSuite) TestListenerCloseFails() {
@@ -190,5 +202,7 @@ func (suite *ListenerSuite) TestListenerCloseFails() {
 	suite.wg.Wait()
 
 	// assert
-	ln.AssertCalled(suite.T(), "Close")
+	t := suite.T()
+
+	ln.AssertCalled(t, "Close")
 }

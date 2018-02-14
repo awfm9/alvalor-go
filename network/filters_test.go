@@ -19,6 +19,7 @@ package network
 
 import (
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -58,5 +59,70 @@ func TestIsNot(t *testing.T) {
 	for name, vector := range vectors {
 		actual := vector.filter(vector.entry)
 		assert.Equalf(t, vector.expected, actual, "Is not filter wrong result for %v", name)
+	}
+}
+
+func TestIsScoreAbove(t *testing.T) {
+
+	address := "192.0.1.100:1337"
+
+	rep := &ReputationManagerMock{}
+	rep.On("Score", address).Return(float64(10))
+
+	vectors := map[string]struct {
+		threshold float32
+		expected  bool
+	}{
+		"above": {
+			threshold: 9,
+			expected:  true,
+		},
+		"equal": {
+			threshold: 10,
+			expected:  false,
+		},
+		"below": {
+			threshold: 11,
+			expected:  false,
+		},
+	}
+
+	for name, vector := range vectors {
+		filter := isScoreAbove(rep, vector.threshold)
+		actual := filter(address)
+		assert.Equalf(t, vector.expected, actual, "Is score above wrong result for %v", name)
+	}
+}
+
+func TestIsLastBefore(t *testing.T) {
+
+	address := "192.0.1.100:1337"
+	now := time.Now()
+
+	rep := &ReputationManagerMock{}
+	rep.On("Fail", address).Return(now)
+
+	vectors := map[string]struct {
+		cutoff   time.Time
+		expected bool
+	}{
+		"before": {
+			cutoff:   now.Add(time.Second),
+			expected: true,
+		},
+		"equal": {
+			cutoff:   now,
+			expected: false,
+		},
+		"after": {
+			cutoff:   now.Add(-time.Second),
+			expected: false,
+		},
+	}
+
+	for name, vector := range vectors {
+		filter := isFailBefore(rep, vector.cutoff)
+		actual := filter(address)
+		assert.Equalf(t, vector.expected, actual, "Is score above wrong result for %v", name)
 	}
 }
