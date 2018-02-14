@@ -26,19 +26,19 @@ type reputationManager interface {
 	Failure(address string)
 	Success(address string)
 	Score(address string) float32
-	Last(address string) time.Time
+	Fail(address string) time.Time
 }
 
 type simpleReputationManager struct {
 	sync.Mutex
 	scores map[string]float32
-	lasts  map[string]time.Time
+	fails  map[string]time.Time
 }
 
 func newSimpleReputationManager() *simpleReputationManager {
 	return &simpleReputationManager{
 		scores: make(map[string]float32),
-		lasts:  make(map[string]time.Time),
+		fails:  make(map[string]time.Time),
 	}
 }
 
@@ -46,14 +46,13 @@ func (rm *simpleReputationManager) Failure(address string) {
 	rm.Lock()
 	defer rm.Unlock()
 	rm.scores[address]--
-	rm.lasts[address] = time.Now()
+	rm.fails[address] = time.Now()
 }
 
 func (rm *simpleReputationManager) Success(address string) {
 	rm.Lock()
 	defer rm.Unlock()
 	rm.scores[address]++
-	rm.lasts[address] = time.Now()
 }
 
 func (rm *simpleReputationManager) Score(address string) float32 {
@@ -62,8 +61,8 @@ func (rm *simpleReputationManager) Score(address string) float32 {
 	return rm.scores[address]
 }
 
-func (rm *simpleReputationManager) Last(address string) time.Time {
+func (rm *simpleReputationManager) Fail(address string) time.Time {
 	rm.Lock()
 	defer rm.Unlock()
-	return rm.lasts[address]
+	return rm.fails[address]
 }

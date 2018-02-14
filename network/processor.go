@@ -37,18 +37,24 @@ func handleProcessing(log zerolog.Logger, wg *sync.WaitGroup, cfg *Config, book 
 	log.Info().Msg("processing routine started")
 	defer log.Info().Msg("processing routine stopped")
 
-	// for each message, handle it as adequate
-	timeout := time.NewTimer(time.Duration(3.5 * float64(interval)))
+	// the timeout is set to the duration of three heartbeats plus a bit
+	timeout := time.Duration(3.5 * float64(interval))
+
+	// start with a discover so we get a picture of the network
 	output <- &Discover{}
+
+	// keep processing incoming messages & reply adequately
 Loop:
 	for {
 		select {
+
+		// if the cascade arrives (input is closed) we break the loop
 		case message, ok := <-input:
 			if !ok {
 				break Loop
 			}
-			timeout.Stop()
-			timeout = time.NewTimer(time.Duration(3.5 * float64(interval)))
+
+			// if we receive a message, we process it adequately depending on type
 			switch msg := message.(type) {
 			case *Ping:
 				log.Debug().Msg("ping received")
@@ -64,6 +70,8 @@ Loop:
 				for _, address := range msg.Addresses {
 					book.Add(address)
 				}
+
+			// custom messages should go to the subscriber, but we drop it if the subscriber is stalling
 			default:
 				log.Debug().Msg("custom received")
 				received := &Received{
@@ -73,16 +81,13 @@ Loop:
 				}
 				select {
 				case subscriber <- received:
-					// success
 				default:
 					log.Debug().Msg("subscriber stalling")
-					// no subscriber or subscriber stalling
 				}
 			}
-		case <-time.After(interval):
-			log.Debug().Msg("sending heartbeat")
-			output <- &Ping{}
-		case <-timeout.C:
+
+		// if this case is triggered, we didn't receive a message in a while and we can drop the peer
+		case <-time.After(timeout):
 			log.Info().Msg("peer timed out")
 			err := peers.Drop(address)
 			if err != nil {
@@ -91,7 +96,11 @@ Loop:
 			break Loop
 		}
 	}
+
+	// once we are here, we want to wait for the cascade in case we broke due to timeout
 	for _ = range input {
 	}
+
+	// then we propagate the cascade to the sender
 	close(output)
 }

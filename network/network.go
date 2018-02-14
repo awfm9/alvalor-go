@@ -94,7 +94,6 @@ func New(log zerolog.Logger, codec Codec, options ...func(*Config)) Network {
 
 	// initialize the address manager that handles outgoing addresses
 	book := newSimpleAddressManager()
-	book.Block(cfg.address)
 	net.book = book
 
 	// initialize the slots manager that handles connection slots

@@ -248,7 +248,7 @@ func (rm *ReputationManagerMock) Score(address string) float32 {
 	return float32(args.Get(0).(float64))
 }
 
-func (rm *ReputationManagerMock) Last(address string) time.Time {
+func (rm *ReputationManagerMock) Fail(address string) time.Time {
 	args := rm.Called(address)
 	return args.Get(0).(time.Time)
 }
@@ -314,14 +314,6 @@ func (am *AddressManagerMock) Block(address string) {
 }
 
 func (am *AddressManagerMock) Unblock(address string) {
-	_ = am.Called(address)
-}
-
-func (am *AddressManagerMock) Pin(address string) {
-	_ = am.Called(address)
-}
-
-func (am *AddressManagerMock) Unpin(address string) {
 	_ = am.Called(address)
 }
 

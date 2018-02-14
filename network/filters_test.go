@@ -121,7 +121,7 @@ func TestIsLastBefore(t *testing.T) {
 	}
 
 	for name, vector := range vectors {
-		filter := isLastBefore(rep, vector.cutoff)
+		filter := isFailBefore(rep, vector.cutoff)
 		actual := filter(address)
 		assert.Equalf(t, vector.expected, actual, "Is score above wrong result for %v", name)
 	}

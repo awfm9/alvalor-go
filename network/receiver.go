@@ -38,7 +38,7 @@ func handleReceiving(log zerolog.Logger, wg *sync.WaitGroup, cfg *Config, rep re
 	log.Info().Msg("receiving routine started")
 	defer log.Info().Msg("receiving routine stopped")
 
-	// read all messages from connetion and forward on channel
+	// read all messages from connection and forward on input channel; break if connection closed, notify other errors
 	for {
 		msg, err := codec.Decode(r)
 		if errors.Cause(err) == io.EOF || isClosedErr(err) {
@@ -52,5 +52,7 @@ func handleReceiving(log zerolog.Logger, wg *sync.WaitGroup, cfg *Config, rep re
 		}
 		input <- msg
 	}
+
+	// once we had a closed network connection, we get here; cascade the shutdown to the processor
 	close(input)
 }

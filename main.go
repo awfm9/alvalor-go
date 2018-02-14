@@ -48,7 +48,11 @@ func main() {
 	rand.Seed(time.Now().UnixNano())
 
 	// initialize the logger to standard error as output
-	log := zerolog.New(os.Stderr)
+	zerolog.TimestampFieldName = "timestamp"
+	zerolog.LevelFieldName = "level"
+	zerolog.MessageFieldName = "message"
+	zerolog.TimestampFunc = time.Now().UTC
+	log := zerolog.New(os.Stderr).With().Timestamp().Logger().Level(zerolog.InfoLevel)
 
 	// use our efficient capnproto codec for network communication
 	cod := codec.NewProto()
