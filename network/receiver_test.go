@@ -66,9 +66,11 @@ func (suite *ReceiverSuite) TestReceiverSuccess() {
 	codec.On("Decode", r).Return(&Peers{}, nil).Once()
 	codec.On("Decode", r).Return(nil, io.EOF)
 
+	peers := &PeerManagerMock{}
+
 	// act
 	suite.cfg.codec = codec
-	go handleReceiving(suite.log, &suite.wg, &suite.cfg, rep, address, r, input)
+	go handleReceiving(suite.log, &suite.wg, &suite.cfg, rep, peers, address, r, input)
 	var msgs []interface{}
 	for msg := range input {
 		msgs = append(msgs, msg)
@@ -101,9 +103,11 @@ func (suite *ReceiverSuite) TestReceiverEOF() {
 	codec := &CodecMock{}
 	codec.On("Decode", r).Return(nil, io.EOF)
 
+	peers := &PeerManagerMock{}
+
 	// act
 	suite.cfg.codec = codec
-	go handleReceiving(suite.log, &suite.wg, &suite.cfg, rep, address, r, input)
+	go handleReceiving(suite.log, &suite.wg, &suite.cfg, rep, peers, address, r, input)
 	suite.wg.Wait()
 
 	// assert
@@ -132,9 +136,11 @@ func (suite *ReceiverSuite) TestReceiverError() {
 	codec.On("Decode", r).Return(message, nil).Once()
 	codec.On("Decode", r).Return(nil, io.EOF)
 
+	peers := &PeerManagerMock{}
+
 	// act
 	suite.cfg.codec = codec
-	go handleReceiving(suite.log, &suite.wg, &suite.cfg, rep, address, r, input)
+	go handleReceiving(suite.log, &suite.wg, &suite.cfg, rep, peers, address, r, input)
 	var msgs []interface{}
 	for msg := range input {
 		msgs = append(msgs, msg)

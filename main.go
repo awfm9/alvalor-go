@@ -62,7 +62,7 @@ func main() {
 	net := network.New(log, cod,
 		network.SetListen(cfg.Listen),
 		network.SetAddress(address),
-		network.SetMinPeers(1),
+		network.SetMinPeers(4),
 		network.SetMaxPeers(16),
 	)
 

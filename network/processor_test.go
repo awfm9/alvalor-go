@@ -18,7 +18,6 @@
 package network
 
 import (
-	"errors"
 	"io/ioutil"
 	"sync"
 	"testing"
@@ -68,7 +67,7 @@ func (suite *ProcessorSuite) TestProcessorSuccess() {
 	peers.On("Drop", mock.Anything).Return(nil)
 
 	// act
-	go handleProcessing(suite.log, &suite.wg, &suite.cfg, book, peers, subscriber, address, input, output)
+	go handleProcessing(suite.log, &suite.wg, &suite.cfg, book, subscriber, address, input, output)
 	close(input)
 	suite.wg.Wait()
 	var msgs []interface{}
@@ -104,7 +103,7 @@ func (suite *ProcessorSuite) TestProcessorHeartbeat() {
 	peers.On("Drop", mock.Anything).Return(nil)
 
 	// act
-	go handleProcessing(suite.log, &suite.wg, &suite.cfg, book, peers, subscriber, address, input, output)
+	go handleProcessing(suite.log, &suite.wg, &suite.cfg, book, subscriber, address, input, output)
 	time.Sleep(time.Duration(2.5 * float64(suite.cfg.interval)))
 	close(input)
 	var msgs []interface{}
@@ -142,7 +141,7 @@ func (suite *ProcessorSuite) TestProcessorTimeout() {
 	peers.On("Drop", mock.Anything).Return(nil)
 
 	// act
-	go handleProcessing(suite.log, &suite.wg, &suite.cfg, book, peers, subscriber, address, input, output)
+	go handleProcessing(suite.log, &suite.wg, &suite.cfg, book, subscriber, address, input, output)
 	time.Sleep(time.Duration(4.5 * float64(suite.cfg.interval)))
 	close(input)
 	var msgs []interface{}
@@ -183,11 +182,8 @@ func (suite *ProcessorSuite) TestProcessorUnknownMessage() {
 	book.On("Add", mock.Anything)
 	book.On("Sample", mock.Anything, mock.Anything).Return(sample)
 
-	peers := &PeerManagerMock{}
-	peers.On("Drop", mock.Anything).Return(nil)
-
 	// act
-	go handleProcessing(suite.log, &suite.wg, &suite.cfg, book, peers, subscriber, address, input, output)
+	go handleProcessing(suite.log, &suite.wg, &suite.cfg, book, subscriber, address, input, output)
 	for _, msg := range messages {
 		input <- msg
 	}
@@ -216,8 +212,6 @@ Loop:
 		}
 		assert.Equal(t, messages[:5], unwrapped)
 	}
-
-	peers.AssertNotCalled(t, "Drop", mock.Anything)
 }
 
 func (suite *ProcessorSuite) TestProcessorPing() {
@@ -234,11 +228,8 @@ func (suite *ProcessorSuite) TestProcessorPing() {
 	book.On("Add", mock.Anything)
 	book.On("Sample", mock.Anything, mock.Anything).Return(sample)
 
-	peers := &PeerManagerMock{}
-	peers.On("Drop", mock.Anything).Return(nil)
-
 	// act
-	go handleProcessing(suite.log, &suite.wg, &suite.cfg, book, peers, subscriber, address, input, output)
+	go handleProcessing(suite.log, &suite.wg, &suite.cfg, book, subscriber, address, input, output)
 	input <- &Ping{}
 	close(input)
 	var msgs []interface{}
@@ -253,8 +244,6 @@ func (suite *ProcessorSuite) TestProcessorPing() {
 	if assert.Len(t, msgs, 2) {
 		assert.IsType(t, &Pong{}, msgs[1])
 	}
-
-	peers.AssertNotCalled(t, "Drop", mock.Anything)
 }
 
 func (suite *ProcessorSuite) TestProcessorDiscover() {
@@ -271,11 +260,8 @@ func (suite *ProcessorSuite) TestProcessorDiscover() {
 	book.On("Add", mock.Anything)
 	book.On("Sample", mock.Anything, mock.Anything).Return(sample)
 
-	peers := &PeerManagerMock{}
-	peers.On("Drop", mock.Anything).Return(nil)
-
 	// act
-	go handleProcessing(suite.log, &suite.wg, &suite.cfg, book, peers, subscriber, address, input, output)
+	go handleProcessing(suite.log, &suite.wg, &suite.cfg, book, subscriber, address, input, output)
 	input <- &Discover{}
 	close(input)
 	var msgs []interface{}
@@ -292,8 +278,6 @@ func (suite *ProcessorSuite) TestProcessorDiscover() {
 		peersMsg := msgs[1].(*Peers)
 		assert.Equal(t, sample, peersMsg.Addresses)
 	}
-
-	peers.AssertNotCalled(t, "Drop", mock.Anything)
 }
 
 func (suite *ProcessorSuite) TestProcessorPeers() {
@@ -314,11 +298,8 @@ func (suite *ProcessorSuite) TestProcessorPeers() {
 	book.On("Add", mock.Anything)
 	book.On("Sample", mock.Anything, mock.Anything).Return(sample)
 
-	peers := &PeerManagerMock{}
-	peers.On("Drop", mock.Anything).Return(nil)
-
 	// act
-	go handleProcessing(suite.log, &suite.wg, &suite.cfg, book, peers, subscriber, address, input, output)
+	go handleProcessing(suite.log, &suite.wg, &suite.cfg, book, subscriber, address, input, output)
 	input <- &Peers{Addresses: []string{peer1, peer2, peer3}}
 	close(input)
 	var msgs []interface{}
@@ -335,8 +316,6 @@ func (suite *ProcessorSuite) TestProcessorPeers() {
 		book.AssertCalled(t, "Add", peer2)
 		book.AssertCalled(t, "Add", peer3)
 	}
-
-	peers.AssertNotCalled(t, "Drop", mock.Anything)
 }
 
 func (suite *ProcessorSuite) TestProcessorPong() {
@@ -353,11 +332,8 @@ func (suite *ProcessorSuite) TestProcessorPong() {
 	book.On("Add", mock.Anything)
 	book.On("Sample", mock.Anything, mock.Anything).Return(sample)
 
-	peers := &PeerManagerMock{}
-	peers.On("Drop", mock.Anything).Return(nil)
-
 	// act
-	go handleProcessing(suite.log, &suite.wg, &suite.cfg, book, peers, subscriber, address, input, output)
+	go handleProcessing(suite.log, &suite.wg, &suite.cfg, book, subscriber, address, input, output)
 	input <- &Pong{}
 	close(input)
 	var msgs []interface{}
@@ -367,9 +343,6 @@ func (suite *ProcessorSuite) TestProcessorPong() {
 	suite.wg.Wait()
 
 	// assert
-	t := suite.T()
-
-	peers.AssertNotCalled(t, "Drop", mock.Anything)
 }
 
 func (suite *ProcessorSuite) TestProcessorDropFails() {
@@ -386,11 +359,8 @@ func (suite *ProcessorSuite) TestProcessorDropFails() {
 	book.On("Add", mock.Anything)
 	book.On("Sample", mock.Anything, mock.Anything).Return(sample)
 
-	peers := &PeerManagerMock{}
-	peers.On("Drop", mock.Anything).Return(errors.New("could not drop peer"))
-
 	// act
-	go handleProcessing(suite.log, &suite.wg, &suite.cfg, book, peers, subscriber, address, input, output)
+	go handleProcessing(suite.log, &suite.wg, &suite.cfg, book, subscriber, address, input, output)
 	time.Sleep(time.Duration(4.5 * float64(suite.cfg.interval)))
 	close(input)
 	var msgs []interface{}
@@ -403,5 +373,4 @@ func (suite *ProcessorSuite) TestProcessorDropFails() {
 	t := suite.T()
 
 	assert.Len(t, msgs, 4)
-	peers.AssertCalled(t, "Drop", address)
 }

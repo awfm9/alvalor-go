@@ -24,7 +24,7 @@ import (
 	"github.com/rs/zerolog"
 )
 
-func handleProcessing(log zerolog.Logger, wg *sync.WaitGroup, cfg *Config, book addressManager, peers peerManager, subscriber chan<- interface{}, address string, input <-chan interface{}, output chan<- interface{}) {
+func handleProcessing(log zerolog.Logger, wg *sync.WaitGroup, cfg *Config, book addressManager, subscriber chan<- interface{}, address string, input <-chan interface{}, output chan<- interface{}) {
 	defer wg.Done()
 
 	// configuration parameters
@@ -89,10 +89,6 @@ Loop:
 		// if this case is triggered, we didn't receive a message in a while and we can drop the peer
 		case <-time.After(timeout):
 			log.Info().Msg("peer timed out")
-			err := peers.Drop(address)
-			if err != nil {
-				log.Error().Err(err).Msg("could not drop peer")
-			}
 			break Loop
 		}
 	}
