@@ -138,17 +138,18 @@ func (suite *ProcessorSuite) TestProcessorTimeout() {
 
 	// act
 	go handleProcessing(suite.log, &suite.wg, &suite.cfg, book, peers, subscriber, address, input, output)
-	time.Sleep(time.Duration(4 * float64(suite.cfg.interval)))
+	time.Sleep(time.Duration(4.5 * float64(suite.cfg.interval)))
 	close(input)
+	count := 0
 	for _ = range output {
-		// just drain
+		count++
 	}
 	suite.wg.Wait()
 
 	// assert
 	t := suite.T()
 
-	peers.AssertCalled(t, "Drop", address)
+	assert.Equal(t, 4, count)
 }
 
 func (suite *ProcessorSuite) TestProcessorUnknownMessage() {

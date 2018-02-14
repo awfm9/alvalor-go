@@ -113,11 +113,11 @@ func (pm *simplePeerManager) Drop(address string) error {
 	if !ok {
 		return errors.New("peer unknown")
 	}
+	delete(pm.reg, address)
 	err := p.conn.Close()
 	if err != nil {
 		return errors.Wrap(err, "could not close peer connection")
 	}
-	delete(pm.reg, address)
 	return nil
 }
 

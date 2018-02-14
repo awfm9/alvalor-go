@@ -25,7 +25,7 @@ import (
 	"github.com/rs/zerolog"
 )
 
-func handleSending(log zerolog.Logger, wg *sync.WaitGroup, cfg *Config, peers peerManager, rep reputationManager, address string, output <-chan interface{}, w io.Writer) {
+func handleSending(log zerolog.Logger, wg *sync.WaitGroup, cfg *Config, rep reputationManager, address string, output <-chan interface{}, w io.Writer) {
 	defer wg.Done()
 
 	// extract configuration parameters

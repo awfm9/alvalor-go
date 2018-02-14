@@ -83,9 +83,15 @@ Loop:
 			log.Debug().Msg("sending heartbeat")
 			output <- &Ping{}
 		case <-timeout.C:
-			log.Info().Msg("peer timed out, dropping")
-			peers.Drop(address)
+			log.Info().Msg("peer timed out")
+			err := peers.Drop(address)
+			if err != nil {
+				log.Error().Err(err).Msg("could not drop peer")
+			}
+			break Loop
 		}
+	}
+	for _ = range input {
 	}
 	close(output)
 }

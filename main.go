@@ -54,14 +54,16 @@ func main() {
 	cod := codec.NewProto()
 
 	// initialize the network component to create our p2p network node
+	address := fmt.Sprintf("%v:%v", cfg.IP, cfg.Port)
 	net := network.New(log, cod,
 		network.SetListen(cfg.Listen),
-		network.SetAddress(fmt.Sprintf("%v:%v", cfg.IP, cfg.Port)),
+		network.SetAddress(address),
 		network.SetMinPeers(1),
 		network.SetMaxPeers(16),
 	)
 
-	// add the bootstrapping nodes
+	// add own address & bootstrapping nodes
+	net.Add(address)
 	for _, address := range cfg.Bootstrap {
 		net.Add(address)
 	}

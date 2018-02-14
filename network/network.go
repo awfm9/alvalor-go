@@ -83,7 +83,7 @@ func New(log zerolog.Logger, codec Codec, options ...func(*Config)) Network {
 		maxPeers:   10,
 		maxPending: 16,
 		nonce:      uuid.NewV4().Bytes(),
-		interval:   time.Second * 1,
+		interval:   time.Second,
 		codec:      codec,
 		bufferSize: 16,
 	}
@@ -170,7 +170,7 @@ func (net *simpleNetwork) Connector(address string) {
 
 func (net *simpleNetwork) Sender(address string, output <-chan interface{}, w io.Writer) {
 	net.wg.Add(1)
-	go handleSending(net.log, net.wg, net.cfg, net.peers, net.rep, address, output, w)
+	go handleSending(net.log, net.wg, net.cfg, net.rep, address, output, w)
 }
 
 func (net *simpleNetwork) Processor(address string, input <-chan interface{}, output chan<- interface{}) {
@@ -180,7 +180,7 @@ func (net *simpleNetwork) Processor(address string, input <-chan interface{}, ou
 
 func (net *simpleNetwork) Receiver(address string, r io.Reader, input chan<- interface{}) {
 	net.wg.Add(1)
-	go handleReceiving(net.log, net.wg, net.cfg, net.peers, net.rep, address, r, input)
+	go handleReceiving(net.log, net.wg, net.cfg, net.rep, address, r, input)
 }
 
 func (net *simpleNetwork) Add(address string) {
