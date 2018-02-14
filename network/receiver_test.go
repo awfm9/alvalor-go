@@ -39,11 +39,14 @@ type ReceiverSuite struct {
 	suite.Suite
 	log zerolog.Logger
 	cfg Config
+	wg  sync.WaitGroup
 }
 
 func (suite *ReceiverSuite) SetupTest() {
 	suite.log = zerolog.New(ioutil.Discard)
 	suite.cfg = Config{}
+	suite.wg = sync.WaitGroup{}
+	suite.wg.Add(1)
 }
 
 func (suite *ReceiverSuite) TestReceiverSuccess() {
@@ -69,9 +72,12 @@ func (suite *ReceiverSuite) TestReceiverSuccess() {
 	peers := &PeerManagerMock{}
 	peers.On("Drop", mock.Anything).Return(nil)
 
+	eventMgr := &EventManagerMock{}
+	eventMgr.On("Received", mock.Anything, mock.Anything)
+
 	// act
 	suite.cfg.codec = codec
-	go handleReceiving(suite.log, &suite.wg, &suite.cfg, rep, peers, address, r, input)
+	go handleReceiving(suite.log, &suite.wg, &suite.cfg, rep, peers, eventMgr, address, r, input)
 	var msgs []interface{}
 	for msg := range input {
 		msgs = append(msgs, msg)
@@ -111,9 +117,12 @@ func (suite *ReceiverSuite) TestReceiverEOF() {
 	peers := &PeerManagerMock{}
 	peers.On("Drop", mock.Anything).Return(nil)
 
+	eventMgr := &EventManagerMock{}
+	eventMgr.On("Received", mock.Anything, mock.Anything)
+
 	// act
 	suite.cfg.codec = codec
-	go handleReceiving(suite.log, &suite.wg, &suite.cfg, rep, peers, address, r, input)
+	go handleReceiving(suite.log, &suite.wg, &suite.cfg, rep, peers, eventMgr, address, r, input)
 	suite.wg.Wait()
 
 	// assert
@@ -145,14 +154,16 @@ func (suite *ReceiverSuite) TestReceiverError() {
 	codec.On("Decode", r).Return(nil, errors.New("could not encode message")).Once()
 	codec.On("Decode", r).Return(message, nil).Once()
 	codec.On("Decode", r).Return(nil, io.EOF)
-	subscriber := make(chan interface{}, 15)
 
 	peers := &PeerManagerMock{}
 	peers.On("Drop", mock.Anything).Return(nil)
 
+	eventMgr := &EventManagerMock{}
+	eventMgr.On("Received", mock.Anything, mock.Anything)
+
 	// act
 	suite.cfg.codec = codec
-	go handleReceiving(suite.log, &suite.wg, &suite.cfg, rep, peers, address, r, input)
+	go handleReceiving(suite.log, &suite.wg, &suite.cfg, rep, peers, eventMgr, address, r, input)
 	var msgs []interface{}
 	for msg := range input {
 		msgs = append(msgs, msg)

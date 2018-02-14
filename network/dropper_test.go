@@ -61,10 +61,11 @@ func (suite *DropperSuite) TestDropperSuccess() {
 	peers.On("Addresses").Return([]string{address})
 	peers.On("Drop", address).Return(nil)
 
-	subscriber := make(chan interface{}, 15)
+	eventMgr := &EventManagerMock{}
+	eventMgr.On("Disconnected", mock.Anything)
 
 	// act
-	go handleDropping(suite.log, &suite.wg, &suite.cfg, peers, stop)
+	go handleDropping(suite.log, &suite.wg, &suite.cfg, peers, eventMgr, stop)
 	time.Sleep(time.Duration(1.5 * float64(suite.cfg.interval)))
 	close(stop)
 	suite.wg.Wait()
@@ -85,10 +86,12 @@ func (suite *DropperSuite) TestDropperValidPeerNumber() {
 	peers.On("Count").Return(5)
 	peers.On("Addresses").Return([]string{address})
 	peers.On("Drop", address).Return(nil)
-	subscriber := make(chan interface{}, 15)
+
+	eventMgr := &EventManagerMock{}
+	eventMgr.On("Disconnected", mock.Anything)
 
 	// act
-	go handleDropping(suite.log, &suite.wg, &suite.cfg, peers, stop)
+	go handleDropping(suite.log, &suite.wg, &suite.cfg, peers, eventMgr, stop)
 	time.Sleep(time.Duration(1.5 * float64(suite.cfg.interval)))
 	close(stop)
 	suite.wg.Wait()
@@ -109,10 +112,12 @@ func (suite *DropperSuite) TestDropperDropFails() {
 	peers.On("Count").Return(16)
 	peers.On("Addresses").Return([]string{address})
 	peers.On("Drop", address).Return(errors.New("could not drop peer"))
-	subscriber := make(chan interface{}, 15)
+
+	eventMgr := &EventManagerMock{}
+	eventMgr.On("Disconnected", mock.Anything)
 
 	// act
-	go handleDropping(suite.log, &suite.wg, &suite.cfg, peers, stop)
+	go handleDropping(suite.log, &suite.wg, &suite.cfg, peers, eventMgr, stop)
 	time.Sleep(time.Duration(2.5 * float64(suite.cfg.interval)))
 	close(stop)
 	suite.wg.Wait()

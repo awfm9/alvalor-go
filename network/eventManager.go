@@ -19,4 +19,6 @@ package network
 
 type eventManager interface {
 	Disconnected(addr string)
+	Connected(addr string)
+	Received(addr string, msg interface{})
 }

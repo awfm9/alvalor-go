@@ -25,7 +25,6 @@ import (
 
 	"github.com/rs/zerolog"
 	uuid "github.com/satori/go.uuid"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/suite"
 )
@@ -83,10 +82,11 @@ func (suite *ConnectorSuite) TestConnectorSuccess() {
 	dialer := &DialManagerMock{}
 	dialer.On("Dial", mock.Anything).Return(conn, nil)
 
-	subscriber := make(chan interface{}, 1)
+	eventMgr := &EventManagerMock{}
+	eventMgr.On("Connected", mock.Anything)
 
 	// act
-	handleConnecting(suite.log, &suite.wg, &suite.cfg, pending, peers, rep, book, dialer, address)
+	handleConnecting(suite.log, &suite.wg, &suite.cfg, pending, peers, rep, book, dialer, eventMgr, address)
 
 	// assert
 	t := suite.T()
@@ -133,10 +133,11 @@ func (suite *ConnectorSuite) TestConnectorClaimFails() {
 	dialer := &DialManagerMock{}
 	dialer.On("Dial", mock.Anything).Return(conn, nil)
 
-	subscriber := make(chan interface{}, 1)
+	eventMgr := &EventManagerMock{}
+	eventMgr.On("Connected", mock.Anything)
 
 	// act
-	handleConnecting(suite.log, &suite.wg, &suite.cfg, pending, peers, rep, book, dialer, address)
+	handleConnecting(suite.log, &suite.wg, &suite.cfg, pending, peers, rep, book, dialer, eventMgr, address)
 
 	// assert
 	t := suite.T()
@@ -183,10 +184,11 @@ func (suite *ConnectorSuite) TestConnectorDialFails() {
 	dialer := &DialManagerMock{}
 	dialer.On("Dial", mock.Anything).Return(nil, errors.New("could not dial address"))
 
-	subscriber := make(chan interface{}, 1)
+	eventMgr := &EventManagerMock{}
+	eventMgr.On("Connected", mock.Anything)
 
 	// act
-	handleConnecting(suite.log, &suite.wg, &suite.cfg, pending, peers, rep, book, dialer, address)
+	handleConnecting(suite.log, &suite.wg, &suite.cfg, pending, peers, rep, book, dialer, eventMgr, address)
 
 	// assert
 	t := suite.T()
@@ -233,10 +235,11 @@ func (suite *ConnectorSuite) TestConnectorWriteFails() {
 	dialer := &DialManagerMock{}
 	dialer.On("Dial", mock.Anything).Return(conn, nil)
 
-	subscriber := make(chan interface{}, 1)
+	eventMgr := &EventManagerMock{}
+	eventMgr.On("Connected", mock.Anything)
 
 	// act
-	handleConnecting(suite.log, &suite.wg, &suite.cfg, pending, peers, rep, book, dialer, address)
+	handleConnecting(suite.log, &suite.wg, &suite.cfg, pending, peers, rep, book, dialer, eventMgr, address)
 
 	// assert
 	t := suite.T()
@@ -283,10 +286,11 @@ func (suite *ConnectorSuite) TestConnectorReadFails() {
 	dialer := &DialManagerMock{}
 	dialer.On("Dial", mock.Anything).Return(conn, nil)
 
-	subscriber := make(chan interface{}, 1)
+	eventMgr := &EventManagerMock{}
+	eventMgr.On("Connected", mock.Anything)
 
 	// act
-	handleConnecting(suite.log, &suite.wg, &suite.cfg, pending, peers, rep, book, dialer, address)
+	handleConnecting(suite.log, &suite.wg, &suite.cfg, pending, peers, rep, book, dialer, eventMgr, address)
 
 	// assert
 	t := suite.T()
@@ -333,10 +337,11 @@ func (suite *ConnectorSuite) TestConnectorNetworkMismatch() {
 	dialer := &DialManagerMock{}
 	dialer.On("Dial", mock.Anything).Return(conn, nil)
 
-	subscriber := make(chan interface{}, 1)
+	eventMgr := &EventManagerMock{}
+	eventMgr.On("Connected", mock.Anything)
 
 	// act
-	handleConnecting(suite.log, &suite.wg, &suite.cfg, pending, peers, rep, book, dialer, address)
+	handleConnecting(suite.log, &suite.wg, &suite.cfg, pending, peers, rep, book, dialer, eventMgr, address)
 
 	// assert
 	t := suite.T()
@@ -382,10 +387,11 @@ func (suite *ConnectorSuite) TestConnectorNonceIdentical() {
 	dialer := &DialManagerMock{}
 	dialer.On("Dial", mock.Anything).Return(conn, nil)
 
-	subscriber := make(chan interface{}, 1)
+	eventMgr := &EventManagerMock{}
+	eventMgr.On("Connected", mock.Anything)
 
 	// act
-	handleConnecting(suite.log, &suite.wg, &suite.cfg, pending, peers, rep, book, dialer, address)
+	handleConnecting(suite.log, &suite.wg, &suite.cfg, pending, peers, rep, book, dialer, eventMgr, address)
 
 	// assert
 	t := suite.T()
@@ -432,10 +438,11 @@ func (suite *ConnectorSuite) TestConnectorNonceKnown() {
 	dialer := &DialManagerMock{}
 	dialer.On("Dial", mock.Anything).Return(conn, nil)
 
-	subscriber := make(chan interface{}, 1)
+	eventMgr := &EventManagerMock{}
+	eventMgr.On("Connected", mock.Anything)
 
 	// act
-	handleConnecting(suite.log, &suite.wg, &suite.cfg, pending, peers, rep, book, dialer, address)
+	handleConnecting(suite.log, &suite.wg, &suite.cfg, pending, peers, rep, book, dialer, eventMgr, address)
 
 	// assert
 	t := suite.T()
@@ -482,10 +489,11 @@ func (suite *ConnectorSuite) TestConnectorAddPeerFails() {
 	dialer := &DialManagerMock{}
 	dialer.On("Dial", mock.Anything).Return(conn, nil)
 
-	subscriber := make(chan interface{}, 1)
+	eventMgr := &EventManagerMock{}
+	eventMgr.On("Connected", mock.Anything)
 
 	// act
-	handleConnecting(suite.log, &suite.wg, &suite.cfg, pending, peers, rep, book, dialer, address)
+	handleConnecting(suite.log, &suite.wg, &suite.cfg, pending, peers, rep, book, dialer, eventMgr, address)
 
 	// assert
 	t := suite.T()

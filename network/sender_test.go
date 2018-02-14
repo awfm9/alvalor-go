@@ -70,7 +70,7 @@ func (suite *SenderSuite) TestSenderSuccess() {
 
 	// act
 	suite.cfg.codec = codec
-	go handleSending(suite.log, &suite.wg, &suite.cfg, rep, address, output, w)
+	go handleSending(suite.log, &suite.wg, &suite.cfg, rep, eventMgr, address, output, w)
 	output <- &Ping{}
 	output <- &Pong{}
 	output <- &Discover{}
@@ -108,7 +108,7 @@ func (suite *SenderSuite) TestSenderEOF() {
 
 	// act
 	suite.cfg.codec = codec
-	go handleSending(suite.log, &suite.wg, &suite.cfg, rep, address, output, w)
+	go handleSending(suite.log, &suite.wg, &suite.cfg, rep, eventMgr, address, output, w)
 	output <- &Ping{}
 	output <- &Pong{}
 	output <- &Discover{}
@@ -135,9 +135,12 @@ func (suite *SenderSuite) TestSenderHeartbeat() {
 	codec := &CodecMock{}
 	codec.On("Encode", mock.Anything, mock.Anything).Return(nil)
 
+	eventMgr := &EventManagerMock{}
+	eventMgr.On("Disconnected", mock.Anything)
+
 	// act
 	suite.cfg.codec = codec
-	go handleSending(suite.log, &suite.wg, &suite.cfg, rep, address, output, w)
+	go handleSending(suite.log, &suite.wg, &suite.cfg, rep, eventMgr, address, output, w)
 	time.Sleep(time.Duration(1.5 * float64(suite.cfg.interval)))
 	close(output)
 	suite.wg.Wait()
@@ -170,7 +173,7 @@ func (suite *SenderSuite) TestSenderEncodeFails() {
 
 	// act
 	suite.cfg.codec = codec
-	go handleSending(suite.log, &suite.wg, &suite.cfg, rep, address, output, w)
+	go handleSending(suite.log, &suite.wg, &suite.cfg, rep, eventMgr, address, output, w)
 	output <- &Ping{}
 	output <- &Pong{}
 	output <- &Discover{}
@@ -208,7 +211,7 @@ func (suite *SenderSuite) TestSenderEncodeFailsAndDisconnectedPublished() {
 
 	// act
 	suite.cfg.codec = codec
-	go handleSending(suite.log, &suite.wg, &suite.cfg, peers, rep, address, output, w, eventMgr)
+	go handleSending(suite.log, &suite.wg, &suite.cfg, rep, eventMgr, address, output, w)
 	output <- &Ping{}
 	output <- &Pong{}
 	output <- &Discover{}

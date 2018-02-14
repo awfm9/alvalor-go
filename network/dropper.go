@@ -25,7 +25,7 @@ import (
 	"github.com/rs/zerolog"
 )
 
-func handleDropping(log zerolog.Logger, wg *sync.WaitGroup, cfg *Config, peers peerManager, stop <-chan struct{}, subscriber chan<- interface{}) {
+func handleDropping(log zerolog.Logger, wg *sync.WaitGroup, cfg *Config, peers peerManager, eventMgr eventManager, stop <-chan struct{}) {
 	defer wg.Done()
 
 	// extract desired configuration parameters
@@ -59,7 +59,7 @@ func handleDropping(log zerolog.Logger, wg *sync.WaitGroup, cfg *Config, peers p
 			log.Error().Err(err).Msg("could not drop peer")
 			continue
 		} else {
-			subscriber <- Disconnected{Address: address, Timestamp: time.Now()}
+			eventMgr.Disconnected(address)
 		}
 	}
 }

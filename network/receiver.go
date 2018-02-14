@@ -20,13 +20,12 @@ package network
 import (
 	"io"
 	"sync"
-	"time"
 
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
 )
 
-func handleReceiving(log zerolog.Logger, wg *sync.WaitGroup, cfg *Config, rep reputationManager, peers peerManager, address string, r io.Reader, input chan<- interface{}) {
+func handleReceiving(log zerolog.Logger, wg *sync.WaitGroup, cfg *Config, rep reputationManager, peers peerManager, eventMgr eventManager, address string, r io.Reader, input chan<- interface{}) {
 	defer wg.Done()
 
 	// extract configuration as needed
@@ -52,7 +51,7 @@ func handleReceiving(log zerolog.Logger, wg *sync.WaitGroup, cfg *Config, rep re
 			continue
 		}
 		input <- msg
-		subscriber <- Received{Address: address, Message: msg, Timestamp: time.Now()}
+		eventMgr.Received(address, msg)
 	}
 
 	// at this point, we should drop the peer, so that we don't risk sends on closed channels

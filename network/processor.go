@@ -24,7 +24,7 @@ import (
 	"github.com/rs/zerolog"
 )
 
-func handleProcessing(log zerolog.Logger, wg *sync.WaitGroup, cfg *Config, book addressManager, subscriber chan<- interface{}, address string, input <-chan interface{}, output chan<- interface{}) {
+func handleProcessing(log zerolog.Logger, wg *sync.WaitGroup, cfg *Config, book addressManager, eventMgr eventManager, address string, input <-chan interface{}, output chan<- interface{}) {
 	defer wg.Done()
 
 	// configuration parameters
@@ -74,16 +74,7 @@ Loop:
 			// custom messages should go to the subscriber, but we drop it if the subscriber is stalling
 			default:
 				log.Debug().Msg("custom received")
-				received := &Received{
-					Address:   address,
-					Timestamp: time.Now(),
-					Message:   message,
-				}
-				select {
-				case subscriber <- received:
-				default:
-					log.Debug().Msg("subscriber stalling")
-				}
+				eventMgr.Received(address, message)
 			}
 
 		// if this case is triggered, we didn't receive a message in a while and we can drop the peer

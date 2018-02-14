@@ -26,7 +26,7 @@ import (
 	"github.com/rs/zerolog"
 )
 
-func handleSending(log zerolog.Logger, wg *sync.WaitGroup, cfg *Config, rep reputationManager, address string, output <-chan interface{}, w io.Writer) {
+func handleSending(log zerolog.Logger, wg *sync.WaitGroup, cfg *Config, rep reputationManager, eventMgr eventManager, address string, output <-chan interface{}, w io.Writer) {
 	defer wg.Done()
 
 	// extract configuration parameters
@@ -65,6 +65,7 @@ Loop:
 		if err != nil {
 			log.Error().Err(err).Msg("could not write message")
 			rep.Failure(address)
+			eventMgr.Disconnected(address)
 			continue
 		}
 	}

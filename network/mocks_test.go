@@ -330,6 +330,12 @@ type EventManagerMock struct {
 	mock.Mock
 }
 
-func (eventMgr *EventManagerMock) Disconnected(address string) {
-	_ = eventMgr.Called(address)
+func (eventMgr *EventManagerMock) Disconnected(addr string) {
+	_ = eventMgr.Called(addr)
+}
+func (eventMgr *EventManagerMock) Connected(addr string) {
+	_ = eventMgr.Called(addr)
+}
+func (eventMgr *EventManagerMock) Received(addr string, msg interface{}) {
+	_ = eventMgr.Called(addr, msg)
 }

@@ -23,8 +23,6 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
-
 	"github.com/rs/zerolog"
 	uuid "github.com/satori/go.uuid"
 	"github.com/stretchr/testify/mock"
@@ -84,10 +82,11 @@ func (suite *AcceptorSuite) TestAcceptorSuccess() {
 	book := &AddressManagerMock{}
 	book.On("Block", mock.Anything)
 
-	subscriber := make(chan interface{}, 1)
+	eventMgr := &EventManagerMock{}
+	eventMgr.On("Connected", mock.Anything)
 
 	// act
-	handleAccepting(suite.log, &suite.wg, &suite.cfg, pending, peers, rep, book, conn)
+	handleAccepting(suite.log, &suite.wg, &suite.cfg, pending, peers, rep, book, eventMgr, conn)
 
 	// assert
 	t := suite.T()
@@ -134,10 +133,11 @@ func (suite *AcceptorSuite) TestAcceptorClaimFails() {
 	book := &AddressManagerMock{}
 	book.On("Block", mock.Anything)
 
-	subscriber := make(chan interface{}, 1)
+	eventMgr := &EventManagerMock{}
+	eventMgr.On("Connected", mock.Anything)
 
 	// act
-	handleAccepting(suite.log, &suite.wg, &suite.cfg, pending, peers, rep, book, conn)
+	handleAccepting(suite.log, &suite.wg, &suite.cfg, pending, peers, rep, book, eventMgr, conn)
 
 	// assert
 	t := suite.T()
@@ -184,10 +184,11 @@ func (suite *AcceptorSuite) TestAcceptorReadFails() {
 	book := &AddressManagerMock{}
 	book.On("Block", mock.Anything)
 
-	subscriber := make(chan interface{}, 1)
+	eventMgr := &EventManagerMock{}
+	eventMgr.On("Connected", mock.Anything)
 
 	// act
-	handleAccepting(suite.log, &suite.wg, &suite.cfg, pending, peers, rep, book, conn)
+	handleAccepting(suite.log, &suite.wg, &suite.cfg, pending, peers, rep, book, eventMgr, conn)
 
 	// assert
 	t := suite.T()
@@ -234,8 +235,11 @@ func (suite *AcceptorSuite) TestAcceptorNetworkMismatch() {
 	book := &AddressManagerMock{}
 	book.On("Block", mock.Anything)
 
+	eventMgr := &EventManagerMock{}
+	eventMgr.On("Connected", mock.Anything)
+
 	// act
-	handleAccepting(suite.log, &suite.wg, &suite.cfg, pending, peers, rep, book, conn)
+	handleAccepting(suite.log, &suite.wg, &suite.cfg, pending, peers, rep, book, eventMgr, conn)
 
 	// assert
 	t := suite.T()
@@ -281,10 +285,11 @@ func (suite *AcceptorSuite) TestAcceptorNonceIdentical() {
 	book := &AddressManagerMock{}
 	book.On("Block", mock.Anything)
 
-	subscriber := make(chan interface{}, 1)
+	eventMgr := &EventManagerMock{}
+	eventMgr.On("Connected", mock.Anything)
 
 	// act
-	handleAccepting(suite.log, &suite.wg, &suite.cfg, pending, peers, rep, book, conn)
+	handleAccepting(suite.log, &suite.wg, &suite.cfg, pending, peers, rep, book, eventMgr, conn)
 
 	// assert
 	t := suite.T()
@@ -331,10 +336,11 @@ func (suite *AcceptorSuite) TestAcceptorWriteFails() {
 	book := &AddressManagerMock{}
 	book.On("Block", mock.Anything)
 
-	subscriber := make(chan interface{}, 1)
+	eventMgr := &EventManagerMock{}
+	eventMgr.On("Connected", mock.Anything)
 
 	// act
-	handleAccepting(suite.log, &suite.wg, &suite.cfg, pending, peers, rep, book, conn)
+	handleAccepting(suite.log, &suite.wg, &suite.cfg, pending, peers, rep, book, eventMgr, conn)
 
 	// assert
 	t := suite.T()
@@ -381,10 +387,11 @@ func (suite *AcceptorSuite) TestAcceptorAddPeerFails() {
 	book := &AddressManagerMock{}
 	book.On("Block", mock.Anything)
 
-	subscriber := make(chan interface{}, 1)
+	eventMgr := &EventManagerMock{}
+	eventMgr.On("Connected", mock.Anything)
 
 	// act
-	handleAccepting(suite.log, &suite.wg, &suite.cfg, pending, peers, rep, book, conn)
+	handleAccepting(suite.log, &suite.wg, &suite.cfg, pending, peers, rep, book, eventMgr, conn)
 
 	// assert
 	t := suite.T()
