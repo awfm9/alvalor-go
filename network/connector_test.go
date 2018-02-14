@@ -121,7 +121,7 @@ func (suite *ConnectorSuite) TestConnectorClaimFails() {
 	peers.On("Add", mock.Anything, mock.Anything).Return(nil)
 
 	pending := &PendingManagerMock{}
-	pending.On("Claim", mock.Anything).Return(nil)
+	pending.On("Claim", mock.Anything).Return(errors.New("could not claim slot"))
 	pending.On("Release", mock.Anything).Return(nil)
 
 	book := &AddressManagerMock{}
@@ -138,12 +138,12 @@ func (suite *ConnectorSuite) TestConnectorClaimFails() {
 
 	pending.AssertCalled(t, "Claim", address)
 
-	pending.AssertNotCalled(t, "Release")
-	peers.AssertNotCalled(t, "Add")
-	rep.AssertNotCalled(t, "Success")
+	pending.AssertNotCalled(t, "Release", mock.Anything)
+	peers.AssertNotCalled(t, "Add", mock.Anything, mock.Anything)
+	rep.AssertNotCalled(t, "Success", mock.Anything)
 	conn.AssertNotCalled(t, "Close")
-	rep.AssertNotCalled(t, "Failure")
-	book.AssertNotCalled(t, "Block")
+	rep.AssertNotCalled(t, "Failure", mock.Anything)
+	book.AssertNotCalled(t, "Block", mock.Anything)
 }
 
 func (suite *ConnectorSuite) TestConnectorDialFails() {
@@ -188,10 +188,10 @@ func (suite *ConnectorSuite) TestConnectorDialFails() {
 	pending.AssertCalled(t, "Release", address)
 	rep.AssertCalled(t, "Failure", address)
 
-	peers.AssertNotCalled(t, "Add", conn, nonce)
-	rep.AssertNotCalled(t, "Success", address)
+	peers.AssertNotCalled(t, "Add", mock.Anything, mock.Anything)
+	rep.AssertNotCalled(t, "Success", mock.Anything)
 	conn.AssertNotCalled(t, "Close")
-	book.AssertNotCalled(t, "Block")
+	book.AssertNotCalled(t, "Block", mock.Anything)
 }
 
 func (suite *ConnectorSuite) TestConnectorWriteFails() {
@@ -237,9 +237,9 @@ func (suite *ConnectorSuite) TestConnectorWriteFails() {
 	conn.AssertCalled(t, "Close")
 	rep.AssertCalled(t, "Failure", address)
 
-	peers.AssertNotCalled(t, "Add")
-	rep.AssertNotCalled(t, "Success")
-	book.AssertNotCalled(t, "Block")
+	peers.AssertNotCalled(t, "Add", mock.Anything, mock.Anything)
+	rep.AssertNotCalled(t, "Success", mock.Anything)
+	book.AssertNotCalled(t, "Block", mock.Anything)
 }
 
 func (suite *ConnectorSuite) TestConnectorReadFails() {
@@ -285,9 +285,9 @@ func (suite *ConnectorSuite) TestConnectorReadFails() {
 	conn.AssertCalled(t, "Close")
 	rep.AssertCalled(t, "Failure", address)
 
-	peers.AssertNotCalled(t, "Add")
-	rep.AssertNotCalled(t, "Success")
-	book.AssertNotCalled(t, "Block")
+	peers.AssertNotCalled(t, "Add", mock.Anything, mock.Anything)
+	rep.AssertNotCalled(t, "Success", mock.Anything)
+	book.AssertNotCalled(t, "Block", mock.Anything)
 }
 
 func (suite *ConnectorSuite) TestConnectorNetworkMismatch() {
@@ -333,9 +333,9 @@ func (suite *ConnectorSuite) TestConnectorNetworkMismatch() {
 	conn.AssertCalled(t, "Close")
 	book.AssertCalled(t, "Block", address)
 
-	peers.AssertNotCalled(t, "Add")
-	rep.AssertNotCalled(t, "Success")
-	rep.AssertNotCalled(t, "Failure")
+	peers.AssertNotCalled(t, "Add", mock.Anything, mock.Anything)
+	rep.AssertNotCalled(t, "Success", mock.Anything)
+	rep.AssertNotCalled(t, "Failure", mock.Anything)
 }
 
 func (suite *ConnectorSuite) TestConnectorNonceIdentical() {
@@ -380,9 +380,9 @@ func (suite *ConnectorSuite) TestConnectorNonceIdentical() {
 	conn.AssertCalled(t, "Close")
 	book.AssertCalled(t, "Block", address)
 
-	peers.AssertNotCalled(t, "Add")
-	rep.AssertNotCalled(t, "Success")
-	rep.AssertNotCalled(t, "Failure")
+	peers.AssertNotCalled(t, "Add", mock.Anything, mock.Anything)
+	rep.AssertNotCalled(t, "Success", mock.Anything)
+	rep.AssertNotCalled(t, "Failure", mock.Anything)
 }
 
 func (suite *ConnectorSuite) TestConnectorNonceKnown() {
@@ -428,9 +428,9 @@ func (suite *ConnectorSuite) TestConnectorNonceKnown() {
 	conn.AssertCalled(t, "Close")
 	book.AssertCalled(t, "Block", address)
 
-	peers.AssertNotCalled(t, "Add")
-	rep.AssertNotCalled(t, "Success")
-	rep.AssertNotCalled(t, "Failure")
+	peers.AssertNotCalled(t, "Add", mock.Anything, mock.Anything)
+	rep.AssertNotCalled(t, "Success", mock.Anything)
+	rep.AssertNotCalled(t, "Failure", mock.Anything)
 }
 
 func (suite *ConnectorSuite) TestConnectorAddPeerFails() {
@@ -476,7 +476,7 @@ func (suite *ConnectorSuite) TestConnectorAddPeerFails() {
 	peers.AssertCalled(t, "Add", conn, nonce)
 	conn.AssertCalled(t, "Close")
 
-	book.AssertNotCalled(t, "Block")
-	rep.AssertNotCalled(t, "Success")
-	rep.AssertNotCalled(t, "Failure")
+	rep.AssertNotCalled(t, "Success", mock.Anything)
+	rep.AssertNotCalled(t, "Failure", mock.Anything)
+	book.AssertNotCalled(t, "Block", mock.Anything)
 }
