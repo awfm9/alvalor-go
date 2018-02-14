@@ -46,7 +46,7 @@ func (suite *ProcessorSuite) SetupTest() {
 	suite.wg = sync.WaitGroup{}
 	suite.wg.Add(1)
 	suite.cfg = Config{
-		interval: time.Millisecond,
+		interval: 2 * time.Millisecond,
 	}
 }
 

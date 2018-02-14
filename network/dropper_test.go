@@ -45,7 +45,7 @@ func (suite *DropperSuite) SetupTest() {
 	suite.wg = sync.WaitGroup{}
 	suite.wg.Add(1)
 	suite.cfg = Config{
-		interval: 10 * time.Millisecond,
+		interval: 2 * time.Millisecond,
 		maxPeers: 15,
 	}
 }
@@ -63,7 +63,7 @@ func (suite *DropperSuite) TestDropperSuccess() {
 
 	// act
 	go handleDropping(suite.log, &suite.wg, &suite.cfg, peers, stop)
-	time.Sleep(50 * time.Millisecond)
+	time.Sleep(time.Duration(1.5 * float64(suite.cfg.interval)))
 	close(stop)
 	suite.wg.Wait()
 
@@ -86,7 +86,7 @@ func (suite *DropperSuite) TestDropperValidPeerNumber() {
 
 	// act
 	go handleDropping(suite.log, &suite.wg, &suite.cfg, peers, stop)
-	time.Sleep(50 * time.Millisecond)
+	time.Sleep(time.Duration(1.5 * float64(suite.cfg.interval)))
 	close(stop)
 	suite.wg.Wait()
 
@@ -109,7 +109,7 @@ func (suite *DropperSuite) TestDropperDropFails() {
 
 	// act
 	go handleDropping(suite.log, &suite.wg, &suite.cfg, peers, stop)
-	time.Sleep(25 * time.Millisecond)
+	time.Sleep(time.Duration(2.5 * float64(suite.cfg.interval)))
 	close(stop)
 	suite.wg.Wait()
 
