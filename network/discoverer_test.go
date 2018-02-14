@@ -18,13 +18,11 @@
 package network
 
 import (
-	"errors"
 	"io/ioutil"
 	"sync"
 	"testing"
 
 	"github.com/rs/zerolog"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/suite"
 )
@@ -47,56 +45,6 @@ func (suite *DiscovererSuite) SetupTest() {
 	suite.cfg = Config{}
 }
 
-func (suite *ConnectorSuite) TestDiscovererNoPeers() {
-
-	// arrange
-	closed := make(chan struct{})
-	close(closed)
-
-	peers := &PeerManagerMock{}
-	peers.On("Addresses").Return(nil)
-	peers.On("Output", mock.Anything).Return(closed, nil)
-
-	// act
-	handleDiscovering(suite.log, &suite.wg, &suite.cfg, peers)
-
-	// assert
-	peers.AssertCalled(suite.T(), "Addresses")
-	peers.AssertNotCalled(suite.T(), "Output")
-}
-
-func (suite *ConnectorSuite) TestDiscovererMissingOutput() {
-
-	// arrange
-	address1 := "192.0.2.10:1337"
-	address2 := "192.0.2.20:1337"
-	address3 := "192.0.2.30:1337"
-
-	output := make(chan interface{}, 3)
-
-	peers := &PeerManagerMock{}
-	peers.On("Addresses").Return([]string{address1, address2, address3})
-	peers.On("Output", address1).Return(output, nil)
-	peers.On("Output", address2).Return(nil, errors.New("could not get channel"))
-	peers.On("Output", address3).Return(output, nil)
-
-	// act
-	handleDiscovering(suite.log, &suite.wg, &suite.cfg, peers)
-	close(output)
-	var msgs []interface{}
-	for msg := range output {
-		msgs = append(msgs, msg)
-	}
-
-	// assert
-	peers.AssertCalled(suite.T(), "Addresses")
-	peers.AssertNumberOfCalls(suite.T(), "Output", 3)
-	if assert.Len(suite.T(), msgs, 2) {
-		assert.IsType(suite.T(), &Discover{}, msgs[0])
-		assert.IsType(suite.T(), &Discover{}, msgs[1])
-	}
-}
-
 func (suite *ConnectorSuite) TestDiscovererSuccess() {
 
 	// arrange
@@ -104,28 +52,33 @@ func (suite *ConnectorSuite) TestDiscovererSuccess() {
 	address2 := "192.0.2.20:1337"
 	address3 := "192.0.2.30:1337"
 
-	output := make(chan interface{}, 3)
-
 	peers := &PeerManagerMock{}
 	peers.On("Addresses").Return([]string{address1, address2, address3})
-	peers.On("Output", address1).Return(output, nil)
-	peers.On("Output", address2).Return(output, nil)
-	peers.On("Output", address3).Return(output, nil)
+	peers.On("Send", mock.Anything, mock.Anything).Return(nil)
 
 	// act
 	handleDiscovering(suite.log, &suite.wg, &suite.cfg, peers)
-	close(output)
-	var msgs []interface{}
-	for msg := range output {
-		msgs = append(msgs, msg)
-	}
 
 	// assert
-	peers.AssertCalled(suite.T(), "Addresses")
-	peers.AssertNumberOfCalls(suite.T(), "Output", 3)
-	if assert.Len(suite.T(), msgs, 3) {
-		assert.IsType(suite.T(), &Discover{}, msgs[0])
-		assert.IsType(suite.T(), &Discover{}, msgs[1])
-		assert.IsType(suite.T(), &Discover{}, msgs[2])
-	}
+	t := suite.T()
+
+	peers.AssertCalled(t, "Send", address1, &Discover{})
+	peers.AssertCalled(t, "Send", address2, &Discover{})
+	peers.AssertCalled(t, "Send", address3, &Discover{})
+}
+
+func (suite *ConnectorSuite) TestDiscovererNoPeers() {
+
+	// arrange
+	peers := &PeerManagerMock{}
+	peers.On("Addresses").Return([]string{})
+	peers.On("Send", mock.Anything, mock.Anything).Return(nil)
+
+	// act
+	handleDiscovering(suite.log, &suite.wg, &suite.cfg, peers)
+
+	// assert
+	t := suite.T()
+
+	peers.AssertNotCalled(t, "Send")
 }

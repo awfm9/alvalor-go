@@ -50,204 +50,339 @@ func (suite *ConnectorSuite) SetupTest() {
 	}
 }
 
-func (suite *ConnectorSuite) TestConnectorClaimFails() {
+func (suite *ConnectorSuite) TestConnectorSuccess() {
 
 	// arrange
 	address := "192.0.2.100:1337"
+	nonce := uuid.NewV4().Bytes()
+	ack := append(suite.cfg.network, nonce...)
 
-	pending := &PendingManagerMock{}
-	pending.On("Claim", address).Return(errors.New("cannot claim slot"))
-
-	peers := &PeerManagerMock{}
+	conn := &ConnMock{}
+	conn.On("Write", mock.Anything).Return(0, nil)
+	conn.On("Read", mock.Anything).Run(func(args mock.Arguments) {
+		copy(args.Get(0).([]byte), ack)
+	}).Return(0, nil)
+	conn.On("Close").Return(nil)
 
 	rep := &ReputationManagerMock{}
+	rep.On("Success", mock.Anything)
+	rep.On("Failure", mock.Anything)
+
+	peers := &PeerManagerMock{}
+	peers.On("Known", mock.Anything).Return(false)
+	peers.On("Add", mock.Anything, mock.Anything).Return(nil)
+
+	pending := &PendingManagerMock{}
+	pending.On("Claim", mock.Anything).Return(nil)
+	pending.On("Release", mock.Anything).Return(nil)
 
 	book := &AddressManagerMock{}
+	book.On("Block", mock.Anything)
 
 	dialer := &DialManagerMock{}
+	dialer.On("Dial", mock.Anything).Return(conn, nil)
 
 	// act
 	handleConnecting(suite.log, &suite.wg, &suite.cfg, pending, peers, rep, book, dialer, address)
 
 	// assert
-	pending.AssertCalled(suite.T(), "Claim", address)
-	pending.AssertNotCalled(suite.T(), "Release", address)
+	t := suite.T()
+
+	pending.AssertCalled(t, "Claim", address)
+	pending.AssertCalled(t, "Release", address)
+	peers.AssertCalled(t, "Add", conn, nonce)
+	rep.AssertCalled(t, "Success", address)
+
+	conn.AssertNotCalled(t, "Close")
+	rep.AssertNotCalled(t, "Failure")
+	book.AssertNotCalled(t, "Block")
+}
+
+func (suite *ConnectorSuite) TestConnectorClaimFails() {
+
+	// arrange
+	address := "192.0.2.100:1337"
+	nonce := uuid.NewV4().Bytes()
+	ack := append(suite.cfg.network, nonce...)
+
+	conn := &ConnMock{}
+	conn.On("Write", mock.Anything).Return(0, nil)
+	conn.On("Read", mock.Anything).Run(func(args mock.Arguments) {
+		copy(args.Get(0).([]byte), ack)
+	}).Return(0, nil)
+	conn.On("Close").Return(nil)
+
+	rep := &ReputationManagerMock{}
+	rep.On("Success", mock.Anything)
+	rep.On("Failure", mock.Anything)
+
+	peers := &PeerManagerMock{}
+	peers.On("Known", mock.Anything).Return(false)
+	peers.On("Add", mock.Anything, mock.Anything).Return(nil)
+
+	pending := &PendingManagerMock{}
+	pending.On("Claim", mock.Anything).Return(nil)
+	pending.On("Release", mock.Anything).Return(nil)
+
+	book := &AddressManagerMock{}
+	book.On("Block", mock.Anything)
+
+	dialer := &DialManagerMock{}
+	dialer.On("Dial", mock.Anything).Return(conn, nil)
+
+	// act
+	handleConnecting(suite.log, &suite.wg, &suite.cfg, pending, peers, rep, book, dialer, address)
+
+	// assert
+	t := suite.T()
+
+	pending.AssertCalled(t, "Claim", address)
+
+	pending.AssertNotCalled(t, "Release")
+	peers.AssertNotCalled(t, "Add")
+	rep.AssertNotCalled(t, "Success")
+	conn.AssertNotCalled(t, "Close")
+	rep.AssertNotCalled(t, "Failure")
+	book.AssertNotCalled(t, "Block")
 }
 
 func (suite *ConnectorSuite) TestConnectorDialFails() {
 
 	// arrange
 	address := "192.0.2.100:1337"
+	nonce := uuid.NewV4().Bytes()
+	ack := append(suite.cfg.network, nonce...)
+
+	conn := &ConnMock{}
+	conn.On("Write", mock.Anything).Return(0, nil)
+	conn.On("Read", mock.Anything).Run(func(args mock.Arguments) {
+		copy(args.Get(0).([]byte), ack)
+	}).Return(0, nil)
+	conn.On("Close").Return(nil)
 
 	rep := &ReputationManagerMock{}
-	rep.On("Failure", address)
+	rep.On("Success", mock.Anything)
+	rep.On("Failure", mock.Anything)
 
 	peers := &PeerManagerMock{}
+	peers.On("Known", mock.Anything).Return(false)
+	peers.On("Add", mock.Anything, mock.Anything).Return(nil)
 
 	pending := &PendingManagerMock{}
-	pending.On("Claim", address).Return(nil)
-	pending.On("Release", address).Return(nil)
+	pending.On("Claim", mock.Anything).Return(nil)
+	pending.On("Release", mock.Anything).Return(nil)
 
 	book := &AddressManagerMock{}
+	book.On("Block", mock.Anything)
 
 	dialer := &DialManagerMock{}
-	dialer.On("Dial", address).Return(nil, errors.New("cannot dial address"))
+	dialer.On("Dial", mock.Anything).Return(nil, errors.New("could not dial address"))
 
 	// act
 	handleConnecting(suite.log, &suite.wg, &suite.cfg, pending, peers, rep, book, dialer, address)
 
 	// assert
-	pending.AssertCalled(suite.T(), "Claim", address)
-	pending.AssertCalled(suite.T(), "Release", address)
-	rep.AssertCalled(suite.T(), "Failure", address)
+	t := suite.T()
+
+	pending.AssertCalled(t, "Claim", address)
+	pending.AssertCalled(t, "Release", address)
+	rep.AssertCalled(t, "Failure", address)
+
+	peers.AssertNotCalled(t, "Add", conn, nonce)
+	rep.AssertNotCalled(t, "Success", address)
+	conn.AssertNotCalled(t, "Close")
+	book.AssertNotCalled(t, "Block")
 }
 
 func (suite *ConnectorSuite) TestConnectorWriteFails() {
 
 	// arrange
 	address := "192.0.2.100:1337"
-	syn := append(suite.cfg.network, suite.cfg.nonce...)
+	nonce := uuid.NewV4().Bytes()
+	ack := append(suite.cfg.network, nonce...)
 
 	conn := &ConnMock{}
+	conn.On("Write", mock.Anything).Return(0, errors.New("could not write syn"))
+	conn.On("Read", mock.Anything).Run(func(args mock.Arguments) {
+		copy(args.Get(0).([]byte), ack)
+	}).Return(0, nil)
 	conn.On("Close").Return(nil)
-	conn.On("Write", syn).Return(0, errors.New("cannot write to connection"))
 
 	rep := &ReputationManagerMock{}
-	rep.On("Error", address)
+	rep.On("Success", mock.Anything)
+	rep.On("Failure", mock.Anything)
 
 	peers := &PeerManagerMock{}
+	peers.On("Known", mock.Anything).Return(false)
+	peers.On("Add", mock.Anything, mock.Anything).Return(nil)
 
 	pending := &PendingManagerMock{}
-	pending.On("Claim", address).Return(nil)
-	pending.On("Release", address).Return(nil)
+	pending.On("Claim", mock.Anything).Return(nil)
+	pending.On("Release", mock.Anything).Return(nil)
 
 	book := &AddressManagerMock{}
+	book.On("Block", mock.Anything)
 
 	dialer := &DialManagerMock{}
-	dialer.On("Dial", address).Return(conn, nil)
+	dialer.On("Dial", mock.Anything).Return(conn, nil)
 
 	// act
 	handleConnecting(suite.log, &suite.wg, &suite.cfg, pending, peers, rep, book, dialer, address)
 
 	// assert
-	pending.AssertCalled(suite.T(), "Claim", address)
-	pending.AssertCalled(suite.T(), "Release", address)
-	rep.AssertCalled(suite.T(), "Error", address)
-	conn.AssertCalled(suite.T(), "Close")
+	t := suite.T()
+
+	pending.AssertCalled(t, "Claim", address)
+	pending.AssertCalled(t, "Release", address)
+	conn.AssertCalled(t, "Close")
+	rep.AssertCalled(t, "Failure", address)
+
+	peers.AssertCalled(t, "Add")
+	rep.AssertCalled(t, "Success")
+	book.AssertNotCalled(t, "Block")
 }
 
 func (suite *ConnectorSuite) TestConnectorReadFails() {
 
 	// arrange
 	address := "192.0.2.100:1337"
-	syn := append(suite.cfg.network, suite.cfg.nonce...)
-	buf := make([]byte, len(syn))
+	nonce := uuid.NewV4().Bytes()
+	ack := append(suite.cfg.network, nonce...)
 
 	conn := &ConnMock{}
-	conn.On("Write", syn).Return(len(syn), nil)
-	conn.On("Read", buf).Return(0, errors.New("cannot read from connection"))
+	conn.On("Write", mock.Anything).Return(0, nil)
+	conn.On("Read", mock.Anything).Run(func(args mock.Arguments) {
+		copy(args.Get(0).([]byte), ack)
+	}).Return(0, errors.New("could not read ack"))
 	conn.On("Close").Return(nil)
 
 	rep := &ReputationManagerMock{}
-	rep.On("Error", address)
+	rep.On("Success", mock.Anything)
+	rep.On("Failure", mock.Anything)
 
 	peers := &PeerManagerMock{}
+	peers.On("Known", mock.Anything).Return(false)
+	peers.On("Add", mock.Anything, mock.Anything).Return(nil)
 
 	pending := &PendingManagerMock{}
-	pending.On("Claim", address).Return(nil)
-	pending.On("Release", address).Return(nil)
+	pending.On("Claim", mock.Anything).Return(nil)
+	pending.On("Release", mock.Anything).Return(nil)
 
 	book := &AddressManagerMock{}
+	book.On("Block", mock.Anything)
 
 	dialer := &DialManagerMock{}
-	dialer.On("Dial", address).Return(conn, nil)
+	dialer.On("Dial", mock.Anything).Return(conn, nil)
 
 	// act
 	handleConnecting(suite.log, &suite.wg, &suite.cfg, pending, peers, rep, book, dialer, address)
 
 	// assert
-	pending.AssertCalled(suite.T(), "Claim", address)
-	pending.AssertCalled(suite.T(), "Release", address)
-	rep.AssertCalled(suite.T(), "Error", address)
-	conn.AssertCalled(suite.T(), "Close")
+	t := suite.T()
+
+	pending.AssertCalled(t, "Claim", address)
+	pending.AssertCalled(t, "Release", address)
+	conn.AssertCalled(t, "Close")
+	rep.AssertCalled(t, "Failure", address)
+
+	peers.AssertNotCalled(t, "Add")
+	rep.AssertNotCalled(t, "Success")
+	book.AssertNotCalled(t, "Block")
 }
 
 func (suite *ConnectorSuite) TestConnectorNetworkMismatch() {
 
 	// arrange
 	address := "192.0.2.100:1337"
-	syn := append(suite.cfg.network, suite.cfg.nonce...)
-	buf := make([]byte, len(syn))
-	ack := append([]byte{1, 2, 3, 4}, uuid.NewV4().Bytes()...)
+	nonce := uuid.NewV4().Bytes()
+	ack := append([]byte{1, 2, 3, 4}, nonce...)
 
 	conn := &ConnMock{}
-	conn.On("Write", syn).Return(len(syn), nil)
-	conn.On("Read", buf).Run(func(args mock.Arguments) {
+	conn.On("Write", mock.Anything).Return(0, nil)
+	conn.On("Read", mock.Anything).Run(func(args mock.Arguments) {
 		copy(args.Get(0).([]byte), ack)
-	}).Return(len(buf), nil)
+	}).Return(0, nil)
 	conn.On("Close").Return(nil)
 
 	rep := &ReputationManagerMock{}
-	rep.On("Invalid", address)
+	rep.On("Success", mock.Anything)
+	rep.On("Failure", mock.Anything)
 
 	peers := &PeerManagerMock{}
+	peers.On("Known", mock.Anything).Return(false)
+	peers.On("Add", mock.Anything, mock.Anything).Return(nil)
 
 	pending := &PendingManagerMock{}
-	pending.On("Claim", address).Return(nil)
-	pending.On("Release", address).Return(nil)
+	pending.On("Claim", mock.Anything).Return(nil)
+	pending.On("Release", mock.Anything).Return(nil)
 
 	book := &AddressManagerMock{}
+	book.On("Block", mock.Anything)
 
 	dialer := &DialManagerMock{}
-	dialer.On("Dial", address).Return(conn, nil)
+	dialer.On("Dial", mock.Anything).Return(conn, nil)
 
 	// act
 	handleConnecting(suite.log, &suite.wg, &suite.cfg, pending, peers, rep, book, dialer, address)
 
 	// assert
-	pending.AssertCalled(suite.T(), "Claim", address)
-	pending.AssertCalled(suite.T(), "Release", address)
-	rep.AssertCalled(suite.T(), "Invalid", address)
-	conn.AssertCalled(suite.T(), "Close")
+	t := suite.T()
+
+	pending.AssertCalled(t, "Claim", address)
+	pending.AssertCalled(t, "Release", address)
+	conn.AssertCalled(t, "Close")
+	book.AssertCalled(t, "Block", address)
+
+	peers.AssertNotCalled(t, "Add")
+	rep.AssertNotCalled(t, "Success")
+	rep.AssertNotCalled(t, "Failure")
 }
 
 func (suite *ConnectorSuite) TestConnectorNonceIdentical() {
 
 	// arrange
 	address := "192.0.2.100:1337"
-	syn := append(suite.cfg.network, suite.cfg.nonce...)
-	buf := make([]byte, len(syn))
 	ack := append(suite.cfg.network, suite.cfg.nonce...)
 
 	conn := &ConnMock{}
-	conn.On("Write", syn).Return(len(syn), nil)
-	conn.On("Read", buf).Run(func(args mock.Arguments) {
+	conn.On("Write", mock.Anything).Return(0, nil)
+	conn.On("Read", mock.Anything).Run(func(args mock.Arguments) {
 		copy(args.Get(0).([]byte), ack)
-	}).Return(len(buf), nil)
+	}).Return(0, nil)
 	conn.On("Close").Return(nil)
 
 	rep := &ReputationManagerMock{}
-	rep.On("Invalid", address)
+	rep.On("Success", mock.Anything)
+	rep.On("Failure", mock.Anything)
 
 	peers := &PeerManagerMock{}
+	peers.On("Known", mock.Anything).Return(false)
+	peers.On("Add", mock.Anything, mock.Anything).Return(nil)
 
 	pending := &PendingManagerMock{}
-	pending.On("Claim", address).Return(nil)
-	pending.On("Release", address).Return(nil)
+	pending.On("Claim", mock.Anything).Return(nil)
+	pending.On("Release", mock.Anything).Return(nil)
 
 	book := &AddressManagerMock{}
+	book.On("Block", mock.Anything)
 
 	dialer := &DialManagerMock{}
-	dialer.On("Dial", address).Return(conn, nil)
+	dialer.On("Dial", mock.Anything).Return(conn, nil)
 
 	// act
 	handleConnecting(suite.log, &suite.wg, &suite.cfg, pending, peers, rep, book, dialer, address)
 
 	// assert
-	pending.AssertCalled(suite.T(), "Claim", address)
-	pending.AssertCalled(suite.T(), "Release", address)
-	rep.AssertCalled(suite.T(), "Invalid", address)
-	conn.AssertCalled(suite.T(), "Close")
+	t := suite.T()
+
+	pending.AssertCalled(t, "Claim", address)
+	pending.AssertCalled(t, "Release", address)
+	conn.AssertCalled(t, "Close")
+	book.AssertCalled(t, "Block", address)
+
+	peers.AssertNotCalled(t, "Add")
+	rep.AssertNotCalled(t, "Success")
+	rep.AssertNotCalled(t, "Failure")
 }
 
 func (suite *ConnectorSuite) TestConnectorNonceKnown() {
@@ -255,40 +390,47 @@ func (suite *ConnectorSuite) TestConnectorNonceKnown() {
 	// arrange
 	address := "192.0.2.100:1337"
 	nonce := uuid.NewV4().Bytes()
-	syn := append(suite.cfg.network, suite.cfg.nonce...)
-	buf := make([]byte, len(syn))
 	ack := append(suite.cfg.network, nonce...)
 
 	conn := &ConnMock{}
-	conn.On("Write", syn).Return(len(syn), nil)
-	conn.On("Read", buf).Run(func(args mock.Arguments) {
+	conn.On("Write", mock.Anything).Return(0, nil)
+	conn.On("Read", mock.Anything).Run(func(args mock.Arguments) {
 		copy(args.Get(0).([]byte), ack)
-	}).Return(len(buf), nil)
+	}).Return(0, nil)
 	conn.On("Close").Return(nil)
 
 	rep := &ReputationManagerMock{}
-	rep.On("Invalid", address)
+	rep.On("Success", mock.Anything)
+	rep.On("Failure", mock.Anything)
 
 	peers := &PeerManagerMock{}
-	peers.On("Known", nonce).Return(true)
+	peers.On("Known", mock.Anything).Return(false)
+	peers.On("Add", mock.Anything, mock.Anything).Return(nil)
 
 	pending := &PendingManagerMock{}
-	pending.On("Claim", address).Return(nil)
-	pending.On("Release", address).Return(nil)
+	pending.On("Claim", mock.Anything).Return(nil)
+	pending.On("Release", mock.Anything).Return(nil)
 
 	book := &AddressManagerMock{}
+	book.On("Block", mock.Anything)
 
 	dialer := &DialManagerMock{}
-	dialer.On("Dial", address).Return(conn, nil)
+	dialer.On("Dial", mock.Anything).Return(conn, nil)
 
 	// act
 	handleConnecting(suite.log, &suite.wg, &suite.cfg, pending, peers, rep, book, dialer, address)
 
 	// assert
-	pending.AssertCalled(suite.T(), "Claim", address)
-	pending.AssertCalled(suite.T(), "Release", address)
-	rep.AssertCalled(suite.T(), "Invalid", address)
-	conn.AssertCalled(suite.T(), "Close")
+	t := suite.T()
+
+	pending.AssertCalled(t, "Claim", address)
+	pending.AssertCalled(t, "Release", address)
+	conn.AssertCalled(t, "Close")
+	book.AssertCalled(t, "Block", address)
+
+	peers.AssertNotCalled(t, "Add")
+	rep.AssertNotCalled(t, "Success")
+	rep.AssertNotCalled(t, "Failure")
 }
 
 func (suite *ConnectorSuite) TestConnectorAddPeerFails() {
@@ -296,80 +438,45 @@ func (suite *ConnectorSuite) TestConnectorAddPeerFails() {
 	// arrange
 	address := "192.0.2.100:1337"
 	nonce := uuid.NewV4().Bytes()
-	syn := append(suite.cfg.network, suite.cfg.nonce...)
-	buf := make([]byte, len(syn))
 	ack := append(suite.cfg.network, nonce...)
 
 	conn := &ConnMock{}
-	conn.On("Write", syn).Return(len(syn), nil)
-	conn.On("Read", buf).Run(func(args mock.Arguments) {
+	conn.On("Write", mock.Anything).Return(0, nil)
+	conn.On("Read", mock.Anything).Run(func(args mock.Arguments) {
 		copy(args.Get(0).([]byte), ack)
-	}).Return(len(buf), nil)
+	}).Return(0, nil)
 	conn.On("Close").Return(nil)
 
 	rep := &ReputationManagerMock{}
-	rep.On("Invalid", address)
+	rep.On("Success", mock.Anything)
+	rep.On("Failure", mock.Anything)
 
 	peers := &PeerManagerMock{}
-	peers.On("Known", nonce).Return(false)
-	peers.On("Add", conn, nonce).Return(errors.New("cannot add peer"))
+	peers.On("Known", mock.Anything).Return(false)
+	peers.On("Add", mock.Anything, mock.Anything).Return(nil)
 
 	pending := &PendingManagerMock{}
-	pending.On("Claim", address).Return(nil)
-	pending.On("Release", address).Return(nil)
+	pending.On("Claim", mock.Anything).Return(nil)
+	pending.On("Release", mock.Anything).Return(nil)
 
 	book := &AddressManagerMock{}
+	book.On("Block", mock.Anything)
 
 	dialer := &DialManagerMock{}
-	dialer.On("Dial", address).Return(conn, nil)
+	dialer.On("Dial", mock.Anything).Return(conn, nil)
 
 	// act
 	handleConnecting(suite.log, &suite.wg, &suite.cfg, pending, peers, rep, book, dialer, address)
 
 	// assert
-	pending.AssertCalled(suite.T(), "Claim", address)
-	pending.AssertCalled(suite.T(), "Release", address)
-	conn.AssertCalled(suite.T(), "Close")
-}
+	t := suite.T()
 
-func (suite *ConnectorSuite) TestConnectorSuccess() {
+	pending.AssertCalled(t, "Claim", address)
+	pending.AssertCalled(t, "Release", address)
+	peers.AssertCalled(t, "Add", conn, nonce)
+	conn.AssertCalled(t, "Close")
 
-	// arrange
-	address := "192.0.2.100:1337"
-	nonce := uuid.NewV4().Bytes()
-	syn := append(suite.cfg.network, suite.cfg.nonce...)
-	buf := make([]byte, len(syn))
-	ack := append(suite.cfg.network, nonce...)
-
-	conn := &ConnMock{}
-	conn.On("Write", syn).Return(len(syn), nil)
-	conn.On("Read", buf).Run(func(args mock.Arguments) {
-		copy(args.Get(0).([]byte), ack)
-	}).Return(len(buf), nil)
-	conn.On("Close").Return(nil)
-
-	rep := &ReputationManagerMock{}
-	rep.On("Success", address)
-
-	peers := &PeerManagerMock{}
-	peers.On("Known", nonce).Return(false)
-	peers.On("Add", conn, nonce).Return(nil)
-
-	pending := &PendingManagerMock{}
-	pending.On("Claim", address).Return(nil)
-	pending.On("Release", address).Return(nil)
-
-	book := &AddressManagerMock{}
-
-	dialer := &DialManagerMock{}
-	dialer.On("Dial", address).Return(conn, nil)
-
-	// act
-	handleConnecting(suite.log, &suite.wg, &suite.cfg, pending, peers, rep, book, dialer, address)
-
-	// assert
-	pending.AssertCalled(suite.T(), "Claim", address)
-	pending.AssertCalled(suite.T(), "Release", address)
-	peers.AssertCalled(suite.T(), "Add", conn, nonce)
-	rep.AssertCalled(suite.T(), "Success", address)
+	book.AssertNotCalled(t, "Block")
+	rep.AssertNotCalled(t, "Success")
+	rep.AssertNotCalled(t, "Failure")
 }
