@@ -48,27 +48,61 @@ func (suite *SenderSuite) SetupTest() {
 	suite.cfg = Config{}
 }
 
-func (suite *ReceiverSuite) TestSenderEOFError() {
+func (suite *ReceiverSuite) TestSenderSuccess() {
 
 	// arrange
 	address := "192.0.2.100:1337"
-	output := make(chan interface{}, 16)
+	output := make(chan interface{}, 5)
 	w := &bytes.Buffer{}
 
-	peers := &PeerManagerMock{}
-
 	rep := &ReputationManagerMock{}
+	rep.On("Failure", mock.Anything)
 
 	codec := &CodecMock{}
-	codec.On("Encode", w, mock.Anything).Return(io.EOF).Once()
-	codec.On("Encode", w, mock.Anything).Return(nil)
+	codec.On("Encode", mock.Anything, mock.Anything).Return(nil)
 
 	// act
 	suite.cfg.codec = codec
-	go handleSending(suite.log, &suite.wg, &suite.cfg, peers, rep, address, output, w)
+	go handleSending(suite.log, &suite.wg, &suite.cfg, rep, address, output, w)
 	output <- &Ping{}
 	output <- &Pong{}
 	output <- &Discover{}
+	output <- &Peers{}
+	close(output)
+	suite.wg.Wait()
+
+	// assert
+	t := suite.T()
+
+	if codec.AssertNumberOfCalls(t, "Encode", 4) {
+		codec.AssertCalled(t, "Encode", w, &Ping{})
+		codec.AssertCalled(t, "Encode", w, &Pong{})
+		codec.AssertCalled(t, "Encode", w, &Discover{})
+		codec.AssertCalled(t, "Encode", w, &Peers{})
+	}
+}
+
+func (suite *ReceiverSuite) TestSenderEOF() {
+
+	// arrange
+	address := "192.0.2.100:1337"
+	output := make(chan interface{}, 5)
+	w := &bytes.Buffer{}
+
+	rep := &ReputationManagerMock{}
+	rep.On("Failure", mock.Anything)
+
+	codec := &CodecMock{}
+	codec.On("Encode", mock.Anything, mock.Anything).Return(io.EOF)
+	codec.On("Encode", mock.Anything, mock.Anything).Return(nil)
+
+	// act
+	suite.cfg.codec = codec
+	go handleSending(suite.log, &suite.wg, &suite.cfg, rep, address, output, w)
+	output <- &Ping{}
+	output <- &Pong{}
+	output <- &Discover{}
+	output <- &Peers{}
 	close(output)
 	suite.wg.Wait()
 
@@ -78,60 +112,24 @@ func (suite *ReceiverSuite) TestSenderEOFError() {
 	}
 }
 
-func (suite *ReceiverSuite) TestSenderSendMessages() {
-
-	// arrange
-	address := "192.0.2.100:1337"
-	output := make(chan interface{}, 16)
-	w := &bytes.Buffer{}
-
-	peers := &PeerManagerMock{}
-
-	rep := &ReputationManagerMock{}
-
-	codec := &CodecMock{}
-	codec.On("Encode", w, mock.Anything).Return(nil)
-
-	// act
-	suite.cfg.codec = codec
-	go handleSending(suite.log, &suite.wg, &suite.cfg, peers, rep, address, output, w)
-	output <- &Ping{}
-	output <- &Pong{}
-	output <- &Discover{}
-	output <- &Peers{}
-	close(output)
-	suite.wg.Wait()
-
-	// assert
-	if codec.AssertNumberOfCalls(suite.T(), "Encode", 4) {
-		codec.AssertCalled(suite.T(), "Encode", w, &Ping{})
-		codec.AssertCalled(suite.T(), "Encode", w, &Pong{})
-		codec.AssertCalled(suite.T(), "Encode", w, &Discover{})
-		codec.AssertCalled(suite.T(), "Encode", w, &Peers{})
-	}
-}
-
 func (suite *ReceiverSuite) TestSenderEncodeFails() {
 
 	// arrange
 	address := "192.0.2.100:1337"
-	output := make(chan interface{}, 16)
+	output := make(chan interface{}, 5)
 	w := &bytes.Buffer{}
 
-	peers := &PeerManagerMock{}
-	peers.On("Drop", address).Return(errors.New("could not drop peer"))
-
 	rep := &ReputationManagerMock{}
-	rep.On("Error", address)
+	rep.On("Failure", mock.Anything)
 
 	codec := &CodecMock{}
-	codec.On("Encode", w, mock.Anything).Return(errors.New("could not decode message"))
-	codec.On("Encode", w, mock.Anything).Return(nil).Twice()
-	codec.On("Encode", w, mock.Anything).Return(io.EOF)
+	codec.On("Encode", mock.Anything, mock.Anything).Return(errors.New("could not encode message")).Once()
+	codec.On("Encode", mock.Anything, mock.Anything).Return(nil).Once()
+	codec.On("Encode", mock.Anything, mock.Anything).Return(io.EOF)
 
 	// act
 	suite.cfg.codec = codec
-	go handleSending(suite.log, &suite.wg, &suite.cfg, peers, rep, address, output, w)
+	go handleSending(suite.log, &suite.wg, &suite.cfg, rep, address, output, w)
 	output <- &Ping{}
 	output <- &Pong{}
 	output <- &Discover{}
@@ -140,12 +138,10 @@ func (suite *ReceiverSuite) TestSenderEncodeFails() {
 	suite.wg.Wait()
 
 	// assert
-	rep.AssertCalled(suite.T(), "Error", address)
-	peers.AssertCalled(suite.T(), "Drop", address)
-	if codec.AssertNumberOfCalls(suite.T(), "Encode", 4) {
+	rep.AssertCalled(suite.T(), "Failure", address)
+	if codec.AssertNumberOfCalls(suite.T(), "Encode", 3) {
 		codec.AssertCalled(suite.T(), "Encode", w, &Ping{})
 		codec.AssertCalled(suite.T(), "Encode", w, &Pong{})
 		codec.AssertCalled(suite.T(), "Encode", w, &Discover{})
-		codec.AssertCalled(suite.T(), "Encode", w, &Peers{})
 	}
 }

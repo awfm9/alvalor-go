@@ -15,29 +15,24 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with Alvalor.  If not, see <http://www.gnu.org/licenses/>.
 
-package network
+package main
 
-import "time"
+import "net"
 
-func isNot(addresses []string) func(string) bool {
-	lookup := make(map[string]struct{})
-	for _, address := range addresses {
-		lookup[address] = struct{}{}
-	}
-	return func(address string) bool {
-		_, ok := lookup[address]
-		return !ok
-	}
+// DefaultConfig sets the default configuration parameters for our node.
+var DefaultConfig = Config{
+	Listen: true,
+	IP:     net.IPv4(127, 0, 0, 1),
+	Port:   21517,
+	Bootstrap: []string{
+		"127.0.0.1:21517",
+	},
 }
 
-func isScoreAbove(rep reputationManager, threshold float32) func(string) bool {
-	return func(address string) bool {
-		return rep.Score(address) > threshold
-	}
-}
-
-func isLastBefore(rep reputationManager, cutoff time.Time) func(string) bool {
-	return func(address string) bool {
-		return rep.Last(address).Before(cutoff)
-	}
+// Config represents the configuration of the Alvalor node.
+type Config struct {
+	Listen    bool
+	IP        net.IP
+	Port      uint16
+	Bootstrap []string
 }

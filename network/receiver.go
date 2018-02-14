@@ -25,7 +25,7 @@ import (
 	"github.com/rs/zerolog"
 )
 
-func handleReceiving(log zerolog.Logger, wg *sync.WaitGroup, cfg *Config, peers peerManager, rep reputationManager, address string, r io.Reader, input chan<- interface{}) {
+func handleReceiving(log zerolog.Logger, wg *sync.WaitGroup, cfg *Config, rep reputationManager, address string, r io.Reader, input chan<- interface{}) {
 	defer wg.Done()
 
 	// extract configuration as needed
@@ -47,11 +47,7 @@ func handleReceiving(log zerolog.Logger, wg *sync.WaitGroup, cfg *Config, peers 
 		}
 		if err != nil {
 			log.Error().Err(err).Msg("could not read message")
-			rep.Error(address)
-			err = peers.Drop(address)
-			if err != nil {
-				log.Error().Err(err).Msg("could not drop peer")
-			}
+			rep.Failure(address)
 			continue
 		}
 		input <- msg

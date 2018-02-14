@@ -44,9 +44,8 @@ func (suite *DialerSuite) SetupTest() {
 	suite.wg = sync.WaitGroup{}
 	suite.wg.Add(1)
 	suite.cfg = Config{
-		interval: 10 * time.Millisecond,
+		interval: 2 * time.Millisecond,
 		minPeers: 5,
-		maxPeers: 15,
 	}
 }
 
@@ -57,38 +56,33 @@ func (suite *DialerSuite) TestDialerSuccess() {
 	stop := make(chan struct{})
 
 	peers := &PeerManagerMock{}
-	peers.On("Count").Return(3)
+	peers.On("Count").Return(4)
 	peers.On("Addresses").Return([]string{})
 
 	pending := &PendingManagerMock{}
-	pending.On("Count").Return(5)
 	pending.On("Addresses").Return([]string{})
 
 	rep := &ReputationManagerMock{}
 
 	addresses := &AddressManagerMock{}
-	addresses.On("Sample", 1, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return([]string{address})
+	addresses.On("Sample", mock.Anything, mock.Anything).Return([]string{address})
 
 	handlers := &HandlerManagerMock{}
-	handlers.On("Connector", address)
+	handlers.On("Connector", mock.Anything)
 	handlers.On("Discoverer")
 
 	// act
 	go handleDialing(suite.log, &suite.wg, &suite.cfg, peers, pending, addresses, rep, handlers, stop)
-	time.Sleep(15 * time.Millisecond)
+	time.Sleep(time.Duration(1.5 * float64(suite.cfg.interval)))
 	close(stop)
 	suite.wg.Wait()
 
 	// assert
-	addresses.AssertCalled(suite.T(), "Sample", 1,
-		mock.AnythingOfType("func(string) bool"),
-		mock.AnythingOfType("func(string) bool"),
-		mock.AnythingOfType("func(string) bool"),
-		mock.AnythingOfType("func(string, string) bool"),
-		mock.AnythingOfType("func(string, string) bool"),
-	)
-	handlers.AssertCalled(suite.T(), "Connector", address)
-	handlers.AssertNotCalled(suite.T(), "Discoverer")
+	t := suite.T()
+
+	handlers.AssertCalled(t, "Connector", address)
+
+	handlers.AssertNotCalled(t, "Discoverer")
 }
 
 func (suite *DialerSuite) TestDialerNoAddresses() {
@@ -97,17 +91,16 @@ func (suite *DialerSuite) TestDialerNoAddresses() {
 	stop := make(chan struct{})
 
 	peers := &PeerManagerMock{}
-	peers.On("Count").Return(3)
+	peers.On("Count").Return(4)
 	peers.On("Addresses").Return([]string{})
 
 	pending := &PendingManagerMock{}
-	pending.On("Count").Return(5)
 	pending.On("Addresses").Return([]string{})
 
 	rep := &ReputationManagerMock{}
 
 	addresses := &AddressManagerMock{}
-	addresses.On("Sample", 1, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return([]string{})
+	addresses.On("Sample", mock.Anything, mock.Anything).Return([]string{})
 
 	handlers := &HandlerManagerMock{}
 	handlers.On("Connector", mock.Anything)
@@ -115,36 +108,35 @@ func (suite *DialerSuite) TestDialerNoAddresses() {
 
 	// act
 	go handleDialing(suite.log, &suite.wg, &suite.cfg, peers, pending, addresses, rep, handlers, stop)
-	time.Sleep(15 * time.Millisecond)
+	time.Sleep(time.Duration(1.5 * float64(suite.cfg.interval)))
 	close(stop)
 	suite.wg.Wait()
 
 	// assert
-	addresses.AssertCalled(suite.T(), "Sample", 1,
-		mock.AnythingOfType("func(string) bool"),
-		mock.AnythingOfType("func(string) bool"),
-		mock.AnythingOfType("func(string) bool"),
-		mock.AnythingOfType("func(string, string) bool"),
-		mock.AnythingOfType("func(string, string) bool"),
-	)
-	handlers.AssertNotCalled(suite.T(), "Connector")
-	handlers.AssertCalled(suite.T(), "Discoverer")
+	t := suite.T()
+
+	handlers.AssertCalled(t, "Discoverer")
+
+	handlers.AssertNotCalled(t, "Connector", mock.Anything)
 }
 
 func (suite *DialerSuite) TestDialerEnoughPeers() {
 
 	// arrange
+	address := "192.0.2.101:1337"
 	stop := make(chan struct{})
 
 	peers := &PeerManagerMock{}
 	peers.On("Count").Return(5)
+	peers.On("Addresses").Return([]string{})
 
 	pending := &PendingManagerMock{}
-	pending.On("Count").Return(3)
-
-	addresses := &AddressManagerMock{}
+	pending.On("Addresses").Return([]string{})
 
 	rep := &ReputationManagerMock{}
+
+	addresses := &AddressManagerMock{}
+	addresses.On("Sample", mock.Anything, mock.Anything).Return([]string{address})
 
 	handlers := &HandlerManagerMock{}
 	handlers.On("Connector", mock.Anything)
@@ -152,43 +144,13 @@ func (suite *DialerSuite) TestDialerEnoughPeers() {
 
 	// act
 	go handleDialing(suite.log, &suite.wg, &suite.cfg, peers, pending, addresses, rep, handlers, stop)
-	time.Sleep(15 * time.Millisecond)
+	time.Sleep(time.Duration(1.5 * float64(suite.cfg.interval)))
 	close(stop)
 	suite.wg.Wait()
 
 	// assert
-	addresses.AssertNotCalled(suite.T(), "Sample")
-	handlers.AssertNotCalled(suite.T(), "Connector")
-	handlers.AssertNotCalled(suite.T(), "Discoverer")
-}
+	t := suite.T()
 
-func (suite *DialerSuite) TestDialerMaximumPendingPeers() {
-
-	// arrange
-	stop := make(chan struct{})
-
-	peers := &PeerManagerMock{}
-	peers.On("Count").Return(3)
-
-	pending := &PendingManagerMock{}
-	pending.On("Count").Return(12)
-
-	addresses := &AddressManagerMock{}
-
-	rep := &ReputationManagerMock{}
-
-	handlers := &HandlerManagerMock{}
-	handlers.On("Connector", mock.Anything)
-	handlers.On("Discoverer")
-
-	// act
-	go handleDialing(suite.log, &suite.wg, &suite.cfg, peers, pending, addresses, rep, handlers, stop)
-	time.Sleep(15 * time.Millisecond)
-	close(stop)
-	suite.wg.Wait()
-
-	// assert
-	addresses.AssertNotCalled(suite.T(), "Sample")
-	handlers.AssertNotCalled(suite.T(), "Connector")
-	handlers.AssertNotCalled(suite.T(), "Discoverer")
+	handlers.AssertNotCalled(t, "Connector", mock.Anything)
+	handlers.AssertNotCalled(t, "Discoverer")
 }

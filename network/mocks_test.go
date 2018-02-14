@@ -202,13 +202,9 @@ func (pm *PeerManagerMock) Add(conn net.Conn, nonce []byte) error {
 	return args.Error(0)
 }
 
-func (pm *PeerManagerMock) Output(address string) (chan<- interface{}, error) {
-	args := pm.Called(address)
-	var output chan interface{}
-	if args.Get(0) != nil {
-		output = args.Get(0).(chan interface{})
-	}
-	return output, args.Error(1)
+func (pm *PeerManagerMock) Send(address string, msg interface{}) error {
+	args := pm.Called(address, msg)
+	return args.Error(0)
 }
 
 func (pm *PeerManagerMock) Drop(address string) error {
@@ -239,15 +235,7 @@ type ReputationManagerMock struct {
 	mock.Mock
 }
 
-func (rm *ReputationManagerMock) Error(address string) {
-	_ = rm.Called(address)
-}
-
 func (rm *ReputationManagerMock) Failure(address string) {
-	_ = rm.Called(address)
-}
-
-func (rm *ReputationManagerMock) Invalid(address string) {
 	_ = rm.Called(address)
 }
 
@@ -258,6 +246,11 @@ func (rm *ReputationManagerMock) Success(address string) {
 func (rm *ReputationManagerMock) Score(address string) float32 {
 	args := rm.Called(address)
 	return float32(args.Get(0).(float64))
+}
+
+func (rm *ReputationManagerMock) Last(address string) time.Time {
+	args := rm.Called(address)
+	return args.Get(0).(time.Time)
 }
 
 type HandlerManagerMock struct {
@@ -333,8 +326,7 @@ func (am *AddressManagerMock) Unpin(address string) {
 }
 
 func (am *AddressManagerMock) Sample(count uint, params ...interface{}) []string {
-	params = append([]interface{}{int(count)}, params...)
-	args := am.Called(params...)
+	args := am.Called(count, params)
 	var sample []string
 	if args.Get(0) != nil {
 		sample = args.Get(0).([]string)

@@ -43,7 +43,7 @@ func (suite *Server) SetupTest() {
 	suite.wg = sync.WaitGroup{}
 	suite.wg.Add(1)
 	suite.cfg = Config{
-		interval: 10 * time.Millisecond,
+		interval: 2 * time.Millisecond,
 		maxPeers: 5,
 	}
 }
@@ -62,7 +62,7 @@ func (suite *Server) TestServerSuccess() {
 	// act
 	suite.cfg.listen = true
 	go handleServing(suite.log, &suite.wg, &suite.cfg, peers, handlers, stop)
-	time.Sleep(25 * time.Millisecond)
+	time.Sleep(time.Duration(1.5 * float64(suite.cfg.interval)))
 	close(stop)
 	suite.wg.Wait()
 
@@ -84,7 +84,7 @@ func (suite *Server) TestServerMaxPeersNotRunning() {
 	// act
 	suite.cfg.listen = true
 	go handleServing(suite.log, &suite.wg, &suite.cfg, peers, handlers, stop)
-	time.Sleep(15 * time.Millisecond)
+	time.Sleep(time.Duration(1.5 * float64(suite.cfg.interval)))
 	close(stop)
 	suite.wg.Wait()
 
@@ -106,7 +106,7 @@ func (suite *Server) TestServerNotListening() {
 	// act
 	suite.cfg.listen = false
 	go handleServing(suite.log, &suite.wg, &suite.cfg, peers, handlers, stop)
-	time.Sleep(15 * time.Millisecond)
+	time.Sleep(time.Duration(1.5 * float64(suite.cfg.interval)))
 	close(stop)
 	suite.wg.Wait()
 
@@ -129,7 +129,7 @@ func (suite *Server) TestServerMaxPeersRunning() {
 	// act
 	suite.cfg.listen = true
 	go handleServing(suite.log, &suite.wg, &suite.cfg, peers, handlers, stop)
-	time.Sleep(35 * time.Millisecond)
+	time.Sleep(time.Duration(3.5 * float64(suite.cfg.interval)))
 	close(stop)
 	suite.wg.Wait()
 

@@ -41,11 +41,10 @@ func handleDiscovering(log zerolog.Logger, wg *sync.WaitGroup, cfg *Config, peer
 	// get output for each peer and send the discover message
 	msg := &Discover{}
 	for _, address := range addresses {
-		output, err := peers.Output(address)
+		err := peers.Send(address, msg)
 		if err != nil {
 			log.Error().Err(err).Str("address", address).Msg("could not send discovery message")
 			continue
 		}
-		output <- msg
 	}
 }
