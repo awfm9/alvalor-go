@@ -58,8 +58,7 @@ func handleDropping(log zerolog.Logger, wg *sync.WaitGroup, cfg *Config, peers p
 		if err != nil {
 			log.Error().Err(err).Msg("could not drop peer")
 			continue
-		} else {
-			eventMgr.Disconnected(address)
 		}
+		eventMgr.Disconnected(address)
 	}
 }
