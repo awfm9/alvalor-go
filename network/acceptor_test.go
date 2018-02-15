@@ -95,6 +95,7 @@ func (suite *AcceptorSuite) TestAcceptorSuccess() {
 	pending.AssertCalled(t, "Release", address)
 	peers.AssertCalled(t, "Add", conn, nonce)
 	rep.AssertCalled(t, "Success", address)
+	eventMgr.AssertCalled(t, "Connected", address)
 
 	conn.AssertNotCalled(t, "Close")
 	rep.AssertNotCalled(t, "Failure", mock.Anything)
@@ -150,6 +151,7 @@ func (suite *AcceptorSuite) TestAcceptorClaimFails() {
 	rep.AssertNotCalled(t, "Success", mock.Anything)
 	rep.AssertNotCalled(t, "Failure", mock.Anything)
 	book.AssertNotCalled(t, "Block", mock.Anything)
+	eventMgr.AssertNotCalled(t, "Connected", mock.Anything)
 }
 
 func (suite *AcceptorSuite) TestAcceptorReadFails() {
@@ -201,6 +203,7 @@ func (suite *AcceptorSuite) TestAcceptorReadFails() {
 	peers.AssertNotCalled(t, "Add", mock.Anything, mock.Anything)
 	rep.AssertNotCalled(t, "Success", mock.Anything)
 	book.AssertNotCalled(t, "Block", mock.Anything)
+	eventMgr.AssertNotCalled(t, "Connected", mock.Anything)
 }
 
 func (suite *AcceptorSuite) TestAcceptorNetworkMismatch() {
@@ -252,6 +255,7 @@ func (suite *AcceptorSuite) TestAcceptorNetworkMismatch() {
 	peers.AssertNotCalled(t, "Add", mock.Anything, mock.Anything)
 	rep.AssertNotCalled(t, "Success", mock.Anything)
 	rep.AssertNotCalled(t, "Failure", mock.Anything)
+	eventMgr.AssertNotCalled(t, "Connected", mock.Anything)
 }
 
 func (suite *AcceptorSuite) TestAcceptorNonceIdentical() {
@@ -302,6 +306,7 @@ func (suite *AcceptorSuite) TestAcceptorNonceIdentical() {
 	peers.AssertNotCalled(t, "Add", mock.Anything, mock.Anything)
 	rep.AssertNotCalled(t, "Success", mock.Anything)
 	rep.AssertNotCalled(t, "Failure", mock.Anything)
+	eventMgr.AssertNotCalled(t, "Connected", mock.Anything)
 }
 
 func (suite *AcceptorSuite) TestAcceptorWriteFails() {
@@ -353,6 +358,7 @@ func (suite *AcceptorSuite) TestAcceptorWriteFails() {
 	peers.AssertNotCalled(t, "Add", mock.Anything, mock.Anything)
 	rep.AssertNotCalled(t, "Success", mock.Anything)
 	book.AssertNotCalled(t, "Block", mock.Anything)
+	eventMgr.AssertNotCalled(t, "Connected", mock.Anything)
 }
 
 func (suite *AcceptorSuite) TestAcceptorAddPeerFails() {
@@ -404,4 +410,5 @@ func (suite *AcceptorSuite) TestAcceptorAddPeerFails() {
 	rep.AssertNotCalled(t, "Success", mock.Anything)
 	rep.AssertNotCalled(t, "Failure", mock.Anything)
 	book.AssertNotCalled(t, "Block", mock.Anything)
+	eventMgr.AssertNotCalled(t, "Connected", mock.Anything)
 }
