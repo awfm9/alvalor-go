@@ -101,9 +101,10 @@ func handleConnecting(log zerolog.Logger, wg *sync.WaitGroup, cfg *Config, pendi
 		return
 	}
 
+	rep.Success(address)
+
 	err = events.Connected(address)
 	if err != nil {
 		log.Debug().Err(err).Msg("could not submit connected event")
 	}
-	rep.Success(address)
 }

@@ -197,6 +197,7 @@ func (net *simpleNetwork) Stop() {
 		net.peers.Drop(address)
 	}
 	net.wg.Wait()
+	close(net.subscriber)
 }
 
 // Subscribe returns a channel that will stream all received messages and events.

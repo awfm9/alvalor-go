@@ -72,6 +72,7 @@ Loop:
 	// drain the channel in case we broke on closed connection & wait until cascade arrives
 	for _ = range output {
 	}
+
 	err := events.Disconnected(address)
 	if err != nil {
 		log.Debug().Err(err).Msg("could not submit disconnected event")
