@@ -74,6 +74,7 @@ func (suite *DropperSuite) TestDropperSuccess() {
 	t := suite.T()
 
 	peers.AssertCalled(t, "Drop", address)
+	eventMgr.AssertCalled(t, "Disconnected", address)
 }
 
 func (suite *DropperSuite) TestDropperValidPeerNumber() {
@@ -100,6 +101,7 @@ func (suite *DropperSuite) TestDropperValidPeerNumber() {
 	t := suite.T()
 
 	peers.AssertNotCalled(t, "Drop", mock.Anything)
+	eventMgr.AssertNotCalled(t, "Disconnected", mock.Anything)
 }
 
 func (suite *DropperSuite) TestDropperDropFails() {
@@ -127,4 +129,5 @@ func (suite *DropperSuite) TestDropperDropFails() {
 
 	peers.AssertCalled(t, "Drop", address)
 	peers.AssertNumberOfCalls(t, "Drop", 2)
+	eventMgr.AssertNotCalled(t, "Disconnected", mock.Anything)
 }
