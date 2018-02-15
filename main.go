@@ -29,6 +29,8 @@ import (
 
 	"github.com/alvalor/alvalor-go/codec"
 	"github.com/alvalor/alvalor-go/network"
+	"github.com/alvalor/alvalor-go/node"
+	"github.com/alvalor/alvalor-go/types"
 )
 
 func main() {
@@ -72,11 +74,86 @@ func main() {
 		net.Add(address)
 	}
 
+	// initialize the node subscriber
+	sub := net.Subscribe()
+	n := node.New(log, sub)
+
 	// wait for a stop signal to initialize shutdown
-	<-sig
-	signal.Stop(sig)
-	close(sig)
+Loop:
+	for {
+		select {
+		case <-sig:
+			signal.Stop(sig)
+			close(sig)
+			break Loop
+		case <-time.After(time.Duration(rand.Int()%40+20) * time.Second):
+			tx := generateTransaction()
+			err := n.Broadcast(tx)
+			if err != nil {
+				log.Error().Err(err).Msg("could not broadcast generated transaction")
+				continue
+			}
+		}
+	}
 
 	// shut down the p2p network node
 	net.Stop()
+}
+
+func generateTransaction() *types.Transaction {
+
+	// determine the composition of the transaction
+	numTransfers := rand.Int()%3 + 1
+	numFees := rand.Int()%3 + 1
+	numData := rand.Int() % 4 * 1024
+
+	// create the transfers
+	transfers := make([]types.Transfer, 0, numTransfers)
+	for i := 0; i < numTransfers; i++ {
+		transfer := generateTransfer()
+		transfers = append(transfers, transfer)
+	}
+
+	// create the fees
+	fees := make([]types.Fee, 0, numFees)
+	for i := 0; i < numFees; i++ {
+		fee := generateFee()
+		fees = append(fees, fee)
+	}
+
+	// create the data block
+	data := make([]byte, numData)
+	_, _ = rand.Read(data)
+
+	// initialize transaction
+	tx := &types.Transaction{
+		Transfers: transfers,
+		Fees:      fees,
+		Data:      data,
+	}
+
+	return tx
+}
+
+func generateTransfer() types.Transfer {
+	from := make([]byte, 32)
+	_, _ = rand.Read(from)
+	to := make([]byte, 32)
+	_, _ = rand.Read(to)
+	amount := rand.Uint64()
+	return types.Transfer{
+		From:   from,
+		To:     to,
+		Amount: amount,
+	}
+}
+
+func generateFee() types.Fee {
+	from := make([]byte, 32)
+	_, _ = rand.Read(from)
+	amount := rand.Uint64()
+	return types.Fee{
+		From:   from,
+		Amount: amount,
+	}
 }
