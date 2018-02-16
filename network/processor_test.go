@@ -149,7 +149,6 @@ func (suite *ProcessorSuite) TestProcessorUnknownMessage() {
 	// assert
 	t := suite.T()
 
-	//eventMgr.AssertNumberOfCalls(t, "Received", 5)
 	eventMgr.AssertCalled(t, "Received", address, messages[0])
 	eventMgr.AssertCalled(t, "Received", address, messages[1])
 	eventMgr.AssertCalled(t, "Received", address, messages[2])

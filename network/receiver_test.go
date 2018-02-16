@@ -52,9 +52,6 @@ func (suite *ReceiverSuite) SetupTest() {
 func (suite *ReceiverSuite) TestReceiverSuccess() {
 
 	// arrange
-	wg := sync.WaitGroup{}
-	wg.Add(1)
-
 	address := "192.0.2.100:1337"
 	input := make(chan interface{}, 16)
 	r := &bytes.Buffer{}
@@ -92,6 +89,10 @@ func (suite *ReceiverSuite) TestReceiverSuccess() {
 		assert.IsType(t, &Pong{}, msgs[1])
 		assert.IsType(t, &Discover{}, msgs[2])
 		assert.IsType(t, &Peers{}, msgs[3])
+		eventMgr.AssertCalled(t, "Received", address, msgs[0])
+		eventMgr.AssertCalled(t, "Received", address, msgs[1])
+		eventMgr.AssertCalled(t, "Received", address, msgs[2])
+		eventMgr.AssertCalled(t, "Received", address, msgs[3])
 	}
 
 	peers.AssertCalled(t, "Drop", address)
@@ -102,8 +103,6 @@ func (suite *ReceiverSuite) TestReceiverSuccess() {
 func (suite *ReceiverSuite) TestReceiverEOF() {
 
 	// arrange
-	wg := sync.WaitGroup{}
-	wg.Add(1)
 	address := "192.0.2.100:1337"
 	input := make(chan interface{}, 16)
 	r := &bytes.Buffer{}
@@ -134,13 +133,12 @@ func (suite *ReceiverSuite) TestReceiverEOF() {
 	peers.AssertCalled(t, "Drop", address)
 
 	rep.AssertNotCalled(t, "Failure", mock.Anything)
+	eventMgr.AssertNotCalled(t, "Received", mock.Anything, mock.Anything)
 }
 
 func (suite *ReceiverSuite) TestReceiverError() {
 
 	// arrange
-	wg := sync.WaitGroup{}
-	wg.Add(1)
 	address := "192.0.2.100:1337"
 	input := make(chan interface{}, 16)
 	r := &bytes.Buffer{}
@@ -168,13 +166,14 @@ func (suite *ReceiverSuite) TestReceiverError() {
 	for msg := range input {
 		msgs = append(msgs, msg)
 	}
-	wg.Wait()
+	suite.wg.Wait()
 
 	// assert
 	t := suite.T()
 
 	if assert.Len(t, msgs, 1) {
 		assert.Equal(t, message, msgs[0])
+		eventMgr.AssertCalled(t, "Received", address, msgs[0])
 	}
 
 	rep.AssertCalled(t, "Failure", address)

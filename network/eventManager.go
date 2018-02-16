@@ -17,8 +17,28 @@
 
 package network
 
+import (
+	"time"
+)
+
 type eventManager interface {
 	Disconnected(addr string)
 	Connected(addr string)
 	Received(addr string, msg interface{})
+}
+
+type simpleEventManager struct {
+	subscriber chan interface{}
+}
+
+func (mgr *simpleEventManager) Disconnected(address string) {
+	mgr.subscriber <- Disconnected{Address: address, Timestamp: time.Now()}
+}
+
+func (mgr *simpleEventManager) Connected(address string) {
+	mgr.subscriber <- Connected{Address: address, Timestamp: time.Now()}
+}
+
+func (mgr *simpleEventManager) Received(address string, msg interface{}) {
+	mgr.subscriber <- Received{Address: address, Message: msg, Timestamp: time.Now()}
 }

@@ -56,6 +56,7 @@ type simpleNetwork struct {
 	pending    pendingManager
 	peers      peerManager
 	rep        reputationManager
+	eventMgr   eventManager
 	subscriber chan interface{}
 	stop       chan struct{}
 }
@@ -124,6 +125,9 @@ func New(log zerolog.Logger, codec Codec, options ...func(*Config)) Network {
 	dialer := &simpleDialWrapper{}
 	net.dialer = dialer
 
+	eventMgr := &simpleEventManager{subscriber: subscriber}
+	net.eventMgr = eventMgr
+
 	// initialize the initial handlers
 	net.Dropper()
 	net.Server()
@@ -134,7 +138,7 @@ func New(log zerolog.Logger, codec Codec, options ...func(*Config)) Network {
 
 func (net *simpleNetwork) Dropper() {
 	net.wg.Add(1)
-	go handleDropping(net.log, net.wg, net.cfg, net.peers, nil, net.stop)
+	go handleDropping(net.log, net.wg, net.cfg, net.peers, net.eventMgr, net.stop)
 }
 
 func (net *simpleNetwork) Server() {
@@ -159,27 +163,27 @@ func (net *simpleNetwork) Discoverer() {
 
 func (net *simpleNetwork) Acceptor(conn net.Conn) {
 	net.wg.Add(1)
-	go handleAccepting(net.log, net.wg, net.cfg, net.pending, net.peers, net.rep, net.book, nil, conn)
+	go handleAccepting(net.log, net.wg, net.cfg, net.pending, net.peers, net.rep, net.book, net.eventMgr, conn)
 }
 
 func (net *simpleNetwork) Connector(address string) {
 	net.wg.Add(1)
-	go handleConnecting(net.log, net.wg, net.cfg, net.pending, net.peers, net.rep, net.book, net.dialer, nil, address)
+	go handleConnecting(net.log, net.wg, net.cfg, net.pending, net.peers, net.rep, net.book, net.dialer, net.eventMgr, address)
 }
 
 func (net *simpleNetwork) Sender(address string, output <-chan interface{}, w io.Writer) {
 	net.wg.Add(1)
-	go handleSending(net.log, net.wg, net.cfg, net.rep, nil, address, output, w)
+	go handleSending(net.log, net.wg, net.cfg, net.rep, net.eventMgr, address, output, w)
 }
 
 func (net *simpleNetwork) Processor(address string, input <-chan interface{}, output chan<- interface{}) {
 	net.wg.Add(1)
-	go handleProcessing(net.log, net.wg, net.cfg, net.book, nil, address, input, output)
+	go handleProcessing(net.log, net.wg, net.cfg, net.book, net.eventMgr, address, input, output)
 }
 
 func (net *simpleNetwork) Receiver(address string, r io.Reader, input chan<- interface{}) {
 	net.wg.Add(1)
-	go handleReceiving(net.log, net.wg, net.cfg, net.rep, net.peers, nil, address, r, input)
+	go handleReceiving(net.log, net.wg, net.cfg, net.rep, net.peers, net.eventMgr, address, r, input)
 }
 
 func (net *simpleNetwork) Add(address string) {

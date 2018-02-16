@@ -183,42 +183,10 @@ func (suite *SenderSuite) TestSenderEncodeFails() {
 
 	// assert
 	rep.AssertCalled(suite.T(), "Failure", address)
+	eventMgr.AssertCalled(suite.T(), "Disconnected", address)
 	if codec.AssertNumberOfCalls(suite.T(), "Encode", 3) {
 		codec.AssertCalled(suite.T(), "Encode", w, &Ping{})
 		codec.AssertCalled(suite.T(), "Encode", w, &Pong{})
 		codec.AssertCalled(suite.T(), "Encode", w, &Discover{})
 	}
-}
-
-func (suite *SenderSuite) TestSenderEncodeFailsAndDisconnectedPublished() {
-
-	// arrange
-	address := "192.0.2.100:1337"
-	output := make(chan interface{}, 16)
-	w := &bytes.Buffer{}
-
-	peers := &PeerManagerMock{}
-	peers.On("Drop", address).Return(nil)
-
-	rep := &ReputationManagerMock{}
-	rep.On("Error", address)
-
-	codec := &CodecMock{}
-	codec.On("Encode", w, mock.Anything).Return(errors.New("could not decode message"))
-
-	eventMgr := &EventManagerMock{}
-	eventMgr.On("Disconnected", mock.Anything)
-
-	// act
-	suite.cfg.codec = codec
-	go handleSending(suite.log, &suite.wg, &suite.cfg, rep, eventMgr, address, output, w)
-	output <- &Ping{}
-	output <- &Pong{}
-	output <- &Discover{}
-	output <- &Peers{}
-	close(output)
-	suite.wg.Wait()
-
-	// assert
-	eventMgr.AssertCalled(suite.T(), "Disconnected", address)
 }
