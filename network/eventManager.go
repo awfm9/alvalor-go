@@ -34,11 +34,19 @@ type simpleEventManager struct {
 }
 
 func (mgr *simpleEventManager) Disconnected(address string) {
-	mgr.subscriber <- Disconnected{Address: address, Timestamp: time.Now()}
+	select {
+	case mgr.subscriber <- Disconnected{Address: address, Timestamp: time.Now()}:
+	default:
+		log.Debug().Msg("subscriber stalling")
+	}
 }
 
 func (mgr *simpleEventManager) Connected(address string) {
-	mgr.subscriber <- Connected{Address: address, Timestamp: time.Now()}
+	select {
+	case mgr.subscriber <- Connected{Address: address, Timestamp: time.Now()}:
+	default:
+		log.Debug().Msg("subscriber stalling")
+	}
 }
 
 func (mgr *simpleEventManager) Received(address string, msg interface{}) {
