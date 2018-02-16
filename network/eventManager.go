@@ -19,6 +19,8 @@ package network
 
 import (
 	"time"
+
+	"github.com/rs/zerolog/log"
 )
 
 type eventManager interface {
@@ -40,5 +42,9 @@ func (mgr *simpleEventManager) Connected(address string) {
 }
 
 func (mgr *simpleEventManager) Received(address string, msg interface{}) {
-	mgr.subscriber <- Received{Address: address, Message: msg, Timestamp: time.Now()}
+	select {
+	case mgr.subscriber <- Received{Address: address, Message: msg, Timestamp: time.Now()}:
+	default:
+		log.Debug().Msg("subscriber stalling")
+	}
 }
