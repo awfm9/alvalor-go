@@ -15,12 +15,11 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with Alvalor.  If not, see <http://www.gnu.org/licenses/>.
 
-package blockchain
+package database
 
-import "io"
-
-// Codec is responsible for serializing and deserializing data for disk storage.
-type Codec interface {
-	Encode(w io.Writer, i interface{}) error
-	Decode(r io.Reader) (interface{}, error)
+// Lookup is used to check existence of keys and look up the corresponding hash.
+type Lookup interface {
+	Add(key []byte, hash []byte)
+	Has(key []byte)
+	Rem(key []byte)
 }

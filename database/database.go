@@ -15,7 +15,7 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with Alvalor.  If not, see <http://www.gnu.org/licenses/>.
 
-package blockchain
+package database
 
 import (
 	"bytes"
@@ -30,9 +30,9 @@ import (
 // DB is a blockchain database that syncs the trie with the persistent key-value store on disk.
 type DB struct {
 	h  hash.Hash
-	kv *badger.DB
-	tr *trie.Trie
 	cd Codec
+	tr *trie.Trie
+	kv *badger.DB
 }
 
 // NewDB creates a new blockchain DB on the disk.
