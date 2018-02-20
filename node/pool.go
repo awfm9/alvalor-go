@@ -17,9 +17,45 @@
 
 package node
 
-import "github.com/alvalor/alvalor-go/types"
+import (
+	"encoding/hex"
 
-type txPool interface {
+	"github.com/pkg/errors"
+	"golang.org/x/crypto/blake2b"
+
+	"github.com/alvalor/alvalor-go/trie"
+	"github.com/alvalor/alvalor-go/types"
+)
+
+type pool interface {
 	Known(hash []byte) bool
 	Add(tx *types.Transaction) error
+	Root() []byte
+}
+
+type simplePool struct {
+	trie *trie.Trie
+}
+
+func newSimplePool() *simplePool {
+	hash, _ := blake2b.New256(nil)
+	p := &simplePool{trie: trie.New(hash)}
+	return p
+}
+
+func (p *simplePool) Known(hash []byte) bool {
+	_, ok := p.trie.Get(hash)
+	return ok
+}
+
+func (p *simplePool) Add(tx *types.Transaction) error {
+	key := tx.Hash()
+	ok := p.trie.Put(key, key, false)
+	if !ok {
+		return errors.Errorf("could not add transaction to pool (%v)", hex.EncodeToString(key))
+	}
+	return nil
+}
+func (p *simplePool) Root() []byte {
+	return p.trie.Hash()
 }

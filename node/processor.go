@@ -26,7 +26,7 @@ import (
 	"github.com/alvalor/alvalor-go/types"
 )
 
-func handleProcessing(log zerolog.Logger, wg *sync.WaitGroup, entity Hasher, pool txPool, state stateManager, handlers handlerManager) {
+func handleProcessing(log zerolog.Logger, wg *sync.WaitGroup, entity Hasher, pool pool, state stateManager, handlers handlerManager) {
 	defer wg.Done()
 
 	var (
