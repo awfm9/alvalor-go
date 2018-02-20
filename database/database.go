@@ -29,10 +29,10 @@ import (
 
 // DB is a blockchain database that syncs the trie with the persistent key-value store on disk.
 type DB struct {
-	h  hash.Hash
-	cd Codec
-	tr *trie.Trie
-	kv *badger.DB
+	h      hash.Hash
+	cd     Codec
+	lookup Lookup
+	store  Store
 }
 
 // NewDB creates a new blockchain DB on the disk.

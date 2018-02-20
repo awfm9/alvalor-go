@@ -17,9 +17,8 @@
 
 package database
 
-// Storage is used to store binary data by hash.
-type Storage interface {
-	Store(data []byte) ([]byte, error)
+type Store interface {
+	Store(hash []byte, data []byte) error
 	Retrieve(hash []byte) ([]byte, error)
 	Delete(hash []byte) error
 }

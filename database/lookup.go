@@ -19,7 +19,7 @@ package database
 
 // Lookup is used to check existence of keys and look up the corresponding hash.
 type Lookup interface {
-	Add(key []byte, hash []byte)
-	Has(key []byte)
-	Rem(key []byte)
+	Add(key []byte, value []byte, force bool) error
+	Get(key []byte) ([]byte, error)
+	Rem(key []byte) error
 }
