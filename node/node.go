@@ -27,7 +27,7 @@ import (
 
 // Node represents the interface for an outside user of the Alvalor client.
 type Node interface {
-	Broadcast(tx *types.Transaction) error
+	Submit(tx *types.Transaction)
 }
 
 // New creates a new node to manage the Alvalor blockchain.
@@ -52,10 +52,11 @@ func New(log zerolog.Logger, subscription <-chan interface{}) Node {
 }
 
 type simpleNode struct {
-	log zerolog.Logger
-	wg  *sync.WaitGroup
+	log      zerolog.Logger
+	wg       *sync.WaitGroup
+	handlers handlerManager
 }
 
-func (n *simpleNode) Broadcast(tx *types.Transaction) error {
-	return nil
+func (n *simpleNode) Submit(tx *types.Transaction) {
+	n.handlers.Process(tx)
 }

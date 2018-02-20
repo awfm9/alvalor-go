@@ -18,6 +18,6 @@
 package node
 
 type handlerManager interface {
-	Process(address string, entity Hasher)
+	Process(entity Hasher)
 	Propagate(entity Hasher) error
 }

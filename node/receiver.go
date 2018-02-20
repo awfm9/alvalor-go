@@ -54,7 +54,8 @@ func handleReceiving(log zerolog.Logger, wg *sync.WaitGroup, subscription <-chan
 				log.Error().Msg("received event is not hasher")
 				continue
 			}
-			handlers.Process(e.Address, entity)
+			state.Tag(e.Address, entity)
+			handlers.Process(entity)
 		}
 	}
 }

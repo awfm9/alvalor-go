@@ -26,7 +26,7 @@ import (
 	"github.com/alvalor/alvalor-go/types"
 )
 
-func handleProcessing(log zerolog.Logger, wg *sync.WaitGroup, address string, entity Hasher, pool txPool, state stateManager, handlers handlerManager) {
+func handleProcessing(log zerolog.Logger, wg *sync.WaitGroup, entity Hasher, pool txPool, state stateManager, handlers handlerManager) {
 	defer wg.Done()
 
 	var (
@@ -34,14 +34,13 @@ func handleProcessing(log zerolog.Logger, wg *sync.WaitGroup, address string, en
 	)
 
 	// configure logger
-	log = log.With().Str("component", "processor").Str("address", address).Str("hash", hex.EncodeToString(hash)).Logger()
+	log = log.With().Str("component", "processor").Str("hash", hex.EncodeToString(hash)).Logger()
 	log.Info().Msg("processing routine started")
 	defer log.Info().Msg("processing routine stopped")
 
 	// process the message according to type
 	switch e := entity.(type) {
 	case *types.Transaction:
-		state.Tag(address, hash)
 		ok := pool.Known(hash)
 		if ok {
 			log.Debug().Msg("transaction already known")

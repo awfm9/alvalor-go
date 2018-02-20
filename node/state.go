@@ -21,6 +21,6 @@ type stateManager interface {
 	On(address string)
 	Off(address string)
 	Active() []string
-	Tag(address string, hash []byte)
+	Tag(address string, entity Hasher)
 	Set(hash []byte) []string
 }
