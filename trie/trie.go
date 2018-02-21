@@ -17,26 +17,30 @@
 
 package trie
 
-import "hash"
+import (
+	"hash"
+
+	"golang.org/x/crypto/blake2b"
+)
 
 // Trie represents our own implementation of the patricia merkle trie as specified in the Ethereum
 // yellow paper, with a few simplications due to the simpler structure of the Alvalor blockchain.
 type Trie struct {
-	h    hash.Hash
 	root node
+	h    hash.Hash
 }
 
 // New creates a new empty trie with no state.
-func New(h hash.Hash) *Trie {
+func New() *Trie {
+	h, _ := blake2b.New256(nil)
 	t := &Trie{h: h}
 	return t
 }
 
-// Put will insert the given hash at the path provided by the given key. If force is true, it will
-// never fail and overwrite any possible hash already located at that key location. Otherwise, the
-// function will not modify the trie and return false if there is already a hash located at the
-// given key.
-func (t *Trie) Put(key []byte, hash []byte, force bool) bool {
+// Put will insert the given data at the path provided by the given key. If force is true, it will never fail and
+// overwrite data already located at that key location. Otherwise, the function will not modify the trie and return
+// false if there is already a hash located at the given key.
+func (t *Trie) Put(key []byte, data []byte, force bool) bool {
 	cur := &t.root
 	path := encode(key)
 	for {
@@ -89,7 +93,7 @@ func (t *Trie) Put(key []byte, hash []byte, force bool) bool {
 				path = nil
 				continue
 			}
-			*cur = valueNode(hash)
+			*cur = valueNode(data)
 			return true
 		}
 	}
@@ -236,7 +240,9 @@ func (t *Trie) nodeHash(node node) []byte {
 		t.h.Write(hash)
 		return t.h.Sum(nil)
 	case valueNode:
-		return []byte(n)
+		t.h.Reset()
+		t.h.Write([]byte(n))
+		return t.h.Sum(nil)
 	case nil:
 		t.h.Reset()
 		return t.h.Sum(nil)

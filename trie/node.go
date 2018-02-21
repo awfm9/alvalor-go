@@ -20,7 +20,7 @@ package trie
 // node is simply a type definition for the empty interface.
 type node interface{}
 
-// valueNode represents a node that stores the hash inserted as value into the trie, which
+// valueNode represents a node that stores the data inserted as value into the trie, which
 // corresponds to the key that we traversed down the trie.
 type valueNode []byte
 

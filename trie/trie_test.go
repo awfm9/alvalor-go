@@ -22,16 +22,13 @@ import (
 	"math/rand"
 	"testing"
 	"time"
-
-	"golang.org/x/crypto/blake2b"
 )
 
 const TestLength = 1000000
 
 func TestSingle(t *testing.T) {
 	rand.Seed(time.Now().UnixNano())
-	h, _ := blake2b.New256(nil)
-	trie := New(h)
+	trie := New()
 	for i := 0; i < TestLength; i++ {
 		key := make([]byte, 32)
 		hash := make([]byte, 32)
@@ -61,8 +58,7 @@ func TestSingle(t *testing.T) {
 
 func TestBatch(t *testing.T) {
 	rand.Seed(time.Now().UnixNano())
-	h, _ := blake2b.New256(nil)
-	trie := New(h)
+	trie := New()
 	keys := make([][]byte, 0, TestLength)
 	hashes := make([][]byte, 0, TestLength)
 	for i := 0; i < TestLength; i++ {
@@ -96,9 +92,9 @@ func TestBatch(t *testing.T) {
 			t.Fatalf("could not del %v: %x", i, key)
 		}
 	}
-	h.Reset()
-	zero := h.Sum(nil)
-	if !bytes.Equal(trie.Hash(), zero) {
-		t.Fatalf("root hash not zero: %x", trie.Hash())
+	zero := trie.h.Sum(nil)
+	hash := trie.Hash()
+	if !bytes.Equal(hash, zero) {
+		t.Fatalf("root hash not zero: %x != %x", hash, zero)
 	}
 }
