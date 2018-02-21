@@ -25,7 +25,7 @@ import (
 	"github.com/alvalor/alvalor-go/types"
 )
 
-// Node represents the interface for an outside user of the Alvalor client.
+// Node defines the exposed API of the Alvalor node package.
 type Node interface {
 	Submit(tx *types.Transaction)
 }
@@ -39,10 +39,13 @@ type simpleNode struct {
 }
 
 // New creates a new node to manage the Alvalor blockchain.
-func New(log zerolog.Logger, subscription <-chan interface{}) Node {
+func New(log zerolog.Logger, net networkManager) Node {
 
 	// initialize the node
 	n := &simpleNode{}
+
+	// subscribe to updates from the network
+	sub := net.Subscribe()
 
 	// configure the logger
 	log = log.With().Str("package", "node").Logger()
@@ -54,7 +57,7 @@ func New(log zerolog.Logger, subscription <-chan interface{}) Node {
 
 	// now we want to subscribe to the network layer and process messages
 	wg.Add(1)
-	go handleReceiving(log, wg, subscription, nil, nil)
+	go handleReceiving(log, wg, sub, n, nil)
 
 	return n
 }

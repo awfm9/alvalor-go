@@ -18,7 +18,6 @@
 package node
 
 type networkManager interface {
-	Peers() []string
 	Subscribe() <-chan interface{}
 	Send(address string, msg interface{}) error
 	Broadcast(msg interface{}, exclude ...string) error

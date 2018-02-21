@@ -44,7 +44,7 @@ func handlePropagating(log zerolog.Logger, wg *sync.WaitGroup, state stateManage
 	}
 
 	// send it to each peer not excluded
-	peers := net.Peers()
+	peers := state.Active()
 	for _, address := range peers {
 		_, ok := lookup[address]
 		if ok {

@@ -36,12 +36,12 @@ var (
 	Loki = []byte{76, 79, 75, 73}
 )
 
-// Network represents a wrapper around the network package to provide the API.
+// Network defines the exposed API of the Alvalor network package.
 type Network interface {
 	Add(address string)
-	Broadcast(i interface{}, exclude ...string)
-	Send(address string, i interface{}) error
 	Subscribe() <-chan interface{}
+	Send(address string, msg interface{}) error
+	Broadcast(msg interface{}, exclude ...string)
 	Stop()
 }
 
