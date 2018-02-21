@@ -65,7 +65,6 @@ Loop:
 		if err != nil {
 			log.Error().Err(err).Msg("could not write message")
 			rep.Failure(address)
-			eventMgr.Disconnected(address)
 			continue
 		}
 	}
@@ -73,4 +72,5 @@ Loop:
 	// drain the channel in case we broke on closed connection & wait until cascade arrives
 	for _ = range output {
 	}
+	eventMgr.Disconnected(address)
 }
