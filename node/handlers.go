@@ -17,7 +17,31 @@
 
 package node
 
+import (
+	"sync"
+
+	"github.com/rs/zerolog"
+)
+
 type handlerManager interface {
 	Process(entity Entity)
-	Propagate(entity Entity) error
+	Propagate(entity Entity)
+}
+
+type simpleHandlerManager struct {
+	log   zerolog.Logger
+	wg    *sync.WaitGroup
+	net   networkManager
+	state stateManager
+	pool  poolManager
+}
+
+func (hm *simpleHandlerManager) Process(entity Entity) {
+	hm.wg.Add(1)
+	go handleProcessing(hm.log, hm.wg, hm.pool, hm.state, hm, entity)
+}
+
+func (hm *simpleHandlerManager) Propagate(entity Entity) {
+	hm.wg.Add(1)
+	go handlePropagating(hm.log, hm.wg, hm.state, hm.net, entity)
 }

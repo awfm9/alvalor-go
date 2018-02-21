@@ -24,7 +24,7 @@ import (
 	"github.com/rs/zerolog"
 )
 
-func handlePropagating(log zerolog.Logger, wg *sync.WaitGroup, entity Entity, state stateManager, net networkManager) {
+func handlePropagating(log zerolog.Logger, wg *sync.WaitGroup, state stateManager, net networkManager, entity Entity) {
 	defer wg.Done()
 
 	var (
