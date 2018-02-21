@@ -138,7 +138,7 @@ func New(log zerolog.Logger, codec Codec, options ...func(*Config)) Network {
 
 func (net *simpleNetwork) Dropper() {
 	net.wg.Add(1)
-	go handleDropping(net.log, net.wg, net.cfg, net.peers, net.eventMgr, net.stop)
+	go handleDropping(net.log, net.wg, net.cfg, net.peers, net.stop)
 }
 
 func (net *simpleNetwork) Server() {

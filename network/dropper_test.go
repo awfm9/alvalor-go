@@ -61,11 +61,8 @@ func (suite *DropperSuite) TestDropperSuccess() {
 	peers.On("Addresses").Return([]string{address})
 	peers.On("Drop", address).Return(nil)
 
-	eventMgr := &EventManagerMock{}
-	eventMgr.On("Disconnected", mock.Anything)
-
 	// act
-	go handleDropping(suite.log, &suite.wg, &suite.cfg, peers, eventMgr, stop)
+	go handleDropping(suite.log, &suite.wg, &suite.cfg, peers, stop)
 	time.Sleep(time.Duration(1.5 * float64(suite.cfg.interval)))
 	close(stop)
 	suite.wg.Wait()
@@ -74,7 +71,6 @@ func (suite *DropperSuite) TestDropperSuccess() {
 	t := suite.T()
 
 	peers.AssertCalled(t, "Drop", address)
-	eventMgr.AssertCalled(t, "Disconnected", address)
 }
 
 func (suite *DropperSuite) TestDropperValidPeerNumber() {
@@ -88,11 +84,8 @@ func (suite *DropperSuite) TestDropperValidPeerNumber() {
 	peers.On("Addresses").Return([]string{address})
 	peers.On("Drop", address).Return(nil)
 
-	eventMgr := &EventManagerMock{}
-	eventMgr.On("Disconnected", mock.Anything)
-
 	// act
-	go handleDropping(suite.log, &suite.wg, &suite.cfg, peers, eventMgr, stop)
+	go handleDropping(suite.log, &suite.wg, &suite.cfg, peers, stop)
 	time.Sleep(time.Duration(1.5 * float64(suite.cfg.interval)))
 	close(stop)
 	suite.wg.Wait()
@@ -101,7 +94,6 @@ func (suite *DropperSuite) TestDropperValidPeerNumber() {
 	t := suite.T()
 
 	peers.AssertNotCalled(t, "Drop", mock.Anything)
-	eventMgr.AssertNotCalled(t, "Disconnected", mock.Anything)
 }
 
 func (suite *DropperSuite) TestDropperDropFails() {
@@ -115,11 +107,8 @@ func (suite *DropperSuite) TestDropperDropFails() {
 	peers.On("Addresses").Return([]string{address})
 	peers.On("Drop", address).Return(errors.New("could not drop peer"))
 
-	eventMgr := &EventManagerMock{}
-	eventMgr.On("Disconnected", mock.Anything)
-
 	// act
-	go handleDropping(suite.log, &suite.wg, &suite.cfg, peers, eventMgr, stop)
+	go handleDropping(suite.log, &suite.wg, &suite.cfg, peers, stop)
 	time.Sleep(time.Duration(2.5 * float64(suite.cfg.interval)))
 	close(stop)
 	suite.wg.Wait()
@@ -129,5 +118,4 @@ func (suite *DropperSuite) TestDropperDropFails() {
 
 	peers.AssertCalled(t, "Drop", address)
 	peers.AssertNumberOfCalls(t, "Drop", 2)
-	eventMgr.AssertNotCalled(t, "Disconnected", mock.Anything)
 }
