@@ -69,12 +69,9 @@ func (suite *ReceiverSuite) TestReceiverSuccess() {
 	peers := &PeerManagerMock{}
 	peers.On("Drop", mock.Anything).Return(nil)
 
-	eventMgr := &EventManagerMock{}
-	eventMgr.On("Received", mock.Anything, mock.Anything)
-
 	// act
 	suite.cfg.codec = codec
-	go handleReceiving(suite.log, &suite.wg, &suite.cfg, rep, peers, eventMgr, address, r, input)
+	go handleReceiving(suite.log, &suite.wg, &suite.cfg, rep, peers, address, r, input)
 	var msgs []interface{}
 	for msg := range input {
 		msgs = append(msgs, msg)
@@ -89,10 +86,6 @@ func (suite *ReceiverSuite) TestReceiverSuccess() {
 		assert.IsType(t, &Pong{}, msgs[1])
 		assert.IsType(t, &Discover{}, msgs[2])
 		assert.IsType(t, &Peers{}, msgs[3])
-		eventMgr.AssertCalled(t, "Received", address, msgs[0])
-		eventMgr.AssertCalled(t, "Received", address, msgs[1])
-		eventMgr.AssertCalled(t, "Received", address, msgs[2])
-		eventMgr.AssertCalled(t, "Received", address, msgs[3])
 	}
 
 	peers.AssertCalled(t, "Drop", address)
@@ -116,12 +109,9 @@ func (suite *ReceiverSuite) TestReceiverEOF() {
 	peers := &PeerManagerMock{}
 	peers.On("Drop", mock.Anything).Return(nil)
 
-	eventMgr := &EventManagerMock{}
-	eventMgr.On("Received", mock.Anything, mock.Anything)
-
 	// act
 	suite.cfg.codec = codec
-	go handleReceiving(suite.log, &suite.wg, &suite.cfg, rep, peers, eventMgr, address, r, input)
+	go handleReceiving(suite.log, &suite.wg, &suite.cfg, rep, peers, address, r, input)
 	suite.wg.Wait()
 
 	// assert
@@ -133,7 +123,6 @@ func (suite *ReceiverSuite) TestReceiverEOF() {
 	peers.AssertCalled(t, "Drop", address)
 
 	rep.AssertNotCalled(t, "Failure", mock.Anything)
-	eventMgr.AssertNotCalled(t, "Received", mock.Anything, mock.Anything)
 }
 
 func (suite *ReceiverSuite) TestReceiverError() {
@@ -156,12 +145,9 @@ func (suite *ReceiverSuite) TestReceiverError() {
 	peers := &PeerManagerMock{}
 	peers.On("Drop", mock.Anything).Return(nil)
 
-	eventMgr := &EventManagerMock{}
-	eventMgr.On("Received", mock.Anything, mock.Anything)
-
 	// act
 	suite.cfg.codec = codec
-	go handleReceiving(suite.log, &suite.wg, &suite.cfg, rep, peers, eventMgr, address, r, input)
+	go handleReceiving(suite.log, &suite.wg, &suite.cfg, rep, peers, address, r, input)
 	var msgs []interface{}
 	for msg := range input {
 		msgs = append(msgs, msg)
@@ -173,7 +159,6 @@ func (suite *ReceiverSuite) TestReceiverError() {
 
 	if assert.Len(t, msgs, 1) {
 		assert.Equal(t, message, msgs[0])
-		eventMgr.AssertCalled(t, "Received", address, msgs[0])
 	}
 
 	rep.AssertCalled(t, "Failure", address)

@@ -183,7 +183,7 @@ func (net *simpleNetwork) Processor(address string, input <-chan interface{}, ou
 
 func (net *simpleNetwork) Receiver(address string, r io.Reader, input chan<- interface{}) {
 	net.wg.Add(1)
-	go handleReceiving(net.log, net.wg, net.cfg, net.rep, net.peers, net.eventMgr, address, r, input)
+	go handleReceiving(net.log, net.wg, net.cfg, net.rep, net.peers, address, r, input)
 }
 
 func (net *simpleNetwork) Add(address string) {
