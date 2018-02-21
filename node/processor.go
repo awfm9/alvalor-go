@@ -41,12 +41,12 @@ func handleProcessing(log zerolog.Logger, wg *sync.WaitGroup, entity Entity, poo
 	// process the message according to type
 	switch e := entity.(type) {
 	case *types.Transaction:
-		_, err := pool.Get(id)
-		if err == nil {
+		ok := pool.Known(id)
+		if ok {
 			log.Debug().Msg("transaction already known")
 			return
 		}
-		err = pool.Add(e)
+		err := pool.Add(e)
 		if err != nil {
 			log.Error().Err(err).Msg("could not add transaction to pool")
 			return

@@ -26,6 +26,7 @@ import (
 
 type pool interface {
 	Add(tx *types.Transaction) error
+	Known(hash []byte) bool
 	Get(hash []byte) (*types.Transaction, error)
 	Remove(tx *types.Transaction) error
 	Delta() []byte
@@ -55,6 +56,11 @@ func (p *simplePool) Add(tx *types.Transaction) error {
 		return errors.Wrap(err, "could not put data")
 	}
 	return nil
+}
+
+func (p *simplePool) Known(id []byte) bool {
+	_, err := p.trie.Get(id)
+	return err == nil
 }
 
 func (p *simplePool) Get(id []byte) (*types.Transaction, error) {
