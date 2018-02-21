@@ -17,8 +17,10 @@
 
 package node
 
+import "io"
+
 // Codec is responsible for serializing and deserializing data for disk storage.
 type Codec interface {
-	Encode(entity Entity) ([]byte, error)
-	Decode(data []byte) (Entity, error)
+	Encode(w io.Writer, i interface{}) error
+	Decode(r io.Reader) (interface{}, error)
 }

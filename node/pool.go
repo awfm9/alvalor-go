@@ -18,6 +18,8 @@
 package node
 
 import (
+	"bytes"
+
 	"github.com/pkg/errors"
 
 	"github.com/alvalor/alvalor-go/trie"
@@ -46,11 +48,13 @@ func newSimplePool(codec Codec) *simplePool {
 }
 
 func (p *simplePool) Add(tx *types.Transaction) error {
-	data, err := p.codec.Encode(tx)
+	buf := &bytes.Buffer{}
+	err := p.codec.Encode(buf, tx)
 	if err != nil {
 		return errors.Wrap(err, "could not encode transaction")
 	}
 	id := tx.ID()
+	data := buf.Bytes()
 	err = p.trie.Put(id, data, false)
 	if err != nil {
 		return errors.Wrap(err, "could not put data")
@@ -68,7 +72,8 @@ func (p *simplePool) Get(id []byte) (*types.Transaction, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get data")
 	}
-	tx, err := p.codec.Decode(data)
+	buf := bytes.NewBuffer(data)
+	tx, err := p.codec.Decode(buf)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not decode transaction")
 	}
