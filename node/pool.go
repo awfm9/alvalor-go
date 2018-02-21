@@ -28,9 +28,9 @@ import (
 
 type poolManager interface {
 	Add(tx *types.Transaction) error
-	Known(hash []byte) bool
-	Get(hash []byte) (*types.Transaction, error)
-	Remove(tx *types.Transaction) error
+	Known(id []byte) bool
+	Get(id []byte) (*types.Transaction, error)
+	Remove(id []byte) error
 	Delta() []byte
 }
 

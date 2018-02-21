@@ -39,7 +39,7 @@ type simpleNode struct {
 }
 
 // New creates a new node to manage the Alvalor blockchain.
-func New(log zerolog.Logger, net networkManager) Node {
+func New(log zerolog.Logger, net networkManager, codec Codec) Node {
 
 	// initialize the node
 	n := &simpleNode{}
@@ -55,9 +55,20 @@ func New(log zerolog.Logger, net networkManager) Node {
 	wg := &sync.WaitGroup{}
 	n.wg = wg
 
+	// store the network manager
+	n.net = net
+
+	// initialize peer state manager
+	state := newSimpleStateManager()
+	n.state = state
+
+	// initialize simple transaction pool
+	pool := newSimplePoolManager(codec)
+	n.pool = pool
+
 	// now we want to subscribe to the network layer and process messages
 	wg.Add(1)
-	go handleReceiving(log, wg, sub, n, nil)
+	go handleReceiving(log, wg, sub, n, state)
 
 	return n
 }
