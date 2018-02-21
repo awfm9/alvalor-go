@@ -54,7 +54,7 @@ func handleReceiving(log zerolog.Logger, wg *sync.WaitGroup, subscription <-chan
 				log.Error().Msg("received event is not entity")
 				continue
 			}
-			state.Tag(e.Address, entity)
+			state.Tag(e.Address, entity.ID())
 			handlers.Process(entity)
 		}
 	}

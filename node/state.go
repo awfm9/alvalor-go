@@ -21,6 +21,42 @@ type stateManager interface {
 	On(address string)
 	Off(address string)
 	Active() []string
-	Tag(address string, entity Entity)
-	Set(hash []byte) []string
+	Tag(address string, id []byte)
+	Seen(id []byte) []string
+}
+
+type simpleStateManager struct {
+	active map[string]bool
+	seen   map[string][]string
+}
+
+func newSimpleStateManager() *simpleStateManager {
+	return &simpleStateManager{
+		active: make(map[string]bool),
+		seen:   make(map[string][]string),
+	}
+}
+
+func (s *simpleStateManager) On(address string) {
+	s.active[address] = true
+}
+
+func (s *simpleStateManager) Off(address string) {
+	delete(s.active, address)
+}
+
+func (s *simpleStateManager) Active() []string {
+	active := make([]string, 0, len(s.active))
+	for address := range s.active {
+		active = append(active, address)
+	}
+	return active
+}
+
+func (s *simpleStateManager) Tag(address string, id []byte) {
+	s.seen[string(id)] = append(s.seen[string(id)], address)
+}
+
+func (s *simpleStateManager) Seen(id []byte) []string {
+	return s.seen[string(id)]
 }

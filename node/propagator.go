@@ -37,9 +37,9 @@ func handlePropagating(log zerolog.Logger, wg *sync.WaitGroup, state stateManage
 	defer log.Info().Msg("propagating routine stopped")
 
 	// create lookup to know who to exclude from broadcast
-	known := state.Set(id)
-	lookup := make(map[string]struct{}, len(known))
-	for _, address := range known {
+	seen := state.Seen(id)
+	lookup := make(map[string]struct{}, len(seen))
+	for _, address := range seen {
 		lookup[address] = struct{}{}
 	}
 
