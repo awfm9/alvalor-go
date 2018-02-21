@@ -23,6 +23,8 @@ import (
 	"sync"
 	"time"
 
+	multierror "github.com/hashicorp/go-multierror"
+	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
 	uuid "github.com/satori/go.uuid"
 )
@@ -41,7 +43,7 @@ type Network interface {
 	Add(address string)
 	Subscribe() <-chan interface{}
 	Send(address string, msg interface{}) error
-	Broadcast(msg interface{}, exclude ...string)
+	Broadcast(msg interface{}, exclude ...string) error
 	Stop()
 }
 
@@ -206,23 +208,27 @@ func (net *simpleNetwork) Subscribe() <-chan interface{} {
 }
 
 // Broadcast broadcasts a message to all peers.
-func (net *simpleNetwork) Broadcast(msg interface{}, exclude ...string) {
+func (net *simpleNetwork) Broadcast(msg interface{}, exclude ...string) error {
 	addresses := net.peers.Addresses()
 	lookup := make(map[string]struct{})
 	for _, address := range exclude {
 		lookup[address] = struct{}{}
 	}
+	var err *multierror.Error
 	for _, address := range addresses {
 		_, ok := lookup[address]
 		if ok {
 			continue
 		}
-		err := net.peers.Send(address, msg)
-		if err != nil {
-			net.log.Error().Err(err).Str("address", address).Msg("could not broadcast to peer")
-			continue
+		inErr := net.peers.Send(address, msg)
+		if inErr != nil {
+			err = multierror.Append(err, inErr)
 		}
 	}
+	if err != nil {
+		return errors.Wrap(err, "could not broadcast to all peers")
+	}
+	return nil
 }
 
 // Send sends a message to the peer with the given address.

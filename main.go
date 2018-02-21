@@ -76,7 +76,7 @@ func main() {
 
 	// initialize the node subscriber
 	sub := net.Subscribe()
-	n := node.New(log, sub)
+	n := node.New(log, net, cod)
 
 	// wait for a stop signal to initialize shutdown
 Loop:
