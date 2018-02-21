@@ -30,6 +30,14 @@ type Node interface {
 	Submit(tx *types.Transaction)
 }
 
+type simpleNode struct {
+	log   zerolog.Logger
+	wg    *sync.WaitGroup
+	net   networkManager
+	state stateManager
+	pool  poolManager
+}
+
 // New creates a new node to manage the Alvalor blockchain.
 func New(log zerolog.Logger, subscription <-chan interface{}) Node {
 
@@ -51,12 +59,16 @@ func New(log zerolog.Logger, subscription <-chan interface{}) Node {
 	return n
 }
 
-type simpleNode struct {
-	log      zerolog.Logger
-	wg       *sync.WaitGroup
-	handlers handlerManager
+func (n *simpleNode) Submit(tx *types.Transaction) {
+	n.Process(tx)
 }
 
-func (n *simpleNode) Submit(tx *types.Transaction) {
-	n.handlers.Process(tx)
+func (n *simpleNode) Process(entity Entity) {
+	n.wg.Add(1)
+	go handleProcessing(n.log, n.wg, n.pool, n.state, n, entity)
+}
+
+func (n *simpleNode) Propagate(entity Entity) {
+	n.wg.Add(1)
+	go handlePropagating(n.log, n.wg, n.state, n.net, entity)
 }
