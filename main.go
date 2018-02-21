@@ -75,7 +75,6 @@ func main() {
 	}
 
 	// initialize the node subscriber
-	sub := net.Subscribe()
 	n := node.New(log, net, cod)
 
 	// wait for a stop signal to initialize shutdown
@@ -88,11 +87,7 @@ Loop:
 			break Loop
 		case <-time.After(time.Duration(rand.Int()%40+20) * time.Second):
 			tx := generateTransaction()
-			err := n.Broadcast(tx)
-			if err != nil {
-				log.Error().Err(err).Msg("could not broadcast generated transaction")
-				continue
-			}
+			n.Submit(tx)
 		}
 	}
 
