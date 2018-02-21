@@ -18,44 +18,65 @@
 package node
 
 import (
-	"encoding/hex"
-
 	"github.com/pkg/errors"
-	"golang.org/x/crypto/blake2b"
 
 	"github.com/alvalor/alvalor-go/trie"
 	"github.com/alvalor/alvalor-go/types"
 )
 
 type pool interface {
-	Known(hash []byte) bool
 	Add(tx *types.Transaction) error
-	Root() []byte
+	Get(hash []byte) (*types.Transaction, error)
+	Remove(tx *types.Transaction) error
+	Delta() []byte
 }
 
 type simplePool struct {
-	trie *trie.Trie
+	codec Codec
+	trie  *trie.Trie
 }
 
-func newSimplePool() *simplePool {
-	hash, _ := blake2b.New256(nil)
-	p := &simplePool{trie: trie.New(hash)}
+func newSimplePool(codec Codec) *simplePool {
+	p := &simplePool{
+		codec: codec,
+		trie:  trie.New(),
+	}
 	return p
 }
 
-func (p *simplePool) Known(hash []byte) bool {
-	_, ok := p.trie.Get(hash)
-	return ok
-}
-
 func (p *simplePool) Add(tx *types.Transaction) error {
-	key := tx.Hash()
-	ok := p.trie.Put(key, key, false)
-	if !ok {
-		return errors.Errorf("could not add transaction to pool (%v)", hex.EncodeToString(key))
+	data, err := p.codec.Encode(tx)
+	if err != nil {
+		return errors.Wrap(err, "could not encode transaction")
+	}
+	id := tx.ID()
+	err = p.trie.Put(id, data, false)
+	if err != nil {
+		return errors.Wrap(err, "could not put data")
 	}
 	return nil
 }
-func (p *simplePool) Root() []byte {
+
+func (p *simplePool) Get(id []byte) (*types.Transaction, error) {
+	data, err := p.trie.Get(id)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not get data")
+	}
+	tx, err := p.codec.Decode(data)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not decode transaction")
+	}
+	return tx.(*types.Transaction), nil
+}
+
+func (p *simplePool) Remove(id []byte) error {
+	err := p.trie.Del(id)
+	if err != nil {
+		return errors.Wrap(err, "could not del data")
+	}
+	return nil
+}
+
+func (p *simplePool) Delta() []byte {
 	return p.trie.Hash()
 }

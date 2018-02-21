@@ -26,27 +26,27 @@ import (
 	"github.com/alvalor/alvalor-go/types"
 )
 
-func handleProcessing(log zerolog.Logger, wg *sync.WaitGroup, entity Hasher, pool pool, state stateManager, handlers handlerManager) {
+func handleProcessing(log zerolog.Logger, wg *sync.WaitGroup, entity Entity, pool pool, state stateManager, handlers handlerManager) {
 	defer wg.Done()
 
 	var (
-		hash = entity.Hash()
+		id = entity.ID()
 	)
 
 	// configure logger
-	log = log.With().Str("component", "processor").Str("hash", hex.EncodeToString(hash)).Logger()
+	log = log.With().Str("component", "processor").Str("id", hex.EncodeToString(id)).Logger()
 	log.Info().Msg("processing routine started")
 	defer log.Info().Msg("processing routine stopped")
 
 	// process the message according to type
 	switch e := entity.(type) {
 	case *types.Transaction:
-		ok := pool.Known(hash)
-		if ok {
+		_, err := pool.Get(id)
+		if err == nil {
 			log.Debug().Msg("transaction already known")
 			return
 		}
-		err := pool.Add(e)
+		err = pool.Add(e)
 		if err != nil {
 			log.Error().Err(err).Msg("could not add transaction to pool")
 			return

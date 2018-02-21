@@ -34,23 +34,23 @@ func TestSingle(t *testing.T) {
 		hash := make([]byte, 32)
 		_, _ = rand.Read(key)
 		_, _ = rand.Read(hash)
-		ok := trie.Put(key, hash, false)
-		if !ok {
+		err := trie.Put(key, hash, false)
+		if err != nil {
 			t.Fatalf("could not put: %x", key)
 		}
-		out, ok := trie.Get(key)
-		if !ok {
+		out, err := trie.Get(key)
+		if err != nil {
 			t.Fatalf("could not get: %x", key)
 		}
 		if !bytes.Equal(out, hash) {
 			t.Errorf("wrong hash: %x != %x", out, hash)
 		}
-		ok = trie.Del(key)
-		if !ok {
+		err = trie.Del(key)
+		if err != nil {
 			t.Fatalf("could not del: %x", key)
 		}
-		_, ok = trie.Get(key)
-		if ok {
+		_, err = trie.Get(key)
+		if err == nil {
 			t.Fatalf("should not get: %x", key)
 		}
 	}
@@ -71,14 +71,14 @@ func TestBatch(t *testing.T) {
 	}
 	for i, key := range keys {
 		hash := hashes[i]
-		ok := trie.Put(key, hash, false)
-		if !ok {
+		err := trie.Put(key, hash, false)
+		if err != nil {
 			t.Fatalf("could not put %v: %x", i, key)
 		}
 	}
 	for i, key := range keys {
-		out, ok := trie.Get(key)
-		if !ok {
+		out, err := trie.Get(key)
+		if err != nil {
 			t.Fatalf("could not get %v: %x", i, key)
 		}
 		hash := hashes[i]
@@ -87,8 +87,8 @@ func TestBatch(t *testing.T) {
 		}
 	}
 	for i, key := range keys {
-		ok := trie.Del(key)
-		if !ok {
+		err := trie.Del(key)
+		if err != nil {
 			t.Fatalf("could not del %v: %x", i, key)
 		}
 	}

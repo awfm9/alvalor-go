@@ -24,20 +24,20 @@ import (
 	"github.com/rs/zerolog"
 )
 
-func handlePropagating(log zerolog.Logger, wg *sync.WaitGroup, entity Hasher, state stateManager, net networkManager) {
+func handlePropagating(log zerolog.Logger, wg *sync.WaitGroup, entity Entity, state stateManager, net networkManager) {
 	defer wg.Done()
 
 	var (
-		hash = entity.Hash()
+		id = entity.ID()
 	)
 
 	// configure logger
-	log = log.With().Str("component", "propagator").Str("hash", hex.EncodeToString(hash)).Logger()
+	log = log.With().Str("component", "propagator").Str("id", hex.EncodeToString(id)).Logger()
 	log.Info().Msg("propagating routine started")
 	defer log.Info().Msg("propagating routine stopped")
 
 	// create lookup to know who to exclude from broadcast
-	known := state.Set(hash)
+	known := state.Set(id)
 	lookup := make(map[string]struct{}, len(known))
 	for _, address := range known {
 		lookup[address] = struct{}{}

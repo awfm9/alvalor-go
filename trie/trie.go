@@ -18,9 +18,16 @@
 package trie
 
 import (
+	"errors"
 	"hash"
 
 	"golang.org/x/crypto/blake2b"
+)
+
+// A list of errors that can be returned by the functions of the trie.
+var (
+	ErrAlreadyExists = errors.New("key already exists")
+	ErrNotFound      = errors.New("key not found")
 )
 
 // Trie represents our own implementation of the patricia merkle trie as specified in the Ethereum
@@ -40,7 +47,7 @@ func New() *Trie {
 // Put will insert the given data at the path provided by the given key. If force is true, it will never fail and
 // overwrite data already located at that key location. Otherwise, the function will not modify the trie and return
 // false if there is already a hash located at the given key.
-func (t *Trie) Put(key []byte, data []byte, force bool) bool {
+func (t *Trie) Put(key []byte, data []byte, force bool) error {
 	cur := &t.root
 	path := encode(key)
 	for {
@@ -82,7 +89,7 @@ func (t *Trie) Put(key []byte, data []byte, force bool) bool {
 			}
 		case valueNode:
 			if !force {
-				return false
+				return ErrAlreadyExists
 			}
 			*cur = nil
 		case nil:
@@ -94,14 +101,14 @@ func (t *Trie) Put(key []byte, data []byte, force bool) bool {
 				continue
 			}
 			*cur = valueNode(data)
-			return true
+			return nil
 		}
 	}
 }
 
 // Get will retrieve the hash located at the path provided by the given key. If the path doesn't
 // exist or there is no hash at the given location, it returns a nil slice and false.
-func (t *Trie) Get(key []byte) ([]byte, bool) {
+func (t *Trie) Get(key []byte) ([]byte, error) {
 	cur := &t.root
 	path := encode(key)
 	for {
@@ -122,18 +129,18 @@ func (t *Trie) Get(key []byte) ([]byte, bool) {
 				path = path[len(common):]
 				continue
 			}
-			return nil, false
+			return nil, ErrNotFound
 		case valueNode:
-			return []byte(n), true
+			return []byte(n), nil
 		case nil:
-			return nil, false
+			return nil, ErrNotFound
 		}
 	}
 }
 
 // Del will try to delete the hash located at the path provided by the given key. If no hash is
 // found at the given location, it returns false.
-func (t *Trie) Del(key []byte) bool {
+func (t *Trie) Del(key []byte) error {
 	var visited []*node
 	cur := &t.root
 	path := encode(key)
@@ -158,12 +165,12 @@ Remove:
 				path = path[len(common):]
 				continue
 			}
-			return false
+			return ErrNotFound
 		case valueNode:
 			*cur = nil
 			break Remove
 		case nil:
-			return false
+			return ErrNotFound
 		}
 	}
 Compact:
@@ -209,7 +216,7 @@ Compact:
 			break Compact
 		}
 	}
-	return true
+	return nil
 }
 
 // Hash will return the hash that represents the trie in its entirety by returning the hash of the

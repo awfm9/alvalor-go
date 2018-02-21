@@ -17,10 +17,7 @@
 
 package node
 
-type stateManager interface {
-	On(address string)
-	Off(address string)
-	Active() []string
-	Tag(address string, entity Entity)
-	Set(hash []byte) []string
+// Entity is any data structure that returns a unique ID.
+type Entity interface {
+	ID() []byte
 }

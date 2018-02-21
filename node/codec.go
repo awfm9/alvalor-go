@@ -17,7 +17,8 @@
 
 package node
 
-// Hasher represents an entity that can return a unique hash.
-type Hasher interface {
-	Hash() []byte
+// Codec is responsible for serializing and deserializing data for disk storage.
+type Codec interface {
+	Encode(entity Entity) ([]byte, error)
+	Decode(data []byte) (Entity, error)
 }
