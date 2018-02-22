@@ -39,12 +39,12 @@ func handleReceiving(log zerolog.Logger, wg *sync.WaitGroup, subscription <-chan
 		// in the case of a connected event, we start tracking the peer state
 		case *network.Connected:
 			log.Info().Str("address", e.Address).Msg("peer connected")
-			state.On(e.Address)
+			state.Active(e.Address)
 
 		// in the case of a disconnected event, we stop tracking the peer state
 		case *network.Disconnected:
 			log.Info().Str("address", e.Address).Msg("peer disconnected")
-			state.Off(e.Address)
+			state.Inactive(e.Address)
 
 		// in the case of a received event, we start processing the peer message
 		case *network.Received:

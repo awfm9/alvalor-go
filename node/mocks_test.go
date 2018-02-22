@@ -20,9 +20,23 @@ package node
 import (
 	"io"
 
-	"github.com/alvalor/alvalor-go/types"
 	"github.com/stretchr/testify/mock"
+
+	"github.com/alvalor/alvalor-go/types"
 )
+
+type EntityMock struct {
+	mock.Mock
+}
+
+func (e *EntityMock) ID() []byte {
+	args := e.Called()
+	var id []byte
+	if args.Get(0) != nil {
+		id = args.Get(0).([]byte)
+	}
+	return id
+}
 
 type CodecMock struct {
 	mock.Mock
@@ -93,15 +107,15 @@ type StateMock struct {
 	mock.Mock
 }
 
-func (s *StateMock) On(address string) {
+func (s *StateMock) Active(address string) {
 	s.Called(address)
 }
 
-func (s *StateMock) Off(address string) {
+func (s *StateMock) Inactive(address string) {
 	s.Called(address)
 }
 
-func (s *StateMock) Active() []string {
+func (s *StateMock) Actives() []string {
 	args := s.Called()
 	var active []string
 	if args.Get(0) != nil {
@@ -114,7 +128,7 @@ func (s *StateMock) Tag(address string, id []byte) {
 	s.Called(address, id)
 }
 
-func (s *StateMock) Seen(id []byte) []string {
+func (s *StateMock) Tags(id []byte) []string {
 	args := s.Called(id)
 	var seen []string
 	if args.Get(0) != nil {
@@ -133,4 +147,23 @@ func (h *HandlersMock) Process(entity Entity) {
 
 func (h *HandlersMock) Propagate(entity Entity) {
 	h.Called(entity)
+}
+
+type NetworkMock struct {
+	mock.Mock
+}
+
+func (n *NetworkMock) Subscribe() <-chan interface{} {
+	args := n.Called()
+	return args.Get(0).(chan interface{})
+}
+
+func (n *NetworkMock) Send(address string, msg interface{}) error {
+	args := n.Called(address, msg)
+	return args.Error(0)
+}
+
+func (n *NetworkMock) Broadcast(msg interface{}, exclude ...string) error {
+	args := n.Called(msg, exclude)
+	return args.Error(0)
 }
