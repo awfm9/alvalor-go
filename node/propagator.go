@@ -33,8 +33,8 @@ func handlePropagating(log zerolog.Logger, wg *sync.WaitGroup, state stateManage
 
 	// configure logger
 	log = log.With().Str("component", "propagator").Str("id", hex.EncodeToString(id)).Logger()
-	log.Info().Msg("propagating routine started")
-	defer log.Info().Msg("propagating routine stopped")
+	log.Debug().Msg("propagating routine started")
+	defer log.Debug().Msg("propagating routine stopped")
 
 	// create lookup to know who to exclude from broadcast
 	tags := state.Tags(id)

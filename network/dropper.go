@@ -36,8 +36,8 @@ func handleDropping(log zerolog.Logger, wg *sync.WaitGroup, cfg *Config, peers p
 
 	// configure logger and add start/stop messages
 	log = log.With().Str("component", "dropper").Logger()
-	log.Info().Msg("dropping routine started")
-	defer log.Info().Msg("dropping routine stopped")
+	log.Debug().Msg("dropping routine started")
+	defer log.Debug().Msg("dropping routine stopped")
 
 	// each tick, check if we have too many peers and if yes, drop one
 	ticker := time.NewTicker(interval)

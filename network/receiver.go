@@ -35,14 +35,14 @@ func handleReceiving(log zerolog.Logger, wg *sync.WaitGroup, cfg *Config, rep re
 
 	// configure logger and add start/stop messages
 	log = log.With().Str("component", "receiver").Str("address", address).Logger()
-	log.Info().Msg("receiving routine started")
-	defer log.Info().Msg("receiving routine stopped")
+	log.Debug().Msg("receiving routine started")
+	defer log.Debug().Msg("receiving routine stopped")
 
 	// read all messages from connection and forward on input channel; break if connection closed, notify other errors
 	for {
 		msg, err := codec.Decode(r)
 		if errors.Cause(err) == io.EOF || isClosedErr(err) {
-			log.Info().Msg("network connection closed")
+			log.Debug().Msg("network connection closed")
 			break
 		}
 		if err != nil {

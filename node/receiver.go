@@ -30,25 +30,22 @@ func handleReceiving(log zerolog.Logger, wg *sync.WaitGroup, subscription <-chan
 
 	// configure logger
 	log = log.With().Str("component", "receiver").Logger()
-	log.Info().Msg("receiving routine started")
-	defer log.Info().Msg("receiving routine stopped")
+	log.Debug().Msg("receiving routine started")
+	defer log.Debug().Msg("receiving routine stopped")
 
 	for event := range subscription {
 		switch e := event.(type) {
 
 		// in the case of a connected event, we start tracking the peer state
 		case *network.Connected:
-			log.Info().Str("address", e.Address).Msg("peer connected")
 			state.Active(e.Address)
 
 		// in the case of a disconnected event, we stop tracking the peer state
 		case *network.Disconnected:
-			log.Info().Str("address", e.Address).Msg("peer disconnected")
 			state.Inactive(e.Address)
 
 		// in the case of a received event, we start processing the peer message
 		case *network.Received:
-			log.Info().Str("address", e.Address).Msg("message received")
 			entity, ok := e.Message.(Entity)
 			if !ok {
 				log.Error().Msg("received event is not entity")

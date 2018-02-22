@@ -40,8 +40,8 @@ func handleAccepting(log zerolog.Logger, wg *sync.WaitGroup, cfg *Config, pendin
 
 	// configure logger
 	log = log.With().Str("component", "acceptor").Str("address", address).Logger()
-	log.Info().Msg("accepting routine started")
-	defer log.Info().Msg("accepting routine stopped")
+	log.Debug().Msg("accepting routine started")
+	defer log.Debug().Msg("accepting routine stopped")
 
 	// first make sure we can claim a connection slot
 	err := pending.Claim(address)
@@ -91,6 +91,8 @@ func handleAccepting(log zerolog.Logger, wg *sync.WaitGroup, cfg *Config, pendin
 		conn.Close()
 		return
 	}
+
+	log.Info().Msg("incoming connection established")
 
 	rep.Success(address)
 

@@ -35,8 +35,8 @@ func handleProcessing(log zerolog.Logger, wg *sync.WaitGroup, pool poolManager, 
 
 	// configure logger
 	log = log.With().Str("component", "processor").Str("id", hex.EncodeToString(id)).Logger()
-	log.Info().Msg("processing routine started")
-	defer log.Info().Msg("processing routine stopped")
+	log.Debug().Msg("processing routine started")
+	defer log.Debug().Msg("processing routine stopped")
 
 	// process the message according to type
 	switch e := entity.(type) {
