@@ -20,6 +20,7 @@ package node
 import (
 	"io"
 
+	"github.com/alvalor/alvalor-go/types"
 	"github.com/stretchr/testify/mock"
 )
 
@@ -58,4 +59,78 @@ func (s *StoreMock) Get(key []byte) ([]byte, error) {
 func (s *StoreMock) Del(key []byte) error {
 	args := s.Called(key)
 	return args.Error(0)
+}
+
+type PoolMock struct {
+	mock.Mock
+}
+
+func (p *PoolMock) Add(tx *types.Transaction) error {
+	args := p.Called(tx)
+	return args.Error(0)
+}
+
+func (p *PoolMock) Known(id []byte) bool {
+	args := p.Called(id)
+	return args.Bool(0)
+}
+
+func (p *PoolMock) Get(id []byte) (*types.Transaction, error) {
+	args := p.Called(id)
+	var tx *types.Transaction
+	if args.Get(0) != nil {
+		tx = args.Get(0).(*types.Transaction)
+	}
+	return tx, args.Error(1)
+}
+
+func (p *PoolMock) Remove(id []byte) error {
+	args := p.Called(id)
+	return args.Error(0)
+}
+
+type StateMock struct {
+	mock.Mock
+}
+
+func (s *StateMock) On(address string) {
+	s.Called(address)
+}
+
+func (s *StateMock) Off(address string) {
+	s.Called(address)
+}
+
+func (s *StateMock) Active() []string {
+	args := s.Called()
+	var active []string
+	if args.Get(0) != nil {
+		active = args.Get(0).([]string)
+	}
+	return active
+}
+
+func (s *StateMock) Tag(address string, id []byte) {
+	s.Called(address, id)
+}
+
+func (s *StateMock) Seen(id []byte) []string {
+	args := s.Called(id)
+	var seen []string
+	if args.Get(0) != nil {
+		seen = args.Get(0).([]string)
+	}
+	return seen
+}
+
+type HandlersMock struct {
+	mock.Mock
+}
+
+func (h *HandlersMock) Process(entity Entity) {
+	h.Called(entity)
+}
+
+func (h *HandlersMock) Propagate(entity Entity) {
+	h.Called(entity)
 }

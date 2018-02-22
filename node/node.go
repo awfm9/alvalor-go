@@ -81,7 +81,7 @@ func (n *simpleNode) Submit(tx *types.Transaction) {
 
 func (n *simpleNode) Process(entity Entity) {
 	n.wg.Add(1)
-	go handleProcessing(n.log, n.wg, n.pool, n.state, n, entity)
+	go handleProcessing(n.log, n.wg, n.pool, n, entity)
 }
 
 func (n *simpleNode) Propagate(entity Entity) {

@@ -21,10 +21,10 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/alvalor/alvalor-go/types"
-
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
+
+	"github.com/alvalor/alvalor-go/types"
 )
 
 func TestNewPool(t *testing.T) {
