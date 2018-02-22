@@ -63,7 +63,7 @@ func (suite *ProcessorSuite) TestProcessorSuccess() {
 	book.On("Sample", mock.Anything, mock.Anything).Return(sample)
 
 	eventMgr := &EventManagerMock{}
-	eventMgr.On("Received", mock.Anything, mock.Anything)
+	eventMgr.On("Received", mock.Anything, mock.Anything).Return(nil)
 
 	// act
 	go handleProcessing(suite.log, &suite.wg, &suite.cfg, book, eventMgr, address, input, output)
@@ -96,7 +96,7 @@ func (suite *ProcessorSuite) TestProcessorTimeout() {
 	book.On("Sample", mock.Anything, mock.Anything).Return(sample)
 
 	eventMgr := &EventManagerMock{}
-	eventMgr.On("Received", mock.Anything, mock.Anything)
+	eventMgr.On("Received", mock.Anything, mock.Anything).Return(nil)
 
 	// act
 	go handleProcessing(suite.log, &suite.wg, &suite.cfg, book, eventMgr, address, input, output)
@@ -136,7 +136,7 @@ func (suite *ProcessorSuite) TestProcessorUnknownMessage() {
 	book.On("Sample", mock.Anything, mock.Anything).Return(sample)
 
 	eventMgr := &EventManagerMock{}
-	eventMgr.On("Received", mock.Anything, mock.Anything)
+	eventMgr.On("Received", mock.Anything, mock.Anything).Return(nil)
 
 	// act
 	go handleProcessing(suite.log, &suite.wg, &suite.cfg, book, eventMgr, address, input, output)
@@ -170,7 +170,7 @@ func (suite *ProcessorSuite) TestProcessorPing() {
 	book.On("Sample", mock.Anything, mock.Anything).Return(sample)
 
 	eventMgr := &EventManagerMock{}
-	eventMgr.On("Received", mock.Anything, mock.Anything)
+	eventMgr.On("Received", mock.Anything, mock.Anything).Return(nil)
 
 	// act
 	go handleProcessing(suite.log, &suite.wg, &suite.cfg, book, eventMgr, address, input, output)
@@ -204,7 +204,7 @@ func (suite *ProcessorSuite) TestProcessorDiscover() {
 	book.On("Sample", mock.Anything, mock.Anything).Return(sample)
 
 	eventMgr := &EventManagerMock{}
-	eventMgr.On("Received", mock.Anything, mock.Anything)
+	eventMgr.On("Received", mock.Anything, mock.Anything).Return(nil)
 
 	// act
 	go handleProcessing(suite.log, &suite.wg, &suite.cfg, book, eventMgr, address, input, output)
@@ -244,7 +244,7 @@ func (suite *ProcessorSuite) TestProcessorPeers() {
 	book.On("Sample", mock.Anything, mock.Anything).Return(sample)
 
 	eventMgr := &EventManagerMock{}
-	eventMgr.On("Received", mock.Anything, mock.Anything)
+	eventMgr.On("Received", mock.Anything, mock.Anything).Return(nil)
 
 	// act
 	go handleProcessing(suite.log, &suite.wg, &suite.cfg, book, eventMgr, address, input, output)
@@ -280,7 +280,7 @@ func (suite *ProcessorSuite) TestProcessorPong() {
 	book.On("Sample", mock.Anything, mock.Anything).Return(sample)
 
 	eventMgr := &EventManagerMock{}
-	eventMgr.On("Received", mock.Anything, mock.Anything)
+	eventMgr.On("Received", mock.Anything, mock.Anything).Return(nil)
 
 	// act
 	go handleProcessing(suite.log, &suite.wg, &suite.cfg, book, eventMgr, address, input, output)

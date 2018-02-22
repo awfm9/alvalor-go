@@ -88,6 +88,9 @@ func handleAccepting(log zerolog.Logger, wg *sync.WaitGroup, cfg *Config, pendin
 		return
 	}
 
-	eventMgr.Connected(address)
+	err = eventMgr.Connected(address)
+	if err != nil {
+		log.Debug().Msg(err.Error())
+	}
 	rep.Success(address)
 }

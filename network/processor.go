@@ -74,7 +74,10 @@ Loop:
 			// custom messages should go to the subscriber, but we drop it if the subscriber is stalling
 			default:
 				log.Debug().Msg("custom received")
-				eventMgr.Received(address, message)
+				err := eventMgr.Received(address, message)
+				if err != nil {
+					log.Debug().Msg(err.Error())
+				}
 			}
 
 		// if this case is triggered, we didn't receive a message in a while and we can drop the peer

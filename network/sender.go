@@ -72,5 +72,8 @@ Loop:
 	// drain the channel in case we broke on closed connection & wait until cascade arrives
 	for _ = range output {
 	}
-	eventMgr.Disconnected(address)
+	err := eventMgr.Disconnected(address)
+	if err != nil {
+		log.Debug().Msg(err.Error())
+	}
 }

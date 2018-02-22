@@ -66,7 +66,7 @@ func (suite *SenderSuite) TestSenderSuccess() {
 	codec.On("Encode", mock.Anything, mock.Anything).Return(nil)
 
 	eventMgr := &EventManagerMock{}
-	eventMgr.On("Disconnected", mock.Anything)
+	eventMgr.On("Disconnected", mock.Anything).Return(nil)
 
 	// act
 	suite.cfg.codec = codec
@@ -104,7 +104,7 @@ func (suite *SenderSuite) TestSenderEOF() {
 	codec.On("Encode", mock.Anything, mock.Anything).Return(nil)
 
 	eventMgr := &EventManagerMock{}
-	eventMgr.On("Disconnected", mock.Anything)
+	eventMgr.On("Disconnected", mock.Anything).Return(nil)
 
 	// act
 	suite.cfg.codec = codec
@@ -136,7 +136,7 @@ func (suite *SenderSuite) TestSenderHeartbeat() {
 	codec.On("Encode", mock.Anything, mock.Anything).Return(nil)
 
 	eventMgr := &EventManagerMock{}
-	eventMgr.On("Disconnected", mock.Anything)
+	eventMgr.On("Disconnected", mock.Anything).Return(nil)
 
 	// act
 	suite.cfg.codec = codec
@@ -169,7 +169,7 @@ func (suite *SenderSuite) TestSenderEncodeFails() {
 	codec.On("Encode", mock.Anything, mock.Anything).Return(io.EOF)
 
 	eventMgr := &EventManagerMock{}
-	eventMgr.On("Disconnected", mock.Anything)
+	eventMgr.On("Disconnected", mock.Anything).Return(nil)
 
 	// act
 	suite.cfg.codec = codec

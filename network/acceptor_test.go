@@ -83,7 +83,7 @@ func (suite *AcceptorSuite) TestAcceptorSuccess() {
 	book.On("Block", mock.Anything)
 
 	eventMgr := &EventManagerMock{}
-	eventMgr.On("Connected", mock.Anything)
+	eventMgr.On("Connected", mock.Anything).Return(nil)
 
 	// act
 	handleAccepting(suite.log, &suite.wg, &suite.cfg, pending, peers, rep, book, eventMgr, conn)
@@ -135,7 +135,7 @@ func (suite *AcceptorSuite) TestAcceptorClaimFails() {
 	book.On("Block", mock.Anything)
 
 	eventMgr := &EventManagerMock{}
-	eventMgr.On("Connected", mock.Anything)
+	eventMgr.On("Connected", mock.Anything).Return(nil)
 
 	// act
 	handleAccepting(suite.log, &suite.wg, &suite.cfg, pending, peers, rep, book, eventMgr, conn)
@@ -187,7 +187,7 @@ func (suite *AcceptorSuite) TestAcceptorReadFails() {
 	book.On("Block", mock.Anything)
 
 	eventMgr := &EventManagerMock{}
-	eventMgr.On("Connected", mock.Anything)
+	eventMgr.On("Connected", mock.Anything).Return(nil)
 
 	// act
 	handleAccepting(suite.log, &suite.wg, &suite.cfg, pending, peers, rep, book, eventMgr, conn)
@@ -239,7 +239,7 @@ func (suite *AcceptorSuite) TestAcceptorNetworkMismatch() {
 	book.On("Block", mock.Anything)
 
 	eventMgr := &EventManagerMock{}
-	eventMgr.On("Connected", mock.Anything)
+	eventMgr.On("Connected", mock.Anything).Return(nil)
 
 	// act
 	handleAccepting(suite.log, &suite.wg, &suite.cfg, pending, peers, rep, book, eventMgr, conn)
@@ -342,7 +342,7 @@ func (suite *AcceptorSuite) TestAcceptorWriteFails() {
 	book.On("Block", mock.Anything)
 
 	eventMgr := &EventManagerMock{}
-	eventMgr.On("Connected", mock.Anything)
+	eventMgr.On("Connected", mock.Anything).Return(nil)
 
 	// act
 	handleAccepting(suite.log, &suite.wg, &suite.cfg, pending, peers, rep, book, eventMgr, conn)
@@ -394,7 +394,7 @@ func (suite *AcceptorSuite) TestAcceptorAddPeerFails() {
 	book.On("Block", mock.Anything)
 
 	eventMgr := &EventManagerMock{}
-	eventMgr.On("Connected", mock.Anything)
+	eventMgr.On("Connected", mock.Anything).Return(nil)
 
 	// act
 	handleAccepting(suite.log, &suite.wg, &suite.cfg, pending, peers, rep, book, eventMgr, conn)

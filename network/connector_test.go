@@ -83,7 +83,7 @@ func (suite *ConnectorSuite) TestConnectorSuccess() {
 	dialer.On("Dial", mock.Anything).Return(conn, nil)
 
 	eventMgr := &EventManagerMock{}
-	eventMgr.On("Connected", mock.Anything)
+	eventMgr.On("Connected", mock.Anything).Return(nil)
 
 	// act
 	handleConnecting(suite.log, &suite.wg, &suite.cfg, pending, peers, rep, book, dialer, eventMgr, address)
@@ -135,7 +135,7 @@ func (suite *ConnectorSuite) TestConnectorClaimFails() {
 	dialer.On("Dial", mock.Anything).Return(conn, nil)
 
 	eventMgr := &EventManagerMock{}
-	eventMgr.On("Connected", mock.Anything)
+	eventMgr.On("Connected", mock.Anything).Return(nil)
 
 	// act
 	handleConnecting(suite.log, &suite.wg, &suite.cfg, pending, peers, rep, book, dialer, eventMgr, address)
@@ -187,7 +187,7 @@ func (suite *ConnectorSuite) TestConnectorDialFails() {
 	dialer.On("Dial", mock.Anything).Return(nil, errors.New("could not dial address"))
 
 	eventMgr := &EventManagerMock{}
-	eventMgr.On("Connected", mock.Anything)
+	eventMgr.On("Connected", mock.Anything).Return(nil)
 
 	// act
 	handleConnecting(suite.log, &suite.wg, &suite.cfg, pending, peers, rep, book, dialer, eventMgr, address)
@@ -239,7 +239,7 @@ func (suite *ConnectorSuite) TestConnectorWriteFails() {
 	dialer.On("Dial", mock.Anything).Return(conn, nil)
 
 	eventMgr := &EventManagerMock{}
-	eventMgr.On("Connected", mock.Anything)
+	eventMgr.On("Connected", mock.Anything).Return(nil)
 
 	// act
 	handleConnecting(suite.log, &suite.wg, &suite.cfg, pending, peers, rep, book, dialer, eventMgr, address)
@@ -291,7 +291,7 @@ func (suite *ConnectorSuite) TestConnectorReadFails() {
 	dialer.On("Dial", mock.Anything).Return(conn, nil)
 
 	eventMgr := &EventManagerMock{}
-	eventMgr.On("Connected", mock.Anything)
+	eventMgr.On("Connected", mock.Anything).Return(nil)
 
 	// act
 	handleConnecting(suite.log, &suite.wg, &suite.cfg, pending, peers, rep, book, dialer, eventMgr, address)
@@ -343,7 +343,7 @@ func (suite *ConnectorSuite) TestConnectorNetworkMismatch() {
 	dialer.On("Dial", mock.Anything).Return(conn, nil)
 
 	eventMgr := &EventManagerMock{}
-	eventMgr.On("Connected", mock.Anything)
+	eventMgr.On("Connected", mock.Anything).Return(nil)
 
 	// act
 	handleConnecting(suite.log, &suite.wg, &suite.cfg, pending, peers, rep, book, dialer, eventMgr, address)
@@ -394,7 +394,7 @@ func (suite *ConnectorSuite) TestConnectorNonceIdentical() {
 	dialer.On("Dial", mock.Anything).Return(conn, nil)
 
 	eventMgr := &EventManagerMock{}
-	eventMgr.On("Connected", mock.Anything)
+	eventMgr.On("Connected", mock.Anything).Return(nil)
 
 	// act
 	handleConnecting(suite.log, &suite.wg, &suite.cfg, pending, peers, rep, book, dialer, eventMgr, address)
@@ -446,7 +446,7 @@ func (suite *ConnectorSuite) TestConnectorNonceKnown() {
 	dialer.On("Dial", mock.Anything).Return(conn, nil)
 
 	eventMgr := &EventManagerMock{}
-	eventMgr.On("Connected", mock.Anything)
+	eventMgr.On("Connected", mock.Anything).Return(nil)
 
 	// act
 	handleConnecting(suite.log, &suite.wg, &suite.cfg, pending, peers, rep, book, dialer, eventMgr, address)
@@ -498,7 +498,7 @@ func (suite *ConnectorSuite) TestConnectorAddPeerFails() {
 	dialer.On("Dial", mock.Anything).Return(conn, nil)
 
 	eventMgr := &EventManagerMock{}
-	eventMgr.On("Connected", mock.Anything)
+	eventMgr.On("Connected", mock.Anything).Return(nil)
 
 	// act
 	handleConnecting(suite.log, &suite.wg, &suite.cfg, pending, peers, rep, book, dialer, eventMgr, address)

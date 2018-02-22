@@ -20,39 +20,39 @@ package network
 import (
 	"time"
 
-	"github.com/rs/zerolog/log"
+	"github.com/pkg/errors"
 )
 
 type eventManager interface {
-	Disconnected(addr string)
-	Connected(addr string)
-	Received(addr string, msg interface{})
+	Disconnected(addr string) error
+	Connected(addr string) error
+	Received(addr string, msg interface{}) error
 }
 
 type simpleEventManager struct {
 	subscriber chan interface{}
 }
 
-func (mgr *simpleEventManager) Disconnected(address string) {
-	select {
-	case mgr.subscriber <- Disconnected{Address: address, Timestamp: time.Now()}:
-	default:
-		log.Debug().Msg("subscriber stalling")
-	}
+func (mgr *simpleEventManager) Disconnected(address string) error {
+	event := Disconnected{Address: address, Timestamp: time.Now()}
+	return mgr.event(event)
 }
 
-func (mgr *simpleEventManager) Connected(address string) {
-	select {
-	case mgr.subscriber <- Connected{Address: address, Timestamp: time.Now()}:
-	default:
-		log.Debug().Msg("subscriber stalling")
-	}
+func (mgr *simpleEventManager) Connected(address string) error {
+	event := Connected{Address: address, Timestamp: time.Now()}
+	return mgr.event(event)
 }
 
-func (mgr *simpleEventManager) Received(address string, msg interface{}) {
+func (mgr *simpleEventManager) Received(address string, msg interface{}) error {
+	event := Received{Address: address, Message: msg, Timestamp: time.Now()}
+	return mgr.event(event)
+}
+
+func (mgr *simpleEventManager) event(event interface{}) error {
 	select {
-	case mgr.subscriber <- Received{Address: address, Message: msg, Timestamp: time.Now()}:
+	case mgr.subscriber <- event:
 	default:
-		log.Debug().Msg("subscriber stalling")
+		return errors.New("subscriber stalling")
 	}
+	return nil
 }
