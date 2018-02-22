@@ -56,7 +56,7 @@ type simpleNetwork struct {
 	pending    pendingManager
 	peers      peerManager
 	rep        reputationManager
-	eventMgr   eventManager
+	events     eventManager
 	subscriber chan interface{}
 	stop       chan struct{}
 }
@@ -125,8 +125,8 @@ func New(log zerolog.Logger, codec Codec, options ...func(*Config)) Network {
 	dialer := &simpleDialWrapper{}
 	net.dialer = dialer
 
-	eventMgr := &simpleEventManager{subscriber: subscriber}
-	net.eventMgr = eventMgr
+	events := &simpleEventManager{subscriber: subscriber}
+	net.events = events
 
 	// initialize the initial handlers
 	net.Dropper()
@@ -163,22 +163,22 @@ func (net *simpleNetwork) Discoverer() {
 
 func (net *simpleNetwork) Acceptor(conn net.Conn) {
 	net.wg.Add(1)
-	go handleAccepting(net.log, net.wg, net.cfg, net.pending, net.peers, net.rep, net.book, net.eventMgr, conn)
+	go handleAccepting(net.log, net.wg, net.cfg, net.pending, net.peers, net.rep, net.book, net.events, conn)
 }
 
 func (net *simpleNetwork) Connector(address string) {
 	net.wg.Add(1)
-	go handleConnecting(net.log, net.wg, net.cfg, net.pending, net.peers, net.rep, net.book, net.dialer, net.eventMgr, address)
+	go handleConnecting(net.log, net.wg, net.cfg, net.pending, net.peers, net.rep, net.book, net.dialer, net.events, address)
 }
 
 func (net *simpleNetwork) Sender(address string, output <-chan interface{}, w io.Writer) {
 	net.wg.Add(1)
-	go handleSending(net.log, net.wg, net.cfg, net.rep, net.eventMgr, address, output, w)
+	go handleSending(net.log, net.wg, net.cfg, net.rep, net.events, address, output, w)
 }
 
 func (net *simpleNetwork) Processor(address string, input <-chan interface{}, output chan<- interface{}) {
 	net.wg.Add(1)
-	go handleProcessing(net.log, net.wg, net.cfg, net.book, net.eventMgr, address, input, output)
+	go handleProcessing(net.log, net.wg, net.cfg, net.book, net.events, address, input, output)
 }
 
 func (net *simpleNetwork) Receiver(address string, r io.Reader, input chan<- interface{}) {

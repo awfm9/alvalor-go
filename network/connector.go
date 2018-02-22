@@ -25,7 +25,7 @@ import (
 	"github.com/rs/zerolog"
 )
 
-func handleConnecting(log zerolog.Logger, wg *sync.WaitGroup, cfg *Config, pending pendingManager, peers peerManager, rep reputationManager, book addressManager, dialer dialWrapper, eventMgr eventManager, address string) {
+func handleConnecting(log zerolog.Logger, wg *sync.WaitGroup, cfg *Config, pending pendingManager, peers peerManager, rep reputationManager, book addressManager, dialer dialWrapper, events eventManager, address string) {
 	defer wg.Done()
 
 	// extract the variables from the config we are interested in
@@ -101,7 +101,7 @@ func handleConnecting(log zerolog.Logger, wg *sync.WaitGroup, cfg *Config, pendi
 		return
 	}
 
-	err = eventMgr.Connected(address)
+	err = events.Connected(address)
 	if err != nil {
 		log.Debug().Msg(err.Error())
 	}

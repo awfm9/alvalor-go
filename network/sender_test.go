@@ -65,12 +65,12 @@ func (suite *SenderSuite) TestSenderSuccess() {
 	codec := &CodecMock{}
 	codec.On("Encode", mock.Anything, mock.Anything).Return(nil)
 
-	eventMgr := &EventManagerMock{}
-	eventMgr.On("Disconnected", mock.Anything).Return(nil)
+	events := &EventManagerMock{}
+	events.On("Disconnected", mock.Anything).Return(nil)
 
 	// act
 	suite.cfg.codec = codec
-	go handleSending(suite.log, &suite.wg, &suite.cfg, rep, eventMgr, address, output, w)
+	go handleSending(suite.log, &suite.wg, &suite.cfg, rep, events, address, output, w)
 	output <- &Ping{}
 	output <- &Pong{}
 	output <- &Discover{}
@@ -103,12 +103,12 @@ func (suite *SenderSuite) TestSenderEOF() {
 	codec.On("Encode", mock.Anything, mock.Anything).Return(io.EOF)
 	codec.On("Encode", mock.Anything, mock.Anything).Return(nil)
 
-	eventMgr := &EventManagerMock{}
-	eventMgr.On("Disconnected", mock.Anything).Return(nil)
+	events := &EventManagerMock{}
+	events.On("Disconnected", mock.Anything).Return(nil)
 
 	// act
 	suite.cfg.codec = codec
-	go handleSending(suite.log, &suite.wg, &suite.cfg, rep, eventMgr, address, output, w)
+	go handleSending(suite.log, &suite.wg, &suite.cfg, rep, events, address, output, w)
 	output <- &Ping{}
 	output <- &Pong{}
 	output <- &Discover{}
@@ -135,12 +135,12 @@ func (suite *SenderSuite) TestSenderHeartbeat() {
 	codec := &CodecMock{}
 	codec.On("Encode", mock.Anything, mock.Anything).Return(nil)
 
-	eventMgr := &EventManagerMock{}
-	eventMgr.On("Disconnected", mock.Anything).Return(nil)
+	events := &EventManagerMock{}
+	events.On("Disconnected", mock.Anything).Return(nil)
 
 	// act
 	suite.cfg.codec = codec
-	go handleSending(suite.log, &suite.wg, &suite.cfg, rep, eventMgr, address, output, w)
+	go handleSending(suite.log, &suite.wg, &suite.cfg, rep, events, address, output, w)
 	time.Sleep(time.Duration(1.5 * float64(suite.cfg.interval)))
 	close(output)
 	suite.wg.Wait()
@@ -168,12 +168,12 @@ func (suite *SenderSuite) TestSenderEncodeFails() {
 	codec.On("Encode", mock.Anything, mock.Anything).Return(nil).Once()
 	codec.On("Encode", mock.Anything, mock.Anything).Return(io.EOF)
 
-	eventMgr := &EventManagerMock{}
-	eventMgr.On("Disconnected", mock.Anything).Return(nil)
+	events := &EventManagerMock{}
+	events.On("Disconnected", mock.Anything).Return(nil)
 
 	// act
 	suite.cfg.codec = codec
-	go handleSending(suite.log, &suite.wg, &suite.cfg, rep, eventMgr, address, output, w)
+	go handleSending(suite.log, &suite.wg, &suite.cfg, rep, events, address, output, w)
 	output <- &Ping{}
 	output <- &Pong{}
 	output <- &Discover{}
@@ -183,7 +183,7 @@ func (suite *SenderSuite) TestSenderEncodeFails() {
 
 	// assert
 	rep.AssertCalled(suite.T(), "Failure", address)
-	eventMgr.AssertCalled(suite.T(), "Disconnected", address)
+	events.AssertCalled(suite.T(), "Disconnected", address)
 	if codec.AssertNumberOfCalls(suite.T(), "Encode", 3) {
 		codec.AssertCalled(suite.T(), "Encode", w, &Ping{})
 		codec.AssertCalled(suite.T(), "Encode", w, &Pong{})
