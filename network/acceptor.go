@@ -26,7 +26,7 @@ import (
 	"github.com/rs/zerolog"
 )
 
-func handleAccepting(log zerolog.Logger, wg *sync.WaitGroup, cfg *Config, pending pendingManager, peers peerManager, rep reputationManager, book addressManager, conn net.Conn) {
+func handleAccepting(log zerolog.Logger, wg *sync.WaitGroup, cfg *Config, pending pendingManager, peers peerManager, rep reputationManager, book addressManager, events eventManager, conn net.Conn) {
 
 	// synchronization, configuration & logging
 	defer wg.Done()
@@ -88,5 +88,9 @@ func handleAccepting(log zerolog.Logger, wg *sync.WaitGroup, cfg *Config, pendin
 		return
 	}
 
+	err = events.Connected(address)
+	if err != nil {
+		log.Debug().Err(err).Msg("could not submit connected event")
+	}
 	rep.Success(address)
 }

@@ -325,3 +325,20 @@ func (am *AddressManagerMock) Sample(count uint, params ...interface{}) []string
 	}
 	return sample
 }
+
+type EventManagerMock struct {
+	mock.Mock
+}
+
+func (events *EventManagerMock) Disconnected(addr string) error {
+	args := events.Called(addr)
+	return args.Error(0)
+}
+func (events *EventManagerMock) Connected(addr string) error {
+	args := events.Called(addr)
+	return args.Error(0)
+}
+func (events *EventManagerMock) Received(addr string, msg interface{}) error {
+	args := events.Called(addr, msg)
+	return args.Error(0)
+}

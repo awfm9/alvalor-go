@@ -82,8 +82,11 @@ func (suite *AcceptorSuite) TestAcceptorSuccess() {
 	book := &AddressManagerMock{}
 	book.On("Block", mock.Anything)
 
+	events := &EventManagerMock{}
+	events.On("Connected", mock.Anything).Return(nil)
+
 	// act
-	handleAccepting(suite.log, &suite.wg, &suite.cfg, pending, peers, rep, book, conn)
+	handleAccepting(suite.log, &suite.wg, &suite.cfg, pending, peers, rep, book, events, conn)
 
 	// assert
 	t := suite.T()
@@ -92,6 +95,7 @@ func (suite *AcceptorSuite) TestAcceptorSuccess() {
 	pending.AssertCalled(t, "Release", address)
 	peers.AssertCalled(t, "Add", conn, nonce)
 	rep.AssertCalled(t, "Success", address)
+	events.AssertCalled(t, "Connected", address)
 
 	conn.AssertNotCalled(t, "Close")
 	rep.AssertNotCalled(t, "Failure", mock.Anything)
@@ -130,8 +134,11 @@ func (suite *AcceptorSuite) TestAcceptorClaimFails() {
 	book := &AddressManagerMock{}
 	book.On("Block", mock.Anything)
 
+	events := &EventManagerMock{}
+	events.On("Connected", mock.Anything).Return(nil)
+
 	// act
-	handleAccepting(suite.log, &suite.wg, &suite.cfg, pending, peers, rep, book, conn)
+	handleAccepting(suite.log, &suite.wg, &suite.cfg, pending, peers, rep, book, events, conn)
 
 	// assert
 	t := suite.T()
@@ -144,6 +151,7 @@ func (suite *AcceptorSuite) TestAcceptorClaimFails() {
 	rep.AssertNotCalled(t, "Success", mock.Anything)
 	rep.AssertNotCalled(t, "Failure", mock.Anything)
 	book.AssertNotCalled(t, "Block", mock.Anything)
+	events.AssertNotCalled(t, "Connected", mock.Anything)
 }
 
 func (suite *AcceptorSuite) TestAcceptorReadFails() {
@@ -178,8 +186,11 @@ func (suite *AcceptorSuite) TestAcceptorReadFails() {
 	book := &AddressManagerMock{}
 	book.On("Block", mock.Anything)
 
+	events := &EventManagerMock{}
+	events.On("Connected", mock.Anything).Return(nil)
+
 	// act
-	handleAccepting(suite.log, &suite.wg, &suite.cfg, pending, peers, rep, book, conn)
+	handleAccepting(suite.log, &suite.wg, &suite.cfg, pending, peers, rep, book, events, conn)
 
 	// assert
 	t := suite.T()
@@ -192,6 +203,7 @@ func (suite *AcceptorSuite) TestAcceptorReadFails() {
 	peers.AssertNotCalled(t, "Add", mock.Anything, mock.Anything)
 	rep.AssertNotCalled(t, "Success", mock.Anything)
 	book.AssertNotCalled(t, "Block", mock.Anything)
+	events.AssertNotCalled(t, "Connected", mock.Anything)
 }
 
 func (suite *AcceptorSuite) TestAcceptorNetworkMismatch() {
@@ -226,8 +238,11 @@ func (suite *AcceptorSuite) TestAcceptorNetworkMismatch() {
 	book := &AddressManagerMock{}
 	book.On("Block", mock.Anything)
 
+	events := &EventManagerMock{}
+	events.On("Connected", mock.Anything).Return(nil)
+
 	// act
-	handleAccepting(suite.log, &suite.wg, &suite.cfg, pending, peers, rep, book, conn)
+	handleAccepting(suite.log, &suite.wg, &suite.cfg, pending, peers, rep, book, events, conn)
 
 	// assert
 	t := suite.T()
@@ -240,6 +255,7 @@ func (suite *AcceptorSuite) TestAcceptorNetworkMismatch() {
 	peers.AssertNotCalled(t, "Add", mock.Anything, mock.Anything)
 	rep.AssertNotCalled(t, "Success", mock.Anything)
 	rep.AssertNotCalled(t, "Failure", mock.Anything)
+	events.AssertNotCalled(t, "Connected", mock.Anything)
 }
 
 func (suite *AcceptorSuite) TestAcceptorNonceIdentical() {
@@ -273,8 +289,11 @@ func (suite *AcceptorSuite) TestAcceptorNonceIdentical() {
 	book := &AddressManagerMock{}
 	book.On("Block", mock.Anything)
 
+	events := &EventManagerMock{}
+	events.On("Connected", mock.Anything)
+
 	// act
-	handleAccepting(suite.log, &suite.wg, &suite.cfg, pending, peers, rep, book, conn)
+	handleAccepting(suite.log, &suite.wg, &suite.cfg, pending, peers, rep, book, events, conn)
 
 	// assert
 	t := suite.T()
@@ -287,6 +306,7 @@ func (suite *AcceptorSuite) TestAcceptorNonceIdentical() {
 	peers.AssertNotCalled(t, "Add", mock.Anything, mock.Anything)
 	rep.AssertNotCalled(t, "Success", mock.Anything)
 	rep.AssertNotCalled(t, "Failure", mock.Anything)
+	events.AssertNotCalled(t, "Connected", mock.Anything)
 }
 
 func (suite *AcceptorSuite) TestAcceptorWriteFails() {
@@ -321,8 +341,11 @@ func (suite *AcceptorSuite) TestAcceptorWriteFails() {
 	book := &AddressManagerMock{}
 	book.On("Block", mock.Anything)
 
+	events := &EventManagerMock{}
+	events.On("Connected", mock.Anything).Return(nil)
+
 	// act
-	handleAccepting(suite.log, &suite.wg, &suite.cfg, pending, peers, rep, book, conn)
+	handleAccepting(suite.log, &suite.wg, &suite.cfg, pending, peers, rep, book, events, conn)
 
 	// assert
 	t := suite.T()
@@ -335,6 +358,7 @@ func (suite *AcceptorSuite) TestAcceptorWriteFails() {
 	peers.AssertNotCalled(t, "Add", mock.Anything, mock.Anything)
 	rep.AssertNotCalled(t, "Success", mock.Anything)
 	book.AssertNotCalled(t, "Block", mock.Anything)
+	events.AssertNotCalled(t, "Connected", mock.Anything)
 }
 
 func (suite *AcceptorSuite) TestAcceptorAddPeerFails() {
@@ -369,8 +393,11 @@ func (suite *AcceptorSuite) TestAcceptorAddPeerFails() {
 	book := &AddressManagerMock{}
 	book.On("Block", mock.Anything)
 
+	events := &EventManagerMock{}
+	events.On("Connected", mock.Anything).Return(nil)
+
 	// act
-	handleAccepting(suite.log, &suite.wg, &suite.cfg, pending, peers, rep, book, conn)
+	handleAccepting(suite.log, &suite.wg, &suite.cfg, pending, peers, rep, book, events, conn)
 
 	// assert
 	t := suite.T()
@@ -383,4 +410,5 @@ func (suite *AcceptorSuite) TestAcceptorAddPeerFails() {
 	rep.AssertNotCalled(t, "Success", mock.Anything)
 	rep.AssertNotCalled(t, "Failure", mock.Anything)
 	book.AssertNotCalled(t, "Block", mock.Anything)
+	events.AssertNotCalled(t, "Connected", mock.Anything)
 }

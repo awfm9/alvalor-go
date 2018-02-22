@@ -57,14 +57,16 @@ func (suite *ProcessorSuite) TestProcessorSuccess() {
 
 	input := make(chan interface{})
 	output := make(chan interface{}, 5)
-	subscriber := make(chan interface{}, 5)
 
 	book := &AddressManagerMock{}
 	book.On("Add", mock.Anything)
 	book.On("Sample", mock.Anything, mock.Anything).Return(sample)
 
+	events := &EventManagerMock{}
+	events.On("Received", mock.Anything, mock.Anything).Return(nil)
+
 	// act
-	go handleProcessing(suite.log, &suite.wg, &suite.cfg, book, subscriber, address, input, output)
+	go handleProcessing(suite.log, &suite.wg, &suite.cfg, book, events, address, input, output)
 	close(input)
 	suite.wg.Wait()
 	var msgs []interface{}
@@ -88,14 +90,16 @@ func (suite *ProcessorSuite) TestProcessorTimeout() {
 
 	input := make(chan interface{})
 	output := make(chan interface{}, 5)
-	subscriber := make(chan interface{}, 5)
 
 	book := &AddressManagerMock{}
 	book.On("Add", mock.Anything)
 	book.On("Sample", mock.Anything, mock.Anything).Return(sample)
 
+	events := &EventManagerMock{}
+	events.On("Received", mock.Anything, mock.Anything).Return(nil)
+
 	// act
-	go handleProcessing(suite.log, &suite.wg, &suite.cfg, book, subscriber, address, input, output)
+	go handleProcessing(suite.log, &suite.wg, &suite.cfg, book, events, address, input, output)
 	time.Sleep(time.Duration(4.5 * float64(suite.cfg.interval)))
 	close(input)
 	var msgs []interface{}
@@ -115,7 +119,6 @@ func (suite *ProcessorSuite) TestProcessorUnknownMessage() {
 
 	input := make(chan interface{})
 	output := make(chan interface{}, 5)
-	subscriber := make(chan interface{}, 5)
 
 	messages := []interface{}{
 		1337,
@@ -132,36 +135,25 @@ func (suite *ProcessorSuite) TestProcessorUnknownMessage() {
 	book.On("Add", mock.Anything)
 	book.On("Sample", mock.Anything, mock.Anything).Return(sample)
 
+	events := &EventManagerMock{}
+	events.On("Received", mock.Anything, mock.Anything).Return(nil)
+
 	// act
-	go handleProcessing(suite.log, &suite.wg, &suite.cfg, book, subscriber, address, input, output)
+	go handleProcessing(suite.log, &suite.wg, &suite.cfg, book, events, address, input, output)
 	for _, msg := range messages {
 		input <- msg
 	}
 	close(input)
 	suite.wg.Wait()
-	var msgs []interface{}
-Loop:
-	for {
-		select {
-		case msg := <-subscriber:
-			msgs = append(msgs, msg)
-		default:
-			break Loop
-		}
-	}
 
 	// assert
 	t := suite.T()
 
-	if assert.Len(t, msgs, 5) {
-		unwrapped := make([]interface{}, 0, 5)
-		for _, msg := range msgs {
-			assert.IsType(t, &Received{}, msg)
-			received := msg.(*Received)
-			unwrapped = append(unwrapped, received.Message)
-		}
-		assert.Equal(t, messages[:5], unwrapped)
-	}
+	events.AssertCalled(t, "Received", address, messages[0])
+	events.AssertCalled(t, "Received", address, messages[1])
+	events.AssertCalled(t, "Received", address, messages[2])
+	events.AssertCalled(t, "Received", address, messages[3])
+	events.AssertCalled(t, "Received", address, messages[4])
 }
 
 func (suite *ProcessorSuite) TestProcessorPing() {
@@ -172,14 +164,16 @@ func (suite *ProcessorSuite) TestProcessorPing() {
 
 	input := make(chan interface{})
 	output := make(chan interface{}, 5)
-	subscriber := make(chan interface{}, 5)
 
 	book := &AddressManagerMock{}
 	book.On("Add", mock.Anything)
 	book.On("Sample", mock.Anything, mock.Anything).Return(sample)
 
+	events := &EventManagerMock{}
+	events.On("Received", mock.Anything, mock.Anything).Return(nil)
+
 	// act
-	go handleProcessing(suite.log, &suite.wg, &suite.cfg, book, subscriber, address, input, output)
+	go handleProcessing(suite.log, &suite.wg, &suite.cfg, book, events, address, input, output)
 	input <- &Ping{}
 	close(input)
 	var msgs []interface{}
@@ -204,14 +198,16 @@ func (suite *ProcessorSuite) TestProcessorDiscover() {
 
 	input := make(chan interface{})
 	output := make(chan interface{}, 5)
-	subscriber := make(chan interface{}, 5)
 
 	book := &AddressManagerMock{}
 	book.On("Add", mock.Anything)
 	book.On("Sample", mock.Anything, mock.Anything).Return(sample)
 
+	events := &EventManagerMock{}
+	events.On("Received", mock.Anything, mock.Anything).Return(nil)
+
 	// act
-	go handleProcessing(suite.log, &suite.wg, &suite.cfg, book, subscriber, address, input, output)
+	go handleProcessing(suite.log, &suite.wg, &suite.cfg, book, events, address, input, output)
 	input <- &Discover{}
 	close(input)
 	var msgs []interface{}
@@ -242,14 +238,16 @@ func (suite *ProcessorSuite) TestProcessorPeers() {
 
 	input := make(chan interface{})
 	output := make(chan interface{}, 5)
-	subscriber := make(chan interface{}, 5)
 
 	book := &AddressManagerMock{}
 	book.On("Add", mock.Anything)
 	book.On("Sample", mock.Anything, mock.Anything).Return(sample)
 
+	events := &EventManagerMock{}
+	events.On("Received", mock.Anything, mock.Anything).Return(nil)
+
 	// act
-	go handleProcessing(suite.log, &suite.wg, &suite.cfg, book, subscriber, address, input, output)
+	go handleProcessing(suite.log, &suite.wg, &suite.cfg, book, events, address, input, output)
 	input <- &Peers{Addresses: []string{peer1, peer2, peer3}}
 	close(input)
 	var msgs []interface{}
@@ -276,14 +274,16 @@ func (suite *ProcessorSuite) TestProcessorPong() {
 
 	input := make(chan interface{})
 	output := make(chan interface{}, 5)
-	subscriber := make(chan interface{}, 5)
 
 	book := &AddressManagerMock{}
 	book.On("Add", mock.Anything)
 	book.On("Sample", mock.Anything, mock.Anything).Return(sample)
 
+	events := &EventManagerMock{}
+	events.On("Received", mock.Anything, mock.Anything).Return(nil)
+
 	// act
-	go handleProcessing(suite.log, &suite.wg, &suite.cfg, book, subscriber, address, input, output)
+	go handleProcessing(suite.log, &suite.wg, &suite.cfg, book, events, address, input, output)
 	input <- &Pong{}
 	close(input)
 	var msgs []interface{}

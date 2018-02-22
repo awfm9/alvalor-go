@@ -26,7 +26,7 @@ import (
 	"github.com/rs/zerolog"
 )
 
-func handleSending(log zerolog.Logger, wg *sync.WaitGroup, cfg *Config, rep reputationManager, address string, output <-chan interface{}, w io.Writer) {
+func handleSending(log zerolog.Logger, wg *sync.WaitGroup, cfg *Config, rep reputationManager, events eventManager, address string, output <-chan interface{}, w io.Writer) {
 	defer wg.Done()
 
 	// extract configuration parameters
@@ -71,5 +71,9 @@ Loop:
 
 	// drain the channel in case we broke on closed connection & wait until cascade arrives
 	for _ = range output {
+	}
+	err := events.Disconnected(address)
+	if err != nil {
+		log.Debug().Err(err).Msg("could not submit disconnected event")
 	}
 }

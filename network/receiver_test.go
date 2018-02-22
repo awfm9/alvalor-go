@@ -38,15 +38,15 @@ func TestReceiver(t *testing.T) {
 type ReceiverSuite struct {
 	suite.Suite
 	log zerolog.Logger
-	wg  sync.WaitGroup
 	cfg Config
+	wg  sync.WaitGroup
 }
 
 func (suite *ReceiverSuite) SetupTest() {
 	suite.log = zerolog.New(ioutil.Discard)
+	suite.cfg = Config{}
 	suite.wg = sync.WaitGroup{}
 	suite.wg.Add(1)
-	suite.cfg = Config{}
 }
 
 func (suite *ReceiverSuite) TestReceiverSuccess() {
