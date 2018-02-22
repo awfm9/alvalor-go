@@ -40,13 +40,10 @@ type simpleNode struct {
 }
 
 // New creates a new node to manage the Alvalor blockchain.
-func New(log zerolog.Logger, net networkManager, codec Codec) Node {
+func New(log zerolog.Logger, net networkManager, codec Codec, subscription <-chan interface{}) Node {
 
 	// initialize the node
 	n := &simpleNode{}
-
-	// subscribe to updates from the network
-	sub := net.Subscribe()
 
 	// configure the logger
 	log = log.With().Str("package", "node").Logger()
@@ -70,7 +67,7 @@ func New(log zerolog.Logger, net networkManager, codec Codec) Node {
 
 	// now we want to subscribe to the network layer and process messages
 	wg.Add(1)
-	go handleReceiving(log, wg, sub, n, state)
+	go handleReceiving(log, wg, subscription, n, state)
 
 	return n
 }

@@ -41,7 +41,6 @@ var (
 // Network defines the exposed API of the Alvalor network package.
 type Network interface {
 	Add(address string)
-	Subscribe() <-chan interface{}
 	Send(address string, msg interface{}) error
 	Broadcast(msg interface{}, exclude ...string) error
 	Stop()
@@ -58,13 +57,13 @@ type simpleNetwork struct {
 	pending    pendingManager
 	peers      peerManager
 	rep        reputationManager
+	subscriber chan<- interface{}
 	events     eventManager
-	subscriber chan interface{}
 	stop       chan struct{}
 }
 
 // New will initialize the network component.
-func New(log zerolog.Logger, codec Codec, options ...func(*Config)) Network {
+func New(log zerolog.Logger, codec Codec, subscriber chan<- interface{}, options ...func(*Config)) Network {
 
 	// initialize the launcher for all handlers
 	net := &simpleNetwork{}
@@ -112,7 +111,6 @@ func New(log zerolog.Logger, codec Codec, options ...func(*Config)) Network {
 	net.rep = rep
 
 	// create the subscriber channel
-	subscriber := make(chan interface{}, int(cfg.maxPeers*cfg.bufferSize))
 	net.subscriber = subscriber
 
 	// create the channel that will shut everything down
@@ -200,11 +198,6 @@ func (net *simpleNetwork) Stop() {
 	}
 	net.wg.Wait()
 	close(net.subscriber)
-}
-
-// Subscribe returns a channel that will stream all received messages and events.
-func (net *simpleNetwork) Subscribe() <-chan interface{} {
-	return net.subscriber
 }
 
 // Broadcast broadcasts a message to all peers.

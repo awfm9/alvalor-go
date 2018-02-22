@@ -59,9 +59,12 @@ func main() {
 	// use our efficient capnproto codec for network communication
 	cod := codec.NewProto()
 
+	// create channel to pipe messages from network layer to node layer
+	sub := make(chan interface{}, 128)
+
 	// initialize the network component to create our p2p network node
 	address := fmt.Sprintf("%v:%v", cfg.IP, cfg.Port)
-	net := network.New(log, cod,
+	net := network.New(log, cod, sub,
 		network.SetListen(cfg.Listen),
 		network.SetAddress(address),
 		network.SetMinPeers(4),
@@ -75,7 +78,7 @@ func main() {
 	}
 
 	// initialize the node subscriber
-	n := node.New(log, net, cod)
+	n := node.New(log, net, cod, sub)
 
 	// wait for a stop signal to initialize shutdown
 Loop:
