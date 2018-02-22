@@ -91,6 +91,9 @@ Loop:
 		case <-time.After(time.Duration(rand.Int()%40+20) * time.Second):
 			tx := generateTransaction()
 			n.Submit(tx)
+		case <-time.After(10 * time.Second):
+			net.Stats()
+			n.Stats()
 		}
 	}
 

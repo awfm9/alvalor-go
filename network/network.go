@@ -44,6 +44,7 @@ type Network interface {
 	Send(address string, msg interface{}) error
 	Broadcast(msg interface{}, exclude ...string) error
 	Stop()
+	Stats()
 }
 
 // simpleNetwork represents a simple network wrapper.
@@ -227,4 +228,11 @@ func (net *simpleNetwork) Broadcast(msg interface{}, exclude ...string) error {
 // Send sends a message to the peer with the given address.
 func (net *simpleNetwork) Send(address string, msg interface{}) error {
 	return net.peers.Send(address, msg)
+}
+
+// Stats will log information of the network layer.
+func (net *simpleNetwork) Stats() {
+	numPeers := net.peers.Count()
+	numPending := net.pending.Count()
+	net.log.Info().Uint("num_peers", numPeers).Uint("num_pending", numPending).Msg("stats")
 }

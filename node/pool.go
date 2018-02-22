@@ -30,17 +30,20 @@ type poolManager interface {
 	Known(id []byte) bool
 	Get(id []byte) (*types.Transaction, error)
 	Remove(id []byte) error
+	Count() uint
 }
 
 type simplePool struct {
 	codec Codec
 	store Store
+	count uint
 }
 
 func newPool(codec Codec, store Store) *simplePool {
 	p := &simplePool{
 		codec: codec,
 		store: store,
+		count: 0,
 	}
 	return p
 }
@@ -57,6 +60,7 @@ func (p *simplePool) Add(tx *types.Transaction) error {
 	if err != nil {
 		return errors.Wrap(err, "could not put data")
 	}
+	p.count++
 	return nil
 }
 
@@ -83,5 +87,10 @@ func (p *simplePool) Remove(id []byte) error {
 	if err != nil {
 		return errors.Wrap(err, "could not del data")
 	}
+	p.count--
 	return nil
+}
+
+func (p *simplePool) Count() uint {
+	return p.count
 }

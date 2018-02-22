@@ -103,6 +103,11 @@ func (p *PoolMock) Remove(id []byte) error {
 	return args.Error(0)
 }
 
+func (p *PoolMock) Count() uint {
+	args := p.Called()
+	return uint(args.Int(0))
+}
+
 type StateMock struct {
 	mock.Mock
 }

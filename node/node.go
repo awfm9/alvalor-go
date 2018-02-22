@@ -29,6 +29,7 @@ import (
 // Node defines the exposed API of the Alvalor node package.
 type Node interface {
 	Submit(tx *types.Transaction)
+	Stats()
 }
 
 type simpleNode struct {
@@ -74,6 +75,12 @@ func New(log zerolog.Logger, net networkManager, codec Codec, subscription <-cha
 
 func (n *simpleNode) Submit(tx *types.Transaction) {
 	n.Process(tx)
+}
+
+func (n *simpleNode) Stats() {
+	numActive := uint(len(n.state.Actives()))
+	numTxs := n.pool.Count()
+	n.log.Info().Uint("num_active", numActive).Uint("num_txs", numTxs).Msg("stats")
 }
 
 func (n *simpleNode) Process(entity Entity) {
