@@ -25,27 +25,27 @@ type stateManager interface {
 	Tags(id []byte) []string
 }
 
-type simpleStateManager struct {
+type simpleState struct {
 	actives map[string]bool
 	tags    map[string][]string
 }
 
-func newSimpleStateManager() *simpleStateManager {
-	return &simpleStateManager{
+func newState() *simpleState {
+	return &simpleState{
 		actives: make(map[string]bool),
 		tags:    make(map[string][]string),
 	}
 }
 
-func (s *simpleStateManager) Active(address string) {
+func (s *simpleState) Active(address string) {
 	s.actives[address] = true
 }
 
-func (s *simpleStateManager) Inactive(address string) {
+func (s *simpleState) Inactive(address string) {
 	delete(s.actives, address)
 }
 
-func (s *simpleStateManager) Actives() []string {
+func (s *simpleState) Actives() []string {
 	actives := make([]string, 0, len(s.actives))
 	for address := range s.actives {
 		actives = append(actives, address)
@@ -53,10 +53,10 @@ func (s *simpleStateManager) Actives() []string {
 	return actives
 }
 
-func (s *simpleStateManager) Tag(address string, id []byte) {
+func (s *simpleState) Tag(address string, id []byte) {
 	s.tags[string(id)] = append(s.tags[string(id)], address)
 }
 
-func (s *simpleStateManager) Tags(id []byte) []string {
+func (s *simpleState) Tags(id []byte) []string {
 	return s.tags[string(id)]
 }

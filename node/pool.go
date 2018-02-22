@@ -32,20 +32,20 @@ type poolManager interface {
 	Remove(id []byte) error
 }
 
-type simplePoolManager struct {
+type simplePool struct {
 	codec Codec
 	store Store
 }
 
-func newSimplePoolManager(codec Codec, store Store) *simplePoolManager {
-	p := &simplePoolManager{
+func newPool(codec Codec, store Store) *simplePool {
+	p := &simplePool{
 		codec: codec,
 		store: store,
 	}
 	return p
 }
 
-func (p *simplePoolManager) Add(tx *types.Transaction) error {
+func (p *simplePool) Add(tx *types.Transaction) error {
 	buf := &bytes.Buffer{}
 	err := p.codec.Encode(buf, tx)
 	if err != nil {
@@ -60,12 +60,12 @@ func (p *simplePoolManager) Add(tx *types.Transaction) error {
 	return nil
 }
 
-func (p *simplePoolManager) Known(id []byte) bool {
+func (p *simplePool) Known(id []byte) bool {
 	_, err := p.store.Get(id)
 	return err == nil
 }
 
-func (p *simplePoolManager) Get(id []byte) (*types.Transaction, error) {
+func (p *simplePool) Get(id []byte) (*types.Transaction, error) {
 	data, err := p.store.Get(id)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get data")
@@ -78,7 +78,7 @@ func (p *simplePoolManager) Get(id []byte) (*types.Transaction, error) {
 	return tx.(*types.Transaction), nil
 }
 
-func (p *simplePoolManager) Remove(id []byte) error {
+func (p *simplePool) Remove(id []byte) error {
 	err := p.store.Del(id)
 	if err != nil {
 		return errors.Wrap(err, "could not del data")

@@ -30,7 +30,7 @@ import (
 func TestNewPool(t *testing.T) {
 	codec := &CodecMock{}
 	store := &StoreMock{}
-	pool := newSimplePoolManager(codec, store)
+	pool := newPool(codec, store)
 	assert.Equal(t, codec, pool.codec)
 	assert.Equal(t, store, pool.store)
 }
@@ -51,7 +51,7 @@ func TestPoolAdd(t *testing.T) {
 	store.On("Put", tx2.ID(), mock.Anything).Return(nil)
 	store.On("Put", tx3.ID(), mock.Anything).Return(errors.New("could not put"))
 
-	pool := simplePoolManager{codec: codec, store: store}
+	pool := simplePool{codec: codec, store: store}
 
 	err := pool.Add(tx1)
 	assert.Nil(t, err)
@@ -72,7 +72,7 @@ func TestPoolKnown(t *testing.T) {
 	store.On("Get", id1).Return(nil, nil)
 	store.On("Get", id2).Return(nil, errors.New("could not get"))
 
-	pool := simplePoolManager{store: store}
+	pool := simplePool{store: store}
 
 	ok := pool.Known(id1)
 	assert.True(t, ok)
@@ -101,7 +101,7 @@ func TestPoolGet(t *testing.T) {
 	codec.On("Decode", mock.Anything).Return(tx1, nil).Once()
 	codec.On("Decode", mock.Anything).Return(tx3, errors.New("could not decode"))
 
-	pool := simplePoolManager{codec: codec, store: store}
+	pool := simplePool{codec: codec, store: store}
 
 	tx, err := pool.Get(id1)
 	assert.Nil(t, err)
@@ -123,7 +123,7 @@ func TestPoolRemove(t *testing.T) {
 	store.On("Del", id1).Return(nil)
 	store.On("Del", id2).Return(errors.New("could not del"))
 
-	pool := simplePoolManager{store: store}
+	pool := simplePool{store: store}
 
 	err := pool.Remove(id1)
 	assert.Nil(t, err)

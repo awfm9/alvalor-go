@@ -60,12 +60,12 @@ func New(log zerolog.Logger, net networkManager, codec Codec) Node {
 	n.net = net
 
 	// initialize peer state manager
-	state := newSimpleStateManager()
+	state := newState()
 	n.state = state
 
 	// initialize simple transaction pool
 	store := trie.New()
-	pool := newSimplePoolManager(codec, store)
+	pool := newPool(codec, store)
 	n.pool = pool
 
 	// now we want to subscribe to the network layer and process messages
