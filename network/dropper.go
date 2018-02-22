@@ -54,7 +54,6 @@ func handleDropping(log zerolog.Logger, wg *sync.WaitGroup, cfg *Config, peers p
 		addresses := peers.Addresses()
 		address := addresses[rand.Int()%len(addresses)]
 		err := peers.Drop(address)
-
 		if err != nil {
 			log.Error().Err(err).Msg("could not drop peer")
 			continue
