@@ -44,10 +44,18 @@ func New() *Trie {
 	return t
 }
 
-// Put will insert the given data at the path provided by the given key. If force is true, it will never fail and
-// overwrite data already located at that key location. Otherwise, the function will not modify the trie and return
-// false if there is already a hash located at the given key.
-func (t *Trie) Put(key []byte, data []byte, force bool) error {
+// Put will insert the given data for the given key. It will fail if there already is data with the given key.
+func (t *Trie) Put(key []byte, data []byte) error {
+	return t.put(key, data, false)
+}
+
+// MustPut will insert the given data for the given key and will overwrite any data that might already be stored under
+// the given key.
+func (t *Trie) MustPut(key []byte, data []byte) {
+	t.put(key, data, true)
+}
+
+func (t *Trie) put(key []byte, data []byte, force bool) error {
 	cur := &t.root
 	path := encode(key)
 	for {

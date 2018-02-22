@@ -22,6 +22,7 @@ import (
 
 	"github.com/rs/zerolog"
 
+	"github.com/alvalor/alvalor-go/trie"
 	"github.com/alvalor/alvalor-go/types"
 )
 
@@ -63,7 +64,8 @@ func New(log zerolog.Logger, net networkManager, codec Codec) Node {
 	n.state = state
 
 	// initialize simple transaction pool
-	pool := newSimplePoolManager(codec)
+	store := trie.New()
+	pool := newSimplePoolManager(codec, store)
 	n.pool = pool
 
 	// now we want to subscribe to the network layer and process messages

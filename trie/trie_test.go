@@ -34,7 +34,7 @@ func TestSingle(t *testing.T) {
 		hash := make([]byte, 32)
 		_, _ = rand.Read(key)
 		_, _ = rand.Read(hash)
-		err := trie.Put(key, hash, false)
+		err := trie.Put(key, hash)
 		if err != nil {
 			t.Fatalf("could not put: %x", key)
 		}
@@ -71,7 +71,7 @@ func TestBatch(t *testing.T) {
 	}
 	for i, key := range keys {
 		hash := hashes[i]
-		err := trie.Put(key, hash, false)
+		err := trie.Put(key, hash)
 		if err != nil {
 			t.Fatalf("could not put %v: %x", i, key)
 		}

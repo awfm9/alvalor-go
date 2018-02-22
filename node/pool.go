@@ -22,7 +22,6 @@ import (
 
 	"github.com/pkg/errors"
 
-	"github.com/alvalor/alvalor-go/trie"
 	"github.com/alvalor/alvalor-go/types"
 )
 
@@ -31,18 +30,17 @@ type poolManager interface {
 	Known(id []byte) bool
 	Get(id []byte) (*types.Transaction, error)
 	Remove(id []byte) error
-	Delta() []byte
 }
 
 type simplePoolManager struct {
 	codec Codec
-	trie  *trie.Trie
+	store Store
 }
 
-func newSimplePoolManager(codec Codec) *simplePoolManager {
+func newSimplePoolManager(codec Codec, store Store) *simplePoolManager {
 	p := &simplePoolManager{
 		codec: codec,
-		trie:  trie.New(),
+		store: store,
 	}
 	return p
 }
@@ -55,7 +53,7 @@ func (p *simplePoolManager) Add(tx *types.Transaction) error {
 	}
 	id := tx.ID()
 	data := buf.Bytes()
-	err = p.trie.Put(id, data, false)
+	err = p.store.Put(id, data)
 	if err != nil {
 		return errors.Wrap(err, "could not put data")
 	}
@@ -63,12 +61,12 @@ func (p *simplePoolManager) Add(tx *types.Transaction) error {
 }
 
 func (p *simplePoolManager) Known(id []byte) bool {
-	_, err := p.trie.Get(id)
+	_, err := p.store.Get(id)
 	return err == nil
 }
 
 func (p *simplePoolManager) Get(id []byte) (*types.Transaction, error) {
-	data, err := p.trie.Get(id)
+	data, err := p.store.Get(id)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get data")
 	}
@@ -81,13 +79,9 @@ func (p *simplePoolManager) Get(id []byte) (*types.Transaction, error) {
 }
 
 func (p *simplePoolManager) Remove(id []byte) error {
-	err := p.trie.Del(id)
+	err := p.store.Del(id)
 	if err != nil {
 		return errors.Wrap(err, "could not del data")
 	}
 	return nil
-}
-
-func (p *simplePoolManager) Delta() []byte {
-	return p.trie.Hash()
 }
