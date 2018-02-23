@@ -81,7 +81,8 @@ func main() {
 	n := node.New(log, net, cod, sub)
 
 	// wait for a stop signal to initialize shutdown
-	ticker := time.NewTicker(10 * time.Second)
+	stats := time.NewTicker(10 * time.Second)
+	gen := time.NewTicker(2 * time.Second)
 
 Loop:
 	for {
@@ -90,10 +91,12 @@ Loop:
 			signal.Stop(sig)
 			close(sig)
 			break Loop
-		case <-ticker.C:
+		case <-stats.C:
+			net.Stats()
+			n.Stats()
+		case <-gen.C:
 			tx := generateTransaction()
 			n.Submit(tx)
-			n.Stats()
 		}
 	}
 
