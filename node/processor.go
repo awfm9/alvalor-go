@@ -18,7 +18,6 @@
 package node
 
 import (
-	"encoding/hex"
 	"sync"
 
 	"github.com/rs/zerolog"
@@ -26,31 +25,34 @@ import (
 	"github.com/alvalor/alvalor-go/types"
 )
 
-func handleProcessing(log zerolog.Logger, wg *sync.WaitGroup, pool poolManager, handlers handlerManager, entity Entity) {
+func handleProcessing(log zerolog.Logger, wg *sync.WaitGroup, pool poolManager, handlers handlerManager, message interface{}) {
 	defer wg.Done()
 
-	var (
-		id = entity.ID()
-	)
-
 	// configure logger
-	log = log.With().Str("component", "processor").Str("id", hex.EncodeToString(id)).Logger()
+	log = log.With().Str("component", "processor").Logger()
 	log.Debug().Msg("processing routine started")
 	defer log.Debug().Msg("processing routine stopped")
 
 	// process the message according to type
-	switch e := entity.(type) {
+	switch msg := message.(type) {
+
 	case *types.Transaction:
-		ok := pool.Known(id)
+		ok := pool.Known(msg.ID())
 		if ok {
 			log.Debug().Msg("transaction already known")
 			return
 		}
-		err := pool.Add(e)
+		err := pool.Add(msg)
 		if err != nil {
 			log.Error().Err(err).Msg("could not add transaction to pool")
 			return
 		}
-		handlers.Propagate(entity)
+		handlers.Propagate(msg)
+
+	case *Mempool:
+
+	case *Inventory:
+
+	case *Request:
 	}
 }

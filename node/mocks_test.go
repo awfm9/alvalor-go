@@ -146,8 +146,8 @@ type HandlersMock struct {
 	mock.Mock
 }
 
-func (h *HandlersMock) Process(entity Entity) {
-	h.Called(entity)
+func (h *HandlersMock) Process(message interface{}) {
+	h.Called(message)
 }
 
 func (h *HandlersMock) Propagate(entity Entity) {

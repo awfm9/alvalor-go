@@ -18,12 +18,15 @@
 package codec
 
 import (
+	"bytes"
 	"io"
 
 	"github.com/pkg/errors"
+	"github.com/willf/bloom"
 	capnp "zombiezen.com/go/capnproto2"
 
 	"github.com/alvalor/alvalor-go/network"
+	"github.com/alvalor/alvalor-go/node"
 	"github.com/alvalor/alvalor-go/types"
 )
 
@@ -83,16 +86,6 @@ func (p Proto) Encode(w io.Writer, i interface{}) error {
 				return errors.Wrap(err, "could not set address")
 			}
 		}
-	case string:
-		err = z.SetText(v)
-		if err != nil {
-			return errors.Wrap(err, "could not create proto text")
-		}
-	case []byte:
-		err = z.SetData(v)
-		if err != nil {
-			return errors.Wrap(err, "could not create proto data")
-		}
 	case *types.Transaction:
 		var transaction Transaction
 		transaction, err = z.NewTransaction()
@@ -149,6 +142,55 @@ func (p Proto) Encode(w io.Writer, i interface{}) error {
 			err = sigs.Set(i, sig)
 			if err != nil {
 				return errors.Wrap(err, "could not set signature")
+			}
+		}
+	case *node.Mempool:
+		buf := &bytes.Buffer{}
+		_, err = v.Bloom.WriteTo(buf)
+		if err != nil {
+			return errors.Wrap(err, "could not encode bloom filter")
+		}
+		var mempool Mempool
+		mempool, err = z.NewMempool()
+		if err != nil {
+			return errors.Wrap(err, "could not create proto mempool")
+		}
+		err = mempool.SetBloom(buf.Bytes())
+		if err != nil {
+			return errors.Wrap(err, "could not set mempool bloom")
+		}
+	case *node.Inventory:
+		var inventory Inventory
+		inventory, err = z.NewInventory()
+		if err != nil {
+			return errors.Wrap(err, "could not create proto inventory")
+		}
+		var ids capnp.DataList
+		ids, err = inventory.NewIds(int32(len(v.IDs)))
+		if err != nil {
+			return errors.Wrap(err, "could not create id list")
+		}
+		for i, id := range v.IDs {
+			err = ids.Set(i, id)
+			if err != nil {
+				return errors.Wrap(err, "could not set ID")
+			}
+		}
+	case *node.Request:
+		var request Request
+		request, err = z.NewRequest()
+		if err != nil {
+			return errors.Wrap(err, "could not create proto request")
+		}
+		var ids capnp.DataList
+		ids, err = request.NewIds(int32(len(v.IDs)))
+		if err != nil {
+			return errors.Wrap(err, "could not create id list")
+		}
+		for i, id := range v.IDs {
+			err = ids.Set(i, id)
+			if err != nil {
+				return errors.Wrap(err, "could not set ID")
 			}
 		}
 	default:
@@ -208,18 +250,6 @@ func (p Proto) Decode(r io.Reader) (interface{}, error) {
 			v.Addresses = append(v.Addresses, addr)
 		}
 		return &v, nil
-	case Z_Which_text:
-		text, err := z.Text()
-		if err != nil {
-			return nil, errors.Wrap(err, "could not read proto text")
-		}
-		return text, nil
-	case Z_Which_data:
-		data, err := z.Data()
-		if err != nil {
-			return nil, errors.Wrap(err, "could not read proto data")
-		}
-		return data, nil
 	case Z_Which_transaction:
 		transaction, err := z.Transaction()
 		if err != nil {
@@ -284,6 +314,65 @@ func (p Proto) Decode(r io.Reader) (interface{}, error) {
 				return nil, errors.Wrap(err, "could not read signature")
 			}
 			v.Signatures = append(v.Signatures, sig)
+		}
+		return &v, nil
+	case Z_Which_mempool:
+		mempool, err := z.Mempool()
+		if err != nil {
+			return nil, errors.Wrap(err, "could not read proto mempool")
+		}
+		data, err := mempool.Bloom()
+		if err != nil {
+			return nil, errors.Wrap(err, "could not read mempool bloom")
+		}
+		buf := bytes.NewBuffer(data)
+		bloom := &bloom.BloomFilter{}
+		_, err = bloom.ReadFrom(buf)
+		if err != nil {
+			return nil, errors.Wrap(err, "could not decode bloom filter")
+		}
+		v := &node.Mempool{
+			Bloom: bloom,
+		}
+		return &v, nil
+	case Z_Which_inventory:
+		inventory, err := z.Inventory()
+		if err != nil {
+			return nil, errors.Wrap(err, "could not read proto inventory")
+		}
+		ids, err := inventory.Ids()
+		if err != nil {
+			return nil, errors.Wrap(err, "could not read inventory IDs")
+		}
+		v := &node.Inventory{
+			IDs: make([][]byte, 0, ids.Len()),
+		}
+		for i := 0; i < ids.Len(); i++ {
+			id, err := ids.At(i)
+			if err != nil {
+				return nil, errors.Wrap(err, "could not read ID")
+			}
+			v.IDs = append(v.IDs, id)
+		}
+		return &v, nil
+	case Z_Which_request:
+		request, err := z.Request()
+		if err != nil {
+			return nil, errors.Wrap(err, "could not read proto request")
+		}
+		ids, err := request.Ids()
+		if err != nil {
+			return nil, errors.Wrap(err, "could not read request IDs")
+		}
+		v := &node.Request{
+			IDs: make([][]byte, 0, ids.Len()),
+		}
+		for i := 0; i < ids.Len(); i++ {
+			id, err := ids.At(i)
+			if err != nil {
+				return nil, errors.Wrap(err, "could not read ID")
+			}
+			v.IDs = append(v.IDs, id)
 		}
 		return &v, nil
 	default:

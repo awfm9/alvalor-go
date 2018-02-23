@@ -47,12 +47,10 @@ func handleReceiving(log zerolog.Logger, wg *sync.WaitGroup, subscription <-chan
 		// in the case of a received event, we start processing the peer message
 		case network.Received:
 			entity, ok := e.Message.(Entity)
-			if !ok {
-				log.Error().Msg("received event is not entity")
-				continue
+			if ok {
+				state.Tag(e.Address, entity.ID())
 			}
-			state.Tag(e.Address, entity.ID())
-			handlers.Process(entity)
+			handlers.Process(e.Message)
 		}
 	}
 }

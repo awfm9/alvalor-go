@@ -83,9 +83,9 @@ func (n *simpleNode) Stats() {
 	n.log.Info().Uint("num_active", numActive).Uint("num_txs", numTxs).Msg("stats")
 }
 
-func (n *simpleNode) Process(entity Entity) {
+func (n *simpleNode) Process(message interface{}) {
 	n.wg.Add(1)
-	go handleProcessing(n.log, n.wg, n.pool, n, entity)
+	go handleProcessing(n.log, n.wg, n.pool, n, message)
 }
 
 func (n *simpleNode) Propagate(entity Entity) {

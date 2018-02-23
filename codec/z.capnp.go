@@ -17,13 +17,14 @@ const (
 	Z_Which_pong        Z_Which = 1
 	Z_Which_discover    Z_Which = 2
 	Z_Which_peers       Z_Which = 3
-	Z_Which_text        Z_Which = 4
-	Z_Which_data        Z_Which = 5
-	Z_Which_transaction Z_Which = 6
+	Z_Which_transaction Z_Which = 4
+	Z_Which_mempool     Z_Which = 5
+	Z_Which_inventory   Z_Which = 6
+	Z_Which_request     Z_Which = 7
 )
 
 func (w Z_Which) String() string {
-	const s = "pingpongdiscoverpeerstextdatatransaction"
+	const s = "pingpongdiscoverpeerstransactionmempoolinventoryrequest"
 	switch w {
 	case Z_Which_ping:
 		return s[0:4]
@@ -33,12 +34,14 @@ func (w Z_Which) String() string {
 		return s[8:16]
 	case Z_Which_peers:
 		return s[16:21]
-	case Z_Which_text:
-		return s[21:25]
-	case Z_Which_data:
-		return s[25:29]
 	case Z_Which_transaction:
-		return s[29:40]
+		return s[21:32]
+	case Z_Which_mempool:
+		return s[32:39]
+	case Z_Which_inventory:
+		return s[39:48]
+	case Z_Which_request:
+		return s[48:55]
 
 	}
 	return "Z_Which(" + strconv.FormatUint(uint64(w), 10) + ")"
@@ -202,55 +205,8 @@ func (s Z) NewPeers() (Peers, error) {
 	return ss, err
 }
 
-func (s Z) Text() (string, error) {
-	if s.Struct.Uint16(0) != 4 {
-		panic("Which() != text")
-	}
-	p, err := s.Struct.Ptr(0)
-	return p.Text(), err
-}
-
-func (s Z) HasText() bool {
-	if s.Struct.Uint16(0) != 4 {
-		return false
-	}
-	p, err := s.Struct.Ptr(0)
-	return p.IsValid() || err != nil
-}
-
-func (s Z) TextBytes() ([]byte, error) {
-	p, err := s.Struct.Ptr(0)
-	return p.TextBytes(), err
-}
-
-func (s Z) SetText(v string) error {
-	s.Struct.SetUint16(0, 4)
-	return s.Struct.SetText(0, v)
-}
-
-func (s Z) Data() ([]byte, error) {
-	if s.Struct.Uint16(0) != 5 {
-		panic("Which() != data")
-	}
-	p, err := s.Struct.Ptr(0)
-	return []byte(p.Data()), err
-}
-
-func (s Z) HasData() bool {
-	if s.Struct.Uint16(0) != 5 {
-		return false
-	}
-	p, err := s.Struct.Ptr(0)
-	return p.IsValid() || err != nil
-}
-
-func (s Z) SetData(v []byte) error {
-	s.Struct.SetUint16(0, 5)
-	return s.Struct.SetData(0, v)
-}
-
 func (s Z) Transaction() (Transaction, error) {
-	if s.Struct.Uint16(0) != 6 {
+	if s.Struct.Uint16(0) != 4 {
 		panic("Which() != transaction")
 	}
 	p, err := s.Struct.Ptr(0)
@@ -258,7 +214,7 @@ func (s Z) Transaction() (Transaction, error) {
 }
 
 func (s Z) HasTransaction() bool {
-	if s.Struct.Uint16(0) != 6 {
+	if s.Struct.Uint16(0) != 4 {
 		return false
 	}
 	p, err := s.Struct.Ptr(0)
@@ -266,17 +222,116 @@ func (s Z) HasTransaction() bool {
 }
 
 func (s Z) SetTransaction(v Transaction) error {
-	s.Struct.SetUint16(0, 6)
+	s.Struct.SetUint16(0, 4)
 	return s.Struct.SetPtr(0, v.Struct.ToPtr())
 }
 
 // NewTransaction sets the transaction field to a newly
 // allocated Transaction struct, preferring placement in s's segment.
 func (s Z) NewTransaction() (Transaction, error) {
-	s.Struct.SetUint16(0, 6)
+	s.Struct.SetUint16(0, 4)
 	ss, err := NewTransaction(s.Struct.Segment())
 	if err != nil {
 		return Transaction{}, err
+	}
+	err = s.Struct.SetPtr(0, ss.Struct.ToPtr())
+	return ss, err
+}
+
+func (s Z) Mempool() (Mempool, error) {
+	if s.Struct.Uint16(0) != 5 {
+		panic("Which() != mempool")
+	}
+	p, err := s.Struct.Ptr(0)
+	return Mempool{Struct: p.Struct()}, err
+}
+
+func (s Z) HasMempool() bool {
+	if s.Struct.Uint16(0) != 5 {
+		return false
+	}
+	p, err := s.Struct.Ptr(0)
+	return p.IsValid() || err != nil
+}
+
+func (s Z) SetMempool(v Mempool) error {
+	s.Struct.SetUint16(0, 5)
+	return s.Struct.SetPtr(0, v.Struct.ToPtr())
+}
+
+// NewMempool sets the mempool field to a newly
+// allocated Mempool struct, preferring placement in s's segment.
+func (s Z) NewMempool() (Mempool, error) {
+	s.Struct.SetUint16(0, 5)
+	ss, err := NewMempool(s.Struct.Segment())
+	if err != nil {
+		return Mempool{}, err
+	}
+	err = s.Struct.SetPtr(0, ss.Struct.ToPtr())
+	return ss, err
+}
+
+func (s Z) Inventory() (Inventory, error) {
+	if s.Struct.Uint16(0) != 6 {
+		panic("Which() != inventory")
+	}
+	p, err := s.Struct.Ptr(0)
+	return Inventory{Struct: p.Struct()}, err
+}
+
+func (s Z) HasInventory() bool {
+	if s.Struct.Uint16(0) != 6 {
+		return false
+	}
+	p, err := s.Struct.Ptr(0)
+	return p.IsValid() || err != nil
+}
+
+func (s Z) SetInventory(v Inventory) error {
+	s.Struct.SetUint16(0, 6)
+	return s.Struct.SetPtr(0, v.Struct.ToPtr())
+}
+
+// NewInventory sets the inventory field to a newly
+// allocated Inventory struct, preferring placement in s's segment.
+func (s Z) NewInventory() (Inventory, error) {
+	s.Struct.SetUint16(0, 6)
+	ss, err := NewInventory(s.Struct.Segment())
+	if err != nil {
+		return Inventory{}, err
+	}
+	err = s.Struct.SetPtr(0, ss.Struct.ToPtr())
+	return ss, err
+}
+
+func (s Z) Request() (Request, error) {
+	if s.Struct.Uint16(0) != 7 {
+		panic("Which() != request")
+	}
+	p, err := s.Struct.Ptr(0)
+	return Request{Struct: p.Struct()}, err
+}
+
+func (s Z) HasRequest() bool {
+	if s.Struct.Uint16(0) != 7 {
+		return false
+	}
+	p, err := s.Struct.Ptr(0)
+	return p.IsValid() || err != nil
+}
+
+func (s Z) SetRequest(v Request) error {
+	s.Struct.SetUint16(0, 7)
+	return s.Struct.SetPtr(0, v.Struct.ToPtr())
+}
+
+// NewRequest sets the request field to a newly
+// allocated Request struct, preferring placement in s's segment.
+func (s Z) NewRequest() (Request, error) {
+	s.Struct.SetUint16(0, 7)
+	ss, err := NewRequest(s.Struct.Segment())
+	if err != nil {
+		return Request{}, err
 	}
 	err = s.Struct.SetPtr(0, ss.Struct.ToPtr())
 	return ss, err
@@ -328,28 +383,45 @@ func (p Z_Promise) Transaction() Transaction_Promise {
 	return Transaction_Promise{Pipeline: p.Pipeline.GetPipeline(0)}
 }
 
-const schema_904d4f3f728c7f04 = "x\xda4\xcc\xbb\x8b\x13Q\x1c\xc5\xf1s\xee\x9d\x87E" +
-	".\x99a\xa7\x12uKQ\x88\xb8\xbbha\xe3\x16\x0a" +
-	"\"\xcaz\xb7\xd4B\xc6\xec )\x9c\x0c\x93A\x82\x8d" +
-	"}\x10\xe2\x7f\xa0\x85X[$\x82\x92@\x8a\x04#(" +
-	"$\x90F\x11\xbb\x80E:+\xe3\xe3'#\xb1\xfd\x1c" +
-	"\xce\xf7\xfc\x15\xee\xab\x1d\xb7\xeb\x01\xf6\x86\xeb\xc9\xdbS" +
-	"\x8b\xbd\xd3\x17\x1e\xf4`\x8f\x91\xe2<~\x92_>\xb8" +
-	"\xf9\x14W\xe9\xfb\xc0VM\x1fn\xedh\x1f\xd8\xab\xe9" +
-	".\xf1N\x1e\x9d\xab\xc7Y\x9a]\x02o\xdf\"\xed\x09" +
-	"\xedTD\x1c\x02a\xff,`_i\xda\x81\xa2\xe1\x1f" +
-	"\x89X\xea\x9bR{\x9av\xa4h\xd4o\x89\xa8\x80p" +
-	"x\x1d\xb0\x03M;U4\xfa\x97D\xd4@8\xd9\x05" +
-	"\xecH\xd3~P4\xceO\x89\xe8\x00\xe1\xfb\xb20\xd6" +
-	"\xb43E\xe3\xae%\xa2\x0b\x84\x1fK\x9dj\xda\x85\xa2" +
-	"\xf1~HD\x0f\x08\xe7\xf7\x00;\xd3\xb4_\x14\xabY" +
-	"#\xbd\xcf@\x96\xdb\x9f\xbf\x7f\xbd6~\x01\x90\x01X" +
-	"\xcd\x9a\xffXj\xcf\x0fd\xb7\xbf\xdc\xb0\x1c5Z\xf5" +
-	"\xe6\xc3$\x07\xc0@\xda\xaf_^\xfc\xb6\xbf\xeal\xd6" +
-	"\xed,I\xf2\x16\x039~xgrr\xdd\x19\xfe\x8f" +
-	"\x15I\xbb`\x05\x8a\x15\xb0z\x14\x171\x0d\x14\x0d(" +
-	"E\x1e\xa7\xad\xb8^\xc0o4S\x06rW\x9f\x99{" +
-	"\x9f\x9e\xad6\xcf\xbf\x01\x00\x00\xff\xff\x9b\xabhA"
+func (p Z_Promise) Mempool() Mempool_Promise {
+	return Mempool_Promise{Pipeline: p.Pipeline.GetPipeline(0)}
+}
+
+func (p Z_Promise) Inventory() Inventory_Promise {
+	return Inventory_Promise{Pipeline: p.Pipeline.GetPipeline(0)}
+}
+
+func (p Z_Promise) Request() Request_Promise {
+	return Request_Promise{Pipeline: p.Pipeline.GetPipeline(0)}
+}
+
+const schema_904d4f3f728c7f04 = "x\xda4\xcb=h\x13q\x1c\xc6\xf1\xe7\xf9\xff/\xb9" +
+	"\x88\x9e\xbd\xa3\xe7\"h\xddD\xc1\xb7\x96\x88/C\x8b" +
+	" \x14A\xea/\xe8\xa2\x83\xc4\xf4\x90\x80\xb9;/\xb1" +
+	"\xa8KG\xb58\x08\x82\x8bC\x1d\xc4I\x07A\x1d\x04" +
+	"7E\x04\x07\x8b\x0a\xad\x14Eh C\x85\x88\x1dl" +
+	"\x8d\xfe$%Y?\xcf\xf3\xdd\x7f\x8fc\xe6@n\xb6" +
+	"\x00\xc8d.\xaf/\xb7\x7f\x1a\xd9Y\xac=\x83\x14H" +
+	"u\xa6og\xa3\x13'\xef\xe08\xdd\x020XtJ" +
+	"\x83\x87\x1d\x17\x18):o\x09\xc5\x06\xbd\xbe\xb7RN" +
+	"\xe3\xf4\x08x\xf6\x14);\xac\xb3I\xd5!\x10\xcc\xed" +
+	"\x06\xe4\xbd\xa5\xcc\x1bz\xfc\xa7!\xbb\xfa\xb9\xab\x1f," +
+	"e\xd1\xd03\x7f5\xa4\x01\x82\x85\x13\x80\xcc[\xca\x92" +
+	"\xa1g;\x1a\xd2\x02\xc1\xf7a@\x16-\xa5e\xe89" +
+	"\x7f4\xa4\x03\x04\xcd\x0b\x80,YJ\xdb\xd0\xcb\xadi" +
+	"\xc8\x1c\x10\xfc8\x06H\xcbRV\x0c\xbd\xfc\xaa\x86\xcc" +
+	"\x03\xc1\xcf\x12 mK\xe9\x18z\xeeo\x0d\xe9\x02\xc1" +
+	"j\xf7\xbbbY\xa2\xe1@Z\x8d/\xd2\xd7\xe6\xd0\x97" +
+	"__\xc7_?\x04H\x1f\x1cH\x93u\xd6=\x0f&" +
+	"t\xf8y\xb3\xc7:Y\xadW\x92\xa9(\x03@_\xaf" +
+	"\xbext\xb05\xb6<\xd3[\x87\xd2(\xca\xea\xf4u" +
+	"k\xe9\xdc\x9bmk3\xaf\xfaU#+\xc7\xf5r\xa5" +
+	"\x01\xb7\x9a\xc4\xf4\xf5\xbc\xdd5\x97_\x98]\xee\xed\xd3" +
+	"\xb5\xa8\x96&\xc9%\xfa\xba\xe5\xf1\xbe3O6\x1fj" +
+	"\xf7\xcbj<\x15\xc5\x8d$\x03\xaf\xd1\xd7\x9b\xdf6\xde" +
+	"\x7fzz\xfcV\xbf\xcb\xa2\xcbW\xa2z\x83\xbe\xde=" +
+	"\xfan\xf4F\xf0\xb1\xd5[\xfe\x07\x00\x00\xff\xff\xfc\xad" +
+	"\x87\xe6"
 
 func init() {
 	schemas.Register(schema_904d4f3f728c7f04,
