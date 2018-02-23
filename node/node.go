@@ -69,7 +69,7 @@ func New(log zerolog.Logger, net networkManager, codec Codec, subscription <-cha
 
 	// now we want to subscribe to the network layer and process messages
 	wg.Add(1)
-	go handleReceiving(log, wg, subscription, n, state)
+	go handleReceiving(log, wg, n, net, state, pool, subscription)
 
 	return n
 }

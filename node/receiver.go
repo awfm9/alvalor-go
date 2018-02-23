@@ -21,11 +21,12 @@ import (
 	"sync"
 
 	"github.com/rs/zerolog"
+	"github.com/willf/bloom"
 
 	"github.com/alvalor/alvalor-go/network"
 )
 
-func handleReceiving(log zerolog.Logger, wg *sync.WaitGroup, subscription <-chan interface{}, handlers handlerManager, state stateManager) {
+func handleReceiving(log zerolog.Logger, wg *sync.WaitGroup, handlers handlerManager, net networkManager, state stateManager, pool poolManager, subscription <-chan interface{}) {
 	defer wg.Done()
 
 	// configure logger
@@ -39,6 +40,17 @@ func handleReceiving(log zerolog.Logger, wg *sync.WaitGroup, subscription <-chan
 		// in the case of a connected event, we start tracking the peer state
 		case network.Connected:
 			state.Active(e.Address)
+			bloom := bloom.NewWithEstimates(pool.Count(), 0.01)
+			ids := pool.IDs()
+			for _, id := range ids {
+				bloom.Add(id)
+			}
+			mempool := &Mempool{Bloom: bloom}
+			err := net.Send(e.Address, mempool)
+			if err != nil {
+				log.Error().Err(err).Msg("could not send mempool message")
+				continue
+			}
 
 		// in the case of a disconnected event, we stop tracking the peer state
 		case network.Disconnected:

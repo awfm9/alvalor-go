@@ -49,18 +49,22 @@ func (suite *ReceiverSuite) TestReceiverConnected() {
 	// arrange
 	address := "192.0.2.1:1337"
 
-	sub := make(chan interface{})
-
 	handlers := &HandlersMock{}
 	handlers.On("Process", mock.Anything)
+
+	net := &NetworkMock{}
 
 	state := &StateMock{}
 	state.On("Active", mock.Anything)
 	state.On("Inactive", mock.Anything)
 	state.On("Tag", mock.Anything, mock.Anything)
 
+	pool := &PoolMock{}
+
+	sub := make(chan interface{})
+
 	// act
-	go handleReceiving(suite.log, suite.wg, sub, handlers, state)
+	go handleReceiving(suite.log, suite.wg, handlers, net, state, pool, sub)
 	sub <- network.Connected{Address: address}
 	close(sub)
 	suite.wg.Wait()
@@ -76,18 +80,22 @@ func (suite *ReceiverSuite) TestReceiverDisconnected() {
 	// arrange
 	address := "192.0.2.1:1337"
 
-	sub := make(chan interface{})
-
 	handlers := &HandlersMock{}
 	handlers.On("Process", mock.Anything)
+
+	net := &NetworkMock{}
 
 	state := &StateMock{}
 	state.On("Active", mock.Anything)
 	state.On("Inactive", mock.Anything)
 	state.On("Tag", mock.Anything, mock.Anything)
 
+	pool := &PoolMock{}
+
+	sub := make(chan interface{})
+
 	// act
-	go handleReceiving(suite.log, suite.wg, sub, handlers, state)
+	go handleReceiving(suite.log, suite.wg, handlers, net, state, pool, sub)
 	sub <- network.Disconnected{Address: address}
 	close(sub)
 	suite.wg.Wait()
@@ -110,15 +118,19 @@ func (suite *ReceiverSuite) TestReceiverReceived() {
 	handlers := &HandlersMock{}
 	handlers.On("Process", mock.Anything)
 
+	net := &NetworkMock{}
+
 	state := &StateMock{}
 	state.On("Active", mock.Anything)
 	state.On("Inactive", mock.Anything)
 	state.On("Tag", mock.Anything, mock.Anything)
 
+	pool := &PoolMock{}
+
 	sub := make(chan interface{})
 
 	// act
-	go handleReceiving(suite.log, suite.wg, sub, handlers, state)
+	go handleReceiving(suite.log, suite.wg, handlers, net, state, pool, sub)
 	sub <- network.Received{Address: address, Message: entity}
 	close(sub)
 	suite.wg.Wait()
