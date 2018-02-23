@@ -25,7 +25,7 @@ import (
 	"github.com/rs/zerolog"
 )
 
-func handleEntity(log zerolog.Logger, wg *sync.WaitGroup, net networkManager, state stateManager, entity Entity) {
+func handleEntity(log zerolog.Logger, wg *sync.WaitGroup, net Network, state stateManager, entity Entity) {
 	defer wg.Done()
 
 	var (

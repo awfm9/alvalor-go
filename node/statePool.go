@@ -26,6 +26,13 @@ import (
 	"github.com/alvalor/alvalor-go/types"
 )
 
+// Store represents an interface to a key value store for bytes.
+type Store interface {
+	Put(key []byte, data []byte) error
+	Get(key []byte) ([]byte, error)
+	Del(key []byte) error
+}
+
 type poolManager interface {
 	Add(tx *types.Transaction) error
 	Get(id []byte) (*types.Transaction, error)

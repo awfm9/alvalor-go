@@ -18,6 +18,7 @@
 package node
 
 import (
+	"io"
 	"sync"
 
 	"github.com/rs/zerolog"
@@ -32,16 +33,40 @@ type Node interface {
 	Stats()
 }
 
+// Network defines what we need from the network module.
+type Network interface {
+	Send(address string, msg interface{}) error
+	Broadcast(msg interface{}, exclude ...string) error
+}
+
+// Codec is responsible for serializing and deserializing data for disk storage.
+type Codec interface {
+	Encode(w io.Writer, i interface{}) error
+	Decode(r io.Reader) (interface{}, error)
+}
+
+// Entity is any data structure that returns a unique ID.
+type Entity interface {
+	ID() []byte
+}
+
+// Handlers describes the handlers we need to process everything.
+type Handlers interface {
+	Event(event interface{})
+	Message(address string, message interface{})
+	Entity(entity Entity)
+}
+
 type simpleNode struct {
 	log   zerolog.Logger
 	wg    *sync.WaitGroup
-	net   networkManager
+	net   Network
 	state stateManager
 	pool  poolManager
 }
 
 // New creates a new node to manage the Alvalor blockchain.
-func New(log zerolog.Logger, net networkManager, codec Codec, subscription <-chan interface{}) Node {
+func New(log zerolog.Logger, net Network, codec Codec, subscription <-chan interface{}) Node {
 
 	// initialize the node
 	n := &simpleNode{}

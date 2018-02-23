@@ -23,7 +23,7 @@ import (
 	"github.com/rs/zerolog"
 )
 
-func handleInput(log zerolog.Logger, wg *sync.WaitGroup, handlers handlerManager, subscription <-chan interface{}) {
+func handleInput(log zerolog.Logger, wg *sync.WaitGroup, handlers Handlers, subscription <-chan interface{}) {
 	defer wg.Done()
 
 	// configure logger

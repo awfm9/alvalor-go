@@ -26,7 +26,7 @@ import (
 	"github.com/alvalor/alvalor-go/network"
 )
 
-func handleEvent(log zerolog.Logger, wg *sync.WaitGroup, handlers handlerManager, net networkManager, state stateManager, pool poolManager, event interface{}) {
+func handleEvent(log zerolog.Logger, wg *sync.WaitGroup, handlers Handlers, net Network, state stateManager, pool poolManager, event interface{}) {
 	defer wg.Done()
 
 	// configure logger

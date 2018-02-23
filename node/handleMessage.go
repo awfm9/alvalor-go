@@ -25,7 +25,7 @@ import (
 	"github.com/alvalor/alvalor-go/types"
 )
 
-func handleMessage(log zerolog.Logger, wg *sync.WaitGroup, handlers handlerManager, net networkManager, state stateManager, pool poolManager, address string, message interface{}) {
+func handleMessage(log zerolog.Logger, wg *sync.WaitGroup, handlers Handlers, net Network, state stateManager, pool poolManager, address string, message interface{}) {
 	defer wg.Done()
 
 	// configure logger
