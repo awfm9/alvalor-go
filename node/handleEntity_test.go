@@ -66,7 +66,7 @@ func (suite *PropagatorSuite) TestPropagatorSuccess() {
 	entity.On("ID").Return(id)
 
 	// act
-	handlePropagating(suite.log, suite.wg, state, net, entity)
+	handleEntity(suite.log, suite.wg, state, net, entity)
 
 	// assert
 	t := suite.T()

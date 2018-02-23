@@ -16,9 +16,3 @@
 // along with Alvalor.  If not, see <http://www.gnu.org/licenses/>.
 
 package node
-
-type handlerManager interface {
-	Event(event interface{})
-	Message(address string, message interface{})
-	Entity(entity Entity)
-}

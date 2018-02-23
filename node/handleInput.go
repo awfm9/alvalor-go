@@ -17,8 +17,21 @@
 
 package node
 
-type handlerManager interface {
-	Event(event interface{})
-	Message(address string, message interface{})
-	Entity(entity Entity)
+import (
+	"sync"
+
+	"github.com/rs/zerolog"
+)
+
+func handleInput(log zerolog.Logger, wg *sync.WaitGroup, handlers handlerManager, subscription <-chan interface{}) {
+	defer wg.Done()
+
+	// configure logger
+	log = log.With().Str("component", "input").Logger()
+	log.Debug().Msg("input routine started")
+	defer log.Debug().Msg("input routine stopped")
+
+	for event := range subscription {
+		handlers.Event(event)
+	}
 }

@@ -22,7 +22,6 @@ import (
 
 	"github.com/rs/zerolog"
 
-	"github.com/alvalor/alvalor-go/network"
 	"github.com/alvalor/alvalor-go/trie"
 	"github.com/alvalor/alvalor-go/types"
 )
@@ -69,14 +68,13 @@ func New(log zerolog.Logger, net networkManager, codec Codec, subscription <-cha
 
 	// now we want to subscribe to the network layer and process messages
 	wg.Add(1)
-	go handleReceiving(log, wg, n, net, state, pool, subscription)
+	go handleInput(log, wg, n, subscription)
 
 	return n
 }
 
 func (n *simpleNode) Submit(tx *types.Transaction) {
-	event := network.Received{Message: tx}
-	n.Process(event)
+	n.Entity(tx)
 }
 
 func (n *simpleNode) Stats() {
@@ -85,12 +83,17 @@ func (n *simpleNode) Stats() {
 	n.log.Info().Uint("num_active", numActive).Uint("num_txs", numTxs).Msg("stats")
 }
 
-func (n *simpleNode) Process(event network.Received) {
+func (n *simpleNode) Event(event interface{}) {
 	n.wg.Add(1)
-	go handleProcessing(n.log, n.wg, n, n.pool, n.net, event)
+	go handleEvent(n.log, n.wg, n, n.net, n.state, n.pool, event)
 }
 
-func (n *simpleNode) Propagate(entity Entity) {
+func (n *simpleNode) Message(address string, message interface{}) {
 	n.wg.Add(1)
-	go handlePropagating(n.log, n.wg, n.state, n.net, entity)
+	go handleMessage(n.log, n.wg, n, n.net, n.state, n.pool, address, message)
+}
+
+func (n *simpleNode) Entity(entity Entity) {
+	n.wg.Add(1)
+	go handleEntity(n.log, n.wg, n.net, n.state, entity)
 }

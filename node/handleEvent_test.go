@@ -65,7 +65,7 @@ func (suite *ReceiverSuite) TestReceiverConnected() {
 	sub := make(chan interface{})
 
 	// act
-	go handleReceiving(suite.log, suite.wg, handlers, net, state, pool, sub)
+	go handleEvent(suite.log, suite.wg, handlers, net, state, pool, sub)
 	sub <- network.Connected{Address: address}
 	close(sub)
 	suite.wg.Wait()
@@ -96,7 +96,7 @@ func (suite *ReceiverSuite) TestReceiverDisconnected() {
 	sub := make(chan interface{})
 
 	// act
-	go handleReceiving(suite.log, suite.wg, handlers, net, state, pool, sub)
+	go handleEvent(suite.log, suite.wg, handlers, net, state, pool, sub)
 	sub <- network.Disconnected{Address: address}
 	close(sub)
 	suite.wg.Wait()
@@ -131,7 +131,7 @@ func (suite *ReceiverSuite) TestReceiverReceived() {
 	sub := make(chan interface{})
 
 	// act
-	go handleReceiving(suite.log, suite.wg, handlers, net, state, pool, sub)
+	go handleEvent(suite.log, suite.wg, handlers, net, state, pool, sub)
 	sub <- network.Received{Address: address, Message: entity}
 	close(sub)
 	suite.wg.Wait()

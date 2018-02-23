@@ -61,7 +61,7 @@ func (suite *ProcessorSuite) TestProcessorTransactionNew() {
 	event := network.Received{}
 
 	// act
-	handleProcessing(suite.log, suite.wg, handlers, pool, net, event)
+	handleMessage(suite.log, suite.wg, handlers, pool, net, event)
 
 	// assert
 	t := suite.T()
@@ -86,7 +86,7 @@ func (suite *ProcessorSuite) TestProcessorTransactionKnown() {
 	event := network.Received{}
 
 	// act
-	handleProcessing(suite.log, suite.wg, handlers, pool, net, event)
+	handleMessage(suite.log, suite.wg, handlers, pool, net, event)
 	// assert
 	t := suite.T()
 
@@ -111,7 +111,7 @@ func (suite *ProcessorSuite) TestProcessorTransactionAddFails() {
 	event := network.Received{}
 
 	// act
-	handleProcessing(suite.log, suite.wg, handlers, pool, net, event)
+	handleMessage(suite.log, suite.wg, handlers, pool, net, event)
 
 	// assert
 	t := suite.T()
