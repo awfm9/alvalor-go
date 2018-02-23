@@ -22,6 +22,7 @@ import (
 
 	"github.com/rs/zerolog"
 
+	"github.com/alvalor/alvalor-go/network"
 	"github.com/alvalor/alvalor-go/trie"
 	"github.com/alvalor/alvalor-go/types"
 )
@@ -74,7 +75,8 @@ func New(log zerolog.Logger, net networkManager, codec Codec, subscription <-cha
 }
 
 func (n *simpleNode) Submit(tx *types.Transaction) {
-	n.Process(tx)
+	event := network.Received{Message: tx}
+	n.Process(event)
 }
 
 func (n *simpleNode) Stats() {
@@ -83,9 +85,9 @@ func (n *simpleNode) Stats() {
 	n.log.Info().Uint("num_active", numActive).Uint("num_txs", numTxs).Msg("stats")
 }
 
-func (n *simpleNode) Process(message interface{}) {
+func (n *simpleNode) Process(event network.Received) {
 	n.wg.Add(1)
-	go handleProcessing(n.log, n.wg, n.pool, n, message)
+	go handleProcessing(n.log, n.wg, n, n.pool, n.net, event)
 }
 
 func (n *simpleNode) Propagate(entity Entity) {

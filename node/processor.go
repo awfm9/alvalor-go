@@ -22,10 +22,11 @@ import (
 
 	"github.com/rs/zerolog"
 
+	"github.com/alvalor/alvalor-go/network"
 	"github.com/alvalor/alvalor-go/types"
 )
 
-func handleProcessing(log zerolog.Logger, wg *sync.WaitGroup, pool poolManager, handlers handlerManager, message interface{}) {
+func handleProcessing(log zerolog.Logger, wg *sync.WaitGroup, handlers handlerManager, pool poolManager, net networkManager, event network.Received) {
 	defer wg.Done()
 
 	// configure logger
@@ -34,7 +35,7 @@ func handleProcessing(log zerolog.Logger, wg *sync.WaitGroup, pool poolManager, 
 	defer log.Debug().Msg("processing routine stopped")
 
 	// process the message according to type
-	switch msg := message.(type) {
+	switch msg := event.Message.(type) {
 
 	case *types.Transaction:
 		ok := pool.Known(msg.ID())
@@ -50,9 +51,49 @@ func handleProcessing(log zerolog.Logger, wg *sync.WaitGroup, pool poolManager, 
 		handlers.Propagate(msg)
 
 	case *Mempool:
+		var inv [][]byte
+		ids := pool.IDs()
+		for _, id := range ids {
+			if msg.Bloom.Test(id) {
+				continue
+			}
+			inv = append(inv, id)
+		}
+		inventory := &Inventory{IDs: inv}
+		err := net.Send(event.Address, inventory)
+		if err != nil {
+			log.Error().Err(err).Msg("could not share inventory")
+			return
+		}
 
 	case *Inventory:
+		var req [][]byte
+		for _, id := range msg.IDs {
+			ok := pool.Known(id)
+			if ok {
+				continue
+			}
+			req = append(req, id)
+		}
+		request := &Request{IDs: req}
+		err := net.Send(event.Address, request)
+		if err != nil {
+			log.Error().Err(err).Msg("could not request transactions")
+			return
+		}
 
 	case *Request:
+		for _, id := range msg.IDs {
+			tx, err := pool.Get(id)
+			if err != nil {
+				log.Error().Err(err).Msg("requested transaction unknown")
+				continue
+			}
+			err = net.Send(event.Address, tx)
+			if err != nil {
+				log.Error().Err(err).Msg("could not send requested transaction")
+				continue
+			}
+		}
 	}
 }

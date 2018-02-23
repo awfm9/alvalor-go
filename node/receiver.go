@@ -50,7 +50,7 @@ func handleReceiving(log zerolog.Logger, wg *sync.WaitGroup, subscription <-chan
 			if ok {
 				state.Tag(e.Address, entity.ID())
 			}
-			handlers.Process(e.Message)
+			handlers.Process(e)
 		}
 	}
 }

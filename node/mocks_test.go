@@ -22,6 +22,7 @@ import (
 
 	"github.com/stretchr/testify/mock"
 
+	"github.com/alvalor/alvalor-go/network"
 	"github.com/alvalor/alvalor-go/types"
 )
 
@@ -108,6 +109,15 @@ func (p *PoolMock) Count() uint {
 	return uint(args.Int(0))
 }
 
+func (p *PoolMock) IDs() [][]byte {
+	args := p.Called()
+	var set [][]byte
+	if args.Get(0) != nil {
+		set = args.Get(0).([][]byte)
+	}
+	return set
+}
+
 type StateMock struct {
 	mock.Mock
 }
@@ -146,8 +156,8 @@ type HandlersMock struct {
 	mock.Mock
 }
 
-func (h *HandlersMock) Process(message interface{}) {
-	h.Called(message)
+func (h *HandlersMock) Process(event network.Received) {
+	h.Called(event)
 }
 
 func (h *HandlersMock) Propagate(entity Entity) {

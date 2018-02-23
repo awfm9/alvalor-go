@@ -17,7 +17,9 @@
 
 package node
 
+import "github.com/alvalor/alvalor-go/network"
+
 type handlerManager interface {
-	Process(message interface{})
+	Process(event network.Received)
 	Propagate(entity Entity)
 }
