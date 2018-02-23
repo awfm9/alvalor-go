@@ -18,7 +18,6 @@
 package node
 
 import (
-	"errors"
 	"io/ioutil"
 	"sync"
 	"testing"
@@ -27,97 +26,48 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/suite"
 
-	"github.com/alvalor/alvalor-go/network"
+	"github.com/alvalor/alvalor-go/types"
 )
 
-func TestProcessor(t *testing.T) {
-	suite.Run(t, new(ProcessorSuite))
+func TestMessage(t *testing.T) {
+	suite.Run(t, new(MessageSuite))
 }
 
-type ProcessorSuite struct {
+type MessageSuite struct {
 	suite.Suite
 	log zerolog.Logger
 	wg  *sync.WaitGroup
 }
 
-func (suite *ProcessorSuite) SetupTest() {
+func (suite *MessageSuite) SetupTest() {
 	suite.log = zerolog.New(ioutil.Discard)
 	suite.wg = &sync.WaitGroup{}
 	suite.wg.Add(1)
 }
 
-func (suite *ProcessorSuite) TestProcessorTransactionNew() {
+func (suite *MessageSuite) TestMessageTransaction() {
 
 	// arrange
+	address := "192.0.2.100:1337"
+
 	pool := &PoolMock{}
-	pool.On("Known", mock.Anything).Return(false)
-	pool.On("Add", mock.Anything).Return(nil)
 
 	handlers := &HandlersMock{}
-	handlers.On("Propagate", mock.Anything)
+	handlers.On("Entity", mock.Anything)
 
 	net := &NetworkMock{}
 
-	event := network.Received{}
+	state := &StateMock{}
+	state.On("Tag", mock.Anything, mock.Anything)
+
+	msg := &types.Transaction{}
 
 	// act
-	handleMessage(suite.log, suite.wg, handlers, pool, net, event)
+	handleMessage(suite.log, suite.wg, handlers, net, state, pool, address, msg)
 
 	// assert
 	t := suite.T()
 
-	// pool.AssertCalled(t, "Known", tx.ID())
-	// pool.AssertCalled(t, "Add", tx)
-	handlers.AssertCalled(t, "Propagate", event.Message)
-}
-
-func (suite *ProcessorSuite) TestProcessorTransactionKnown() {
-
-	// arrange
-	pool := &PoolMock{}
-	pool.On("Known", mock.Anything).Return(true)
-	pool.On("Add", mock.Anything).Return(nil)
-
-	handlers := &HandlersMock{}
-	handlers.On("Propagate", mock.Anything)
-
-	net := &NetworkMock{}
-
-	event := network.Received{}
-
-	// act
-	handleMessage(suite.log, suite.wg, handlers, pool, net, event)
-	// assert
-	t := suite.T()
-
-	// pool.AssertCalled(t, "Known", tx.ID())
-
-	pool.AssertNotCalled(t, "Add", mock.Anything)
-	handlers.AssertNotCalled(t, "Propagate", mock.Anything)
-}
-
-func (suite *ProcessorSuite) TestProcessorTransactionAddFails() {
-
-	// arrange
-	pool := &PoolMock{}
-	pool.On("Known", mock.Anything).Return(false)
-	pool.On("Add", mock.Anything).Return(errors.New("could not add"))
-
-	handlers := &HandlersMock{}
-	handlers.On("Propagate", mock.Anything)
-
-	net := &NetworkMock{}
-
-	event := network.Received{}
-
-	// act
-	handleMessage(suite.log, suite.wg, handlers, pool, net, event)
-
-	// assert
-	t := suite.T()
-
-	// pool.AssertCalled(t, "Known", tx.ID())
-	// pool.AssertCalled(t, "Add", tx)
-
-	handlers.AssertNotCalled(t, "Propagate", mock.Anything)
+	state.AssertCalled(t, "Tag", address, msg.ID())
+	handlers.AssertCalled(t, "Entity", msg)
 }

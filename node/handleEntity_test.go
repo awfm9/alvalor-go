@@ -26,47 +26,50 @@ import (
 	"github.com/rs/zerolog"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/suite"
+
+	"github.com/alvalor/alvalor-go/types"
 )
 
-func TestPropagator(t *testing.T) {
-	suite.Run(t, new(PropagatorSuite))
+func TestEntity(t *testing.T) {
+	suite.Run(t, new(EntitySuite))
 }
 
-type PropagatorSuite struct {
+type EntitySuite struct {
 	suite.Suite
 	log zerolog.Logger
 	wg  *sync.WaitGroup
 }
 
-func (suite *PropagatorSuite) SetupTest() {
+func (suite *EntitySuite) SetupTest() {
 	suite.log = zerolog.New(ioutil.Discard)
 	suite.wg = &sync.WaitGroup{}
 	suite.wg.Add(1)
 }
 
-func (suite *PropagatorSuite) TestPropagatorSuccess() {
+func (suite *EntitySuite) TestEntityTransaction() {
 
 	// arrange
-	id := []byte{1, 2, 3, 4}
-
 	address1 := "192.0.2.1:1337"
 	address2 := "192.0.2.2:1337"
 	address3 := "192.0.2.3:1337"
-
-	state := &StateMock{}
-	state.On("Tags", mock.Anything).Return([]string{address2})
-	state.On("Actives").Return([]string{address1, address2, address3})
 
 	net := &NetworkMock{}
 	net.On("Send", address1, mock.Anything).Return(errors.New("could not send"))
 	net.On("Send", address2, mock.Anything).Return(nil)
 	net.On("Send", address3, mock.Anything).Return(nil)
 
-	entity := &EntityMock{}
-	entity.On("ID").Return(id)
+	state := &StateMock{}
+	state.On("Tags", mock.Anything).Return([]string{address2})
+	state.On("Actives").Return([]string{address1, address2, address3})
+
+	pool := &PoolMock{}
+	pool.On("Known", mock.Anything).Return(false)
+	pool.On("Add", mock.Anything).Return(nil)
+
+	entity := &types.Transaction{}
 
 	// act
-	handleEntity(suite.log, suite.wg, state, net, entity)
+	handleEntity(suite.log, suite.wg, net, state, pool, entity)
 
 	// assert
 	t := suite.T()

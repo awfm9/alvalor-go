@@ -21,11 +21,12 @@ import (
 	"encoding/hex"
 	"sync"
 
-	"github.com/alvalor/alvalor-go/types"
 	"github.com/rs/zerolog"
+
+	"github.com/alvalor/alvalor-go/types"
 )
 
-func handleEntity(log zerolog.Logger, wg *sync.WaitGroup, net Network, state stateManager, entity Entity) {
+func handleEntity(log zerolog.Logger, wg *sync.WaitGroup, net Network, state stateManager, pool poolManager, entity Entity) {
 	defer wg.Done()
 
 	var (
@@ -37,9 +38,23 @@ func handleEntity(log zerolog.Logger, wg *sync.WaitGroup, net Network, state sta
 	log.Debug().Msg("entity routine started")
 	defer log.Debug().Msg("entity routine stopped")
 
-	switch entity.(type) {
+	switch e := entity.(type) {
 
 	case *types.Transaction:
+
+		// check if we already know the transaction; if so, ignore it
+		ok := pool.Known(id)
+		if ok {
+			log.Debug().Msg("transaction already known")
+			return
+		}
+
+		// add the transaction to the transaction pool
+		err := pool.Add(e)
+		if err != nil {
+			log.Error().Err(err).Msg("could not add transaction to pool")
+			return
+		}
 
 		// create lookup to know who to exclude from broadcast
 		tags := state.Tags(id)

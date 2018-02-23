@@ -41,22 +41,7 @@ func handleMessage(log zerolog.Logger, wg *sync.WaitGroup, handlers Handlers, ne
 		// TODO: validate the transaction
 
 		// tag the peer for having seen the transaction
-		id := msg.ID()
-		state.Tag(address, id)
-
-		// check if we already know the transaction; if so, ignore it
-		ok := pool.Known(id)
-		if ok {
-			log.Debug().Msg("transaction already known")
-			return
-		}
-
-		// add the transaction to the transaction pool
-		err := pool.Add(msg)
-		if err != nil {
-			log.Error().Err(err).Msg("could not add transaction to pool")
-			return
-		}
+		state.Tag(address, msg.ID())
 
 		// handle the transaction for our blockchain state & propagation
 		handlers.Entity(msg)

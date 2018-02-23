@@ -29,31 +29,32 @@ import (
 	"github.com/alvalor/alvalor-go/network"
 )
 
-func TestReceiver(t *testing.T) {
-	suite.Run(t, new(ReceiverSuite))
+func TestEvent(t *testing.T) {
+	suite.Run(t, new(EventSuite))
 }
 
-type ReceiverSuite struct {
+type EventSuite struct {
 	suite.Suite
 	log zerolog.Logger
 	wg  *sync.WaitGroup
 }
 
-func (suite *ReceiverSuite) SetupTest() {
+func (suite *EventSuite) SetupTest() {
 	suite.log = zerolog.New(ioutil.Discard)
 	suite.wg = &sync.WaitGroup{}
 	suite.wg.Add(1)
 }
 
-func (suite *ReceiverSuite) TestReceiverConnected() {
+func (suite *EventSuite) TestEventConnected() {
 
 	// arrange
 	address := "192.0.2.1:1337"
 
 	handlers := &HandlersMock{}
-	handlers.On("Process", mock.Anything)
+	handlers.On("Message", mock.Anything)
 
 	net := &NetworkMock{}
+	net.On("Send", mock.Anything, mock.Anything).Return(nil)
 
 	state := &StateMock{}
 	state.On("Active", mock.Anything)
@@ -61,14 +62,13 @@ func (suite *ReceiverSuite) TestReceiverConnected() {
 	state.On("Tag", mock.Anything, mock.Anything)
 
 	pool := &PoolMock{}
+	pool.On("Count").Return(0)
+	pool.On("IDs").Return([][]byte{})
 
-	sub := make(chan interface{})
+	event := network.Connected{Address: address}
 
 	// act
-	go handleEvent(suite.log, suite.wg, handlers, net, state, pool, sub)
-	sub <- network.Connected{Address: address}
-	close(sub)
-	suite.wg.Wait()
+	handleEvent(suite.log, suite.wg, handlers, net, state, pool, event)
 
 	// assert
 	t := suite.T()
@@ -76,15 +76,16 @@ func (suite *ReceiverSuite) TestReceiverConnected() {
 	state.AssertCalled(t, "Active", address)
 }
 
-func (suite *ReceiverSuite) TestReceiverDisconnected() {
+func (suite *EventSuite) TestEventDisconnected() {
 
 	// arrange
 	address := "192.0.2.1:1337"
 
 	handlers := &HandlersMock{}
-	handlers.On("Process", mock.Anything)
+	handlers.On("Message", mock.Anything)
 
 	net := &NetworkMock{}
+	net.On("Send", mock.Anything, mock.Anything).Return(nil)
 
 	state := &StateMock{}
 	state.On("Active", mock.Anything)
@@ -92,14 +93,13 @@ func (suite *ReceiverSuite) TestReceiverDisconnected() {
 	state.On("Tag", mock.Anything, mock.Anything)
 
 	pool := &PoolMock{}
+	pool.On("Count").Return(0)
+	pool.On("IDs").Return([][]byte{})
 
-	sub := make(chan interface{})
+	event := network.Disconnected{Address: address}
 
 	// act
-	go handleEvent(suite.log, suite.wg, handlers, net, state, pool, sub)
-	sub <- network.Disconnected{Address: address}
-	close(sub)
-	suite.wg.Wait()
+	handleEvent(suite.log, suite.wg, handlers, net, state, pool, event)
 
 	// assert
 	t := suite.T()
@@ -107,19 +107,17 @@ func (suite *ReceiverSuite) TestReceiverDisconnected() {
 	state.AssertCalled(t, "Inactive", address)
 }
 
-func (suite *ReceiverSuite) TestReceiverReceived() {
+func (suite *EventSuite) TestEventReceived() {
 
 	// arrange
 	address := "192.0.2.1:1337"
-	id := []byte{1, 2, 3, 4}
-
-	entity := &EntityMock{}
-	entity.On("ID").Return(id)
+	message := "message"
 
 	handlers := &HandlersMock{}
-	handlers.On("Process", mock.Anything)
+	handlers.On("Message", mock.Anything, mock.Anything)
 
 	net := &NetworkMock{}
+	net.On("Send", mock.Anything, mock.Anything).Return(nil)
 
 	state := &StateMock{}
 	state.On("Active", mock.Anything)
@@ -127,18 +125,16 @@ func (suite *ReceiverSuite) TestReceiverReceived() {
 	state.On("Tag", mock.Anything, mock.Anything)
 
 	pool := &PoolMock{}
+	pool.On("Count").Return(0)
+	pool.On("IDs").Return([][]byte{})
 
-	sub := make(chan interface{})
+	event := network.Received{Address: address, Message: message}
 
 	// act
-	go handleEvent(suite.log, suite.wg, handlers, net, state, pool, sub)
-	sub <- network.Received{Address: address, Message: entity}
-	close(sub)
-	suite.wg.Wait()
+	handleEvent(suite.log, suite.wg, handlers, net, state, pool, event)
 
 	// assert
 	t := suite.T()
 
-	state.AssertCalled(t, "Tag", address, id)
-	handlers.AssertCalled(t, "Process", entity)
+	handlers.AssertCalled(t, "Message", address, message)
 }

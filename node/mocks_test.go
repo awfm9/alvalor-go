@@ -22,7 +22,6 @@ import (
 
 	"github.com/stretchr/testify/mock"
 
-	"github.com/alvalor/alvalor-go/network"
 	"github.com/alvalor/alvalor-go/types"
 )
 
@@ -156,21 +155,24 @@ type HandlersMock struct {
 	mock.Mock
 }
 
-func (h *HandlersMock) Process(event network.Received) {
+func (h *HandlersMock) Input(input <-chan interface{}) {
+	h.Called(input)
+}
+
+func (h *HandlersMock) Event(event interface{}) {
 	h.Called(event)
 }
 
-func (h *HandlersMock) Propagate(entity Entity) {
+func (h *HandlersMock) Message(address string, message interface{}) {
+	h.Called(address, message)
+}
+
+func (h *HandlersMock) Entity(entity Entity) {
 	h.Called(entity)
 }
 
 type NetworkMock struct {
 	mock.Mock
-}
-
-func (n *NetworkMock) Subscribe() <-chan interface{} {
-	args := n.Called()
-	return args.Get(0).(chan interface{})
 }
 
 func (n *NetworkMock) Send(address string, msg interface{}) error {
