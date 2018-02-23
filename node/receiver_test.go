@@ -22,10 +22,11 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/alvalor/alvalor-go/network"
 	"github.com/rs/zerolog"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/suite"
+
+	"github.com/alvalor/alvalor-go/network"
 )
 
 func TestReceiver(t *testing.T) {
