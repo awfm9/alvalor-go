@@ -61,7 +61,7 @@ func (suite *ReceiverSuite) TestReceiverConnected() {
 
 	// act
 	go handleReceiving(suite.log, suite.wg, sub, handlers, state)
-	sub <- &network.Connected{Address: address}
+	sub <- network.Connected{Address: address}
 	close(sub)
 	suite.wg.Wait()
 
@@ -88,7 +88,7 @@ func (suite *ReceiverSuite) TestReceiverDisconnected() {
 
 	// act
 	go handleReceiving(suite.log, suite.wg, sub, handlers, state)
-	sub <- &network.Disconnected{Address: address}
+	sub <- network.Disconnected{Address: address}
 	close(sub)
 	suite.wg.Wait()
 
@@ -119,7 +119,7 @@ func (suite *ReceiverSuite) TestReceiverReceived() {
 
 	// act
 	go handleReceiving(suite.log, suite.wg, sub, handlers, state)
-	sub <- &network.Received{Address: address, Message: entity}
+	sub <- network.Received{Address: address, Message: entity}
 	close(sub)
 	suite.wg.Wait()
 

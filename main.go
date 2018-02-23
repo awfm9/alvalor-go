@@ -91,10 +91,9 @@ Loop:
 			close(sig)
 			break Loop
 		case <-ticker.C:
-			net.Stats()
-			n.Stats()
 			tx := generateTransaction()
 			n.Submit(tx)
+			n.Stats()
 		}
 	}
 

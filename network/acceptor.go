@@ -98,6 +98,6 @@ func handleAccepting(log zerolog.Logger, wg *sync.WaitGroup, cfg *Config, pendin
 
 	err = events.Connected(address)
 	if err != nil {
-		log.Debug().Err(err).Msg("could not submit connected event")
+		log.Error().Err(err).Msg("could not submit connected event")
 	}
 }

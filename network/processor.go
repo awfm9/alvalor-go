@@ -76,7 +76,7 @@ Loop:
 				log.Debug().Msg("custom received")
 				err := events.Received(address, message)
 				if err != nil {
-					log.Debug().Err(err).Msg("could not submit received event")
+					log.Error().Err(err).Msg("could not submit received event")
 				}
 			}
 

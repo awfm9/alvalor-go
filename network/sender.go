@@ -77,6 +77,6 @@ Loop:
 
 	err := events.Disconnected(address)
 	if err != nil {
-		log.Debug().Err(err).Msg("could not submit disconnected event")
+		log.Error().Err(err).Msg("could not submit disconnected event")
 	}
 }
