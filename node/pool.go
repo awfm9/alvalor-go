@@ -19,6 +19,7 @@ package node
 
 import (
 	"bytes"
+	"sync"
 
 	"github.com/pkg/errors"
 
@@ -34,6 +35,7 @@ type poolManager interface {
 }
 
 type simplePool struct {
+	sync.Mutex
 	codec Codec
 	store Store
 	count uint
@@ -49,48 +51,70 @@ func newPool(codec Codec, store Store) *simplePool {
 }
 
 func (p *simplePool) Add(tx *types.Transaction) error {
+	p.Lock()
+	defer p.Unlock()
+
 	buf := &bytes.Buffer{}
 	err := p.codec.Encode(buf, tx)
 	if err != nil {
 		return errors.Wrap(err, "could not encode transaction")
 	}
+
 	id := tx.ID()
 	data := buf.Bytes()
 	err = p.store.Put(id, data)
 	if err != nil {
 		return errors.Wrap(err, "could not put data")
 	}
+
 	p.count++
+
 	return nil
 }
 
 func (p *simplePool) Known(id []byte) bool {
+	p.Lock()
+	defer p.Unlock()
+
 	_, err := p.store.Get(id)
 	return err == nil
 }
 
 func (p *simplePool) Get(id []byte) (*types.Transaction, error) {
+	p.Lock()
+	defer p.Unlock()
+
 	data, err := p.store.Get(id)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get data")
 	}
+
 	buf := bytes.NewBuffer(data)
 	tx, err := p.codec.Decode(buf)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not decode transaction")
 	}
+
 	return tx.(*types.Transaction), nil
 }
 
 func (p *simplePool) Remove(id []byte) error {
+	p.Lock()
+	defer p.Unlock()
+
 	err := p.store.Del(id)
 	if err != nil {
 		return errors.Wrap(err, "could not del data")
 	}
+
 	p.count--
+
 	return nil
 }
 
 func (p *simplePool) Count() uint {
+	p.Lock()
+	defer p.Unlock()
+
 	return p.count
 }

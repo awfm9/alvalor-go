@@ -17,6 +17,8 @@
 
 package node
 
+import "sync"
+
 type stateManager interface {
 	Active(address string)
 	Inactive(address string)
@@ -26,6 +28,7 @@ type stateManager interface {
 }
 
 type simpleState struct {
+	sync.Mutex
 	actives map[string]bool
 	tags    map[string][]string
 }
@@ -38,25 +41,41 @@ func newState() *simpleState {
 }
 
 func (s *simpleState) Active(address string) {
+	s.Lock()
+	defer s.Unlock()
+
 	s.actives[address] = true
 }
 
 func (s *simpleState) Inactive(address string) {
+	s.Lock()
+	defer s.Unlock()
+
 	delete(s.actives, address)
 }
 
 func (s *simpleState) Actives() []string {
+	s.Lock()
+	defer s.Unlock()
+
 	actives := make([]string, 0, len(s.actives))
 	for address := range s.actives {
 		actives = append(actives, address)
 	}
+
 	return actives
 }
 
 func (s *simpleState) Tag(address string, id []byte) {
+	s.Lock()
+	defer s.Unlock()
+
 	s.tags[string(id)] = append(s.tags[string(id)], address)
 }
 
 func (s *simpleState) Tags(id []byte) []string {
+	s.Lock()
+	defer s.Unlock()
+
 	return s.tags[string(id)]
 }
