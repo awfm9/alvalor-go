@@ -15,7 +15,7 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with Alvalor.  If not, see <http://www.gnu.org/licenses/>.
 
-package blockchain
+package database
 
 import (
 	"bytes"
@@ -30,14 +30,14 @@ import (
 // DB is a blockchain database that syncs the trie with the persistent key-value store on disk.
 type DB struct {
 	h  hash.Hash
-	kv *badger.DB
-	tr *trie.Trie
 	cd Codec
+	tr *trie.Trie
+	kv *badger.DB
 }
 
-// NewDB creates a new blockchain DB on the disk.
-func NewDB(h hash.Hash, kv *badger.DB) (*DB, error) {
-	tr := trie.New(h)
+// Load loads a blockchain database from disk.
+func Load(h hash.Hash, cd Codec, kv *badger.DB) (*DB, error) {
+	tr := trie.New()
 	err := kv.View(func(tx *badger.Txn) error {
 		it := tx.NewIterator(badger.DefaultIteratorOptions)
 		for it.Rewind(); it.Valid(); it.Next() {
@@ -57,17 +57,16 @@ func NewDB(h hash.Hash, kv *badger.DB) (*DB, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "could not execute iteration transaction")
 	}
-	db := &DB{h: h, kv: kv, tr: tr}
+	db := &DB{h: h, cd: cd, tr: tr, kv: kv}
 	return db, nil
 }
 
-// Insert will insert a new key and hash into the trie after storing the related hash and data on
-// disk.
-func (db *DB) Insert(id []byte, entity interface{}) error {
+// Insert will insert an entity that has a unique ID into the database.
+func (db *DB) Insert(entity Entity) error {
 	buf := &bytes.Buffer{}
 	err := db.cd.Encode(buf, entity)
 	if err != nil {
-		return errors.Wrap(err, "could not serialize entity")
+		return errors.Wrap(err, "could not encode entity")
 	}
 	data := buf.Bytes()
 	db.h.Reset()
@@ -77,42 +76,42 @@ func (db *DB) Insert(id []byte, entity interface{}) error {
 		return tx.Set(hash, data)
 	})
 	if err != nil {
-		return errors.Wrap(err, "could not save entity on disk")
+		return errors.Wrap(err, "could not store data for hash")
 	}
-	ok := db.tr.Put(id, hash, false)
+	key := entity.ID()
+	ok := db.tr.Put(key, hash, false)
 	if !ok {
-		return errors.Errorf("could not insert entity %x into trie", id)
+		return errors.Errorf("could not store hash for key (%x)", hash)
 	}
 	return nil
 }
 
-// Retrieve will retrieve an entity from the key-value store by looking up the associated hash in
-// the trie.
-func (db *DB) Retrieve(id []byte) (interface{}, error) {
-	hash, ok := db.tr.Get(id)
+// Retrieve will retrieve an entity from the database by its unique ID.
+func (db *DB) Retrieve(key []byte) (Entity, error) {
+	hash, ok := db.tr.Get(key)
 	if !ok {
-		return nil, errors.New("could not get hash for id")
+		return nil, errors.New("could not retriev hash for key")
 	}
-	var value []byte
+	var data []byte
 	err := db.kv.View(func(tx *badger.Txn) error {
-		item, err := tx.Get(hash)
-		if err != nil {
-			return errors.Wrapf(err, "could not get item for hash (%x)", hash)
+		var inErr error
+		item, inErr := tx.Get(hash)
+		if inErr != nil {
+			return errors.Wrapf(inErr, "could not retrieve item for hash (%x)", hash)
 		}
-		val, err := item.Value()
-		if err != nil {
-			return errors.Wrap(err, "could not get value for item")
+		data, inErr = item.Value()
+		if inErr != nil {
+			return errors.Wrap(inErr, "could not retrieve value for item")
 		}
-		value = val
 		return nil
 	})
 	if err != nil {
-		return nil, errors.Wrap(err, "could not lookup hash on key-value store")
+		return nil, errors.Wrap(err, "could not retrieve data for hash")
 	}
-	buf := bytes.NewBuffer(value)
+	buf := bytes.NewBuffer(data)
 	entity, err := db.cd.Decode(buf)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not deserialize entity")
+		return nil, errors.Wrap(err, "could not decode entity")
 	}
-	return entity, nil
+	return entity.(Entity), nil
 }

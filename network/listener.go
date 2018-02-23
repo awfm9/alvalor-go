@@ -35,8 +35,8 @@ func handleListening(log zerolog.Logger, wg *sync.WaitGroup, cfg *Config, handle
 
 	// configure the component logger and set start/stop messages
 	log = log.With().Str("component", "listener").Str("address", address).Logger()
-	log.Info().Msg("listening routine started")
-	defer log.Info().Msg("listening routine stopped")
+	log.Debug().Msg("listening routine started")
+	defer log.Debug().Msg("listening routine stopped")
 
 	// initialize the listener
 	ln, err := listener.Listen(address)
@@ -44,6 +44,8 @@ func handleListening(log zerolog.Logger, wg *sync.WaitGroup, cfg *Config, handle
 		log.Error().Err(err).Msg("could not listen on address")
 		return
 	}
+
+	log.Info().Msg("listening started")
 
 Loop:
 	for {
@@ -73,6 +75,8 @@ Loop:
 		// on listening, and as well so we can release slots with defer
 		handlers.Acceptor(conn)
 	}
+
+	log.Info().Msg("listening stopped")
 
 	// ordered to quit, we close the listener down
 	err = ln.Close()

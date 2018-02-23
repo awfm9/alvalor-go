@@ -36,8 +36,8 @@ func handleConnecting(log zerolog.Logger, wg *sync.WaitGroup, cfg *Config, pendi
 
 	// configure the component logger and set start/stop messages
 	log = log.With().Str("component", "connector").Str("address", address).Logger()
-	log.Info().Msg("connecting routine started")
-	defer log.Info().Msg("connecting routine stopped")
+	log.Debug().Msg("connecting routine started")
+	defer log.Debug().Msg("connecting routine stopped")
 
 	// claim a free connection slot and set the release
 	err := pending.Claim(address)
@@ -101,9 +101,12 @@ func handleConnecting(log zerolog.Logger, wg *sync.WaitGroup, cfg *Config, pendi
 		return
 	}
 
+	log.Info().Msg("outgoing connection established")
+
+	rep.Success(address)
+
 	err = events.Connected(address)
 	if err != nil {
-		log.Debug().Err(err).Msg("could not submit connected event")
+		log.Error().Err(err).Msg("could not submit connected event")
 	}
-	rep.Success(address)
 }

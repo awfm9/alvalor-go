@@ -15,36 +15,42 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with Alvalor.  If not, see <http://www.gnu.org/licenses/>.
 
-package network
+package node
 
 import (
+	"encoding/hex"
 	"sync"
 
 	"github.com/rs/zerolog"
+
+	"github.com/alvalor/alvalor-go/types"
 )
 
-func handleDiscovering(log zerolog.Logger, wg *sync.WaitGroup, cfg *Config, peers peerManager) {
+func handleProcessing(log zerolog.Logger, wg *sync.WaitGroup, pool poolManager, handlers handlerManager, entity Entity) {
 	defer wg.Done()
 
-	// configure logger and add start/stop messages
-	log = log.With().Str("component", "discoverer").Logger()
-	log.Debug().Msg("discovering routine started")
-	defer log.Debug().Msg("discovering routine stopped")
+	var (
+		id = entity.ID()
+	)
 
-	// send a discover message to each peer
-	addresses := peers.Addresses()
-	if len(addresses) == 0 {
-		log.Debug().Msg("could not launch discovery, no peers")
-		return
-	}
+	// configure logger
+	log = log.With().Str("component", "processor").Str("id", hex.EncodeToString(id)).Logger()
+	log.Debug().Msg("processing routine started")
+	defer log.Debug().Msg("processing routine stopped")
 
-	// get output for each peer and send the discover message
-	msg := &Discover{}
-	for _, address := range addresses {
-		err := peers.Send(address, msg)
-		if err != nil {
-			log.Error().Err(err).Str("address", address).Msg("could not send discovery message")
-			continue
+	// process the message according to type
+	switch e := entity.(type) {
+	case *types.Transaction:
+		ok := pool.Known(id)
+		if ok {
+			log.Debug().Msg("transaction already known")
+			return
 		}
+		err := pool.Add(e)
+		if err != nil {
+			log.Error().Err(err).Msg("could not add transaction to pool")
+			return
+		}
+		handlers.Propagate(entity)
 	}
 }

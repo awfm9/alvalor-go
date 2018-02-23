@@ -15,12 +15,9 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with Alvalor.  If not, see <http://www.gnu.org/licenses/>.
 
-package blockchain
+package node
 
-import "io"
-
-// Codec is responsible for serializing and deserializing data for disk storage.
-type Codec interface {
-	Encode(w io.Writer, i interface{}) error
-	Decode(r io.Reader) (interface{}, error)
+type handlerManager interface {
+	Process(entity Entity)
+	Propagate(entity Entity)
 }

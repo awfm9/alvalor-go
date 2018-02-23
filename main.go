@@ -29,6 +29,8 @@ import (
 
 	"github.com/alvalor/alvalor-go/codec"
 	"github.com/alvalor/alvalor-go/network"
+	"github.com/alvalor/alvalor-go/node"
+	"github.com/alvalor/alvalor-go/types"
 )
 
 func main() {
@@ -57,9 +59,12 @@ func main() {
 	// use our efficient capnproto codec for network communication
 	cod := codec.NewProto()
 
+	// create channel to pipe messages from network layer to node layer
+	sub := make(chan interface{}, 128)
+
 	// initialize the network component to create our p2p network node
 	address := fmt.Sprintf("%v:%v", cfg.IP, cfg.Port)
-	net := network.New(log, cod,
+	net := network.New(log, cod, sub,
 		network.SetListen(cfg.Listen),
 		network.SetAddress(address),
 		network.SetMinPeers(4),
@@ -72,11 +77,87 @@ func main() {
 		net.Add(address)
 	}
 
+	// initialize the node subscriber
+	n := node.New(log, net, cod, sub)
+
 	// wait for a stop signal to initialize shutdown
-	<-sig
-	signal.Stop(sig)
-	close(sig)
+	stats := time.NewTicker(10 * time.Second)
+	gen := time.NewTicker(2 * time.Second)
+
+Loop:
+	for {
+		select {
+		case <-sig:
+			signal.Stop(sig)
+			close(sig)
+			break Loop
+		case <-stats.C:
+			net.Stats()
+			n.Stats()
+		case <-gen.C:
+			tx := generateTransaction()
+			n.Submit(tx)
+		}
+	}
 
 	// shut down the p2p network node
 	net.Stop()
+}
+
+func generateTransaction() *types.Transaction {
+
+	// determine the composition of the transaction
+	numTransfers := rand.Int()%3 + 1
+	numFees := rand.Int()%3 + 1
+	numData := rand.Int() % 4 * 1024
+
+	// create the transfers
+	transfers := make([]types.Transfer, 0, numTransfers)
+	for i := 0; i < numTransfers; i++ {
+		transfer := generateTransfer()
+		transfers = append(transfers, transfer)
+	}
+
+	// create the fees
+	fees := make([]types.Fee, 0, numFees)
+	for i := 0; i < numFees; i++ {
+		fee := generateFee()
+		fees = append(fees, fee)
+	}
+
+	// create the data block
+	data := make([]byte, numData)
+	_, _ = rand.Read(data)
+
+	// initialize transaction
+	tx := &types.Transaction{
+		Transfers: transfers,
+		Fees:      fees,
+		Data:      data,
+	}
+
+	return tx
+}
+
+func generateTransfer() types.Transfer {
+	from := make([]byte, 32)
+	_, _ = rand.Read(from)
+	to := make([]byte, 32)
+	_, _ = rand.Read(to)
+	amount := rand.Uint64()
+	return types.Transfer{
+		From:   from,
+		To:     to,
+		Amount: amount,
+	}
+}
+
+func generateFee() types.Fee {
+	from := make([]byte, 32)
+	_, _ = rand.Read(from)
+	amount := rand.Uint64()
+	return types.Fee{
+		From:   from,
+		Amount: amount,
+	}
 }

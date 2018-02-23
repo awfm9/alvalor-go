@@ -15,47 +15,44 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with Alvalor.  If not, see <http://www.gnu.org/licenses/>.
 
-package network
+package node
 
 import (
-	"math/rand"
+	"encoding/hex"
 	"sync"
-	"time"
 
 	"github.com/rs/zerolog"
 )
 
-func handleDropping(log zerolog.Logger, wg *sync.WaitGroup, cfg *Config, peers peerManager, stop <-chan struct{}) {
+func handlePropagating(log zerolog.Logger, wg *sync.WaitGroup, state stateManager, net networkManager, entity Entity) {
 	defer wg.Done()
 
-	// extract desired configuration parameters
 	var (
-		interval = cfg.interval
-		maxPeers = cfg.maxPeers
+		id = entity.ID()
 	)
 
-	// configure logger and add start/stop messages
-	log = log.With().Str("component", "dropper").Logger()
-	log.Debug().Msg("dropping routine started")
-	defer log.Debug().Msg("dropping routine stopped")
+	// configure logger
+	log = log.With().Str("component", "propagator").Str("id", hex.EncodeToString(id)).Logger()
+	log.Debug().Msg("propagating routine started")
+	defer log.Debug().Msg("propagating routine stopped")
 
-	// each tick, check if we have too many peers and if yes, drop one
-	ticker := time.NewTicker(interval)
-	for {
-		select {
-		case <-stop:
-			ticker.Stop()
-			return
-		case <-ticker.C:
-		}
-		if peers.Count() <= maxPeers {
+	// create lookup to know who to exclude from broadcast
+	tags := state.Tags(id)
+	lookup := make(map[string]struct{}, len(tags))
+	for _, address := range tags {
+		lookup[address] = struct{}{}
+	}
+
+	// send it to each peer not excluded
+	actives := state.Actives()
+	for _, address := range actives {
+		_, ok := lookup[address]
+		if ok {
 			continue
 		}
-		addresses := peers.Addresses()
-		address := addresses[rand.Int()%len(addresses)]
-		err := peers.Drop(address)
+		err := net.Send(address, entity)
 		if err != nil {
-			log.Error().Err(err).Msg("could not drop peer")
+			log.Error().Err(err).Str("address", address).Msg("could not propagate entity")
 			continue
 		}
 	}

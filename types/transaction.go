@@ -17,10 +17,35 @@
 
 package types
 
+import (
+	"encoding/binary"
+
+	"golang.org/x/crypto/blake2b"
+)
+
 // Transaction represents an atomic standard transaction on the Alvalor network.
 type Transaction struct {
 	Transfers  []Transfer
 	Fees       []Fee
 	Data       []byte
 	Signatures [][]byte
+}
+
+// ID returns the unique ID of the transaction.
+func (tx Transaction) ID() []byte {
+	buf := make([]byte, 8)
+	h, _ := blake2b.New256(nil)
+	for _, transfer := range tx.Transfers {
+		_, _ = h.Write(transfer.From)
+		_, _ = h.Write(transfer.To)
+		binary.LittleEndian.PutUint64(buf, transfer.Amount)
+		_, _ = h.Write(buf)
+	}
+	for _, fee := range tx.Fees {
+		_, _ = h.Write(fee.From)
+		binary.LittleEndian.PutUint64(buf, fee.Amount)
+		_, _ = h.Write(buf)
+	}
+	_, _ = h.Write(tx.Data)
+	return h.Sum(nil)
 }

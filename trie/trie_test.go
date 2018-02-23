@@ -22,38 +22,35 @@ import (
 	"math/rand"
 	"testing"
 	"time"
-
-	"golang.org/x/crypto/blake2b"
 )
 
 const TestLength = 1000000
 
 func TestSingle(t *testing.T) {
 	rand.Seed(time.Now().UnixNano())
-	h, _ := blake2b.New256(nil)
-	trie := New(h)
+	trie := New()
 	for i := 0; i < TestLength; i++ {
 		key := make([]byte, 32)
 		hash := make([]byte, 32)
 		_, _ = rand.Read(key)
 		_, _ = rand.Read(hash)
-		ok := trie.Put(key, hash, false)
-		if !ok {
+		err := trie.Put(key, hash)
+		if err != nil {
 			t.Fatalf("could not put: %x", key)
 		}
-		out, ok := trie.Get(key)
-		if !ok {
+		out, err := trie.Get(key)
+		if err != nil {
 			t.Fatalf("could not get: %x", key)
 		}
 		if !bytes.Equal(out, hash) {
 			t.Errorf("wrong hash: %x != %x", out, hash)
 		}
-		ok = trie.Del(key)
-		if !ok {
+		err = trie.Del(key)
+		if err != nil {
 			t.Fatalf("could not del: %x", key)
 		}
-		_, ok = trie.Get(key)
-		if ok {
+		_, err = trie.Get(key)
+		if err == nil {
 			t.Fatalf("should not get: %x", key)
 		}
 	}
@@ -61,8 +58,7 @@ func TestSingle(t *testing.T) {
 
 func TestBatch(t *testing.T) {
 	rand.Seed(time.Now().UnixNano())
-	h, _ := blake2b.New256(nil)
-	trie := New(h)
+	trie := New()
 	keys := make([][]byte, 0, TestLength)
 	hashes := make([][]byte, 0, TestLength)
 	for i := 0; i < TestLength; i++ {
@@ -75,14 +71,14 @@ func TestBatch(t *testing.T) {
 	}
 	for i, key := range keys {
 		hash := hashes[i]
-		ok := trie.Put(key, hash, false)
-		if !ok {
+		err := trie.Put(key, hash)
+		if err != nil {
 			t.Fatalf("could not put %v: %x", i, key)
 		}
 	}
 	for i, key := range keys {
-		out, ok := trie.Get(key)
-		if !ok {
+		out, err := trie.Get(key)
+		if err != nil {
 			t.Fatalf("could not get %v: %x", i, key)
 		}
 		hash := hashes[i]
@@ -91,14 +87,14 @@ func TestBatch(t *testing.T) {
 		}
 	}
 	for i, key := range keys {
-		ok := trie.Del(key)
-		if !ok {
+		err := trie.Del(key)
+		if err != nil {
 			t.Fatalf("could not del %v: %x", i, key)
 		}
 	}
-	h.Reset()
-	zero := h.Sum(nil)
-	if !bytes.Equal(trie.Hash(), zero) {
-		t.Fatalf("root hash not zero: %x", trie.Hash())
+	zero := trie.h.Sum(nil)
+	hash := trie.Hash()
+	if !bytes.Equal(hash, zero) {
+		t.Fatalf("root hash not zero: %x != %x", hash, zero)
 	}
 }

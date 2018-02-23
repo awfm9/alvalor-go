@@ -37,8 +37,8 @@ func handleSending(log zerolog.Logger, wg *sync.WaitGroup, cfg *Config, rep repu
 
 	// configure logger and add stop/start messages
 	log = log.With().Str("component", "sender").Str("address", address).Logger()
-	log.Info().Msg("sending routine started")
-	defer log.Info().Msg("sending routine stopped")
+	log.Debug().Msg("sending routine started")
+	defer log.Debug().Msg("sending routine stopped")
 
 	// we keep reading messages from the output channel and writing them to the network connection
 	var msg interface{}
@@ -59,7 +59,7 @@ Loop:
 		// send the message, break the loop on closed connection, register other failures
 		err := codec.Encode(w, msg)
 		if errors.Cause(err) == io.EOF || isClosedErr(err) {
-			log.Info().Msg("network connection closed")
+			log.Debug().Msg("network connection closed")
 			break
 		}
 		if err != nil {
@@ -72,8 +72,11 @@ Loop:
 	// drain the channel in case we broke on closed connection & wait until cascade arrives
 	for _ = range output {
 	}
+
+	log.Info().Msg("connection dropped")
+
 	err := events.Disconnected(address)
 	if err != nil {
-		log.Debug().Err(err).Msg("could not submit disconnected event")
+		log.Error().Err(err).Msg("could not submit disconnected event")
 	}
 }

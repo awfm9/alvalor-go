@@ -23,6 +23,8 @@ import (
 	"sync"
 	"time"
 
+	multierror "github.com/hashicorp/go-multierror"
+	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
 	uuid "github.com/satori/go.uuid"
 )
@@ -36,13 +38,13 @@ var (
 	Loki = []byte{76, 79, 75, 73}
 )
 
-// Network represents a wrapper around the network package to provide the API.
+// Network defines the exposed API of the Alvalor network package.
 type Network interface {
 	Add(address string)
-	Broadcast(i interface{}, exclude ...string)
-	Send(address string, i interface{}) error
-	Subscribe() <-chan interface{}
+	Send(address string, msg interface{}) error
+	Broadcast(msg interface{}, exclude ...string) error
 	Stop()
+	Stats()
 }
 
 // simpleNetwork represents a simple network wrapper.
@@ -56,13 +58,13 @@ type simpleNetwork struct {
 	pending    pendingManager
 	peers      peerManager
 	rep        reputationManager
+	subscriber chan<- interface{}
 	events     eventManager
-	subscriber chan interface{}
 	stop       chan struct{}
 }
 
 // New will initialize the network component.
-func New(log zerolog.Logger, codec Codec, options ...func(*Config)) Network {
+func New(log zerolog.Logger, codec Codec, subscriber chan<- interface{}, options ...func(*Config)) Network {
 
 	// initialize the launcher for all handlers
 	net := &simpleNetwork{}
@@ -110,7 +112,6 @@ func New(log zerolog.Logger, codec Codec, options ...func(*Config)) Network {
 	net.rep = rep
 
 	// create the subscriber channel
-	subscriber := make(chan interface{}, int(cfg.maxPeers*cfg.bufferSize))
 	net.subscriber = subscriber
 
 	// create the channel that will shut everything down
@@ -197,34 +198,41 @@ func (net *simpleNetwork) Stop() {
 		net.peers.Drop(address)
 	}
 	net.wg.Wait()
-}
-
-// Subscribe returns a channel that will stream all received messages and events.
-func (net *simpleNetwork) Subscribe() <-chan interface{} {
-	return net.subscriber
+	close(net.subscriber)
 }
 
 // Broadcast broadcasts a message to all peers.
-func (net *simpleNetwork) Broadcast(msg interface{}, exclude ...string) {
+func (net *simpleNetwork) Broadcast(msg interface{}, exclude ...string) error {
 	addresses := net.peers.Addresses()
 	lookup := make(map[string]struct{})
 	for _, address := range exclude {
 		lookup[address] = struct{}{}
 	}
+	var err *multierror.Error
 	for _, address := range addresses {
 		_, ok := lookup[address]
 		if ok {
 			continue
 		}
-		err := net.peers.Send(address, msg)
-		if err != nil {
-			net.log.Error().Err(err).Str("address", address).Msg("could not broadcast to peer")
-			continue
+		inErr := net.peers.Send(address, msg)
+		if inErr != nil {
+			err = multierror.Append(err, inErr)
 		}
 	}
+	if err != nil {
+		return errors.Wrap(err, "could not broadcast to all peers")
+	}
+	return nil
 }
 
 // Send sends a message to the peer with the given address.
 func (net *simpleNetwork) Send(address string, msg interface{}) error {
 	return net.peers.Send(address, msg)
+}
+
+// Stats will log information of the network layer.
+func (net *simpleNetwork) Stats() {
+	numPeers := net.peers.Count()
+	numPending := net.pending.Count()
+	net.log.Info().Uint("num_peers", numPeers).Uint("num_pending", numPending).Msg("stats")
 }

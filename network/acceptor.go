@@ -30,14 +30,18 @@ func handleAccepting(log zerolog.Logger, wg *sync.WaitGroup, cfg *Config, pendin
 
 	// synchronization, configuration & logging
 	defer wg.Done()
+
+	// configuration
 	var (
 		network = cfg.network
 		nonce   = cfg.nonce
 		address = conn.RemoteAddr().String()
 	)
+
+	// configure logger
 	log = log.With().Str("component", "acceptor").Str("address", address).Logger()
-	log.Info().Msg("accepting routine started")
-	defer log.Info().Msg("accepting routine stopped")
+	log.Debug().Msg("accepting routine started")
+	defer log.Debug().Msg("accepting routine stopped")
 
 	// first make sure we can claim a connection slot
 	err := pending.Claim(address)
@@ -88,9 +92,12 @@ func handleAccepting(log zerolog.Logger, wg *sync.WaitGroup, cfg *Config, pendin
 		return
 	}
 
+	log.Info().Msg("incoming connection established")
+
+	rep.Success(address)
+
 	err = events.Connected(address)
 	if err != nil {
-		log.Debug().Err(err).Msg("could not submit connected event")
+		log.Error().Err(err).Msg("could not submit connected event")
 	}
-	rep.Success(address)
 }

@@ -30,7 +30,7 @@ type eventManager interface {
 }
 
 type simpleEventManager struct {
-	subscriber chan interface{}
+	subscriber chan<- interface{}
 }
 
 func (mgr *simpleEventManager) Disconnected(address string) error {

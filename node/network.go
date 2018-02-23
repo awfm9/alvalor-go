@@ -15,24 +15,9 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with Alvalor.  If not, see <http://www.gnu.org/licenses/>.
 
-package trie
+package node
 
-// node is simply a type definition for the empty interface.
-type node interface{}
-
-// valueNode represents a node that stores the data inserted as value into the trie, which
-// corresponds to the key that we traversed down the trie.
-type valueNode []byte
-
-// shortNode represents a combined single path through what would otherwise be several full nodes.
-// It holds the key of the traversed path and a reference to the child node.
-type shortNode struct {
-	key   []byte
-	child node
-}
-
-// fullNode represents a full node in the patricia merkle trie that has sixteen children, one per
-// possible value of the next nibble of the key/path.
-type fullNode struct {
-	children [16]node
+type networkManager interface {
+	Send(address string, msg interface{}) error
+	Broadcast(msg interface{}, exclude ...string) error
 }

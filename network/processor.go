@@ -34,8 +34,8 @@ func handleProcessing(log zerolog.Logger, wg *sync.WaitGroup, cfg *Config, book 
 
 	// configure logger and add start/stop messages
 	log = log.With().Str("component", "processor").Str("address", address).Logger()
-	log.Info().Msg("processing routine started")
-	defer log.Info().Msg("processing routine stopped")
+	log.Debug().Msg("processing routine started")
+	defer log.Debug().Msg("processing routine stopped")
 
 	// the timeout is set to the duration of three heartbeats plus a bit
 	timeout := time.Duration(3.5 * float64(interval))
@@ -76,13 +76,13 @@ Loop:
 				log.Debug().Msg("custom received")
 				err := events.Received(address, message)
 				if err != nil {
-					log.Debug().Err(err).Msg("could not submit received event")
+					log.Error().Err(err).Msg("could not submit received event")
 				}
 			}
 
 		// if this case is triggered, we didn't receive a message in a while and we can drop the peer
 		case <-time.After(timeout):
-			log.Info().Msg("peer timed out")
+			log.Debug().Msg("peer timed out")
 			break Loop
 		}
 	}

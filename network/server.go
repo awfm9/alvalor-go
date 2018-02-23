@@ -36,8 +36,8 @@ func handleServing(log zerolog.Logger, wg *sync.WaitGroup, cfg *Config, peers pe
 
 	// configure the logger for the component with start/stop messages
 	log = log.With().Str("component", "server").Logger()
-	log.Info().Msg("serving routine started")
-	defer log.Info().Msg("serving routine stopped")
+	log.Debug().Msg("serving routine started")
+	defer log.Debug().Msg("serving routine stopped")
 
 	// each time we tick, check if we should enable or disable the accepting of
 	// connections

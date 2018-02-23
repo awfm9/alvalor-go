@@ -37,8 +37,8 @@ func handleDialing(log zerolog.Logger, wg *sync.WaitGroup, cfg *Config, peers pe
 
 	// configure logger and add start/stop messages
 	log = log.With().Str("component", "dialer").Logger()
-	log.Info().Msg("dialing routine started")
-	defer log.Info().Msg("dialing routine stopped")
+	log.Debug().Msg("dialing routine started")
+	defer log.Debug().Msg("dialing routine stopped")
 
 	// on each tick, check if we are below minimum peers and should have free
 	// connection slots, then start a new dialer
@@ -64,8 +64,8 @@ func handleDialing(log zerolog.Logger, wg *sync.WaitGroup, cfg *Config, peers pe
 			byIPHash(sha256.New()),
 		)
 		if len(sample) == 0 {
+			log.Debug().Msg("could not get address to connect")
 			handlers.Discoverer()
-			log.Info().Msg("could not get address to connect")
 			continue
 		}
 		handlers.Connector(sample[0])
