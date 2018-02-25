@@ -77,6 +77,7 @@ Loop:
 				err := events.Received(address, message)
 				if err != nil {
 					log.Error().Err(err).Msg("could not submit received event")
+					continue
 				}
 			}
 

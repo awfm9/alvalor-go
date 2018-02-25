@@ -331,7 +331,7 @@ func (p Proto) Decode(r io.Reader) (interface{}, error) {
 		if err != nil {
 			return nil, errors.Wrap(err, "could not decode bloom filter")
 		}
-		v := &node.Mempool{
+		v := node.Mempool{
 			Bloom: bloom,
 		}
 		return &v, nil
@@ -344,7 +344,7 @@ func (p Proto) Decode(r io.Reader) (interface{}, error) {
 		if err != nil {
 			return nil, errors.Wrap(err, "could not read inventory IDs")
 		}
-		v := &node.Inventory{
+		v := node.Inventory{
 			IDs: make([][]byte, 0, ids.Len()),
 		}
 		for i := 0; i < ids.Len(); i++ {
@@ -364,7 +364,7 @@ func (p Proto) Decode(r io.Reader) (interface{}, error) {
 		if err != nil {
 			return nil, errors.Wrap(err, "could not read request IDs")
 		}
-		v := &node.Request{
+		v := node.Request{
 			IDs: make([][]byte, 0, ids.Len()),
 		}
 		for i := 0; i < ids.Len(); i++ {

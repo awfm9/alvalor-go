@@ -60,6 +60,8 @@ func handleMessage(log zerolog.Logger, wg *sync.WaitGroup, handlers Handlers, ne
 			inv = append(inv, id)
 		}
 
+		log.Info().Int("num_ids", len(inv)).Msg("received mempool message")
+
 		// send the list of transaction IDs they do not have
 		inventory := &Inventory{IDs: inv}
 		err := net.Send(address, inventory)
@@ -69,6 +71,8 @@ func handleMessage(log zerolog.Logger, wg *sync.WaitGroup, handlers Handlers, ne
 		}
 
 	case *Inventory:
+
+		log.Info().Int("num_ids", len(msg.IDs)).Msg("received inventory message")
 
 		// create list of transactions that we are missing
 		var req [][]byte
@@ -90,6 +94,8 @@ func handleMessage(log zerolog.Logger, wg *sync.WaitGroup, handlers Handlers, ne
 		}
 
 	case *Request:
+
+		log.Info().Int("num_ids", len(msg.IDs)).Msg("received request message")
 
 		// for each requested ID
 		for _, id := range msg.IDs {
