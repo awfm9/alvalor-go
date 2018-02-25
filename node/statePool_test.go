@@ -51,7 +51,11 @@ func TestPoolAdd(t *testing.T) {
 	store.On("Put", tx2.ID(), mock.Anything).Return(nil)
 	store.On("Put", tx3.ID(), mock.Anything).Return(errors.New("could not put"))
 
-	pool := simplePool{codec: codec, store: store}
+	pool := simplePool{
+		codec: codec,
+		store: store,
+		ids:   make(map[string]struct{}),
+	}
 
 	err := pool.Add(tx1)
 	assert.Nil(t, err)
@@ -61,24 +65,6 @@ func TestPoolAdd(t *testing.T) {
 
 	err = pool.Add(tx3)
 	assert.NotNil(t, err)
-}
-
-func TestPoolKnown(t *testing.T) {
-
-	id1 := []byte{1, 2, 3, 4}
-	id2 := []byte{5, 6, 7, 8}
-
-	store := &StoreMock{}
-	store.On("Get", id1).Return(nil, nil)
-	store.On("Get", id2).Return(nil, errors.New("could not get"))
-
-	pool := simplePool{store: store}
-
-	ok := pool.Known(id1)
-	assert.True(t, ok)
-
-	ok = pool.Known(id2)
-	assert.False(t, ok)
 }
 
 func TestPoolGet(t *testing.T) {
@@ -123,11 +109,31 @@ func TestPoolRemove(t *testing.T) {
 	store.On("Del", id1).Return(nil)
 	store.On("Del", id2).Return(errors.New("could not del"))
 
-	pool := simplePool{store: store}
+	pool := simplePool{
+		store: store,
+		ids:   make(map[string]struct{}),
+	}
 
 	err := pool.Remove(id1)
 	assert.Nil(t, err)
 
 	err = pool.Remove(id2)
 	assert.NotNil(t, err)
+}
+
+func TestPoolKnown(t *testing.T) {
+
+	id1 := []byte{1, 2, 3, 4}
+	id2 := []byte{5, 6, 7, 8}
+
+	pool := simplePool{
+		ids: make(map[string]struct{}),
+	}
+	pool.ids[string(id1)] = struct{}{}
+
+	ok := pool.Known(id1)
+	assert.True(t, ok)
+
+	ok = pool.Known(id2)
+	assert.False(t, ok)
 }

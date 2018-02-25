@@ -18,6 +18,7 @@
 package node
 
 import (
+	"io"
 	"sync"
 
 	"github.com/rs/zerolog"
@@ -32,16 +33,28 @@ type Node interface {
 	Stats()
 }
 
+// Network defines what we need from the network module.
+type Network interface {
+	Send(address string, msg interface{}) error
+	Broadcast(msg interface{}, exclude ...string) error
+}
+
+// Codec is responsible for serializing and deserializing data for disk storage.
+type Codec interface {
+	Encode(w io.Writer, i interface{}) error
+	Decode(r io.Reader) (interface{}, error)
+}
+
 type simpleNode struct {
 	log   zerolog.Logger
 	wg    *sync.WaitGroup
-	net   networkManager
+	net   Network
 	state stateManager
 	pool  poolManager
 }
 
 // New creates a new node to manage the Alvalor blockchain.
-func New(log zerolog.Logger, net networkManager, codec Codec, subscription <-chan interface{}) Node {
+func New(log zerolog.Logger, net Network, codec Codec, input <-chan interface{}) Node {
 
 	// initialize the node
 	n := &simpleNode{}
@@ -66,15 +79,14 @@ func New(log zerolog.Logger, net networkManager, codec Codec, subscription <-cha
 	pool := newPool(codec, store)
 	n.pool = pool
 
-	// now we want to subscribe to the network layer and process messages
-	wg.Add(1)
-	go handleReceiving(log, wg, subscription, n, state)
+	// handle all input messages we get
+	n.Input(input)
 
 	return n
 }
 
 func (n *simpleNode) Submit(tx *types.Transaction) {
-	n.Process(tx)
+	n.Entity(tx)
 }
 
 func (n *simpleNode) Stats() {
@@ -83,12 +95,22 @@ func (n *simpleNode) Stats() {
 	n.log.Info().Uint("num_active", numActive).Uint("num_txs", numTxs).Msg("stats")
 }
 
-func (n *simpleNode) Process(entity Entity) {
+func (n *simpleNode) Input(input <-chan interface{}) {
 	n.wg.Add(1)
-	go handleProcessing(n.log, n.wg, n.pool, n, entity)
+	go handleInput(n.log, n.wg, n, input)
 }
 
-func (n *simpleNode) Propagate(entity Entity) {
+func (n *simpleNode) Event(event interface{}) {
 	n.wg.Add(1)
-	go handlePropagating(n.log, n.wg, n.state, n.net, entity)
+	go handleEvent(n.log, n.wg, n, n.net, n.state, n.pool, event)
+}
+
+func (n *simpleNode) Message(address string, message interface{}) {
+	n.wg.Add(1)
+	go handleMessage(n.log, n.wg, n, n.net, n.state, n.pool, address, message)
+}
+
+func (n *simpleNode) Entity(entity Entity) {
+	n.wg.Add(1)
+	go handleEntity(n.log, n.wg, n.net, n.state, n.pool, entity)
 }

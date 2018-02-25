@@ -77,6 +77,7 @@ Loop:
 				err := events.Received(address, message)
 				if err != nil {
 					log.Error().Err(err).Msg("could not submit received event")
+					continue
 				}
 			}
 
@@ -88,7 +89,7 @@ Loop:
 	}
 
 	// once we are here, we want to wait for the cascade in case we broke due to timeout
-	for _ = range input {
+	for range input {
 	}
 
 	// then we propagate the cascade to the sender

@@ -44,14 +44,14 @@ func (mgr *simpleEventManager) Connected(address string) error {
 }
 
 func (mgr *simpleEventManager) Received(address string, msg interface{}) error {
-	event := Received{Address: address, Message: msg, Timestamp: time.Now()}
+	event := Received{Address: address, Timestamp: time.Now(), Message: msg}
 	return mgr.event(event)
 }
 
 func (mgr *simpleEventManager) event(event interface{}) error {
 	select {
 	case mgr.subscriber <- event:
-	default:
+	case <-time.After(10 * time.Millisecond):
 		return errors.New("subscriber stalling")
 	}
 	return nil

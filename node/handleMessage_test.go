@@ -18,7 +18,6 @@
 package node
 
 import (
-	"errors"
 	"io/ioutil"
 	"sync"
 	"testing"
@@ -26,53 +25,49 @@ import (
 	"github.com/rs/zerolog"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/suite"
+
+	"github.com/alvalor/alvalor-go/types"
 )
 
-func TestPropagator(t *testing.T) {
-	suite.Run(t, new(PropagatorSuite))
+func TestMessage(t *testing.T) {
+	suite.Run(t, new(MessageSuite))
 }
 
-type PropagatorSuite struct {
+type MessageSuite struct {
 	suite.Suite
 	log zerolog.Logger
 	wg  *sync.WaitGroup
 }
 
-func (suite *PropagatorSuite) SetupTest() {
+func (suite *MessageSuite) SetupTest() {
 	suite.log = zerolog.New(ioutil.Discard)
 	suite.wg = &sync.WaitGroup{}
 	suite.wg.Add(1)
 }
 
-func (suite *PropagatorSuite) TestPropagatorSuccess() {
+func (suite *MessageSuite) TestMessageTransaction() {
 
 	// arrange
-	id := []byte{1, 2, 3, 4}
+	address := "192.0.2.100:1337"
 
-	address1 := "192.0.2.1:1337"
-	address2 := "192.0.2.2:1337"
-	address3 := "192.0.2.3:1337"
+	pool := &PoolMock{}
 
-	state := &StateMock{}
-	state.On("Tags", mock.Anything).Return([]string{address2})
-	state.On("Actives").Return([]string{address1, address2, address3})
+	handlers := &HandlersMock{}
+	handlers.On("Entity", mock.Anything)
 
 	net := &NetworkMock{}
-	net.On("Send", address1, mock.Anything).Return(errors.New("could not send"))
-	net.On("Send", address2, mock.Anything).Return(nil)
-	net.On("Send", address3, mock.Anything).Return(nil)
 
-	entity := &EntityMock{}
-	entity.On("ID").Return(id)
+	state := &StateMock{}
+	state.On("Tag", mock.Anything, mock.Anything)
+
+	msg := &types.Transaction{}
 
 	// act
-	handlePropagating(suite.log, suite.wg, state, net, entity)
+	handleMessage(suite.log, suite.wg, handlers, net, state, pool, address, msg)
 
 	// assert
 	t := suite.T()
 
-	net.AssertCalled(t, "Send", address1, mock.Anything)
-	net.AssertCalled(t, "Send", address3, mock.Anything)
-
-	net.AssertNotCalled(t, "Send", address2, mock.Anything)
+	state.AssertCalled(t, "Tag", address, msg.ID())
+	handlers.AssertCalled(t, "Entity", msg)
 }

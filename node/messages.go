@@ -17,7 +17,19 @@
 
 package node
 
-type networkManager interface {
-	Send(address string, msg interface{}) error
-	Broadcast(msg interface{}, exclude ...string) error
+import "github.com/willf/bloom"
+
+// Mempool is a message containing details about the memory pool.
+type Mempool struct {
+	Bloom *bloom.BloomFilter
+}
+
+// Inventory is a message containing a list of transaction hashes.
+type Inventory struct {
+	IDs [][]byte
+}
+
+// Request requests a number of transactions for the memory pool.
+type Request struct {
+	IDs [][]byte
 }

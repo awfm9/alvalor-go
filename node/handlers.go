@@ -17,7 +17,15 @@
 
 package node
 
-type handlerManager interface {
-	Process(entity Entity)
-	Propagate(entity Entity)
+// Entity is any data structure that returns a unique ID.
+type Entity interface {
+	ID() []byte
+}
+
+// Handlers describes the handlers we need to process everything.
+type Handlers interface {
+	Input(input <-chan interface{})
+	Event(event interface{})
+	Message(address string, message interface{})
+	Entity(entity Entity)
 }

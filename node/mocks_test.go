@@ -108,6 +108,15 @@ func (p *PoolMock) Count() uint {
 	return uint(args.Int(0))
 }
 
+func (p *PoolMock) IDs() [][]byte {
+	args := p.Called()
+	var set [][]byte
+	if args.Get(0) != nil {
+		set = args.Get(0).([][]byte)
+	}
+	return set
+}
+
 type StateMock struct {
 	mock.Mock
 }
@@ -146,21 +155,24 @@ type HandlersMock struct {
 	mock.Mock
 }
 
-func (h *HandlersMock) Process(entity Entity) {
-	h.Called(entity)
+func (h *HandlersMock) Input(input <-chan interface{}) {
+	h.Called(input)
 }
 
-func (h *HandlersMock) Propagate(entity Entity) {
+func (h *HandlersMock) Event(event interface{}) {
+	h.Called(event)
+}
+
+func (h *HandlersMock) Message(address string, message interface{}) {
+	h.Called(address, message)
+}
+
+func (h *HandlersMock) Entity(entity Entity) {
 	h.Called(entity)
 }
 
 type NetworkMock struct {
 	mock.Mock
-}
-
-func (n *NetworkMock) Subscribe() <-chan interface{} {
-	args := n.Called()
-	return args.Get(0).(chan interface{})
 }
 
 func (n *NetworkMock) Send(address string, msg interface{}) error {

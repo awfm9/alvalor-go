@@ -18,9 +18,8 @@ incentive schemes and participatory governance structures.
 If you are interested to contribute to the development of the Alvalor Go client,
 we would be more than happy to hear from you. We are always willing to reward
 contributions of high quality in one way or another. The best way to start is to
-get in touch with us directly on Slack or Telegram:
+get in touch with us directly on Telegram:
 
-* [Alvalor on Slack](https://slackpass.io/alvalor)
 * [Alvalor on Telegram](https://t.me/alvalor)
 
 We use a workflow  where you fork the repository on Github, implement your

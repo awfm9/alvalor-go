@@ -26,26 +26,34 @@ import (
 	"github.com/alvalor/alvalor-go/types"
 )
 
+// Store represents an interface to a key value store for bytes.
+type Store interface {
+	Put(key []byte, data []byte) error
+	Get(key []byte) ([]byte, error)
+	Del(key []byte) error
+}
+
 type poolManager interface {
 	Add(tx *types.Transaction) error
-	Known(id []byte) bool
 	Get(id []byte) (*types.Transaction, error)
 	Remove(id []byte) error
 	Count() uint
+	Known(id []byte) bool
+	IDs() [][]byte
 }
 
 type simplePool struct {
 	sync.Mutex
 	codec Codec
 	store Store
-	count uint
+	ids   map[string]struct{}
 }
 
 func newPool(codec Codec, store Store) *simplePool {
 	p := &simplePool{
 		codec: codec,
 		store: store,
-		count: 0,
+		ids:   make(map[string]struct{}),
 	}
 	return p
 }
@@ -67,17 +75,10 @@ func (p *simplePool) Add(tx *types.Transaction) error {
 		return errors.Wrap(err, "could not put data")
 	}
 
-	p.count++
+	// TODO: fix tests to check ids entry
+	p.ids[string(id)] = struct{}{}
 
 	return nil
-}
-
-func (p *simplePool) Known(id []byte) bool {
-	p.Lock()
-	defer p.Unlock()
-
-	_, err := p.store.Get(id)
-	return err == nil
 }
 
 func (p *simplePool) Get(id []byte) (*types.Transaction, error) {
@@ -107,7 +108,8 @@ func (p *simplePool) Remove(id []byte) error {
 		return errors.Wrap(err, "could not del data")
 	}
 
-	p.count--
+	// TODO: fix tests to check ids entry
+	delete(p.ids, string(id))
 
 	return nil
 }
@@ -116,5 +118,27 @@ func (p *simplePool) Count() uint {
 	p.Lock()
 	defer p.Unlock()
 
-	return p.count
+	// TODO: check tests to use ids for count
+	return uint(len(p.ids))
+}
+
+func (p *simplePool) Known(id []byte) bool {
+	p.Lock()
+	defer p.Unlock()
+
+	// TODO: check tests to use lookup for known
+	_, ok := p.ids[string(id)]
+	return ok
+}
+
+func (p *simplePool) IDs() [][]byte {
+	p.Lock()
+	defer p.Unlock()
+
+	ids := make([][]byte, 0, len(p.ids))
+	for id := range p.ids {
+		ids = append(ids, []byte(id))
+	}
+
+	return ids
 }
