@@ -18,7 +18,6 @@
 package node
 
 import (
-	"fmt"
 	"sync"
 
 	"github.com/rs/zerolog"
@@ -62,7 +61,5 @@ func handleEvent(log zerolog.Logger, wg *sync.WaitGroup, handlers Handlers, net 
 
 	case network.Received:
 		handlers.Message(e.Address, e.Message)
-	default:
-		fmt.Printf("%T\n", event)
 	}
 }

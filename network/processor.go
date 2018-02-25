@@ -88,7 +88,7 @@ Loop:
 	}
 
 	// once we are here, we want to wait for the cascade in case we broke due to timeout
-	for _ = range input {
+	for range input {
 	}
 
 	// then we propagate the cascade to the sender

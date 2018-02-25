@@ -70,7 +70,7 @@ Loop:
 	}
 
 	// drain the channel in case we broke on closed connection & wait until cascade arrives
-	for _ = range output {
+	for range output {
 	}
 
 	log.Info().Msg("connection dropped")
