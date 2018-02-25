@@ -31,5 +31,8 @@ func isClosedErr(err error) bool {
 	if strings.Contains(err.Error(), "use of closed network connection") {
 		return true
 	}
+	if strings.Contains(err.Error(), "connection was forcibly closed") {
+		return true
+	}
 	return false
 }
