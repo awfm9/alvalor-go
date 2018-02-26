@@ -19,27 +19,9 @@ using Go = import "/go.capnp";
 $Go.package("codec");
 $Go.import("codec");
 
-using Ping = import "ping.capnp".Ping;
-using Pong = import "pong.capnp".Pong;
-using Discover = import "discover.capnp".Discover;
-using Peers = import "peers.capnp".Peers;
 using Transaction = import "transaction.capnp".Transaction;
-using Mempool = import "mempool.capnp".Mempool;
-using Inventory = import "inventory.capnp".Inventory;
-using Request = import "request.capnp".Request;
-using Transactions = import "transactions.capnp".Transactions;
 
-@0x904d4f3f728c7f04;
-struct Z {
-	union {
-		ping @0 :Ping;
-		pong @1 :Pong;
-		discover @2: Discover;
-		peers @3: Peers;
-		transaction @4: Transaction;
-		mempool @5: Mempool;
-		inventory @6: Inventory;
-		request @7: Request;
-		transactions @8: Transactions;
-	}
+@0xe60ceb912269b107;
+struct Transactions {
+  transactions @0 :List(Transaction);
 }
