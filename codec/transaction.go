@@ -40,21 +40,13 @@ func transactionToMessage(entity *types.Transaction) (*capnp.Message, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "could not initialize transfer list")
 	}
-	for i, item := range entity.Transfers {
-		transfer, err := NewTransfer(seg)
+	for i, transfer := range entity.Transfers {
+		var t Transfer
+		t, err = initTransfer(&transfer, seg)
 		if err != nil {
 			return nil, errors.Wrap(err, "could not initialize transfer")
 		}
-		err = transfer.SetFrom(item.From)
-		if err != nil {
-			return nil, errors.Wrap(err, "could not set from")
-		}
-		err = transfer.SetTo(item.To)
-		if err != nil {
-			return nil, errors.Wrap(err, "could not set to")
-		}
-		transfer.SetAmount(item.Amount)
-		err = transfers.Set(i, transfer)
+		err = transfers.Set(i, t)
 		if err != nil {
 			return nil, errors.Wrap(err, "could not set transfer")
 		}
@@ -63,22 +55,20 @@ func transactionToMessage(entity *types.Transaction) (*capnp.Message, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "could not initialize fee list")
 	}
-	for i, item := range entity.Fees {
-		var fee Fee
-		fee, err = NewFee(seg)
+	for i, fee := range entity.Fees {
+		var f Fee
+		f, err = initFee(&fee, seg)
 		if err != nil {
 			return nil, errors.Wrap(err, "could not initialize fee")
 		}
-		fee.SetFrom(item.From)
-		fee.SetAmount(item.Amount)
-		err = fees.Set(i, fee)
+		err = fees.Set(i, f)
 		if err != nil {
 			return nil, errors.Wrap(err, "could not set fee")
 		}
 	}
 	err = transaction.SetData(entity.Data)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not set transaction data")
+		return nil, errors.Wrap(err, "could not set data")
 	}
 	sigs, err := transaction.NewSignatures(int32(len(entity.Signatures)))
 	if err != nil {

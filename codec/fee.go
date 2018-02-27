@@ -16,3 +16,22 @@
 // along with Alvalor.  If not, see <http://www.gnu.org/licenses/>.
 
 package codec
+
+import (
+	"github.com/alvalor/alvalor-go/types"
+	"github.com/pkg/errors"
+	capnp "zombiezen.com/go/capnproto2"
+)
+
+func initFee(fee *types.Fee, seg *capnp.Segment) (Fee, error) {
+	f, err := NewFee(seg)
+	if err != nil {
+		return Fee{}, errors.Wrap(err, "could not initialize fee")
+	}
+	err = f.SetFrom(fee.From)
+	if err != nil {
+		return Fee{}, errors.Wrap(err, "could not set from")
+	}
+	f.SetAmount(fee.Amount)
+	return f, nil
+}

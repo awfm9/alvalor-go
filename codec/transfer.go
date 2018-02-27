@@ -16,3 +16,26 @@
 // along with Alvalor.  If not, see <http://www.gnu.org/licenses/>.
 
 package codec
+
+import (
+	"github.com/alvalor/alvalor-go/types"
+	"github.com/pkg/errors"
+	capnp "zombiezen.com/go/capnproto2"
+)
+
+func initTransfer(transfer *types.Transfer, seg *capnp.Segment) (Transfer, error) {
+	t, err := NewTransfer(seg)
+	if err != nil {
+		return Transfer{}, errors.Wrap(err, "could not initialize transfer")
+	}
+	err = t.SetFrom(transfer.From)
+	if err != nil {
+		return Transfer{}, errors.Wrap(err, "could not set from")
+	}
+	err = t.SetTo(transfer.To)
+	if err != nil {
+		return Transfer{}, errors.Wrap(err, "could not set to")
+	}
+	t.SetAmount(transfer.Amount)
+	return t, nil
+}
