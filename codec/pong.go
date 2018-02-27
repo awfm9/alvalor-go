@@ -16,3 +16,26 @@
 // along with Alvalor.  If not, see <http://www.gnu.org/licenses/>.
 
 package codec
+
+import (
+	"github.com/alvalor/alvalor-go/network"
+	"github.com/pkg/errors"
+	capnp "zombiezen.com/go/capnproto2"
+)
+
+func pongToMessage(entity *network.Pong) (*capnp.Message, error) {
+	msg, seg, err := capnp.NewMessage(capnp.SingleSegment(nil))
+	if err != nil {
+		return nil, errors.Wrap(err, "could not initialize message")
+	}
+	z, err := NewRootZ(seg)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not initialize wrapper")
+	}
+	pong, err := z.NewPong()
+	if err != nil {
+		return nil, errors.Wrap(err, "could not initialize pong")
+	}
+	pong.SetNonce(entity.Nonce)
+	return msg, nil
+}

@@ -16,3 +16,35 @@
 // along with Alvalor.  If not, see <http://www.gnu.org/licenses/>.
 
 package codec
+
+import (
+	"github.com/alvalor/alvalor-go/node"
+	"github.com/pkg/errors"
+	capnp "zombiezen.com/go/capnproto2"
+)
+
+func requestToMessage(entity *node.Request) (*capnp.Message, error) {
+	msg, seg, err := capnp.NewMessage(capnp.SingleSegment(nil))
+	if err != nil {
+		return nil, errors.Wrap(err, "could not initialize message")
+	}
+	z, err := NewRootZ(seg)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not initialize wrapper")
+	}
+	request, err := z.NewRequest()
+	if err != nil {
+		return nil, errors.Wrap(err, "could not initialize request")
+	}
+	ids, err := request.NewIds(int32(len(entity.IDs)))
+	if err != nil {
+		return nil, errors.Wrap(err, "could not initialize ID list")
+	}
+	for i, id := range entity.IDs {
+		err = ids.Set(i, id)
+		if err != nil {
+			return nil, errors.Wrap(err, "could not set ID")
+		}
+	}
+	return msg, nil
+}

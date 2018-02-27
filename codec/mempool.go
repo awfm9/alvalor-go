@@ -16,3 +16,36 @@
 // along with Alvalor.  If not, see <http://www.gnu.org/licenses/>.
 
 package codec
+
+import (
+	"bytes"
+
+	"github.com/alvalor/alvalor-go/node"
+	"github.com/pkg/errors"
+	capnp "zombiezen.com/go/capnproto2"
+)
+
+func mempoolToMessage(entity *node.Mempool) (*capnp.Message, error) {
+	msg, seg, err := capnp.NewMessage(capnp.SingleSegment(nil))
+	if err != nil {
+		return nil, errors.Wrap(err, "could not initialize message")
+	}
+	z, err := NewRootZ(seg)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not initialize wrapper")
+	}
+	buf := &bytes.Buffer{}
+	_, err = entity.Bloom.WriteTo(buf)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not encode bloom filter")
+	}
+	mempool, err := z.NewMempool()
+	if err != nil {
+		return nil, errors.Wrap(err, "could not initialize mempool")
+	}
+	err = mempool.SetBloom(buf.Bytes())
+	if err != nil {
+		return nil, errors.Wrap(err, "could not set bloom")
+	}
+	return msg, nil
+}

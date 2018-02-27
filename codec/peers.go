@@ -16,3 +16,35 @@
 // along with Alvalor.  If not, see <http://www.gnu.org/licenses/>.
 
 package codec
+
+import (
+	"github.com/alvalor/alvalor-go/network"
+	"github.com/pkg/errors"
+	capnp "zombiezen.com/go/capnproto2"
+)
+
+func peersToMessage(entity *network.Peers) (*capnp.Message, error) {
+	msg, seg, err := capnp.NewMessage(capnp.SingleSegment(nil))
+	if err != nil {
+		return nil, errors.Wrap(err, "could not initialize message")
+	}
+	z, err := NewRootZ(seg)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not initialize wrapper")
+	}
+	peers, err := z.NewPeers()
+	if err != nil {
+		return nil, errors.Wrap(err, "could not initialize peers")
+	}
+	addrs, err := peers.NewAddresses(int32(len(entity.Addresses)))
+	if err != nil {
+		return nil, errors.Wrap(err, "could not initialize address list")
+	}
+	for i, address := range entity.Addresses {
+		err = addrs.Set(i, address)
+		if err != nil {
+			return nil, errors.Wrap(err, "could not set address")
+		}
+	}
+	return msg, nil
+}

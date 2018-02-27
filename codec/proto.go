@@ -40,161 +40,31 @@ func NewProto() Proto {
 
 // Encode will serialize the provided entity by writing the binary format into the provided writer.
 // It will fail if the entity type is unknown.
-func (p Proto) Encode(w io.Writer, i interface{}) error {
-	msg, seg, err := capnp.NewMessage(capnp.SingleSegment(nil))
+func (p Proto) Encode(w io.Writer, entity interface{}) error {
+	var msg *capnp.Message
+	var err error
+	switch e := entity.(type) {
+	case *network.Ping:
+		msg, err = pingToMessage(e)
+	case *network.Pong:
+		msg, err = pongToMessage(e)
+	case *network.Discover:
+		msg, err = discoverToMessage(e)
+	case *network.Peers:
+		msg, err = peersToMessage(e)
+	case *types.Transaction:
+		msg, err = transactionToMessage(e)
+	case *node.Mempool:
+		msg, err = mempoolToMessage(e)
+	case *node.Inventory:
+		msg, err = inventoryToMessage(e)
+	case *node.Request:
+		msg, err = requestToMessage(e)
+	default:
+		return errors.Errorf("unknown message type (%T)", e)
+	}
 	if err != nil {
 		return errors.Wrap(err, "could not create proto message")
-	}
-	z, err := NewRootZ(seg)
-	if err != nil {
-		return errors.Wrap(err, "could not create proto wrapper")
-	}
-	switch v := i.(type) {
-	case *network.Ping:
-		var ping Ping
-		ping, err = z.NewPing()
-		if err != nil {
-			return errors.Wrap(err, "could not create proto ping")
-		}
-		ping.SetNonce(v.Nonce)
-	case *network.Pong:
-		var pong Pong
-		pong, err = z.NewPong()
-		if err != nil {
-			return errors.Wrap(err, "could not create proto pong")
-		}
-		pong.SetNonce(v.Nonce)
-	case *network.Discover:
-		_, err = z.NewDiscover()
-		if err != nil {
-			return errors.Wrap(err, "could not create proto discover")
-		}
-	case *network.Peers:
-		var peers Peers
-		peers, err = z.NewPeers()
-		if err != nil {
-			return errors.Wrap(err, "could not create proto peers")
-		}
-		var addrs capnp.TextList
-		addrs, err = peers.NewAddresses(int32(len(v.Addresses)))
-		if err != nil {
-			return errors.Wrap(err, "could not create address list")
-		}
-		for i, address := range v.Addresses {
-			err = addrs.Set(i, address)
-			if err != nil {
-				return errors.Wrap(err, "could not set address")
-			}
-		}
-	case *types.Transaction:
-		var transaction Transaction
-		transaction, err = z.NewTransaction()
-		if err != nil {
-			return errors.Wrap(err, "could not create proto transaction")
-		}
-		var transfers Transfer_List
-		transfers, err = transaction.NewTransfers(int32(len(v.Transfers)))
-		if err != nil {
-			return errors.Wrap(err, "could not create transaction list")
-		}
-		for i, item := range v.Transfers {
-			var transfer Transfer
-			transfer, err = NewTransfer(seg)
-			if err != nil {
-				return errors.Wrap(err, "could not create proto transfer")
-			}
-			transfer.SetFrom(item.From)
-			transfer.SetTo(item.To)
-			transfer.SetAmount(item.Amount)
-			err = transfers.Set(i, transfer)
-			if err != nil {
-				return errors.Wrap(err, "could not set transfer")
-			}
-		}
-		var fees Fee_List
-		fees, err = transaction.NewFees(int32(len(v.Fees)))
-		if err != nil {
-			return errors.Wrap(err, "could not create fee list")
-		}
-		for i, item := range v.Fees {
-			var fee Fee
-			fee, err = NewFee(seg)
-			if err != nil {
-				return errors.Wrap(err, "could not create proto fee")
-			}
-			fee.SetFrom(item.From)
-			fee.SetAmount(item.Amount)
-			err = fees.Set(i, fee)
-			if err != nil {
-				return errors.Wrap(err, "could not set fee")
-			}
-		}
-		err = transaction.SetData(v.Data)
-		if err != nil {
-			return errors.Wrap(err, "could not set transaction data")
-		}
-		var sigs capnp.DataList
-		sigs, err = transaction.NewSignatures(int32(len(v.Signatures)))
-		if err != nil {
-			return errors.Wrap(err, "could not create signature list")
-		}
-		for i, sig := range v.Signatures {
-			err = sigs.Set(i, sig)
-			if err != nil {
-				return errors.Wrap(err, "could not set signature")
-			}
-		}
-	case *node.Mempool:
-		buf := &bytes.Buffer{}
-		_, err = v.Bloom.WriteTo(buf)
-		if err != nil {
-			return errors.Wrap(err, "could not encode bloom filter")
-		}
-		var mempool Mempool
-		mempool, err = z.NewMempool()
-		if err != nil {
-			return errors.Wrap(err, "could not create proto mempool")
-		}
-		err = mempool.SetBloom(buf.Bytes())
-		if err != nil {
-			return errors.Wrap(err, "could not set mempool bloom")
-		}
-	case *node.Inventory:
-		var inventory Inventory
-		inventory, err = z.NewInventory()
-		if err != nil {
-			return errors.Wrap(err, "could not create proto inventory")
-		}
-		var ids capnp.DataList
-		ids, err = inventory.NewIds(int32(len(v.IDs)))
-		if err != nil {
-			return errors.Wrap(err, "could not create id list")
-		}
-		for i, id := range v.IDs {
-			err = ids.Set(i, id)
-			if err != nil {
-				return errors.Wrap(err, "could not set ID")
-			}
-		}
-	case *node.Request:
-		var request Request
-		request, err = z.NewRequest()
-		if err != nil {
-			return errors.Wrap(err, "could not create proto request")
-		}
-		var ids capnp.DataList
-		ids, err = request.NewIds(int32(len(v.IDs)))
-		if err != nil {
-			return errors.Wrap(err, "could not create id list")
-		}
-		for i, id := range v.IDs {
-			err = ids.Set(i, id)
-			if err != nil {
-				return errors.Wrap(err, "could not set ID")
-			}
-		}
-	default:
-		return errors.Errorf("unknown proto type (%T)", i)
 	}
 	err = capnp.NewEncoder(w).Encode(msg)
 	if err != nil {

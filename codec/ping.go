@@ -24,26 +24,24 @@ import (
 	"github.com/alvalor/alvalor-go/network"
 )
 
-// PingToMessage converts a network ping message to an encoded capnp message.
-func PingToMessage(entity *network.Ping) (*capnp.Message, error) {
+func pingToMessage(entity *network.Ping) (*capnp.Message, error) {
 	msg, seg, err := capnp.NewMessage(capnp.SingleSegment(nil))
 	if err != nil {
-		return nil, errors.Wrap(err, "could not create proto message")
+		return nil, errors.Wrap(err, "could not initialize message")
 	}
 	z, err := NewRootZ(seg)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not create proto wrapper")
+		return nil, errors.Wrap(err, "could not initialize wrapper")
 	}
 	ping, err := z.NewPing()
 	if err != nil {
-		return nil, errors.Wrap(err, "could not create proto ping")
+		return nil, errors.Wrap(err, "could not initialize pong")
 	}
 	ping.SetNonce(entity.Nonce)
 	return msg, nil
 }
 
-// PingFromMessage converts an encoded capnp message to a network ping message.
-func PingFromMessage(msg *capnp.Message) (*network.Ping, error) {
+func pingFromMessage(msg *capnp.Message) (*network.Ping, error) {
 	z, err := ReadRootZ(msg)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not read proto wrapper")

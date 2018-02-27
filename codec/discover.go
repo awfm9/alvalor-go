@@ -16,3 +16,25 @@
 // along with Alvalor.  If not, see <http://www.gnu.org/licenses/>.
 
 package codec
+
+import (
+	"github.com/alvalor/alvalor-go/network"
+	"github.com/pkg/errors"
+	capnp "zombiezen.com/go/capnproto2"
+)
+
+func discoverToMessage(entity *network.Discover) (*capnp.Message, error) {
+	msg, seg, err := capnp.NewMessage(capnp.SingleSegment(nil))
+	if err != nil {
+		return nil, errors.Wrap(err, "could not initialize message")
+	}
+	z, err := NewRootZ(seg)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not initialize wrapper")
+	}
+	_, err = z.NewDiscover()
+	if err != nil {
+		return nil, errors.Wrap(err, "could not initialize discover")
+	}
+	return msg, nil
+}
