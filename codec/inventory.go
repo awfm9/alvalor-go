@@ -26,18 +26,22 @@ import (
 
 type initInventory func() (Inventory, error)
 
-func rootInventory(z Z) initInventory {
+func createRootInventory(z Z) initInventory {
 	return z.NewInventory
 }
 
-func encodeInventory(seg *capnp.Segment, init initInventory, e *node.Inventory) (Inventory, error) {
-	inventory, err := init()
+func readRootInventory(z Z) initInventory {
+	return z.Inventory
+}
+
+func encodeInventory(seg *capnp.Segment, create initInventory, e *node.Inventory) (Inventory, error) {
+	inventory, err := create()
 	if err != nil {
-		return Inventory{}, errors.Wrap(err, "could not initialize inventory")
+		return Inventory{}, errors.Wrap(err, "could not create inventory")
 	}
 	ids, err := inventory.NewIds(int32(len(e.IDs)))
 	if err != nil {
-		return Inventory{}, errors.Wrap(err, "could not initialize ID list")
+		return Inventory{}, errors.Wrap(err, "could not create ID list")
 	}
 	for i, id := range e.IDs {
 		err = ids.Set(i, id)
@@ -46,4 +50,26 @@ func encodeInventory(seg *capnp.Segment, init initInventory, e *node.Inventory) 
 		}
 	}
 	return inventory, nil
+}
+
+func decodeInventory(read initInventory) (*node.Inventory, error) {
+	inventory, err := read()
+	if err != nil {
+		return nil, errors.Wrap(err, "could not read inventory")
+	}
+	ids, err := inventory.Ids()
+	if err != nil {
+		return nil, errors.Wrap(err, "could not read ID list")
+	}
+	e := &node.Inventory{
+		IDs: make([][]byte, 0, ids.Len()),
+	}
+	for i := 0; i < ids.Len(); i++ {
+		id, err := ids.At(i)
+		if err != nil {
+			return nil, errors.Wrap(err, "could not get ID")
+		}
+		e.IDs = append(e.IDs, id)
+	}
+	return e, nil
 }

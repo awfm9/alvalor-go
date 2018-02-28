@@ -26,29 +26,39 @@ import (
 
 type initTransaction func() (Transaction, error)
 
-func rootTransaction(z Z) initTransaction {
+func createRootTransaction(z Z) initTransaction {
 	return z.NewTransaction
 }
 
-func childTransaction(seg *capnp.Segment) initTransaction {
+func createChildTransaction(seg *capnp.Segment) initTransaction {
 	return func() (Transaction, error) {
 		transaction, err := NewTransaction(seg)
 		return transaction, err
 	}
 }
 
+func readRootTransaction(z Z) initTransaction {
+	return z.Transaction
+}
+
+func readChildTransaction(transaction Transaction) initTransaction {
+	return func() (Transaction, error) {
+		return transaction, nil
+	}
+}
+
 func encodeTransaction(seg *capnp.Segment, init initTransaction, e *types.Transaction) (Transaction, error) {
 	transaction, err := init()
 	if err != nil {
-		return Transaction{}, errors.Wrap(err, "could not initialize transaction")
+		return Transaction{}, errors.Wrap(err, "could not create transaction")
 	}
 	transfers, err := transaction.NewTransfers(int32(len(e.Transfers)))
 	if err != nil {
-		return Transaction{}, errors.Wrap(err, "could not initialize transfer list")
+		return Transaction{}, errors.Wrap(err, "could not create transfer list")
 	}
 	for i, t := range e.Transfers {
 		var transfer Transfer
-		transfer, err = encodeTransfer(seg, childTransfer(seg), &t)
+		transfer, err = encodeTransfer(seg, createChildTransfer(seg), t)
 		if err != nil {
 			return Transaction{}, errors.Wrap(err, "could not encode transfer")
 		}
@@ -59,11 +69,11 @@ func encodeTransaction(seg *capnp.Segment, init initTransaction, e *types.Transa
 	}
 	fees, err := transaction.NewFees(int32(len(e.Fees)))
 	if err != nil {
-		return Transaction{}, errors.Wrap(err, "could not initialize fee list")
+		return Transaction{}, errors.Wrap(err, "could not create fee list")
 	}
 	for i, f := range e.Fees {
 		var fee Fee
-		fee, err = encodeFee(seg, childFee(seg), &f)
+		fee, err = encodeFee(seg, createChildFee(seg), f)
 		if err != nil {
 			return Transaction{}, errors.Wrap(err, "could not encode fee")
 		}
@@ -78,7 +88,7 @@ func encodeTransaction(seg *capnp.Segment, init initTransaction, e *types.Transa
 	}
 	sigs, err := transaction.NewSignatures(int32(len(e.Signatures)))
 	if err != nil {
-		return Transaction{}, errors.Wrap(err, "could not initialize signature list")
+		return Transaction{}, errors.Wrap(err, "could not create signature list")
 	}
 	for i, sig := range e.Signatures {
 		err = sigs.Set(i, sig)
@@ -87,4 +97,57 @@ func encodeTransaction(seg *capnp.Segment, init initTransaction, e *types.Transa
 		}
 	}
 	return transaction, nil
+}
+
+func decodeTransaction(read initTransaction) (*types.Transaction, error) {
+	transaction, err := read()
+	if err != nil {
+		return nil, errors.Wrap(err, "could not read transaction")
+	}
+	transfers, err := transaction.Transfers()
+	if err != nil {
+		return nil, errors.Wrap(err, "could not read transfer list")
+	}
+	fees, err := transaction.Fees()
+	if err != nil {
+		return nil, errors.Wrap(err, "could not read fee list")
+	}
+	data, err := transaction.Data()
+	if err != nil {
+		return nil, errors.Wrap(err, "could not read data")
+	}
+	signatures, err := transaction.Signatures()
+	if err != nil {
+		return nil, errors.Wrap(err, "could not read signature list")
+	}
+	e := &types.Transaction{
+		Transfers:  make([]*types.Transfer, 0, transfers.Len()),
+		Fees:       make([]*types.Fee, 0, fees.Len()),
+		Data:       data,
+		Signatures: make([][]byte, 0, signatures.Len()),
+	}
+	for i := 0; i < transfers.Len(); i++ {
+		transfer := transfers.At(i)
+		t, err := decodeTransfer(readChildTransfer(transfer))
+		if err != nil {
+			return nil, errors.Wrap(err, "could not decode transfer")
+		}
+		e.Transfers = append(e.Transfers, t)
+	}
+	for i := 0; i < fees.Len(); i++ {
+		fee := fees.At(i)
+		f, err := decodeFee(readChildFee(fee))
+		if err != nil {
+			return nil, errors.Wrap(err, "could not decode fee")
+		}
+		e.Fees = append(e.Fees, f)
+	}
+	for i := 0; i < signatures.Len(); i++ {
+		signature, err := signatures.At(i)
+		if err != nil {
+			return nil, errors.Wrap(err, "could not get signature")
+		}
+		e.Signatures = append(e.Signatures, signature)
+	}
+	return e, nil
 }

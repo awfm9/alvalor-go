@@ -26,18 +26,22 @@ import (
 
 type initRequest func() (Request, error)
 
-func rootRequest(z Z) initRequest {
+func createRootRequest(z Z) initRequest {
 	return z.NewRequest
 }
 
-func encodeRequest(seg *capnp.Segment, init initRequest, e *node.Request) (Request, error) {
-	request, err := init()
+func readRootRequest(z Z) initRequest {
+	return z.Request
+}
+
+func encodeRequest(seg *capnp.Segment, create initRequest, e *node.Request) (Request, error) {
+	request, err := create()
 	if err != nil {
-		return Request{}, errors.Wrap(err, "could not initialize request")
+		return Request{}, errors.Wrap(err, "could not create request")
 	}
 	ids, err := request.NewIds(int32(len(e.IDs)))
 	if err != nil {
-		return Request{}, errors.Wrap(err, "could not initialize ID list")
+		return Request{}, errors.Wrap(err, "could not create ID list")
 	}
 	for i, id := range e.IDs {
 		err = ids.Set(i, id)
@@ -46,4 +50,26 @@ func encodeRequest(seg *capnp.Segment, init initRequest, e *node.Request) (Reque
 		}
 	}
 	return request, nil
+}
+
+func decodeRequest(read initRequest) (*node.Request, error) {
+	request, err := read()
+	if err != nil {
+		return nil, errors.Wrap(err, "could not read request")
+	}
+	ids, err := request.Ids()
+	if err != nil {
+		return nil, errors.Wrap(err, "could not read ID list")
+	}
+	e := &node.Request{
+		IDs: make([][]byte, 0, ids.Len()),
+	}
+	for i := 0; i < ids.Len(); i++ {
+		id, err := ids.At(i)
+		if err != nil {
+			return nil, errors.Wrap(err, "could not get ID")
+		}
+		e.IDs = append(e.IDs, id)
+	}
+	return e, nil
 }

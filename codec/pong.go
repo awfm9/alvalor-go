@@ -26,22 +26,30 @@ import (
 
 type initPong func() (Pong, error)
 
-func rootPong(z Z) initPong {
+func createRootPong(z Z) initPong {
 	return z.NewPong
 }
 
-func childPong(seg *capnp.Segment) initPong {
-	return func() (Pong, error) {
-		pong, err := NewPong(seg)
-		return pong, err
-	}
+func readRootPong(z Z) initPong {
+	return z.Pong
 }
 
-func encodePong(seg *capnp.Segment, init initPong, e *network.Pong) (Pong, error) {
-	pong, err := init()
+func encodePong(seg *capnp.Segment, create initPong, e *network.Pong) (Pong, error) {
+	pong, err := create()
 	if err != nil {
 		return Pong{}, errors.Wrap(err, "could not initialize pong")
 	}
 	pong.SetNonce(e.Nonce)
 	return pong, nil
+}
+
+func decodePong(read initPong) (*network.Pong, error) {
+	pong, err := read()
+	if err != nil {
+		return nil, errors.Wrap(err, "could not read pong")
+	}
+	e := &network.Pong{
+		Nonce: pong.Nonce(),
+	}
+	return e, nil
 }

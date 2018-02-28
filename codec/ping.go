@@ -26,22 +26,30 @@ import (
 
 type initPing func() (Ping, error)
 
-func rootPing(z Z) initPing {
+func createRootPing(z Z) initPing {
 	return z.NewPing
 }
 
-func childPing(seg *capnp.Segment) initPing {
-	return func() (Ping, error) {
-		ping, err := NewPing(seg)
-		return ping, err
-	}
+func readRootPing(z Z) initPing {
+	return z.Ping
 }
 
-func encodePing(seg *capnp.Segment, init initPing, e *network.Ping) (Ping, error) {
-	ping, err := init()
+func encodePing(seg *capnp.Segment, create initPing, e *network.Ping) (Ping, error) {
+	ping, err := create()
 	if err != nil {
-		return Ping{}, errors.Wrap(err, "could not initialize ping")
+		return Ping{}, errors.Wrap(err, "could not create ping")
 	}
 	ping.SetNonce(e.Nonce)
 	return ping, nil
+}
+
+func decodePing(read initPing) (*network.Ping, error) {
+	ping, err := read()
+	if err != nil {
+		return nil, errors.Wrap(err, "could not read ping")
+	}
+	e := &network.Ping{
+		Nonce: ping.Nonce(),
+	}
+	return e, nil
 }

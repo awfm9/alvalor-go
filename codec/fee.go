@@ -26,17 +26,17 @@ import (
 
 type initFee func() (Fee, error)
 
-func childFee(seg *capnp.Segment) initFee {
+func createChildFee(seg *capnp.Segment) initFee {
 	return func() (Fee, error) {
 		fee, err := NewFee(seg)
 		return fee, err
 	}
 }
 
-func encodeFee(seg *capnp.Segment, init initFee, e *types.Fee) (Fee, error) {
-	fee, err := init()
+func encodeFee(seg *capnp.Segment, create initFee, e *types.Fee) (Fee, error) {
+	fee, err := create()
 	if err != nil {
-		return Fee{}, errors.Wrap(err, "could not initialize fee")
+		return Fee{}, errors.Wrap(err, "could not create fee")
 	}
 	err = fee.SetFrom(e.From)
 	if err != nil {
@@ -44,4 +44,27 @@ func encodeFee(seg *capnp.Segment, init initFee, e *types.Fee) (Fee, error) {
 	}
 	fee.SetAmount(e.Amount)
 	return fee, nil
+}
+
+func readChildFee(fee Fee) initFee {
+	return func() (Fee, error) {
+		return fee, nil
+	}
+}
+
+func decodeFee(read initFee) (*types.Fee, error) {
+	fee, err := read()
+	if err != nil {
+		return nil, errors.Wrap(err, "could not read fee")
+	}
+	from, err := fee.From()
+	if err != nil {
+		return nil, errors.Wrap(err, "could not get from")
+	}
+	amount := fee.Amount()
+	f := &types.Fee{
+		From:   from,
+		Amount: amount,
+	}
+	return f, nil
 }

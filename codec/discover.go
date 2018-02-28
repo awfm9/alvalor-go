@@ -26,14 +26,27 @@ import (
 
 type initDiscover func() (Discover, error)
 
-func rootDiscover(z Z) initDiscover {
+func createRootDiscover(z Z) initDiscover {
 	return z.NewDiscover
 }
 
-func encodeDiscover(seg *capnp.Segment, init initDiscover, e *network.Discover) (Discover, error) {
-	discover, err := init()
+func readRootDiscover(z Z) initDiscover {
+	return z.Discover
+}
+
+func encodeDiscover(seg *capnp.Segment, create initDiscover, e *network.Discover) (Discover, error) {
+	discover, err := create()
 	if err != nil {
-		return Discover{}, errors.Wrap(err, "could not initialize discover")
+		return Discover{}, errors.Wrap(err, "could not create discover")
 	}
 	return discover, nil
+}
+
+func decodeDiscover(read initDiscover) (*network.Discover, error) {
+	_, err := read()
+	if err != nil {
+		return nil, errors.Wrap(err, "could not read discover")
+	}
+	e := &network.Discover{}
+	return e, nil
 }

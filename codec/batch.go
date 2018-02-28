@@ -22,26 +22,31 @@ import (
 	capnp "zombiezen.com/go/capnproto2"
 
 	"github.com/alvalor/alvalor-go/node"
+	"github.com/alvalor/alvalor-go/types"
 )
 
 type initBatch func() (Batch, error)
 
-func rootBatch(z Z) initBatch {
+func createRootBatch(z Z) initBatch {
 	return z.NewBatch
 }
 
-func encodeBatch(seg *capnp.Segment, init initBatch, e *node.Batch) (Batch, error) {
-	batch, err := init()
+func readRootBatch(z Z) initBatch {
+	return z.Batch
+}
+
+func encodeBatch(seg *capnp.Segment, create initBatch, e *node.Batch) (Batch, error) {
+	batch, err := create()
 	if err != nil {
-		return Batch{}, errors.Wrap(err, "could not initialize batch")
+		return Batch{}, errors.Wrap(err, "could not create batch")
 	}
 	transactions, err := batch.NewTransactions(int32(len(e.Transactions)))
 	if err != nil {
-		return Batch{}, errors.Wrap(err, "could not initialize transaction list")
+		return Batch{}, errors.Wrap(err, "could not create transaction list")
 	}
 	for i, t := range e.Transactions {
 		var transaction Transaction
-		transaction, err = encodeTransaction(seg, childTransaction(seg), t)
+		transaction, err = encodeTransaction(seg, createChildTransaction(seg), t)
 		if err != nil {
 			return Batch{}, errors.Wrap(err, "could not encode transaction")
 		}
@@ -51,4 +56,27 @@ func encodeBatch(seg *capnp.Segment, init initBatch, e *node.Batch) (Batch, erro
 		}
 	}
 	return batch, nil
+}
+
+func decodeBatch(read initBatch) (*node.Batch, error) {
+	batch, err := read()
+	if err != nil {
+		return nil, errors.Wrap(err, "could not read batch")
+	}
+	transactions, err := batch.Transactions()
+	if err != nil {
+		return nil, errors.Wrap(err, "could not read transaction list")
+	}
+	e := &node.Batch{
+		Transactions: make([]*types.Transaction, 0, transactions.Len()),
+	}
+	for i := 0; i < transactions.Len(); i++ {
+		transaction := transactions.At(i)
+		t, err := decodeTransaction(readChildTransaction(transaction))
+		if err != nil {
+			return nil, errors.Wrap(err, "could not decode transation")
+		}
+		e.Transactions = append(e.Transactions, t)
+	}
+	return e, nil
 }

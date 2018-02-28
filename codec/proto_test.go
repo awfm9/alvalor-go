@@ -95,12 +95,12 @@ func TestProtoTransaction(t *testing.T) {
 	proto := NewProto()
 	buf := &bytes.Buffer{}
 	tx := &types.Transaction{
-		Transfers: []types.Transfer{
+		Transfers: []*types.Transfer{
 			{From: []byte{1}, To: []byte{2}, Amount: 1000},
 			{From: []byte{2}, To: []byte{3}, Amount: 2000},
 			{From: []byte{4}, To: []byte{5}, Amount: 3000},
 		},
-		Fees: []types.Fee{
+		Fees: []*types.Fee{
 			{From: []byte{15}, Amount: 19},
 			{From: []byte{25}, Amount: 29},
 			{From: []byte{35}, Amount: 39},

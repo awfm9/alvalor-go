@@ -26,18 +26,22 @@ import (
 
 type initPeers func() (Peers, error)
 
-func rootPeers(z Z) initPeers {
+func createRootPeers(z Z) initPeers {
 	return z.NewPeers
 }
 
-func encodePeers(seg *capnp.Segment, init initPeers, e *network.Peers) (Peers, error) {
-	peers, err := init()
+func readRootPeers(z Z) initPeers {
+	return z.Peers
+}
+
+func encodePeers(seg *capnp.Segment, create initPeers, e *network.Peers) (Peers, error) {
+	peers, err := create()
 	if err != nil {
-		return Peers{}, errors.Wrap(err, "could not initialize peers")
+		return Peers{}, errors.Wrap(err, "could not create peers")
 	}
 	addrs, err := peers.NewAddresses(int32(len(e.Addresses)))
 	if err != nil {
-		return Peers{}, errors.Wrap(err, "could not initialize address list")
+		return Peers{}, errors.Wrap(err, "could not create address list")
 	}
 	for i, address := range e.Addresses {
 		err = addrs.Set(i, address)
@@ -46,4 +50,26 @@ func encodePeers(seg *capnp.Segment, init initPeers, e *network.Peers) (Peers, e
 		}
 	}
 	return peers, nil
+}
+
+func decodePeers(read initPeers) (*network.Peers, error) {
+	peers, err := read()
+	if err != nil {
+		return nil, errors.Wrap(err, "could not read peers")
+	}
+	addresses, err := peers.Addresses()
+	if err != nil {
+		return nil, errors.Wrap(err, "could not read address list")
+	}
+	e := &network.Peers{
+		Addresses: make([]string, 0, addresses.Len()),
+	}
+	for i := 0; i < addresses.Len(); i++ {
+		address, err := addresses.At(i)
+		if err != nil {
+			return nil, errors.Wrap(err, "could not get address")
+		}
+		e.Addresses = append(e.Addresses, address)
+	}
+	return e, nil
 }

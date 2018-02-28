@@ -26,17 +26,17 @@ import (
 
 type initTransfer func() (Transfer, error)
 
-func childTransfer(seg *capnp.Segment) initTransfer {
+func createChildTransfer(seg *capnp.Segment) initTransfer {
 	return func() (Transfer, error) {
 		transfer, err := NewTransfer(seg)
 		return transfer, err
 	}
 }
 
-func encodeTransfer(seg *capnp.Segment, init initTransfer, e *types.Transfer) (Transfer, error) {
-	transfer, err := init()
+func encodeTransfer(seg *capnp.Segment, create initTransfer, e *types.Transfer) (Transfer, error) {
+	transfer, err := create()
 	if err != nil {
-		return Transfer{}, errors.Wrap(err, "could not initialize transfer")
+		return Transfer{}, errors.Wrap(err, "could not create transfer")
 	}
 	err = transfer.SetFrom(e.From)
 	if err != nil {
@@ -48,4 +48,32 @@ func encodeTransfer(seg *capnp.Segment, init initTransfer, e *types.Transfer) (T
 	}
 	transfer.SetAmount(e.Amount)
 	return transfer, nil
+}
+
+func readChildTransfer(transfer Transfer) initTransfer {
+	return func() (Transfer, error) {
+		return transfer, nil
+	}
+}
+
+func decodeTransfer(read initTransfer) (*types.Transfer, error) {
+	transfer, err := read()
+	if err != nil {
+		return nil, errors.Wrap(err, "could not read transfer")
+	}
+	from, err := transfer.From()
+	if err != nil {
+		return nil, errors.Wrap(err, "could not get from")
+	}
+	to, err := transfer.To()
+	if err != nil {
+		return nil, errors.Wrap(err, "could not get to")
+	}
+	amount := transfer.Amount()
+	e := &types.Transfer{
+		From:   from,
+		To:     to,
+		Amount: amount,
+	}
+	return e, nil
 }
