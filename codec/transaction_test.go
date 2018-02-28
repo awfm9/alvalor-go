@@ -19,81 +19,15 @@ package codec
 
 import (
 	"bytes"
-	"math/rand"
 	"testing"
 
-	"github.com/alvalor/alvalor-go/network"
-	"github.com/alvalor/alvalor-go/types"
 	"github.com/stretchr/testify/assert"
+
+	"github.com/alvalor/alvalor-go/types"
 )
 
-func TestProtoPing(t *testing.T) {
-	proto := NewProto()
-	buf := &bytes.Buffer{}
-	ping := &network.Ping{
-		Nonce: rand.Uint32(),
-	}
-
-	err := proto.Encode(buf, ping)
-	assert.Nil(t, err)
-
-	msg, err := proto.Decode(buf)
-	assert.Nil(t, err)
-	assert.Equal(t, ping, msg)
-}
-
-func TestProtoPong(t *testing.T) {
-	proto := NewProto()
-	buf := &bytes.Buffer{}
-	pong := &network.Pong{
-		Nonce: rand.Uint32(),
-	}
-
-	err := proto.Encode(buf, pong)
-	assert.Nil(t, err)
-
-	msg, err := proto.Decode(buf)
-	assert.Nil(t, err)
-	assert.Equal(t, pong, msg)
-}
-
-func TestProtoDiscover(t *testing.T) {
-	proto := NewProto()
-	buf := &bytes.Buffer{}
-	discover := &network.Discover{}
-
-	err := proto.Encode(buf, discover)
-	assert.Nil(t, err)
-
-	msg, err := proto.Decode(buf)
-	assert.Nil(t, err)
-	assert.Equal(t, discover, msg)
-}
-
-func TestProtoPeers(t *testing.T) {
-	proto := NewProto()
-	buf := &bytes.Buffer{}
-	peers := &network.Peers{
-		Addresses: []string{
-			"192.0.2.101:1337",
-			"192.0.2.102:1337",
-			"192.0.2.103:1337",
-			"192.0.2.104:1337",
-			"192.0.2.105:1337",
-		},
-	}
-
-	err := proto.Encode(buf, peers)
-	assert.Nil(t, err)
-
-	msg, err := proto.Decode(buf)
-	assert.Nil(t, err)
-	assert.Equal(t, peers, msg)
-}
-
-func TestProtoTransaction(t *testing.T) {
-	proto := NewProto()
-	buf := &bytes.Buffer{}
+func TestTransaction(t *testing.T) {
+	proto := &Proto{}
 	tx := &types.Transaction{
 		Transfers: []*types.Transfer{
 			{From: []byte{1}, To: []byte{2}, Amount: 1000},
@@ -113,6 +47,7 @@ func TestProtoTransaction(t *testing.T) {
 		},
 	}
 
+	buf := &bytes.Buffer{}
 	err := proto.Encode(buf, tx)
 	assert.Nil(t, err)
 
