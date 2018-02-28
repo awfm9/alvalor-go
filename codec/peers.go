@@ -18,33 +18,32 @@
 package codec
 
 import (
-	"github.com/alvalor/alvalor-go/network"
 	"github.com/pkg/errors"
 	capnp "zombiezen.com/go/capnproto2"
+
+	"github.com/alvalor/alvalor-go/network"
 )
 
-func peersToMessage(entity *network.Peers) (*capnp.Message, error) {
-	msg, seg, err := capnp.NewMessage(capnp.SingleSegment(nil))
+type initPeers func() (Peers, error)
+
+func rootPeers(z Z) initPeers {
+	return z.NewPeers
+}
+
+func encodePeers(seg *capnp.Segment, init initPeers, e *network.Peers) (Peers, error) {
+	peers, err := init()
 	if err != nil {
-		return nil, errors.Wrap(err, "could not initialize message")
+		return Peers{}, errors.Wrap(err, "could not initialize peers")
 	}
-	z, err := NewRootZ(seg)
+	addrs, err := peers.NewAddresses(int32(len(e.Addresses)))
 	if err != nil {
-		return nil, errors.Wrap(err, "could not initialize wrapper")
+		return Peers{}, errors.Wrap(err, "could not initialize address list")
 	}
-	peers, err := z.NewPeers()
-	if err != nil {
-		return nil, errors.Wrap(err, "could not initialize peers")
-	}
-	addrs, err := peers.NewAddresses(int32(len(entity.Addresses)))
-	if err != nil {
-		return nil, errors.Wrap(err, "could not initialize address list")
-	}
-	for i, address := range entity.Addresses {
+	for i, address := range e.Addresses {
 		err = addrs.Set(i, address)
 		if err != nil {
-			return nil, errors.Wrap(err, "could not set address")
+			return Peers{}, errors.Wrap(err, "could not set address")
 		}
 	}
-	return msg, nil
+	return peers, nil
 }

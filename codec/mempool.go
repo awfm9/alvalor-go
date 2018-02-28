@@ -20,32 +20,31 @@ package codec
 import (
 	"bytes"
 
-	"github.com/alvalor/alvalor-go/node"
 	"github.com/pkg/errors"
 	capnp "zombiezen.com/go/capnproto2"
+
+	"github.com/alvalor/alvalor-go/node"
 )
 
-func mempoolToMessage(entity *node.Mempool) (*capnp.Message, error) {
-	msg, seg, err := capnp.NewMessage(capnp.SingleSegment(nil))
+type initMempool func() (Mempool, error)
+
+func rootMempool(z Z) initMempool {
+	return z.NewMempool
+}
+
+func encodeMempool(seg *capnp.Segment, init initMempool, e *node.Mempool) (Mempool, error) {
+	mempool, err := init()
 	if err != nil {
-		return nil, errors.Wrap(err, "could not initialize message")
-	}
-	z, err := NewRootZ(seg)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not initialize wrapper")
+		return Mempool{}, errors.Wrap(err, "could not initialize mempool")
 	}
 	buf := &bytes.Buffer{}
-	_, err = entity.Bloom.WriteTo(buf)
+	_, err = e.Bloom.WriteTo(buf)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not encode bloom filter")
-	}
-	mempool, err := z.NewMempool()
-	if err != nil {
-		return nil, errors.Wrap(err, "could not initialize mempool")
+		return Mempool{}, errors.Wrap(err, "could not encode bloom")
 	}
 	err = mempool.SetBloom(buf.Bytes())
 	if err != nil {
-		return nil, errors.Wrap(err, "could not set bloom")
+		return Mempool{}, errors.Wrap(err, "could not set bloom")
 	}
-	return msg, nil
+	return mempool, nil
 }

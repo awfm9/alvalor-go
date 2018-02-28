@@ -18,24 +18,30 @@
 package codec
 
 import (
-	"github.com/alvalor/alvalor-go/network"
 	"github.com/pkg/errors"
 	capnp "zombiezen.com/go/capnproto2"
+
+	"github.com/alvalor/alvalor-go/network"
 )
 
-func pongToMessage(entity *network.Pong) (*capnp.Message, error) {
-	msg, seg, err := capnp.NewMessage(capnp.SingleSegment(nil))
-	if err != nil {
-		return nil, errors.Wrap(err, "could not initialize message")
+type initPong func() (Pong, error)
+
+func rootPong(z Z) initPong {
+	return z.NewPong
+}
+
+func childPong(seg *capnp.Segment) initPong {
+	return func() (Pong, error) {
+		pong, err := NewPong(seg)
+		return pong, err
 	}
-	z, err := NewRootZ(seg)
+}
+
+func encodePong(seg *capnp.Segment, init initPong, e *network.Pong) (Pong, error) {
+	pong, err := init()
 	if err != nil {
-		return nil, errors.Wrap(err, "could not initialize wrapper")
+		return Pong{}, errors.Wrap(err, "could not initialize pong")
 	}
-	pong, err := z.NewPong()
-	if err != nil {
-		return nil, errors.Wrap(err, "could not initialize pong")
-	}
-	pong.SetNonce(entity.Nonce)
-	return msg, nil
+	pong.SetNonce(e.Nonce)
+	return pong, nil
 }

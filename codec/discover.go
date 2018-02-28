@@ -18,23 +18,22 @@
 package codec
 
 import (
-	"github.com/alvalor/alvalor-go/network"
 	"github.com/pkg/errors"
 	capnp "zombiezen.com/go/capnproto2"
+
+	"github.com/alvalor/alvalor-go/network"
 )
 
-func discoverToMessage(entity *network.Discover) (*capnp.Message, error) {
-	msg, seg, err := capnp.NewMessage(capnp.SingleSegment(nil))
+type initDiscover func() (Discover, error)
+
+func rootDiscover(z Z) initDiscover {
+	return z.NewDiscover
+}
+
+func encodeDiscover(seg *capnp.Segment, init initDiscover, e *network.Discover) (Discover, error) {
+	discover, err := init()
 	if err != nil {
-		return nil, errors.Wrap(err, "could not initialize message")
+		return Discover{}, errors.Wrap(err, "could not initialize discover")
 	}
-	z, err := NewRootZ(seg)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not initialize wrapper")
-	}
-	_, err = z.NewDiscover()
-	if err != nil {
-		return nil, errors.Wrap(err, "could not initialize discover")
-	}
-	return msg, nil
+	return discover, nil
 }

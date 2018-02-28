@@ -23,19 +23,28 @@ import (
 	capnp "zombiezen.com/go/capnproto2"
 )
 
-func initTransfer(transfer *types.Transfer, seg *capnp.Segment) (Transfer, error) {
-	t, err := NewTransfer(seg)
+type initTransfer func() (Transfer, error)
+
+func childTransfer(seg *capnp.Segment) initTransfer {
+	return func() (Transfer, error) {
+		transfer, err := NewTransfer(seg)
+		return transfer, err
+	}
+}
+
+func encodeTransfer(seg *capnp.Segment, init initTransfer, e *types.Transfer) (Transfer, error) {
+	transfer, err := init()
 	if err != nil {
 		return Transfer{}, errors.Wrap(err, "could not initialize transfer")
 	}
-	err = t.SetFrom(transfer.From)
+	err = transfer.SetFrom(e.From)
 	if err != nil {
 		return Transfer{}, errors.Wrap(err, "could not set from")
 	}
-	err = t.SetTo(transfer.To)
+	err = transfer.SetTo(e.To)
 	if err != nil {
 		return Transfer{}, errors.Wrap(err, "could not set to")
 	}
-	t.SetAmount(transfer.Amount)
-	return t, nil
+	transfer.SetAmount(e.Amount)
+	return transfer, nil
 }

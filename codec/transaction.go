@@ -18,67 +18,73 @@
 package codec
 
 import (
-	"github.com/alvalor/alvalor-go/types"
 	"github.com/pkg/errors"
 	capnp "zombiezen.com/go/capnproto2"
+
+	"github.com/alvalor/alvalor-go/types"
 )
 
-func transactionToMessage(entity *types.Transaction) (*capnp.Message, error) {
-	msg, seg, err := capnp.NewMessage(capnp.SingleSegment(nil))
-	if err != nil {
-		return nil, errors.Wrap(err, "could not initialize message")
+type initTransaction func() (Transaction, error)
+
+func rootTransaction(z Z) initTransaction {
+	return z.NewTransaction
+}
+
+func childTransaction(seg *capnp.Segment) initTransaction {
+	return func() (Transaction, error) {
+		transaction, err := NewTransaction(seg)
+		return transaction, err
 	}
-	z, err := NewRootZ(seg)
+}
+
+func encodeTransaction(seg *capnp.Segment, init initTransaction, e *types.Transaction) (Transaction, error) {
+	transaction, err := init()
 	if err != nil {
-		return nil, errors.Wrap(err, "could not initialize wrapper")
+		return Transaction{}, errors.Wrap(err, "could not initialize transaction")
 	}
-	transaction, err := z.NewTransaction()
+	transfers, err := transaction.NewTransfers(int32(len(e.Transfers)))
 	if err != nil {
-		return nil, errors.Wrap(err, "could not initialize transaction")
+		return Transaction{}, errors.Wrap(err, "could not initialize transfer list")
 	}
-	transfers, err := transaction.NewTransfers(int32(len(entity.Transfers)))
-	if err != nil {
-		return nil, errors.Wrap(err, "could not initialize transfer list")
-	}
-	for i, transfer := range entity.Transfers {
-		var t Transfer
-		t, err = initTransfer(&transfer, seg)
+	for i, t := range e.Transfers {
+		var transfer Transfer
+		transfer, err = encodeTransfer(seg, childTransfer(seg), &t)
 		if err != nil {
-			return nil, errors.Wrap(err, "could not initialize transfer")
+			return Transaction{}, errors.Wrap(err, "could not encode transfer")
 		}
-		err = transfers.Set(i, t)
+		err = transfers.Set(i, transfer)
 		if err != nil {
-			return nil, errors.Wrap(err, "could not set transfer")
-		}
-	}
-	fees, err := transaction.NewFees(int32(len(entity.Fees)))
-	if err != nil {
-		return nil, errors.Wrap(err, "could not initialize fee list")
-	}
-	for i, fee := range entity.Fees {
-		var f Fee
-		f, err = initFee(&fee, seg)
-		if err != nil {
-			return nil, errors.Wrap(err, "could not initialize fee")
-		}
-		err = fees.Set(i, f)
-		if err != nil {
-			return nil, errors.Wrap(err, "could not set fee")
+			return Transaction{}, errors.Wrap(err, "could not set transfer")
 		}
 	}
-	err = transaction.SetData(entity.Data)
+	fees, err := transaction.NewFees(int32(len(e.Fees)))
 	if err != nil {
-		return nil, errors.Wrap(err, "could not set data")
+		return Transaction{}, errors.Wrap(err, "could not initialize fee list")
 	}
-	sigs, err := transaction.NewSignatures(int32(len(entity.Signatures)))
+	for i, f := range e.Fees {
+		var fee Fee
+		fee, err = encodeFee(seg, childFee(seg), &f)
+		if err != nil {
+			return Transaction{}, errors.Wrap(err, "could not encode fee")
+		}
+		err = fees.Set(i, fee)
+		if err != nil {
+			return Transaction{}, errors.Wrap(err, "could not set fee")
+		}
+	}
+	err = transaction.SetData(e.Data)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not initialize signature list")
+		return Transaction{}, errors.Wrap(err, "could not set data")
 	}
-	for i, sig := range entity.Signatures {
+	sigs, err := transaction.NewSignatures(int32(len(e.Signatures)))
+	if err != nil {
+		return Transaction{}, errors.Wrap(err, "could not initialize signature list")
+	}
+	for i, sig := range e.Signatures {
 		err = sigs.Set(i, sig)
 		if err != nil {
-			return nil, errors.Wrap(err, "could not set signature")
+			return Transaction{}, errors.Wrap(err, "could not set signature")
 		}
 	}
-	return msg, nil
+	return transaction, nil
 }

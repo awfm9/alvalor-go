@@ -23,15 +23,24 @@ import (
 	capnp "zombiezen.com/go/capnproto2"
 )
 
-func initFee(fee *types.Fee, seg *capnp.Segment) (Fee, error) {
-	f, err := NewFee(seg)
+type initFee func() (Fee, error)
+
+func childFee(seg *capnp.Segment) initFee {
+	return func() (Fee, error) {
+		fee, err := NewFee(seg)
+		return fee, err
+	}
+}
+
+func encodeFee(seg *capnp.Segment, init initFee, e *types.Fee) (Fee, error) {
+	fee, err := init()
 	if err != nil {
 		return Fee{}, errors.Wrap(err, "could not initialize fee")
 	}
-	err = f.SetFrom(fee.From)
+	err = fee.SetFrom(e.From)
 	if err != nil {
 		return Fee{}, errors.Wrap(err, "could not set from")
 	}
-	f.SetAmount(fee.Amount)
-	return f, nil
+	fee.SetAmount(e.Amount)
+	return fee, nil
 }

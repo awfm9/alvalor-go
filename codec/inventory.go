@@ -18,33 +18,32 @@
 package codec
 
 import (
-	"github.com/alvalor/alvalor-go/node"
 	"github.com/pkg/errors"
 	capnp "zombiezen.com/go/capnproto2"
+
+	"github.com/alvalor/alvalor-go/node"
 )
 
-func inventoryToMessage(entity *node.Inventory) (*capnp.Message, error) {
-	msg, seg, err := capnp.NewMessage(capnp.SingleSegment(nil))
+type initInventory func() (Inventory, error)
+
+func rootInventory(z Z) initInventory {
+	return z.NewInventory
+}
+
+func encodeInventory(seg *capnp.Segment, init initInventory, e *node.Inventory) (Inventory, error) {
+	inventory, err := init()
 	if err != nil {
-		return nil, errors.Wrap(err, "could not initialize message")
+		return Inventory{}, errors.Wrap(err, "could not initialize inventory")
 	}
-	z, err := NewRootZ(seg)
+	ids, err := inventory.NewIds(int32(len(e.IDs)))
 	if err != nil {
-		return nil, errors.Wrap(err, "could not initialize wrapper")
+		return Inventory{}, errors.Wrap(err, "could not initialize ID list")
 	}
-	inventory, err := z.NewInventory()
-	if err != nil {
-		return nil, errors.Wrap(err, "could not initialize inventory")
-	}
-	ids, err := inventory.NewIds(int32(len(entity.IDs)))
-	if err != nil {
-		return nil, errors.Wrap(err, "could not initialize ID list")
-	}
-	for i, id := range entity.IDs {
+	for i, id := range e.IDs {
 		err = ids.Set(i, id)
 		if err != nil {
-			return nil, errors.Wrap(err, "could not set ID")
+			return Inventory{}, errors.Wrap(err, "could not set ID")
 		}
 	}
-	return msg, nil
+	return inventory, nil
 }

@@ -41,34 +41,40 @@ func NewProto() Proto {
 // Encode will serialize the provided entity by writing the binary format into the provided writer.
 // It will fail if the entity type is unknown.
 func (p Proto) Encode(w io.Writer, entity interface{}) error {
-	var msg *capnp.Message
-	var err error
+	msg, seg, err := capnp.NewMessage(capnp.SingleSegment(nil))
+	if err != nil {
+		return errors.Wrap(err, "could not initialize message")
+	}
+	z, err := NewRootZ(seg)
+	if err != nil {
+		return errors.Wrap(err, "could not initialize wrapper")
+	}
 	switch e := entity.(type) {
 	case *network.Ping:
-		msg, err = pingToMessage(e)
+		_, err = encodePing(seg, rootPing(z), e)
 	case *network.Pong:
-		msg, err = pongToMessage(e)
+		_, err = encodePong(seg, rootPong(z), e)
 	case *network.Discover:
-		msg, err = discoverToMessage(e)
+		_, err = encodeDiscover(seg, rootDiscover(z), e)
 	case *network.Peers:
-		msg, err = peersToMessage(e)
+		_, err = encodePeers(seg, rootPeers(z), e)
 	case *types.Transaction:
-		msg, err = transactionToMessage(e)
+		_, err = encodeTransaction(seg, rootTransaction(z), e)
 	case *node.Mempool:
-		msg, err = mempoolToMessage(e)
+		_, err = encodeMempool(seg, rootMempool(z), e)
 	case *node.Inventory:
-		msg, err = inventoryToMessage(e)
+		_, err = encodeInventory(seg, rootInventory(z), e)
 	case *node.Request:
-		msg, err = requestToMessage(e)
+		_, err = encodeRequest(seg, rootRequest(z), e)
 	default:
 		return errors.Errorf("unknown message type (%T)", e)
 	}
 	if err != nil {
-		return errors.Wrap(err, "could not create proto message")
+		return errors.Wrap(err, "could not encode entity")
 	}
 	err = capnp.NewEncoder(w).Encode(msg)
 	if err != nil {
-		return errors.Wrap(err, "could not encode proto message")
+		return errors.Wrap(err, "could not encode message")
 	}
 	return nil
 }

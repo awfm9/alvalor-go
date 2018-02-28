@@ -24,34 +24,24 @@ import (
 	"github.com/alvalor/alvalor-go/network"
 )
 
-func pingToMessage(entity *network.Ping) (*capnp.Message, error) {
-	msg, seg, err := capnp.NewMessage(capnp.SingleSegment(nil))
-	if err != nil {
-		return nil, errors.Wrap(err, "could not initialize message")
-	}
-	z, err := NewRootZ(seg)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not initialize wrapper")
-	}
-	ping, err := z.NewPing()
-	if err != nil {
-		return nil, errors.Wrap(err, "could not initialize pong")
-	}
-	ping.SetNonce(entity.Nonce)
-	return msg, nil
+type initPing func() (Ping, error)
+
+func rootPing(z Z) initPing {
+	return z.NewPing
 }
 
-func pingFromMessage(msg *capnp.Message) (*network.Ping, error) {
-	z, err := ReadRootZ(msg)
+func childPing(seg *capnp.Segment) initPing {
+	return func() (Ping, error) {
+		ping, err := NewPing(seg)
+		return ping, err
+	}
+}
+
+func encodePing(seg *capnp.Segment, init initPing, e *network.Ping) (Ping, error) {
+	ping, err := init()
 	if err != nil {
-		return nil, errors.Wrap(err, "could not read proto wrapper")
+		return Ping{}, errors.Wrap(err, "could not initialize ping")
 	}
-	ping, err := z.Ping()
-	if err != nil {
-		return nil, errors.Wrap(err, "could not read proto ping")
-	}
-	entity := &network.Ping{
-		Nonce: ping.Nonce(),
-	}
-	return entity, nil
+	ping.SetNonce(e.Nonce)
+	return ping, nil
 }

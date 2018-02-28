@@ -23,28 +23,26 @@ import (
 	capnp "zombiezen.com/go/capnproto2"
 )
 
-func requestToMessage(entity *node.Request) (*capnp.Message, error) {
-	msg, seg, err := capnp.NewMessage(capnp.SingleSegment(nil))
+type initRequest func() (Request, error)
+
+func rootRequest(z Z) initRequest {
+	return z.NewRequest
+}
+
+func encodeRequest(seg *capnp.Segment, init initRequest, e *node.Request) (Request, error) {
+	request, err := init()
 	if err != nil {
-		return nil, errors.Wrap(err, "could not initialize message")
+		return Request{}, errors.Wrap(err, "could not initialize request")
 	}
-	z, err := NewRootZ(seg)
+	ids, err := request.NewIds(int32(len(e.IDs)))
 	if err != nil {
-		return nil, errors.Wrap(err, "could not initialize wrapper")
+		return Request{}, errors.Wrap(err, "could not initialize ID list")
 	}
-	request, err := z.NewRequest()
-	if err != nil {
-		return nil, errors.Wrap(err, "could not initialize request")
-	}
-	ids, err := request.NewIds(int32(len(entity.IDs)))
-	if err != nil {
-		return nil, errors.Wrap(err, "could not initialize ID list")
-	}
-	for i, id := range entity.IDs {
+	for i, id := range e.IDs {
 		err = ids.Set(i, id)
 		if err != nil {
-			return nil, errors.Wrap(err, "could not set ID")
+			return Request{}, errors.Wrap(err, "could not set ID")
 		}
 	}
-	return msg, nil
+	return request, nil
 }
