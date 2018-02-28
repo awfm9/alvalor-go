@@ -112,14 +112,14 @@ func generateTransaction() *types.Transaction {
 	numData := rand.Int() % 4 * 1024
 
 	// create the transfers
-	transfers := make([]types.Transfer, 0, numTransfers)
+	transfers := make([]*types.Transfer, 0, numTransfers)
 	for i := 0; i < numTransfers; i++ {
 		transfer := generateTransfer()
 		transfers = append(transfers, transfer)
 	}
 
 	// create the fees
-	fees := make([]types.Fee, 0, numFees)
+	fees := make([]*types.Fee, 0, numFees)
 	for i := 0; i < numFees; i++ {
 		fee := generateFee()
 		fees = append(fees, fee)
@@ -139,24 +139,24 @@ func generateTransaction() *types.Transaction {
 	return tx
 }
 
-func generateTransfer() types.Transfer {
+func generateTransfer() *types.Transfer {
 	from := make([]byte, 32)
 	_, _ = rand.Read(from)
 	to := make([]byte, 32)
 	_, _ = rand.Read(to)
 	amount := rand.Uint64()
-	return types.Transfer{
+	return &types.Transfer{
 		From:   from,
 		To:     to,
 		Amount: amount,
 	}
 }
 
-func generateFee() types.Fee {
+func generateFee() *types.Fee {
 	from := make([]byte, 32)
 	_, _ = rand.Read(from)
 	amount := rand.Uint64()
-	return types.Fee{
+	return &types.Fee{
 		From:   from,
 		Amount: amount,
 	}

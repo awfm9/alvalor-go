@@ -15,29 +15,38 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with Alvalor.  If not, see <http://www.gnu.org/licenses/>.
 
-package node
+package codec
 
 import (
-	"github.com/alvalor/alvalor-go/types"
-	"github.com/willf/bloom"
+	"github.com/pkg/errors"
+	capnp "zombiezen.com/go/capnproto2"
+
+	"github.com/alvalor/alvalor-go/network"
 )
 
-// Mempool is a message containing details about the memory pool.
-type Mempool struct {
-	Bloom *bloom.BloomFilter
+type initDiscover func() (Discover, error)
+
+func createRootDiscover(z Z) initDiscover {
+	return z.NewDiscover
 }
 
-// Inventory is a message containing a list of transaction hashes.
-type Inventory struct {
-	IDs [][]byte
+func readRootDiscover(z Z) initDiscover {
+	return z.Discover
 }
 
-// Request requests a number of transactions for the memory pool.
-type Request struct {
-	IDs [][]byte
+func encodeDiscover(seg *capnp.Segment, create initDiscover, e *network.Discover) (Discover, error) {
+	discover, err := create()
+	if err != nil {
+		return Discover{}, errors.Wrap(err, "could not create discover")
+	}
+	return discover, nil
 }
 
-// Batch is a batch of transactions to send as one message.
-type Batch struct {
-	Transactions []*types.Transaction
+func decodeDiscover(read initDiscover) (*network.Discover, error) {
+	_, err := read()
+	if err != nil {
+		return nil, errors.Wrap(err, "could not read discover")
+	}
+	e := &network.Discover{}
+	return e, nil
 }

@@ -15,29 +15,41 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with Alvalor.  If not, see <http://www.gnu.org/licenses/>.
 
-package node
+package codec
 
 import (
-	"github.com/alvalor/alvalor-go/types"
-	"github.com/willf/bloom"
+	"github.com/pkg/errors"
+	capnp "zombiezen.com/go/capnproto2"
+
+	"github.com/alvalor/alvalor-go/network"
 )
 
-// Mempool is a message containing details about the memory pool.
-type Mempool struct {
-	Bloom *bloom.BloomFilter
+type initPing func() (Ping, error)
+
+func createRootPing(z Z) initPing {
+	return z.NewPing
 }
 
-// Inventory is a message containing a list of transaction hashes.
-type Inventory struct {
-	IDs [][]byte
+func readRootPing(z Z) initPing {
+	return z.Ping
 }
 
-// Request requests a number of transactions for the memory pool.
-type Request struct {
-	IDs [][]byte
+func encodePing(seg *capnp.Segment, create initPing, e *network.Ping) (Ping, error) {
+	ping, err := create()
+	if err != nil {
+		return Ping{}, errors.Wrap(err, "could not create ping")
+	}
+	ping.SetNonce(e.Nonce)
+	return ping, nil
 }
 
-// Batch is a batch of transactions to send as one message.
-type Batch struct {
-	Transactions []*types.Transaction
+func decodePing(read initPing) (*network.Ping, error) {
+	ping, err := read()
+	if err != nil {
+		return nil, errors.Wrap(err, "could not read ping")
+	}
+	e := &network.Ping{
+		Nonce: ping.Nonce(),
+	}
+	return e, nil
 }

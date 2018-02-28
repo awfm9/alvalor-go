@@ -25,8 +25,8 @@ import (
 
 // Transaction represents an atomic standard transaction on the Alvalor network.
 type Transaction struct {
-	Transfers  []Transfer
-	Fees       []Fee
+	Transfers  []*Transfer
+	Fees       []*Fee
 	Data       []byte
 	Signatures [][]byte
 }

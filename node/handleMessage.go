@@ -18,6 +18,7 @@
 package node
 
 import (
+	"encoding/hex"
 	"sync"
 
 	"github.com/rs/zerolog"
@@ -38,6 +39,8 @@ func handleMessage(log zerolog.Logger, wg *sync.WaitGroup, handlers Handlers, ne
 
 	case *types.Transaction:
 
+		log.Info().Str("id", hex.EncodeToString(msg.ID())).Msg("transaction message received")
+
 		// TODO: validate the transaction
 
 		// tag the peer for having seen the transaction
@@ -47,6 +50,8 @@ func handleMessage(log zerolog.Logger, wg *sync.WaitGroup, handlers Handlers, ne
 		handlers.Entity(msg)
 
 	case *Mempool:
+
+		log.Info().Uint("cap", msg.Bloom.Cap()).Msg("bloom message received")
 
 		// find transactions in our memory pool the peer misses
 		var inv [][]byte
@@ -97,23 +102,39 @@ func handleMessage(log zerolog.Logger, wg *sync.WaitGroup, handlers Handlers, ne
 
 		log.Info().Int("num_ids", len(msg.IDs)).Msg("received request message")
 
-		// for each requested ID
+		// collect each transaction that we have from the set of requested IDs
+		var transactions []*types.Transaction
 		for _, id := range msg.IDs {
-
-			// check if we have the requested transaction
 			tx, err := pool.Get(id)
 			if err != nil {
 				// TODO: somehow punish peer for requesting something we didn't announce
 				log.Error().Err(err).Msg("requested transaction unknown")
 				continue
 			}
+			transactions = append(transactions, tx)
+		}
 
-			// then send the peer the requested transaction
-			err = net.Send(address, tx)
-			if err != nil {
-				log.Error().Err(err).Msg("could not send requested transaction")
-				continue
-			}
+		// send the transactions in a batch
+		batch := &Batch{Transactions: transactions}
+		err := net.Send(address, batch)
+		if err != nil {
+			log.Error().Err(err).Msg("could not send transactions")
+			return
+		}
+
+	case *Batch:
+
+		log.Info().Int("num_txs", len(msg.Transactions)).Msg("received batch message")
+
+		for _, tx := range msg.Transactions {
+
+			// TODO: validate transaction
+
+			// tag the peer for having seen the transaction
+			state.Tag(address, tx.ID())
+
+			// handle the transaction for our blockchain state & propagation
+			handlers.Entity(tx)
 		}
 	}
 }

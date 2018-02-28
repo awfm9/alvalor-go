@@ -15,29 +15,43 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with Alvalor.  If not, see <http://www.gnu.org/licenses/>.
 
-package node
+package codec
 
 import (
+	"bytes"
+	"testing"
+
+	"github.com/stretchr/testify/assert"
+
 	"github.com/alvalor/alvalor-go/types"
-	"github.com/willf/bloom"
 )
 
-// Mempool is a message containing details about the memory pool.
-type Mempool struct {
-	Bloom *bloom.BloomFilter
-}
+func TestTransaction(t *testing.T) {
+	proto := &Proto{}
+	tx := &types.Transaction{
+		Transfers: []*types.Transfer{
+			{From: []byte{1}, To: []byte{2}, Amount: 1000},
+			{From: []byte{2}, To: []byte{3}, Amount: 2000},
+			{From: []byte{4}, To: []byte{5}, Amount: 3000},
+		},
+		Fees: []*types.Fee{
+			{From: []byte{15}, Amount: 19},
+			{From: []byte{25}, Amount: 29},
+			{From: []byte{35}, Amount: 39},
+		},
+		Data: []byte{10, 20, 30},
+		Signatures: [][]byte{
+			{1, 2, 3},
+			{4, 5, 6},
+			{7, 8, 9},
+		},
+	}
 
-// Inventory is a message containing a list of transaction hashes.
-type Inventory struct {
-	IDs [][]byte
-}
+	buf := &bytes.Buffer{}
+	err := proto.Encode(buf, tx)
+	assert.Nil(t, err)
 
-// Request requests a number of transactions for the memory pool.
-type Request struct {
-	IDs [][]byte
-}
-
-// Batch is a batch of transactions to send as one message.
-type Batch struct {
-	Transactions []*types.Transaction
+	msg, err := proto.Decode(buf)
+	assert.Nil(t, err)
+	assert.Equal(t, tx, msg)
 }

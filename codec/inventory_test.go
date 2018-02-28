@@ -15,29 +15,32 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with Alvalor.  If not, see <http://www.gnu.org/licenses/>.
 
-package node
+package codec
 
 import (
-	"github.com/alvalor/alvalor-go/types"
-	"github.com/willf/bloom"
+	"bytes"
+	"testing"
+
+	"github.com/stretchr/testify/assert"
+
+	"github.com/alvalor/alvalor-go/node"
 )
 
-// Mempool is a message containing details about the memory pool.
-type Mempool struct {
-	Bloom *bloom.BloomFilter
-}
+func TestInventory(t *testing.T) {
+	proto := &Proto{}
+	inventory := &node.Inventory{
+		IDs: [][]byte{
+			{11, 12, 13},
+			{21, 22, 23},
+			{31, 32, 33},
+		},
+	}
 
-// Inventory is a message containing a list of transaction hashes.
-type Inventory struct {
-	IDs [][]byte
-}
+	buf := &bytes.Buffer{}
+	err := proto.Encode(buf, inventory)
+	assert.Nil(t, err)
 
-// Request requests a number of transactions for the memory pool.
-type Request struct {
-	IDs [][]byte
-}
-
-// Batch is a batch of transactions to send as one message.
-type Batch struct {
-	Transactions []*types.Transaction
+	msg, err := proto.Decode(buf)
+	assert.Nil(t, err)
+	assert.Equal(t, inventory, msg)
 }
