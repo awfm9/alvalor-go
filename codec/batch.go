@@ -21,27 +21,34 @@ import (
 	"github.com/pkg/errors"
 	capnp "zombiezen.com/go/capnproto2"
 
-	"github.com/alvalor/alvalor-go/types"
+	"github.com/alvalor/alvalor-go/node"
 )
 
-type initFee func() (Fee, error)
+type initBatch func() (Batch, error)
 
-func childFee(seg *capnp.Segment) initFee {
-	return func() (Fee, error) {
-		fee, err := NewFee(seg)
-		return fee, err
-	}
+func rootBatch(z Z) initBatch {
+	return z.NewBatch
 }
 
-func encodeFee(seg *capnp.Segment, init initFee, e *types.Fee) (Fee, error) {
-	fee, err := init()
+func encodeBatch(seg *capnp.Segment, init initBatch, e *node.Batch) (Batch, error) {
+	batch, err := init()
 	if err != nil {
-		return Fee{}, errors.Wrap(err, "could not initialize fee")
+		return Batch{}, errors.Wrap(err, "could not initialize batch")
 	}
-	err = fee.SetFrom(e.From)
+	transactions, err := batch.NewTransactions(int32(len(e.Transactions)))
 	if err != nil {
-		return Fee{}, errors.Wrap(err, "could not set from")
+		return Batch{}, errors.Wrap(err, "could not initialize transaction list")
 	}
-	fee.SetAmount(e.Amount)
-	return fee, nil
+	for i, t := range e.Transactions {
+		var transaction Transaction
+		transaction, err = encodeTransaction(seg, childTransaction(seg), t)
+		if err != nil {
+			return Batch{}, errors.Wrap(err, "could not encode transaction")
+		}
+		err = transactions.Set(i, transaction)
+		if err != nil {
+			return Batch{}, errors.Wrap(err, "could not set transaction")
+		}
+	}
+	return batch, nil
 }

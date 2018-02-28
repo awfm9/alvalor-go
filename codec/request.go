@@ -18,9 +18,10 @@
 package codec
 
 import (
-	"github.com/alvalor/alvalor-go/node"
 	"github.com/pkg/errors"
 	capnp "zombiezen.com/go/capnproto2"
+
+	"github.com/alvalor/alvalor-go/node"
 )
 
 type initRequest func() (Request, error)

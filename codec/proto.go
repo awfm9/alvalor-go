@@ -66,6 +66,8 @@ func (p Proto) Encode(w io.Writer, entity interface{}) error {
 		_, err = encodeInventory(seg, rootInventory(z), e)
 	case *node.Request:
 		_, err = encodeRequest(seg, rootRequest(z), e)
+	case *node.Batch:
+		_, err = encodeBatch(seg, rootBatch(z), e)
 	default:
 		return errors.Errorf("unknown message type (%T)", e)
 	}

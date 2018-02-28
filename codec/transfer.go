@@ -18,9 +18,10 @@
 package codec
 
 import (
-	"github.com/alvalor/alvalor-go/types"
 	"github.com/pkg/errors"
 	capnp "zombiezen.com/go/capnproto2"
+
+	"github.com/alvalor/alvalor-go/types"
 )
 
 type initTransfer func() (Transfer, error)

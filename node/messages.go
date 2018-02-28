@@ -17,7 +17,10 @@
 
 package node
 
-import "github.com/willf/bloom"
+import (
+	"github.com/alvalor/alvalor-go/types"
+	"github.com/willf/bloom"
+)
 
 // Mempool is a message containing details about the memory pool.
 type Mempool struct {
@@ -32,4 +35,9 @@ type Inventory struct {
 // Request requests a number of transactions for the memory pool.
 type Request struct {
 	IDs [][]byte
+}
+
+// Batch is a batch of transactions to send as one message.
+type Batch struct {
+	Transactions []*types.Transaction
 }

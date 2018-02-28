@@ -27,7 +27,7 @@ using Transaction = import "transaction.capnp".Transaction;
 using Mempool = import "mempool.capnp".Mempool;
 using Inventory = import "inventory.capnp".Inventory;
 using Request = import "request.capnp".Request;
-using Transactions = import "transactions.capnp".Transactions;
+using Batch = import "batch.capnp".Batch;
 
 @0x904d4f3f728c7f04;
 struct Z {
@@ -40,6 +40,6 @@ struct Z {
 		mempool @5: Mempool;
 		inventory @6: Inventory;
 		request @7: Request;
-		transactions @8: Transactions;
+		batch @8: Batch;
 	}
 }

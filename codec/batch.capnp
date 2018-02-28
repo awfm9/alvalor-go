@@ -22,6 +22,6 @@ $Go.import("codec");
 using Transaction = import "transaction.capnp".Transaction;
 
 @0xe60ceb912269b107;
-struct Transactions {
+struct Batch {
   transactions @0 :List(Transaction);
 }
