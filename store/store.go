@@ -15,12 +15,18 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with Alvalor.  If not, see <http://www.gnu.org/licenses/>.
 
-package database
+package store
 
-// Database represents a common wrapper around a key-value database.
-type Database interface {
-	Put(key []byte, val []byte) error
-	Has(key []byte) (bool, error)
-	Get(key []byte) ([]byte, error)
-	Del(key []byte) error
+// Store represents a store for different entities.
+type Store struct {
+	codec Codec
+	kv    KV
+}
+
+// New creates a new store to store entities.
+func New(codec Codec, kv KV) *Store {
+	return &Store{
+		codec: codec,
+		kv:    kv,
+	}
 }
