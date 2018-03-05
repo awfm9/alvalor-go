@@ -17,18 +17,52 @@
 
 package node
 
+import (
+	"errors"
+
+	"github.com/alvalor/alvalor-go/types"
+)
+
 type pathManager interface {
+	Add(header *types.Header) error
 	Known(hash []byte) bool
 	BestHash() []byte
 }
 
 type simplePath struct {
+	best    *types.Header
+	headers map[string]*types.Header
+}
+
+func newPath() *simplePath {
+	return &simplePath{
+		headers: make(map[string]*types.Header),
+	}
+}
+
+func (s *simplePath) Add(header *types.Header) error {
+	id := string(header.ID())
+	_, ok := s.headers[id]
+	if ok {
+		return errors.New("header already known")
+	}
+	parent := string(header.Parent)
+	_, ok = s.headers[parent]
+	if !ok {
+		return errors.New("parent not known")
+	}
+	s.headers[id] = header
+	if header.Height > s.best.Height {
+		s.best = header
+	}
+	return nil
 }
 
 func (s *simplePath) Known(hash []byte) bool {
-	return false
+	_, ok := s.headers[string(hash)]
+	return ok
 }
 
 func (s *simplePath) BestHash() []byte {
-	return nil
+	return s.best.ID()
 }

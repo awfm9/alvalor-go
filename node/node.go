@@ -85,6 +85,10 @@ func New(log zerolog.Logger, net Network, codec Codec, input <-chan interface{})
 	chain := newChain()
 	n.chain = chain
 
+	// initialize simple path manager
+	path := newPath()
+	n.path = path
+
 	// handle all input messages we get
 	n.Input(input)
 
