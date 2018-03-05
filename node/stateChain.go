@@ -17,33 +17,17 @@
 
 package node
 
-import (
-	"github.com/willf/bloom"
-
-	"github.com/alvalor/alvalor-go/types"
-)
-
-// Status message shares the node synchronization state.
-type Status struct {
-	Height uint32
+type chainManager interface {
+	Height() uint32
 }
 
-// Mempool is a message containing details about the memory pool.
-type Mempool struct {
-	Bloom *bloom.BloomFilter
+type simpleChain struct {
 }
 
-// Inventory is a message containing a list of transaction hashes.
-type Inventory struct {
-	IDs [][]byte
+func newChain() *simpleChain {
+	return &simpleChain{}
 }
 
-// Request requests a number of transactions for the memory pool.
-type Request struct {
-	IDs [][]byte
-}
-
-// Batch is a batch of transactions to send as one message.
-type Batch struct {
-	Transactions []*types.Transaction
+func (b *simpleChain) Height() uint32 {
+	return 0
 }

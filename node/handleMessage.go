@@ -26,7 +26,7 @@ import (
 	"github.com/alvalor/alvalor-go/types"
 )
 
-func handleMessage(log zerolog.Logger, wg *sync.WaitGroup, handlers Handlers, net Network, state stateManager, pool poolManager, address string, message interface{}) {
+func handleMessage(log zerolog.Logger, wg *sync.WaitGroup, handlers Handlers, net Network, peers peerManager, pool poolManager, address string, message interface{}) {
 	defer wg.Done()
 
 	// configure logger
@@ -44,7 +44,7 @@ func handleMessage(log zerolog.Logger, wg *sync.WaitGroup, handlers Handlers, ne
 		// TODO: validate the transaction
 
 		// tag the peer for having seen the transaction
-		state.Tag(address, msg.ID())
+		peers.Tag(address, msg.ID())
 
 		// handle the transaction for our blockchain state & propagation
 		handlers.Entity(msg)
@@ -59,7 +59,7 @@ func handleMessage(log zerolog.Logger, wg *sync.WaitGroup, handlers Handlers, ne
 		for _, id := range ids {
 			if msg.Bloom.Test(id) {
 				// TODO: figure out implications of false positives here
-				state.Tag(address, id)
+				peers.Tag(address, id)
 				continue
 			}
 			inv = append(inv, id)
@@ -131,7 +131,7 @@ func handleMessage(log zerolog.Logger, wg *sync.WaitGroup, handlers Handlers, ne
 			// TODO: validate transaction
 
 			// tag the peer for having seen the transaction
-			state.Tag(address, tx.ID())
+			peers.Tag(address, tx.ID())
 
 			// handle the transaction for our blockchain state & propagation
 			handlers.Entity(tx)

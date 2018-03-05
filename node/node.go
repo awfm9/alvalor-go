@@ -49,8 +49,9 @@ type simpleNode struct {
 	log   zerolog.Logger
 	wg    *sync.WaitGroup
 	net   Network
-	state stateManager
+	peers peerManager
 	pool  poolManager
+	chain chainManager
 }
 
 // New creates a new node to manage the Alvalor blockchain.
@@ -71,13 +72,17 @@ func New(log zerolog.Logger, net Network, codec Codec, input <-chan interface{})
 	n.net = net
 
 	// initialize peer state manager
-	state := newState()
-	n.state = state
+	peers := newPeers()
+	n.peers = peers
 
 	// initialize simple transaction pool
 	store := trie.New()
 	pool := newPool(codec, store)
 	n.pool = pool
+
+	// initialize simple blockchain
+	chain := newChain()
+	n.chain = chain
 
 	// handle all input messages we get
 	n.Input(input)
@@ -90,7 +95,7 @@ func (n *simpleNode) Submit(tx *types.Transaction) {
 }
 
 func (n *simpleNode) Stats() {
-	numActive := uint(len(n.state.Actives()))
+	numActive := uint(len(n.peers.Actives()))
 	numTxs := n.pool.Count()
 	n.log.Info().Uint("num_active", numActive).Uint("num_txs", numTxs).Msg("stats")
 }
@@ -102,15 +107,15 @@ func (n *simpleNode) Input(input <-chan interface{}) {
 
 func (n *simpleNode) Event(event interface{}) {
 	n.wg.Add(1)
-	go handleEvent(n.log, n.wg, n, n.net, n.state, n.pool, event)
+	go handleEvent(n.log, n.wg, n.net, n.chain, n.peers, n, event)
 }
 
 func (n *simpleNode) Message(address string, message interface{}) {
 	n.wg.Add(1)
-	go handleMessage(n.log, n.wg, n, n.net, n.state, n.pool, address, message)
+	go handleMessage(n.log, n.wg, n, n.net, n.peers, n.pool, address, message)
 }
 
 func (n *simpleNode) Entity(entity Entity) {
 	n.wg.Add(1)
-	go handleEntity(n.log, n.wg, n.net, n.state, n.pool, entity)
+	go handleEntity(n.log, n.wg, n.net, n.peers, n.pool, entity)
 }

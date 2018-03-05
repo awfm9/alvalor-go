@@ -26,7 +26,7 @@ import (
 	"github.com/alvalor/alvalor-go/types"
 )
 
-func handleEntity(log zerolog.Logger, wg *sync.WaitGroup, net Network, state stateManager, pool poolManager, entity Entity) {
+func handleEntity(log zerolog.Logger, wg *sync.WaitGroup, net Network, peers peerManager, pool poolManager, entity Entity) {
 	defer wg.Done()
 
 	var (
@@ -57,14 +57,14 @@ func handleEntity(log zerolog.Logger, wg *sync.WaitGroup, net Network, state sta
 		}
 
 		// create lookup to know who to exclude from broadcast
-		tags := state.Tags(id)
+		tags := peers.Tags(id)
 		lookup := make(map[string]struct{}, len(tags))
 		for _, address := range tags {
 			lookup[address] = struct{}{}
 		}
 
 		// for each active peer
-		actives := state.Actives()
+		actives := peers.Actives()
 		for _, address := range actives {
 
 			// skip if he already knows the transaction
