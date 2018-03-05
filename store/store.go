@@ -17,6 +17,12 @@
 
 package store
 
+import (
+	"bytes"
+
+	"github.com/pkg/errors"
+)
+
 // Store represents a store for different entities.
 type Store struct {
 	codec Codec
@@ -29,4 +35,34 @@ func New(codec Codec, kv KV) *Store {
 		codec: codec,
 		kv:    kv,
 	}
+}
+
+// Save will put a new entity into the store.
+func (s *Store) Save(entity Entity) error {
+	buf := &bytes.Buffer{}
+	err := s.codec.Encode(buf, entity)
+	if err != nil {
+		return errors.Wrap(err, "could not encode entity")
+	}
+	id := entity.ID()
+	data := buf.Bytes()
+	err = s.kv.Put(id, data)
+	if err != nil {
+		return errors.Wrap(err, "could not put entity data")
+	}
+	return nil
+}
+
+// Retrieve will retrieve an entity from the store.
+func (s *Store) Retrieve(id []byte) (interface{}, error) {
+	data, err := s.kv.Get(id)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not get entity data")
+	}
+	buf := bytes.NewBuffer(data)
+	entity, err := s.codec.Decode(buf)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not decode entity")
+	}
+	return entity, nil
 }
