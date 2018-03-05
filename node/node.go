@@ -52,6 +52,7 @@ type simpleNode struct {
 	peers peerManager
 	pool  poolManager
 	chain chainManager
+	path  pathManager
 }
 
 // New creates a new node to manage the Alvalor blockchain.
@@ -112,7 +113,7 @@ func (n *simpleNode) Event(event interface{}) {
 
 func (n *simpleNode) Message(address string, message interface{}) {
 	n.wg.Add(1)
-	go handleMessage(n.log, n.wg, n, n.net, n.peers, n.pool, address, message)
+	go handleMessage(n.log, n.wg, n, n.net, n.chain, n.path, n.peers, n.pool, address, message)
 }
 
 func (n *simpleNode) Entity(entity Entity) {

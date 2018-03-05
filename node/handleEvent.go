@@ -37,10 +37,15 @@ func handleEvent(log zerolog.Logger, wg *sync.WaitGroup, net Network, chain chai
 
 	case network.Connected:
 		peers.Active(e.Address)
-		status := &Status{
-			Height: chain.Height(),
+		height, err := chain.Height()
+		if err != nil {
+			log.Error().Err(err).Msg("could not get chain height")
+			return
 		}
-		err := net.Send(e.Address, status)
+		status := &Status{
+			Height: height,
+		}
+		err = net.Send(e.Address, status)
 		if err != nil {
 			log.Error().Err(err).Msg("could not send status message")
 			return

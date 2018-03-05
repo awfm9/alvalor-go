@@ -17,30 +17,18 @@
 
 package node
 
-type chainManager interface {
-	Height() (uint32, error)
-	BestHash() ([]byte, error)
-	HashByHeight(height uint32) ([]byte, error)
+type pathManager interface {
+	Known(hash []byte) bool
+	BestHash() []byte
 }
 
-type simpleChain struct {
+type simplePath struct {
 }
 
-func newChain() *simpleChain {
-	return &simpleChain{}
+func (s *simplePath) Known(hash []byte) bool {
+	return false
 }
 
-func (b *simpleChain) Height() (uint32, error) {
-	// TODO
-	return 0, nil
-}
-
-func (b *simpleChain) BestHash() ([]byte, error) {
-	// TODO
-	return nil, nil
-}
-
-func (b *simpleChain) HashByHeight(height uint32) ([]byte, error) {
-	// TODO
-	return nil, nil
+func (s *simplePath) BestHash() []byte {
+	return nil
 }

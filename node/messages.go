@@ -23,9 +23,15 @@ import (
 	"github.com/alvalor/alvalor-go/types"
 )
 
-// Status message shares the node synchronization state.
+// Status message shares our top block height.
 type Status struct {
 	Height uint32
+	Hash   []byte
+}
+
+// Sync requests headers we are missing.
+type Sync struct {
+	Locators [][]byte
 }
 
 // Mempool is a message containing details about the memory pool.
