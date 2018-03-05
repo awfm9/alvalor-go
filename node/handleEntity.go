@@ -30,11 +30,11 @@ func handleEntity(log zerolog.Logger, wg *sync.WaitGroup, net Network, peers pee
 	defer wg.Done()
 
 	var (
-		id = entity.ID()
+		hash = entity.Hash()
 	)
 
 	// configure logger
-	log = log.With().Str("component", "entity").Str("id", hex.EncodeToString(id)).Logger()
+	log = log.With().Str("component", "entity").Str("hash", hex.EncodeToString(hash)).Logger()
 	log.Debug().Msg("entity routine started")
 	defer log.Debug().Msg("entity routine stopped")
 
@@ -43,7 +43,7 @@ func handleEntity(log zerolog.Logger, wg *sync.WaitGroup, net Network, peers pee
 	case *types.Transaction:
 
 		// check if we already know the transaction; if so, ignore it
-		ok := pool.Known(id)
+		ok := pool.Known(hash)
 		if ok {
 			log.Debug().Msg("transaction already known")
 			return
@@ -57,7 +57,7 @@ func handleEntity(log zerolog.Logger, wg *sync.WaitGroup, net Network, peers pee
 		}
 
 		// create lookup to know who to exclude from broadcast
-		tags := peers.Tags(id)
+		tags := peers.Tags(hash)
 		lookup := make(map[string]struct{}, len(tags))
 		for _, address := range tags {
 			lookup[address] = struct{}{}

@@ -17,7 +17,7 @@
 
 package blockchain
 
-// Entity represents any type that has a unique hash as ID.
+// Entity represents any type that has a hash as unique identifier.
 type Entity interface {
-	ID() []byte
+	Hash() []byte
 }

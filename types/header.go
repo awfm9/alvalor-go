@@ -36,8 +36,8 @@ type Header struct {
 	Nonce  uint64
 }
 
-// ID returns the unique hash of the block with the given header.
-func (hdr Header) ID() []byte {
+// Hash returns the unique hash of header.
+func (hdr Header) Hash() []byte {
 	h, _ := blake2b.New256(nil)
 	_, _ = h.Write(hdr.Parent)
 	_, _ = h.Write(hdr.State)

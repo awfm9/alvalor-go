@@ -25,7 +25,7 @@ import (
 	"github.com/alvalor/alvalor-go/network"
 )
 
-func handleEvent(log zerolog.Logger, wg *sync.WaitGroup, net Network, chain chainManager, peers peerManager, handlers Handlers, event interface{}) {
+func handleEvent(log zerolog.Logger, wg *sync.WaitGroup, net Network, chain Blockchain, peers peerManager, handlers Handlers, event interface{}) {
 	defer wg.Done()
 
 	// configure logger
@@ -37,15 +37,11 @@ func handleEvent(log zerolog.Logger, wg *sync.WaitGroup, net Network, chain chai
 
 	case network.Connected:
 		peers.Active(e.Address)
-		height, err := chain.Height()
-		if err != nil {
-			log.Error().Err(err).Msg("could not get chain height")
-			return
-		}
+		height := chain.Current().Height
 		status := &Status{
 			Height: height,
 		}
-		err = net.Send(e.Address, status)
+		err := net.Send(e.Address, status)
 		if err != nil {
 			log.Error().Err(err).Msg("could not send status message")
 			return

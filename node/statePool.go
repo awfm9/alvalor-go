@@ -35,10 +35,10 @@ type Store interface {
 
 type poolManager interface {
 	Add(tx *types.Transaction) error
-	Get(id []byte) (*types.Transaction, error)
-	Remove(id []byte) error
+	Get(hash []byte) (*types.Transaction, error)
+	Remove(hash []byte) error
 	Count() uint
-	Known(id []byte) bool
+	Known(hash []byte) bool
 	IDs() [][]byte
 }
 
@@ -68,24 +68,24 @@ func (p *simplePool) Add(tx *types.Transaction) error {
 		return errors.Wrap(err, "could not encode transaction")
 	}
 
-	id := tx.ID()
+	hash := tx.Hash()
 	data := buf.Bytes()
-	err = p.store.Put(id, data)
+	err = p.store.Put(hash, data)
 	if err != nil {
 		return errors.Wrap(err, "could not put data")
 	}
 
 	// TODO: fix tests to check ids entry
-	p.ids[string(id)] = struct{}{}
+	p.ids[string(hash)] = struct{}{}
 
 	return nil
 }
 
-func (p *simplePool) Get(id []byte) (*types.Transaction, error) {
+func (p *simplePool) Get(hash []byte) (*types.Transaction, error) {
 	p.Lock()
 	defer p.Unlock()
 
-	data, err := p.store.Get(id)
+	data, err := p.store.Get(hash)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get data")
 	}
@@ -99,17 +99,17 @@ func (p *simplePool) Get(id []byte) (*types.Transaction, error) {
 	return tx.(*types.Transaction), nil
 }
 
-func (p *simplePool) Remove(id []byte) error {
+func (p *simplePool) Remove(hash []byte) error {
 	p.Lock()
 	defer p.Unlock()
 
-	err := p.store.Del(id)
+	err := p.store.Del(hash)
 	if err != nil {
 		return errors.Wrap(err, "could not del data")
 	}
 
 	// TODO: fix tests to check ids entry
-	delete(p.ids, string(id))
+	delete(p.ids, string(hash))
 
 	return nil
 }
@@ -122,12 +122,12 @@ func (p *simplePool) Count() uint {
 	return uint(len(p.ids))
 }
 
-func (p *simplePool) Known(id []byte) bool {
+func (p *simplePool) Known(hash []byte) bool {
 	p.Lock()
 	defer p.Unlock()
 
 	// TODO: check tests to use lookup for known
-	_, ok := p.ids[string(id)]
+	_, ok := p.ids[string(hash)]
 	return ok
 }
 
@@ -136,8 +136,8 @@ func (p *simplePool) IDs() [][]byte {
 	defer p.Unlock()
 
 	ids := make([][]byte, 0, len(p.ids))
-	for id := range p.ids {
-		ids = append(ids, []byte(id))
+	for hash := range p.ids {
+		ids = append(ids, []byte(hash))
 	}
 
 	return ids

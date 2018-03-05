@@ -27,7 +27,7 @@ import (
 	"github.com/alvalor/alvalor-go/types"
 )
 
-func handleMessage(log zerolog.Logger, wg *sync.WaitGroup, handlers Handlers, net Network, chain chainManager, path pathManager, peers peerManager, pool poolManager, address string, message interface{}) {
+func handleMessage(log zerolog.Logger, wg *sync.WaitGroup, handlers Handlers, net Network, chain Blockchain, path pathManager, peers peerManager, pool poolManager, address string, message interface{}) {
 	defer wg.Done()
 
 	// configure logger
@@ -44,15 +44,9 @@ func handleMessage(log zerolog.Logger, wg *sync.WaitGroup, handlers Handlers, ne
 
 		// TODO: should we save the height to the peer state?
 
-		// get local best validated height from blockchain DB
-		height, err := chain.Height()
-		if err != nil {
-			log.Error().Err(err).Msg("could not get chain height")
-			return
-		}
-
 		// don't take any action if we are not behind the peer
-		if msg.Height <= height {
+		height := chain.Current().Height
+		if msg.Height <= chain.Current().Height {
 			log.Debug().Uint32("height", height).Msg("chain height ahead of peer")
 			return
 		}
@@ -64,15 +58,9 @@ func handleMessage(log zerolog.Logger, wg *sync.WaitGroup, handlers Handlers, ne
 			return
 		}
 
-		// get the best block hash from local blockchain DB
-		bestBlock, err := chain.BestHash()
-		if err != nil {
-			log.Error().Err(err).Msg("could not get best block hash")
-			return
-		}
-
-		// include the best header hash if it's different from the best validated block
+		// add the latest synching header to our locator hashes if it's different from chain state
 		var locators [][]byte
+		bestBlock := chain.Current().Hash()
 		bestHeader := path.BestHash()
 		if !bytes.Equal(bestHeader, bestBlock) {
 			locators = append(locators, bestHeader)
@@ -90,19 +78,19 @@ func handleMessage(log zerolog.Logger, wg *sync.WaitGroup, handlers Handlers, ne
 
 		// retrieve the hashes from the blockchain database
 		for _, height := range heights {
-			hash, err := chain.HashByHeight(height)
+			header, err := chain.HeaderByHeight(height)
 			if err != nil {
 				log.Error().Err(err).Msg("could not get hash by index")
 				return
 			}
-			locators = append(locators, hash)
+			locators = append(locators, header.Hash())
 		}
 
 		// create the synchronization request & send
 		sync := &Sync{
 			Locators: locators,
 		}
-		err = net.Send(address, sync)
+		err := net.Send(address, sync)
 		if err != nil {
 			log.Error().Err(err).Msg("could not send synchronization")
 			return
@@ -110,12 +98,14 @@ func handleMessage(log zerolog.Logger, wg *sync.WaitGroup, handlers Handlers, ne
 
 	case *types.Transaction:
 
-		log.Info().Str("id", hex.EncodeToString(msg.ID())).Msg("transaction message received")
+		hash := msg.Hash()
+
+		log.Info().Str("hash", hex.EncodeToString(hash)).Msg("transaction message received")
 
 		// TODO: validate the transaction
 
 		// tag the peer for having seen the transaction
-		peers.Tag(address, msg.ID())
+		peers.Tag(address, hash)
 
 		// handle the transaction for our blockchain state & propagation
 		handlers.Entity(msg)
@@ -202,7 +192,7 @@ func handleMessage(log zerolog.Logger, wg *sync.WaitGroup, handlers Handlers, ne
 			// TODO: validate transaction
 
 			// tag the peer for having seen the transaction
-			peers.Tag(address, tx.ID())
+			peers.Tag(address, tx.Hash())
 
 			// handle the transaction for our blockchain state & propagation
 			handlers.Entity(tx)

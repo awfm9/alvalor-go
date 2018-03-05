@@ -41,8 +41,8 @@ func newPath() *simplePath {
 }
 
 func (s *simplePath) Add(header *types.Header) error {
-	id := string(header.ID())
-	_, ok := s.headers[id]
+	hash := string(header.Hash())
+	_, ok := s.headers[hash]
 	if ok {
 		return errors.New("header already known")
 	}
@@ -51,7 +51,7 @@ func (s *simplePath) Add(header *types.Header) error {
 	if !ok {
 		return errors.New("parent not known")
 	}
-	s.headers[id] = header
+	s.headers[hash] = header
 	if header.Height > s.best.Height {
 		s.best = header
 	}
@@ -64,5 +64,5 @@ func (s *simplePath) Has(hash []byte) bool {
 }
 
 func (s *simplePath) BestHash() []byte {
-	return s.best.ID()
+	return s.best.Hash()
 }

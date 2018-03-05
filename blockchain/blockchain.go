@@ -17,20 +17,92 @@
 
 package blockchain
 
+import (
+	"encoding/binary"
+
+	"github.com/alvalor/alvalor-go/types"
+	"github.com/pkg/errors"
+)
+
 // Blockchain represents a wrapper around all blockchain data.
 type Blockchain struct {
+	heights      KV
+	bodies       KV
 	headers      Store
 	transactions Store
-	heights      KV
-	lists        KV
 }
 
 // New creates a new blockchain database.
-func New(headers Store, transactions Store, heights KV, lists KV) *Blockchain {
+func New(heights KV, bodies KV, headers Store, transactions Store) *Blockchain {
 	return &Blockchain{
+		heights:      heights,
+		bodies:       bodies,
 		headers:      headers,
 		transactions: transactions,
-		heights:      heights,
-		lists:        lists,
 	}
+}
+
+// AddBlock adds a block to the blockchain.
+func (bc *Blockchain) AddBlock(block *types.Block) error {
+	hash := block.Hash()
+	key := make([]byte, 4)
+	binary.LittleEndian.PutUint32(key, block.Height)
+	err := bc.heights.Put(key, hash)
+	if err != nil {
+		return errors.Wrap(err, "could not map block height to hash")
+	}
+	body := make([]byte, 0, len(block.Transactions)*32)
+	for _, tx := range block.Transactions {
+		err = bc.transactions.Save(tx)
+		if err != nil {
+			return errors.Wrap(err, "could not store block transaction")
+		}
+		body = append(body, tx.Hash()...)
+	}
+	err = bc.bodies.Put(hash, body)
+	if err != nil {
+		return errors.Wrap(err, "could not store block transaction IDs")
+	}
+	err = bc.headers.Save(&block.Header)
+	if err != nil {
+		return errors.Wrap(err, "could not store block header")
+	}
+	return nil
+}
+
+// HeaderByHash retrieves a header by its hash.
+func (bc *Blockchain) HeaderByHash(hash []byte) (*types.Header, error) {
+	entity, err := bc.headers.Retrieve(hash)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not retrieve header by hash")
+	}
+	header, ok := entity.(*types.Header)
+	if !ok {
+		return nil, errors.New("could not convert entity to header")
+	}
+	return header, nil
+}
+
+// HeaderByHeight retrieves a header by its height.
+func (bc *Blockchain) HeaderByHeight(height uint32) (*types.Header, error) {
+	key := make([]byte, 4)
+	binary.LittleEndian.PutUint32(key, height)
+	hash, err := bc.heights.Get(key)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not retrieve header by height")
+	}
+	return bc.HeaderByHash(hash)
+}
+
+// TransactionByHash retrieves a transaction by its hash.
+func (bc *Blockchain) TransactionByHash(hash []byte) (*types.Transaction, error) {
+	entity, err := bc.transactions.Retrieve(hash)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not retrieve transaction by hash")
+	}
+	tx, ok := entity.(*types.Transaction)
+	if !ok {
+		return nil, errors.New("could not convert entity to transaction")
+	}
+	return tx, nil
 }

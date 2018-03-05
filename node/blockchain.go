@@ -17,15 +17,13 @@
 
 package node
 
-// Entity is any data structure that returns a unique ID.
-type Entity interface {
-	Hash() []byte
-}
+import "github.com/alvalor/alvalor-go/types"
 
-// Handlers describes the handlers we need to process everything.
-type Handlers interface {
-	Input(input <-chan interface{})
-	Event(event interface{})
-	Message(address string, message interface{})
-	Entity(entity Entity)
+// Blockchain represents an interface to access all blockchain related data.
+type Blockchain interface {
+	Current() *types.Block
+	AddBlock(block *types.Block) error
+	HeaderByHash(hash []byte) (*types.Header, error)
+	HeaderByHeight(height uint32) (*types.Header, error)
+	TransactionByHash(hash []byte) (*types.Transaction, error)
 }
