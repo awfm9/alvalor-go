@@ -17,6 +17,12 @@
 
 package node
 
+import (
+	"errors"
+
+	"github.com/alvalor/alvalor-go/types"
+)
+
 type chainManager interface {
 	Height() (uint32, error)
 	BestHash() ([]byte, error)
@@ -24,23 +30,49 @@ type chainManager interface {
 }
 
 type simpleChain struct {
+	best   *types.Block
+	blocks map[string]*types.Block
 }
 
 func newChain() *simpleChain {
 	return &simpleChain{}
 }
 
+func (b *simpleChain) Add(block *types.Block) error {
+	id := string(block.ID())
+	_, ok := b.blocks[id]
+	if ok {
+		return errors.New("block already known")
+	}
+	parent := string(block.Parent)
+	_, ok = b.blocks[parent]
+	if !ok {
+		return errors.New("block parent unknown")
+	}
+	b.blocks[id] = block
+	if block.Height > b.best.Height {
+		b.best = block
+	}
+	return nil
+}
+
 func (b *simpleChain) Height() (uint32, error) {
-	// TODO
-	return 0, nil
+	return b.best.Height, nil
 }
 
 func (b *simpleChain) BestHash() ([]byte, error) {
-	// TODO
-	return nil, nil
+	return b.best.ID(), nil
 }
 
 func (b *simpleChain) HashByHeight(height uint32) ([]byte, error) {
-	// TODO
-	return nil, nil
+	if height > b.best.Height {
+		return nil, errors.New("invalid block height")
+
+	}
+	for _, block := range b.blocks {
+		if block.Height == height {
+			return block.ID(), nil
+		}
+	}
+	return nil, errors.New("unknown block height")
 }
