@@ -58,7 +58,7 @@ func handleMessage(log zerolog.Logger, wg *sync.WaitGroup, handlers Handlers, ne
 		}
 
 		// check if we are already synching the path to this unknown hash
-		ok := path.Known(msg.Hash)
+		ok := path.Has(msg.Hash)
 		if ok {
 			log.Debug().Str("hash", hex.EncodeToString(msg.Hash)).Msg("path already synching")
 			return

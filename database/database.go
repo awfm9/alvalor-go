@@ -47,8 +47,8 @@ func Load(h hash.Hash, cd Codec, kv *badger.DB) (*DB, error) {
 			if err != nil {
 				return errors.Wrapf(err, "could not retrieve item value (%x)", key)
 			}
-			ok := tr.Put(key, value, false)
-			if !ok {
+			err = tr.Put(key, value)
+			if err != nil {
 				return errors.Wrapf(err, "could not put value (%x) with key (%x)", value, key)
 			}
 		}
@@ -79,21 +79,21 @@ func (db *DB) Insert(entity Entity) error {
 		return errors.Wrap(err, "could not store data for hash")
 	}
 	key := entity.ID()
-	ok := db.tr.Put(key, hash, false)
-	if !ok {
-		return errors.Errorf("could not store hash for key (%x)", hash)
+	err = db.tr.Put(key, hash)
+	if err != nil {
+		return errors.Wrapf(err, "could not store hash for key (%x)", hash)
 	}
 	return nil
 }
 
 // Retrieve will retrieve an entity from the database by its unique ID.
 func (db *DB) Retrieve(key []byte) (Entity, error) {
-	hash, ok := db.tr.Get(key)
-	if !ok {
-		return nil, errors.New("could not retriev hash for key")
+	hash, err := db.tr.Get(key)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not retrieve hash for key")
 	}
 	var data []byte
-	err := db.kv.View(func(tx *badger.Txn) error {
+	err = db.kv.View(func(tx *badger.Txn) error {
 		var inErr error
 		item, inErr := tx.Get(hash)
 		if inErr != nil {

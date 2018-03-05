@@ -25,7 +25,7 @@ import (
 
 type pathManager interface {
 	Add(header *types.Header) error
-	Known(hash []byte) bool
+	Has(hash []byte) bool
 	BestHash() []byte
 }
 
@@ -58,7 +58,7 @@ func (s *simplePath) Add(header *types.Header) error {
 	return nil
 }
 
-func (s *simplePath) Known(hash []byte) bool {
+func (s *simplePath) Has(hash []byte) bool {
 	_, ok := s.headers[string(hash)]
 	return ok
 }
