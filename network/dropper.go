@@ -22,7 +22,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/rs/zerolog"
+	"github.com/awishformore/zerolog"
 )
 
 func handleDropping(log zerolog.Logger, wg *sync.WaitGroup, cfg *Config, peers peerManager, stop <-chan struct{}) {

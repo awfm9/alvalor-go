@@ -26,8 +26,16 @@
   name = "github.com/andreburgaud/crypt2go"
 
 [[constraint]]
+  name = "github.com/awishformore/zerolog"
+  revision = "425d4d7f88048d4652f4352c42f4078496fa5c54"
+
+[[constraint]]
   name = "github.com/dgraph-io/badger"
   version = "1.3.0"
+
+[[constraint]]
+  branch = "master"
+  name = "github.com/hashicorp/go-multierror"
 
 [[constraint]]
   name = "github.com/pierrec/lz4"
@@ -38,12 +46,12 @@
   version = "0.8.0"
 
 [[constraint]]
-  name = "github.com/rs/zerolog"
-  version = "1.4.0"
-
-[[constraint]]
   name = "github.com/satori/go.uuid"
   version = "1.2.0"
+
+[[constraint]]
+  name = "github.com/spf13/pflag"
+  version = "1.0.0"
 
 [[constraint]]
   name = "github.com/stretchr/testify"
@@ -56,6 +64,10 @@
 [[constraint]]
   branch = "master"
   name = "github.com/tyler-smith/go-bip39"
+
+[[constraint]]
+  name = "github.com/willf/bloom"
+  version = "2.0.3"
 
 [[constraint]]
   branch = "master"

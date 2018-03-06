@@ -20,7 +20,7 @@ package node
 import (
 	"sync"
 
-	"github.com/rs/zerolog"
+	"github.com/awishformore/zerolog"
 
 	"github.com/alvalor/alvalor-go/network"
 )

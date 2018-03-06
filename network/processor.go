@@ -21,7 +21,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/rs/zerolog"
+	"github.com/awishformore/zerolog"
 )
 
 func handleProcessing(log zerolog.Logger, wg *sync.WaitGroup, cfg *Config, book addressManager, events eventManager, address string, input <-chan interface{}, output chan<- interface{}) {

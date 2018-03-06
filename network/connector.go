@@ -19,10 +19,9 @@ package network
 
 import (
 	"bytes"
-	"encoding/hex"
 	"sync"
 
-	"github.com/rs/zerolog"
+	"github.com/awishformore/zerolog"
 )
 
 func handleConnecting(log zerolog.Logger, wg *sync.WaitGroup, cfg *Config, pending pendingManager, peers peerManager, rep reputationManager, book addressManager, dialer dialWrapper, events eventManager, address string) {
@@ -81,13 +80,13 @@ func handleConnecting(log zerolog.Logger, wg *sync.WaitGroup, cfg *Config, pendi
 	}
 	nonceIn := ack[len(network):]
 	if bytes.Equal(nonceIn, nonce) {
-		log.Error().Str("nonce", hex.EncodeToString(nonce)).Msg("identical nonce")
+		log.Error().Hex("nonce", nonce).Msg("identical nonce")
 		conn.Close()
 		book.Block(address)
 		return
 	}
 	if peers.Known(nonceIn) {
-		log.Error().Str("nonce", hex.EncodeToString(nonce)).Msg("nonce already known")
+		log.Error().Hex("nonce", nonce).Msg("nonce already known")
 		conn.Close()
 		book.Block(address)
 		return

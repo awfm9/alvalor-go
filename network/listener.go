@@ -22,7 +22,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/rs/zerolog"
+	"github.com/awishformore/zerolog"
 )
 
 func handleListening(log zerolog.Logger, wg *sync.WaitGroup, cfg *Config, handlers handlerManager, listener listenWrapper, stop <-chan struct{}) {
