@@ -49,7 +49,7 @@ func newSimplePeerManager(handlers handlerManager, min uint, max uint) *simplePe
 		handlers: handlers,
 		min:      min,
 		max:      max,
-		buffer:   128,
+		buffer:   2048,
 		reg:      make(map[string]*peer),
 	}
 }

@@ -23,7 +23,10 @@ import "github.com/alvalor/alvalor-go/types"
 type Blockchain interface {
 	Current() *types.Block
 	AddBlock(block *types.Block) error
+	TransactionByHash(hash []byte) (*types.Transaction, error)
+	HashByHeight(height uint32) ([]byte, error)
 	HeaderByHash(hash []byte) (*types.Header, error)
 	HeaderByHeight(height uint32) (*types.Header, error)
-	TransactionByHash(hash []byte) (*types.Transaction, error)
+	BlockByHash(hash []byte) (*types.Block, error)
+	BlockByHeight(height uint32) (*types.Block, error)
 }

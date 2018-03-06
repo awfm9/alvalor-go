@@ -42,16 +42,14 @@ func handleMessage(log zerolog.Logger, wg *sync.WaitGroup, handlers Handlers, ne
 
 		log.Info().Uint32("height", msg.Height).Msg("status message received")
 
-		// TODO: should we save the height to the peer state?
-
 		// don't take any action if we are not behind the peer
 		height := chain.Current().Height
 		if msg.Height <= chain.Current().Height {
-			log.Debug().Uint32("height", height).Msg("chain height ahead of peer")
+			log.Debug().Uint32("height", height).Msg("peer not ahead of us")
 			return
 		}
 
-		// check if we are already synching the path to this unknown hash
+		// check if we are already synching the path to this unstored block
 		ok := path.Has(msg.Hash)
 		if ok {
 			log.Debug().Str("hash", hex.EncodeToString(msg.Hash)).Msg("path already synching")
@@ -78,12 +76,12 @@ func handleMessage(log zerolog.Logger, wg *sync.WaitGroup, handlers Handlers, ne
 
 		// retrieve the hashes from the blockchain database
 		for _, height := range heights {
-			header, err := chain.HeaderByHeight(height)
+			hash, err := chain.HashByHeight(height)
 			if err != nil {
 				log.Error().Err(err).Msg("could not get hash by index")
 				return
 			}
-			locators = append(locators, header.Hash())
+			locators = append(locators, hash)
 		}
 
 		// create the synchronization request & send
@@ -94,6 +92,52 @@ func handleMessage(log zerolog.Logger, wg *sync.WaitGroup, handlers Handlers, ne
 		if err != nil {
 			log.Error().Err(err).Msg("could not send synchronization")
 			return
+		}
+
+	case *Sync:
+
+		// try finding a locator hash in our best path
+		var start uint32
+	Outer:
+		for _, locator := range msg.Locators {
+			header := &chain.Current().Header
+			for {
+				hash := header.Hash()
+				if bytes.Equal(hash, locator) {
+					start = header.Height
+					break Outer
+				}
+				parent := header.Parent
+				if bytes.Equal(parent, bytes.Repeat([]byte{0}, 32)) {
+					break
+				}
+				var err error
+				header, err = chain.HeaderByHash(parent)
+				if err != nil {
+					log.Error().Err(err).Msg("could not get parent for sync")
+					return
+				}
+			}
+		}
+
+		// return all headers from the found start to the top
+		var headers []*types.Header
+		for height := start + 1; height <= chain.Current().Height; height++ {
+			header, err := chain.HeaderByHeight(height)
+			if err != nil {
+				log.Error().Err(err).Msg("could not get header for sync")
+				return
+			}
+			headers = append(headers, header)
+		}
+
+		// send each header
+		for _, header := range headers {
+			err := net.Send(address, header)
+			if err != nil {
+				log.Error().Err(err).Msg("could not send header for sync")
+				return
+			}
 		}
 
 	case *types.Transaction:
