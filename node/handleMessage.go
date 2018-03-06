@@ -44,7 +44,7 @@ func handleMessage(log zerolog.Logger, wg *sync.WaitGroup, net Network, chain Bl
 
 		// don't take any action if we are not behind the peer
 		height := chain.Current().Height
-		if msg.Height <= chain.Current().Height {
+		if msg.Height <= height {
 			log.Debug().Uint32("height", height).Msg("peer not ahead of us")
 			return
 		}
