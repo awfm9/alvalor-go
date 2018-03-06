@@ -40,19 +40,19 @@ func handleMessage(log zerolog.Logger, wg *sync.WaitGroup, net Network, chain Bl
 
 	case *Status:
 
-		log.Info().Uint32("height", msg.Height).Msg("status message received")
+		log = log.With().Uint32("height", msg.Height).Str("hash", hex.EncodeToString(msg.Hash)).Logger()
 
 		// don't take any action if we are not behind the peer
 		height := chain.Current().Height
 		if msg.Height <= height {
-			log.Debug().Uint32("height", height).Msg("peer not ahead of us")
+			log.Debug().Msg("already synced with peer")
 			return
 		}
 
 		// check if we are already synching the path to this unstored block
 		ok := path.Has(msg.Hash)
 		if ok {
-			log.Debug().Str("hash", hex.EncodeToString(msg.Hash)).Msg("path already synching")
+			log.Debug().Msg("already syncing with peer")
 			return
 		}
 
@@ -78,7 +78,7 @@ func handleMessage(log zerolog.Logger, wg *sync.WaitGroup, net Network, chain Bl
 		for _, height := range heights {
 			hash, err := chain.HashByHeight(height)
 			if err != nil {
-				log.Error().Err(err).Msg("could not get hash by index")
+				log.Error().Err(err).Uint32("height", height).Msg("could not get hash by height")
 				return
 			}
 			locators = append(locators, hash)
@@ -94,7 +94,16 @@ func handleMessage(log zerolog.Logger, wg *sync.WaitGroup, net Network, chain Bl
 			return
 		}
 
+		log.Debug().Msg("replied with synchronization message")
+
 	case *Sync:
+
+		locators := make([]string, 0, len(msg.Locators))
+		for _, locator := range msg.Locators {
+			locators = append(locators, hex.EncodeToString(locator))
+		}
+
+		log = log.With().Strs("locators", locators).Logger()
 
 		// try finding a locator hash in our best path
 		var start uint32
@@ -114,7 +123,7 @@ func handleMessage(log zerolog.Logger, wg *sync.WaitGroup, net Network, chain Bl
 				var err error
 				header, err = chain.HeaderByHash(parent)
 				if err != nil {
-					log.Error().Err(err).Msg("could not get parent for sync")
+					log.Error().Err(err).Str("hash", hex.EncodeToString(parent)).Msg("could not header by hash")
 					return
 				}
 			}
@@ -125,7 +134,7 @@ func handleMessage(log zerolog.Logger, wg *sync.WaitGroup, net Network, chain Bl
 		for height := start + 1; height <= chain.Current().Height; height++ {
 			header, err := chain.HeaderByHeight(height)
 			if err != nil {
-				log.Error().Err(err).Msg("could not get header for sync")
+				log.Error().Err(err).Uint32("height", height).Msg("could not get header by height")
 				return
 			}
 			headers = append(headers, header)
@@ -135,16 +144,38 @@ func handleMessage(log zerolog.Logger, wg *sync.WaitGroup, net Network, chain Bl
 		for _, header := range headers {
 			err := net.Send(address, header)
 			if err != nil {
-				log.Error().Err(err).Msg("could not send header for sync")
+				log.Error().Err(err).Msg("could not send header")
 				return
 			}
 		}
 
+		log.Debug().Msg("processed synchronization message")
+
+	case *types.Header:
+
+		hash := msg.Hash()
+		log = log.With().Str("msg_type", "header").Str("hash", hex.EncodeToString(hash)).Logger()
+
+		// check if we already know the header
+		_, err := chain.HeaderByHash(hash)
+		if err == nil {
+			log.Debug().Msg("header already known")
+			return
+		}
+
+		log.Debug().Msg("processed header message")
+
 	case *types.Transaction:
 
 		hash := msg.Hash()
+		log = log.With().Str("msg_type", "transaction").Str("hash", hex.EncodeToString(hash)).Logger()
 
-		log.Info().Str("hash", hex.EncodeToString(hash)).Msg("transaction message received")
+		// check if we already know the transaction
+		_, err := chain.TransactionByHash(hash)
+		if err == nil {
+			log.Debug().Msg("transaction already known")
+			return
+		}
 
 		// TODO: validate the transaction
 
@@ -154,9 +185,11 @@ func handleMessage(log zerolog.Logger, wg *sync.WaitGroup, net Network, chain Bl
 		// handle the transaction for our blockchain state & propagation
 		handlers.Entity(msg)
 
+		log.Debug().Msg("processed transaction message")
+
 	case *Mempool:
 
-		log.Info().Uint("cap", msg.Bloom.Cap()).Msg("bloom message received")
+		log = log.With().Str("msg_type", "mempool").Uint("num_cap", msg.Bloom.Cap()).Logger()
 
 		// find transactions in our memory pool the peer misses
 		var inv [][]byte
@@ -170,7 +203,7 @@ func handleMessage(log zerolog.Logger, wg *sync.WaitGroup, net Network, chain Bl
 			inv = append(inv, id)
 		}
 
-		log.Info().Int("num_ids", len(inv)).Msg("received mempool message")
+		log = log.With().Int("num_inv", len(inv)).Logger()
 
 		// send the list of transaction IDs they do not have
 		inventory := &Inventory{IDs: inv}
@@ -180,9 +213,11 @@ func handleMessage(log zerolog.Logger, wg *sync.WaitGroup, net Network, chain Bl
 			return
 		}
 
+		log.Debug().Msg("processed mempool message")
+
 	case *Inventory:
 
-		log.Info().Int("num_ids", len(msg.IDs)).Msg("received inventory message")
+		log = log.With().Int("num_inv", len(msg.IDs)).Logger()
 
 		// create list of transactions that we are missing
 		var req [][]byte
@@ -194,6 +229,8 @@ func handleMessage(log zerolog.Logger, wg *sync.WaitGroup, net Network, chain Bl
 			req = append(req, id)
 		}
 
+		log = log.With().Int("num_req", len(req)).Logger()
+
 		// request the missing transactions from the peer
 		// TODO: better to add into a pending queue
 		request := &Request{IDs: req}
@@ -203,21 +240,25 @@ func handleMessage(log zerolog.Logger, wg *sync.WaitGroup, net Network, chain Bl
 			return
 		}
 
+		log.Debug().Msg("processed inventory message")
+
 	case *Request:
 
-		log.Info().Int("num_ids", len(msg.IDs)).Msg("received request message")
+		log = log.With().Int("num_req", len(msg.IDs)).Logger()
 
 		// collect each transaction that we have from the set of requested IDs
 		var transactions []*types.Transaction
-		for _, id := range msg.IDs {
-			tx, err := pool.Get(id)
+		for _, hash := range msg.IDs {
+			tx, err := pool.Get(hash)
 			if err != nil {
 				// TODO: somehow punish peer for requesting something we didn't announce
-				log.Error().Err(err).Msg("requested transaction unknown")
+				log.Error().Err(err).Str("hash", hex.EncodeToString(hash)).Msg("requested transaction unknown")
 				continue
 			}
 			transactions = append(transactions, tx)
 		}
+
+		log = log.With().Int("num_txs", len(transactions)).Logger()
 
 		// send the transactions in a batch
 		batch := &Batch{Transactions: transactions}
@@ -227,9 +268,11 @@ func handleMessage(log zerolog.Logger, wg *sync.WaitGroup, net Network, chain Bl
 			return
 		}
 
+		log.Debug().Msg("processed request message")
+
 	case *Batch:
 
-		log.Info().Int("num_txs", len(msg.Transactions)).Msg("received batch message")
+		log = log.With().Int("num_txs", len(msg.Transactions)).Logger()
 
 		for _, tx := range msg.Transactions {
 
@@ -241,5 +284,7 @@ func handleMessage(log zerolog.Logger, wg *sync.WaitGroup, net Network, chain Bl
 			// handle the transaction for our blockchain state & propagation
 			handlers.Entity(tx)
 		}
+
+		log.Debug().Msg("processed batch message")
 	}
 }
