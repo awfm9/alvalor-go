@@ -32,6 +32,7 @@ const (
 
 // Blockchain represents a wrapper around all blockchain data.
 type Blockchain struct {
+	height       uint32
 	current      *types.Block
 	heights      KV
 	indices      KV
@@ -47,16 +48,21 @@ func New(heights KV, indices KV, headers Store, transactions Store) (*Blockchain
 		headers:      headers,
 		transactions: transactions,
 	}
-	key := make([]byte, 4)
-	binary.LittleEndian.PutUint32(key, Current)
-	hash, err := bc.heights.Get(key)
+	data := make([]byte, 4)
+	binary.LittleEndian.PutUint32(data, Current)
+	hash, err := bc.heights.Get(data)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get hash of current block")
 	}
+	data, err = bc.heights.Get(hash)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not get height of current block")
+	}
 	current, err := bc.BlockByHash(hash)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not get latest block by hash")
+		return nil, errors.Wrap(err, "could not get current block")
 	}
+	bc.height = binary.LittleEndian.Uint32(data)
 	bc.current = current
 	return bc, nil
 }
@@ -66,15 +72,26 @@ func (bc *Blockchain) AddBlock(block *types.Block) error {
 
 	// TODO: handle reorgs & best path block per height
 
-	// TODO: make sure we have parent
+	// check if we know the parent and get the parent height
+	height, err := bc.HeightByHash(block.Parent)
+	if err != nil {
+		return errors.Wrap(err, "could not get parent header")
+	}
 
 	// calculate the hash once and prepare key for height lookups
+	height++
 	hash := block.Hash()
-	key := make([]byte, 4)
+	data := make([]byte, 4)
+
+	// mapp the block hash to the block height
+	binary.LittleEndian.PutUint32(data, height)
+	err = bc.heights.Put(hash, data)
+	if err != nil {
+		return errors.Wrap(err, "could not map block hash to height")
+	}
 
 	// map the block height to the block hash
-	binary.LittleEndian.PutUint32(key, block.Height)
-	err := bc.heights.Put(key, hash)
+	err = bc.heights.Put(data, hash)
 	if err != nil {
 		return errors.Wrap(err, "could not map block height to hash")
 	}
@@ -102,21 +119,32 @@ func (bc *Blockchain) AddBlock(block *types.Block) error {
 	}
 
 	// if the block is not a new best block, we are done
-	if block.Height <= bc.current.Height {
+	if height <= bc.height {
 		return nil
 	}
 
 	// map the current height to the block hash
-	binary.LittleEndian.PutUint32(key, Current)
-	err = bc.heights.Put(key, hash)
+	binary.LittleEndian.PutUint32(data, Current)
+	err = bc.heights.Put(data, hash)
 	if err != nil {
 		return errors.Wrap(err, "could not map current height to hash")
 	}
 
 	// store a reference to the block for fast access
+	bc.height = height
 	bc.current = block
 
 	return nil
+}
+
+// HeightByHash returns the height of a block for the given hash.
+func (bc *Blockchain) HeightByHash(hash []byte) (uint32, error) {
+	data, err := bc.heights.Get(hash)
+	if err != nil {
+		return 0, errors.Wrap(err, "could not retrieve height by hash")
+	}
+	height := binary.LittleEndian.Uint32(data)
+	return height, nil
 }
 
 // HashByHeight returns the hash of the block at the given height.
