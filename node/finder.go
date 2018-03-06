@@ -17,21 +17,9 @@
 
 package node
 
-import (
-	"sync"
-
-	"github.com/awishformore/zerolog"
-)
-
-func handleInput(log zerolog.Logger, wg *sync.WaitGroup, handlers Handlers, subscription <-chan interface{}) {
-	defer wg.Done()
-
-	// configure logger
-	log = log.With().Str("component", "input").Logger()
-	log.Debug().Msg("input routine started")
-	defer log.Debug().Msg("input routine stopped")
-
-	for event := range subscription {
-		handlers.Event(event)
-	}
+// Finder is in charge of finding the longest path in a tree of block hashes.
+type Finder interface {
+	Add(hash []byte, parent []byte) error
+	Has(hash []byte) bool
+	Path() [][]byte
 }

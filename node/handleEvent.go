@@ -20,7 +20,7 @@ package node
 import (
 	"sync"
 
-	"github.com/rs/zerolog"
+	"github.com/awishformore/zerolog"
 
 	"github.com/alvalor/alvalor-go/network"
 )
@@ -38,8 +38,8 @@ func handleEvent(log zerolog.Logger, wg *sync.WaitGroup, net Network, chain Bloc
 	case network.Connected:
 		peers.Active(e.Address)
 		status := &Status{
-			Height: chain.Current().Height,
-			Hash:   chain.Current().Hash(),
+			Height: chain.Height(),
+			Hash:   chain.Header().Hash(),
 		}
 		err := net.Send(e.Address, status)
 		if err != nil {

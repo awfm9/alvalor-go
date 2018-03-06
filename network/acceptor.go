@@ -19,11 +19,10 @@ package network
 
 import (
 	"bytes"
-	"encoding/hex"
 	"net"
 	"sync"
 
-	"github.com/rs/zerolog"
+	"github.com/awishformore/zerolog"
 )
 
 func handleAccepting(log zerolog.Logger, wg *sync.WaitGroup, cfg *Config, pending pendingManager, peers peerManager, rep reputationManager, book addressManager, events eventManager, conn net.Conn) {
@@ -71,7 +70,7 @@ func handleAccepting(log zerolog.Logger, wg *sync.WaitGroup, cfg *Config, pendin
 	}
 	nonceIn := syn[len(network):]
 	if bytes.Equal(nonceIn, nonce) {
-		log.Error().Str("nonce", hex.EncodeToString(nonce)).Msg("identical nonce")
+		log.Error().Hex("nonce", nonce).Msg("identical nonce")
 		conn.Close()
 		book.Block(address)
 		return

@@ -25,7 +25,7 @@ import (
 
 	multierror "github.com/hashicorp/go-multierror"
 	"github.com/pkg/errors"
-	"github.com/rs/zerolog"
+	"github.com/awishformore/zerolog"
 	uuid "github.com/satori/go.uuid"
 )
 

@@ -23,7 +23,7 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
-	"github.com/rs/zerolog"
+	"github.com/awishformore/zerolog"
 )
 
 func handleSending(log zerolog.Logger, wg *sync.WaitGroup, cfg *Config, rep reputationManager, events eventManager, address string, output <-chan interface{}, w io.Writer) {

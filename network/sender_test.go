@@ -26,7 +26,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/rs/zerolog"
+	"github.com/awishformore/zerolog"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/suite"
 )

@@ -21,7 +21,7 @@ import (
 	"io"
 	"sync"
 
-	"github.com/rs/zerolog"
+	"github.com/awishformore/zerolog"
 
 	"github.com/alvalor/alvalor-go/trie"
 	"github.com/alvalor/alvalor-go/types"
@@ -46,17 +46,17 @@ type Codec interface {
 }
 
 type simpleNode struct {
-	log   zerolog.Logger
-	wg    *sync.WaitGroup
-	net   Network
-	chain Blockchain
-	peers peerManager
-	pool  poolManager
-	path  pathManager
+	log    zerolog.Logger
+	wg     *sync.WaitGroup
+	net    Network
+	chain  Blockchain
+	finder Finder
+	peers  peerManager
+	pool   poolManager
 }
 
 // New creates a new node to manage the Alvalor blockchain.
-func New(log zerolog.Logger, chain Blockchain, net Network, codec Codec, input <-chan interface{}) Node {
+func New(log zerolog.Logger, net Network, chain Blockchain, finder Finder, codec Codec, input <-chan interface{}) Node {
 
 	// initialize the node
 	n := &simpleNode{}
@@ -69,11 +69,10 @@ func New(log zerolog.Logger, chain Blockchain, net Network, codec Codec, input <
 	wg := &sync.WaitGroup{}
 	n.wg = wg
 
-	// store the network dependency
+	// store dependency references
 	n.net = net
-
-	// store the blockchain dependency
 	n.chain = chain
+	n.finder = finder
 
 	// initialize peer state manager
 	peers := newPeers()
@@ -83,10 +82,6 @@ func New(log zerolog.Logger, chain Blockchain, net Network, codec Codec, input <
 	store := trie.New()
 	pool := newPool(codec, store)
 	n.pool = pool
-
-	// initialize simple path manager
-	path := newPath()
-	n.path = path
 
 	// handle all input messages we get
 	n.Input(input)
@@ -116,10 +111,13 @@ func (n *simpleNode) Event(event interface{}) {
 
 func (n *simpleNode) Message(address string, message interface{}) {
 	n.wg.Add(1)
-	go handleMessage(n.log, n.wg, n.net, n.chain, n.path, n.peers, n.pool, n, address, message)
+	go handleMessage(n.log, n.wg, n.net, n.chain, n.finder, n.peers, n.pool, n, address, message)
 }
 
 func (n *simpleNode) Entity(entity Entity) {
 	n.wg.Add(1)
 	go handleEntity(n.log, n.wg, n.net, n.peers, n.pool, entity)
+}
+
+func (n *simpleNode) Collect(path [][]byte) {
 }

@@ -22,7 +22,7 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/rs/zerolog"
+	"github.com/awishformore/zerolog"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/suite"
 
@@ -54,7 +54,7 @@ func (suite *MessageSuite) TestMessageTransaction() {
 
 	chain := &BlockchainMock{}
 
-	path := &PathMock{}
+	finder := &FinderMock{}
 
 	peers := &PeersMock{}
 	peers.On("Tag", mock.Anything, mock.Anything)
@@ -67,7 +67,7 @@ func (suite *MessageSuite) TestMessageTransaction() {
 	msg := &types.Transaction{}
 
 	// act
-	handleMessage(suite.log, suite.wg, net, chain, path, peers, pool, handlers, address, msg)
+	handleMessage(suite.log, suite.wg, net, chain, finder, peers, pool, handlers, address, msg)
 
 	// assert
 	t := suite.T()

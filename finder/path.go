@@ -15,23 +15,19 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with Alvalor.  If not, see <http://www.gnu.org/licenses/>.
 
-package node
+package path
 
-import (
-	"sync"
-
-	"github.com/awishformore/zerolog"
-)
-
-func handleInput(log zerolog.Logger, wg *sync.WaitGroup, handlers Handlers, subscription <-chan interface{}) {
-	defer wg.Done()
-
-	// configure logger
-	log = log.With().Str("component", "input").Logger()
-	log.Debug().Msg("input routine started")
-	defer log.Debug().Msg("input routine stopped")
-
-	for event := range subscription {
-		handlers.Event(event)
+func path(n *node) [][]byte {
+	if len(n.children) == 0 {
+		return [][]byte{n.hash}
 	}
+	var best [][]byte
+	for _, child := range n.children {
+		p := path(child)
+		if len(p) <= len(best) {
+			continue
+		}
+		best = p
+	}
+	return append([][]byte{n.hash}, best...)
 }

@@ -24,7 +24,7 @@ import (
 	"os/signal"
 	"time"
 
-	"github.com/rs/zerolog"
+	"github.com/awishformore/zerolog"
 	"github.com/spf13/pflag"
 
 	"github.com/alvalor/alvalor-go/codec"

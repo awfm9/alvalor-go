@@ -21,9 +21,11 @@ import "github.com/alvalor/alvalor-go/types"
 
 // Blockchain represents an interface to access all blockchain related data.
 type Blockchain interface {
-	Current() *types.Block
+	Height() uint32
+	Header() *types.Header
 	AddBlock(block *types.Block) error
 	TransactionByHash(hash []byte) (*types.Transaction, error)
+	HeightByHash(hash []byte) (uint32, error)
 	HashByHeight(height uint32) ([]byte, error)
 	HeaderByHash(hash []byte) (*types.Header, error)
 	HeaderByHeight(height uint32) (*types.Header, error)

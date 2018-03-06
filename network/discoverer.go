@@ -20,7 +20,7 @@ package network
 import (
 	"sync"
 
-	"github.com/rs/zerolog"
+	"github.com/awishformore/zerolog"
 )
 
 func handleDiscovering(log zerolog.Logger, wg *sync.WaitGroup, cfg *Config, peers peerManager) {

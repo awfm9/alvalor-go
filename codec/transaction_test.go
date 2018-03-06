@@ -39,7 +39,8 @@ func TestTransaction(t *testing.T) {
 			{From: []byte{25}, Amount: 29},
 			{From: []byte{35}, Amount: 39},
 		},
-		Data: []byte{10, 20, 30},
+		Data:  []byte{10, 20, 30},
+		Nonce: 1337,
 		Signatures: [][]byte{
 			{1, 2, 3},
 			{4, 5, 6},

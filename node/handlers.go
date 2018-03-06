@@ -28,4 +28,5 @@ type Handlers interface {
 	Event(event interface{})
 	Message(address string, message interface{})
 	Entity(entity Entity)
+	Collect(path [][]byte)
 }

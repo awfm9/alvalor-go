@@ -158,6 +158,10 @@ func (h *HandlersMock) Entity(entity Entity) {
 	h.Called(entity)
 }
 
+func (h *HandlersMock) Collect(path [][]byte) {
+	h.Called(path)
+}
+
 type NetworkMock struct {
 	mock.Mock
 }
@@ -176,9 +180,14 @@ type BlockchainMock struct {
 	mock.Mock
 }
 
-func (b *BlockchainMock) Current() *types.Block {
+func (b *BlockchainMock) Height() uint32 {
 	args := b.Called()
-	return args.Get(0).(*types.Block)
+	return uint32(args.Int(0))
+}
+
+func (b *BlockchainMock) Header() *types.Header {
+	args := b.Called()
+	return args.Get(0).(*types.Header)
 }
 
 func (b *BlockchainMock) AddBlock(block *types.Block) error {
@@ -193,6 +202,11 @@ func (b *BlockchainMock) TransactionByHash(hash []byte) (*types.Transaction, err
 		tx = args.Get(0).(*types.Transaction)
 	}
 	return tx, args.Error(1)
+}
+
+func (b *BlockchainMock) HeightByHash(hash []byte) (uint32, error) {
+	args := b.Called(hash)
+	return uint32(args.Int(0)), args.Error(1)
 }
 
 func (b *BlockchainMock) HashByHeight(height uint32) ([]byte, error) {
@@ -240,25 +254,25 @@ func (b *BlockchainMock) BlockByHeight(height uint32) (*types.Block, error) {
 	return block, args.Error(1)
 }
 
-type PathMock struct {
+type FinderMock struct {
 	mock.Mock
 }
 
-func (p *PathMock) Add(header *types.Header) error {
-	args := p.Called(header)
+func (f *FinderMock) Add(hash []byte, parent []byte) error {
+	args := f.Called(hash, parent)
 	return args.Error(0)
 }
 
-func (p *PathMock) Has(hash []byte) bool {
-	args := p.Called(hash)
+func (f *FinderMock) Has(hash []byte) bool {
+	args := f.Called(hash)
 	return args.Bool(0)
 }
 
-func (p *PathMock) BestHash() []byte {
-	args := p.Called()
-	var hash []byte
+func (f *FinderMock) Path() [][]byte {
+	args := f.Called()
+	var path [][]byte
 	if args.Get(0) != nil {
-		hash = args.Get(0).([]byte)
+		path = args.Get(0).([][]byte)
 	}
-	return hash
+	return path
 }
