@@ -50,24 +50,28 @@ func (suite *MessageSuite) TestMessageTransaction() {
 	// arrange
 	address := "192.0.2.100:1337"
 
+	net := &NetworkMock{}
+
+	chain := &BlockchainMock{}
+
+	path := &PathMock{}
+
+	peers := &PeersMock{}
+	peers.On("Tag", mock.Anything, mock.Anything)
+
 	pool := &PoolMock{}
 
 	handlers := &HandlersMock{}
 	handlers.On("Entity", mock.Anything)
 
-	net := &NetworkMock{}
-
-	state := &StateMock{}
-	state.On("Tag", mock.Anything, mock.Anything)
-
 	msg := &types.Transaction{}
 
 	// act
-	handleMessage(suite.log, suite.wg, handlers, net, state, pool, address, msg)
+	handleMessage(suite.log, suite.wg, net, chain, path, peers, pool, handlers, address, msg)
 
 	// assert
 	t := suite.T()
 
-	state.AssertCalled(t, "Tag", address, msg.ID())
+	peers.AssertCalled(t, "Tag", address, msg.Hash())
 	handlers.AssertCalled(t, "Entity", msg)
 }

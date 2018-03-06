@@ -49,12 +49,14 @@ type simpleNode struct {
 	log   zerolog.Logger
 	wg    *sync.WaitGroup
 	net   Network
-	state stateManager
+	chain Blockchain
+	peers peerManager
 	pool  poolManager
+	path  pathManager
 }
 
 // New creates a new node to manage the Alvalor blockchain.
-func New(log zerolog.Logger, net Network, codec Codec, input <-chan interface{}) Node {
+func New(log zerolog.Logger, chain Blockchain, net Network, codec Codec, input <-chan interface{}) Node {
 
 	// initialize the node
 	n := &simpleNode{}
@@ -67,17 +69,24 @@ func New(log zerolog.Logger, net Network, codec Codec, input <-chan interface{})
 	wg := &sync.WaitGroup{}
 	n.wg = wg
 
-	// store the network manager
+	// store the network dependency
 	n.net = net
 
+	// store the blockchain dependency
+	n.chain = chain
+
 	// initialize peer state manager
-	state := newState()
-	n.state = state
+	peers := newPeers()
+	n.peers = peers
 
 	// initialize simple transaction pool
 	store := trie.New()
 	pool := newPool(codec, store)
 	n.pool = pool
+
+	// initialize simple path manager
+	path := newPath()
+	n.path = path
 
 	// handle all input messages we get
 	n.Input(input)
@@ -90,7 +99,7 @@ func (n *simpleNode) Submit(tx *types.Transaction) {
 }
 
 func (n *simpleNode) Stats() {
-	numActive := uint(len(n.state.Actives()))
+	numActive := uint(len(n.peers.Actives()))
 	numTxs := n.pool.Count()
 	n.log.Info().Uint("num_active", numActive).Uint("num_txs", numTxs).Msg("stats")
 }
@@ -102,15 +111,15 @@ func (n *simpleNode) Input(input <-chan interface{}) {
 
 func (n *simpleNode) Event(event interface{}) {
 	n.wg.Add(1)
-	go handleEvent(n.log, n.wg, n, n.net, n.state, n.pool, event)
+	go handleEvent(n.log, n.wg, n.net, n.chain, n.peers, n, event)
 }
 
 func (n *simpleNode) Message(address string, message interface{}) {
 	n.wg.Add(1)
-	go handleMessage(n.log, n.wg, n, n.net, n.state, n.pool, address, message)
+	go handleMessage(n.log, n.wg, n.net, n.chain, n.path, n.peers, n.pool, n, address, message)
 }
 
 func (n *simpleNode) Entity(entity Entity) {
 	n.wg.Add(1)
-	go handleEntity(n.log, n.wg, n.net, n.state, n.pool, entity)
+	go handleEntity(n.log, n.wg, n.net, n.peers, n.pool, entity)
 }

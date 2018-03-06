@@ -31,11 +31,12 @@ type Header struct {
 	Delta  []byte
 	Miner  []byte
 	Target []byte
+	Height uint32
 	Time   time.Time
 	Nonce  uint64
 }
 
-// Hash returns the hash (ID) of the block with the given header.
+// Hash returns the unique hash of header.
 func (hdr Header) Hash() []byte {
 	h, _ := blake2b.New256(nil)
 	_, _ = h.Write(hdr.Parent)
@@ -43,9 +44,10 @@ func (hdr Header) Hash() []byte {
 	_, _ = h.Write(hdr.Delta)
 	_, _ = h.Write(hdr.Miner)
 	_, _ = h.Write(hdr.Target)
-	data := make([]byte, 16)
-	binary.LittleEndian.PutUint64(data[:8], uint64(hdr.Time.Unix()))
-	binary.LittleEndian.PutUint64(data[8:], hdr.Nonce)
+	data := make([]byte, 20)
+	binary.LittleEndian.PutUint32(data[00:04], hdr.Height)
+	binary.LittleEndian.PutUint64(data[04:12], uint64(hdr.Time.Unix()))
+	binary.LittleEndian.PutUint64(data[12:20], hdr.Nonce)
 	_, _ = h.Write(data)
 	return h.Sum(nil)
 }

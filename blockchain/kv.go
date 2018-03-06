@@ -15,9 +15,12 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with Alvalor.  If not, see <http://www.gnu.org/licenses/>.
 
-package database
+package blockchain
 
-// Entity represens a hashable entity that returns its unique hash as ID.
-type Entity interface {
-	ID() []byte
+// KV represens a key-value database.
+type KV interface {
+	Put(key []byte, val []byte) error
+	Has(key []byte) (bool, error)
+	Get(key []byte) ([]byte, error)
+	Del(key []byte) error
 }

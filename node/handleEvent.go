@@ -21,12 +21,11 @@ import (
 	"sync"
 
 	"github.com/rs/zerolog"
-	"github.com/willf/bloom"
 
 	"github.com/alvalor/alvalor-go/network"
 )
 
-func handleEvent(log zerolog.Logger, wg *sync.WaitGroup, handlers Handlers, net Network, state stateManager, pool poolManager, event interface{}) {
+func handleEvent(log zerolog.Logger, wg *sync.WaitGroup, net Network, chain Blockchain, peers peerManager, handlers Handlers, event interface{}) {
 	defer wg.Done()
 
 	// configure logger
@@ -37,27 +36,19 @@ func handleEvent(log zerolog.Logger, wg *sync.WaitGroup, handlers Handlers, net 
 	switch e := event.(type) {
 
 	case network.Connected:
-
-		// mark the peer as active
-		state.Active(e.Address)
-
-		// create a bloom filter of all our known transaction IDs
-		bloom := bloom.NewWithEstimates(pool.Count(), 0.01)
-		ids := pool.IDs()
-		for _, id := range ids {
-			bloom.Add(id)
+		peers.Active(e.Address)
+		status := &Status{
+			Height: chain.Current().Height,
+			Hash:   chain.Current().Hash(),
 		}
-
-		// share mempool message to get inventory of unknown messages from peer
-		mempool := &Mempool{Bloom: bloom}
-		err := net.Send(e.Address, mempool)
+		err := net.Send(e.Address, status)
 		if err != nil {
-			log.Error().Err(err).Msg("could not send mempool message")
+			log.Error().Err(err).Msg("could not send status message")
 			return
 		}
 
 	case network.Disconnected:
-		state.Inactive(e.Address)
+		peers.Inactive(e.Address)
 
 	case network.Received:
 		handlers.Message(e.Address, e.Message)

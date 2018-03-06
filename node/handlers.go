@@ -19,7 +19,7 @@ package node
 
 // Entity is any data structure that returns a unique ID.
 type Entity interface {
-	ID() []byte
+	Hash() []byte
 }
 
 // Handlers describes the handlers we need to process everything.

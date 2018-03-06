@@ -15,41 +15,9 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with Alvalor.  If not, see <http://www.gnu.org/licenses/>.
 
-package node
+package store
 
-import (
-	"github.com/willf/bloom"
-
-	"github.com/alvalor/alvalor-go/types"
-)
-
-// Status message shares our top block height.
-type Status struct {
-	Height uint32
-	Hash   []byte
-}
-
-// Sync requests headers we are missing.
-type Sync struct {
-	Locators [][]byte
-}
-
-// Mempool is a message containing details about the memory pool.
-type Mempool struct {
-	Bloom *bloom.BloomFilter
-}
-
-// Inventory is a message containing a list of transaction hashes.
-type Inventory struct {
-	IDs [][]byte
-}
-
-// Request requests a number of transactions for the memory pool.
-type Request struct {
-	IDs [][]byte
-}
-
-// Batch is a batch of transactions to send as one message.
-type Batch struct {
-	Transactions []*types.Transaction
+// Entity represents an entity that can be stored in a store.
+type Entity interface {
+	ID() []byte
 }

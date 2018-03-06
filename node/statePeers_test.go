@@ -23,96 +23,96 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestNewState(t *testing.T) {
-	state := newState()
-	assert.NotNil(t, state.actives)
-	assert.NotNil(t, state.tags)
+func TestNewPeers(t *testing.T) {
+	peers := newPeers()
+	assert.NotNil(t, peers.actives)
+	assert.NotNil(t, peers.tags)
 }
 
-func TestStateActive(t *testing.T) {
+func TestPeersActive(t *testing.T) {
 	address1 := "192.0.2.100:1337"
 	address2 := "192.0.2.200:1337"
-	state := &simpleState{actives: make(map[string]bool)}
+	peers := &simplePeers{actives: make(map[string]bool)}
 
-	state.Active(address1)
-	if assert.Len(t, state.actives, 1) {
-		assert.Contains(t, state.actives, address1)
+	peers.Active(address1)
+	if assert.Len(t, peers.actives, 1) {
+		assert.Contains(t, peers.actives, address1)
 	}
 
-	state.Active(address1)
-	assert.Len(t, state.actives, 1)
+	peers.Active(address1)
+	assert.Len(t, peers.actives, 1)
 
-	state.Active(address2)
-	if assert.Len(t, state.actives, 2) {
-		assert.Contains(t, state.actives, address2)
+	peers.Active(address2)
+	if assert.Len(t, peers.actives, 2) {
+		assert.Contains(t, peers.actives, address2)
 	}
 }
 
-func TestStateInactive(t *testing.T) {
+func TestPeersInactive(t *testing.T) {
 	address1 := "192.0.2.100:1337"
 	address2 := "192.0.2.200:1337"
-	state := &simpleState{actives: make(map[string]bool)}
+	peers := &simplePeers{actives: make(map[string]bool)}
 
-	state.actives[address1] = true
-	state.actives[address2] = true
-	state.Inactive(address1)
-	if assert.Len(t, state.actives, 1) {
-		assert.NotContains(t, state.actives, address1)
+	peers.actives[address1] = true
+	peers.actives[address2] = true
+	peers.Inactive(address1)
+	if assert.Len(t, peers.actives, 1) {
+		assert.NotContains(t, peers.actives, address1)
 	}
 
-	state.Inactive(address1)
-	assert.Len(t, state.actives, 1)
+	peers.Inactive(address1)
+	assert.Len(t, peers.actives, 1)
 
-	state.Inactive(address2)
-	assert.Len(t, state.actives, 0)
+	peers.Inactive(address2)
+	assert.Len(t, peers.actives, 0)
 }
 
-func TestStateActives(t *testing.T) {
+func TestPeersActives(t *testing.T) {
 	address1 := "192.0.2.100:1337"
 	address2 := "192.0.2.200:1337"
-	state := &simpleState{actives: make(map[string]bool)}
+	peers := &simplePeers{actives: make(map[string]bool)}
 
-	actives := state.Actives()
+	actives := peers.Actives()
 	assert.Empty(t, actives)
 
-	state.actives[address1] = true
-	state.actives[address2] = true
-	actives = state.Actives()
+	peers.actives[address1] = true
+	peers.actives[address2] = true
+	actives = peers.Actives()
 	assert.ElementsMatch(t, []string{address1, address2}, actives)
 }
 
-func TestStateTag(t *testing.T) {
+func TestPeersTag(t *testing.T) {
 	id1 := []byte{1, 2, 3, 4}
 	id2 := []byte{5, 6, 7, 8}
 	address1 := "192.0.2.100:1337"
 	address2 := "192.0.2.200:1337"
-	state := &simpleState{tags: make(map[string][]string)}
+	peers := &simplePeers{tags: make(map[string][]string)}
 
-	state.Tag(address1, id1)
-	if assert.Len(t, state.tags[string(id1)], 1) {
-		assert.Contains(t, state.tags[string(id1)], address1)
+	peers.Tag(address1, id1)
+	if assert.Len(t, peers.tags[string(id1)], 1) {
+		assert.Contains(t, peers.tags[string(id1)], address1)
 	}
 
-	assert.Empty(t, state.tags[string(id2)])
+	assert.Empty(t, peers.tags[string(id2)])
 
-	state.Tag(address1, id2)
-	if assert.Len(t, state.tags[string(id2)], 1) {
-		assert.Contains(t, state.tags[string(id2)], address1)
+	peers.Tag(address1, id2)
+	if assert.Len(t, peers.tags[string(id2)], 1) {
+		assert.Contains(t, peers.tags[string(id2)], address1)
 	}
 
-	state.Tag(address2, id1)
-	if assert.Len(t, state.tags[string(id1)], 2) {
-		assert.Contains(t, state.tags[string(id1)], address2)
+	peers.Tag(address2, id1)
+	if assert.Len(t, peers.tags[string(id1)], 2) {
+		assert.Contains(t, peers.tags[string(id1)], address2)
 	}
 }
 
-func TestStateTags(t *testing.T) {
+func TestPeersTags(t *testing.T) {
 	id := []byte{1, 2, 3, 4}
 	address1 := "192.0.2.100:1337"
 	address2 := "192.0.2.200:1337"
-	state := &simpleState{tags: make(map[string][]string)}
+	peers := &simplePeers{tags: make(map[string][]string)}
 
-	state.tags[string(id)] = []string{address1, address2}
-	tags := state.Tags(id)
+	peers.tags[string(id)] = []string{address1, address2}
+	tags := peers.Tags(id)
 	assert.ElementsMatch(t, []string{address1, address2}, tags)
 }

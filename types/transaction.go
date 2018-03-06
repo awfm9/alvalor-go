@@ -31,8 +31,8 @@ type Transaction struct {
 	Signatures [][]byte
 }
 
-// ID returns the unique ID of the transaction.
-func (tx Transaction) ID() []byte {
+// Hash returns the unique hash of the transaction.
+func (tx Transaction) Hash() []byte {
 	buf := make([]byte, 8)
 	h, _ := blake2b.New256(nil)
 	for _, transfer := range tx.Transfers {

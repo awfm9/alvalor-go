@@ -47,9 +47,9 @@ func TestPoolAdd(t *testing.T) {
 	codec.On("Encode", mock.Anything, tx3).Return(nil)
 
 	store := &StoreMock{}
-	store.On("Put", tx1.ID(), mock.Anything).Return(nil)
-	store.On("Put", tx2.ID(), mock.Anything).Return(nil)
-	store.On("Put", tx3.ID(), mock.Anything).Return(errors.New("could not put"))
+	store.On("Put", tx1.Hash(), mock.Anything).Return(nil)
+	store.On("Put", tx2.Hash(), mock.Anything).Return(nil)
+	store.On("Put", tx3.Hash(), mock.Anything).Return(errors.New("could not put"))
 
 	pool := simplePool{
 		codec: codec,

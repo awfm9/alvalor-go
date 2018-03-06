@@ -17,39 +17,16 @@
 
 package node
 
-import (
-	"github.com/willf/bloom"
+import "github.com/alvalor/alvalor-go/types"
 
-	"github.com/alvalor/alvalor-go/types"
-)
-
-// Status message shares our top block height.
-type Status struct {
-	Height uint32
-	Hash   []byte
-}
-
-// Sync requests headers we are missing.
-type Sync struct {
-	Locators [][]byte
-}
-
-// Mempool is a message containing details about the memory pool.
-type Mempool struct {
-	Bloom *bloom.BloomFilter
-}
-
-// Inventory is a message containing a list of transaction hashes.
-type Inventory struct {
-	IDs [][]byte
-}
-
-// Request requests a number of transactions for the memory pool.
-type Request struct {
-	IDs [][]byte
-}
-
-// Batch is a batch of transactions to send as one message.
-type Batch struct {
-	Transactions []*types.Transaction
+// Blockchain represents an interface to access all blockchain related data.
+type Blockchain interface {
+	Current() *types.Block
+	AddBlock(block *types.Block) error
+	TransactionByHash(hash []byte) (*types.Transaction, error)
+	HashByHeight(height uint32) ([]byte, error)
+	HeaderByHash(hash []byte) (*types.Header, error)
+	HeaderByHeight(height uint32) (*types.Header, error)
+	BlockByHash(hash []byte) (*types.Block, error)
+	BlockByHeight(height uint32) (*types.Block, error)
 }

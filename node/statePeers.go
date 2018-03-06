@@ -19,7 +19,7 @@ package node
 
 import "sync"
 
-type stateManager interface {
+type peerManager interface {
 	Active(address string)
 	Inactive(address string)
 	Actives() []string
@@ -27,34 +27,34 @@ type stateManager interface {
 	Tags(id []byte) []string
 }
 
-type simpleState struct {
+type simplePeers struct {
 	sync.Mutex
 	actives map[string]bool
 	tags    map[string][]string
 }
 
-func newState() *simpleState {
-	return &simpleState{
+func newPeers() *simplePeers {
+	return &simplePeers{
 		actives: make(map[string]bool),
 		tags:    make(map[string][]string),
 	}
 }
 
-func (s *simpleState) Active(address string) {
+func (s *simplePeers) Active(address string) {
 	s.Lock()
 	defer s.Unlock()
 
 	s.actives[address] = true
 }
 
-func (s *simpleState) Inactive(address string) {
+func (s *simplePeers) Inactive(address string) {
 	s.Lock()
 	defer s.Unlock()
 
 	delete(s.actives, address)
 }
 
-func (s *simpleState) Actives() []string {
+func (s *simplePeers) Actives() []string {
 	s.Lock()
 	defer s.Unlock()
 
@@ -66,14 +66,14 @@ func (s *simpleState) Actives() []string {
 	return actives
 }
 
-func (s *simpleState) Tag(address string, id []byte) {
+func (s *simplePeers) Tag(address string, id []byte) {
 	s.Lock()
 	defer s.Unlock()
 
 	s.tags[string(id)] = append(s.tags[string(id)], address)
 }
 
-func (s *simpleState) Tags(id []byte) []string {
+func (s *simplePeers) Tags(id []byte) []string {
 	s.Lock()
 	defer s.Unlock()
 

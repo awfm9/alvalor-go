@@ -18,6 +18,7 @@
 package node
 
 import (
+	"bytes"
 	"encoding/hex"
 	"sync"
 
@@ -26,7 +27,7 @@ import (
 	"github.com/alvalor/alvalor-go/types"
 )
 
-func handleMessage(log zerolog.Logger, wg *sync.WaitGroup, handlers Handlers, net Network, state stateManager, pool poolManager, address string, message interface{}) {
+func handleMessage(log zerolog.Logger, wg *sync.WaitGroup, net Network, chain Blockchain, path pathManager, peers peerManager, pool poolManager, handlers Handlers, address string, message interface{}) {
 	defer wg.Done()
 
 	// configure logger
@@ -37,14 +38,118 @@ func handleMessage(log zerolog.Logger, wg *sync.WaitGroup, handlers Handlers, ne
 	// process the message according to type
 	switch msg := message.(type) {
 
+	case *Status:
+
+		log.Info().Uint32("height", msg.Height).Msg("status message received")
+
+		// don't take any action if we are not behind the peer
+		height := chain.Current().Height
+		if msg.Height <= height {
+			log.Debug().Uint32("height", height).Msg("peer not ahead of us")
+			return
+		}
+
+		// check if we are already synching the path to this unstored block
+		ok := path.Has(msg.Hash)
+		if ok {
+			log.Debug().Str("hash", hex.EncodeToString(msg.Hash)).Msg("path already synching")
+			return
+		}
+
+		// add the latest synching header to our locator hashes if it's different from chain state
+		var locators [][]byte
+		bestBlock := chain.Current().Hash()
+		bestHeader := path.BestHash()
+		if !bytes.Equal(bestHeader, bestBlock) {
+			locators = append(locators, bestHeader)
+		}
+
+		// decide which block locator hashes to include by height
+		var heights []uint32
+		for h, step := height, uint32(1); h > 0; h -= step {
+			if len(heights) >= 8 {
+				step *= 2
+			}
+			heights = append(heights, h)
+		}
+		heights = append(heights, 0)
+
+		// retrieve the hashes from the blockchain database
+		for _, height := range heights {
+			hash, err := chain.HashByHeight(height)
+			if err != nil {
+				log.Error().Err(err).Msg("could not get hash by index")
+				return
+			}
+			locators = append(locators, hash)
+		}
+
+		// create the synchronization request & send
+		sync := &Sync{
+			Locators: locators,
+		}
+		err := net.Send(address, sync)
+		if err != nil {
+			log.Error().Err(err).Msg("could not send synchronization")
+			return
+		}
+
+	case *Sync:
+
+		// try finding a locator hash in our best path
+		var start uint32
+	Outer:
+		for _, locator := range msg.Locators {
+			header := &chain.Current().Header
+			for {
+				hash := header.Hash()
+				if bytes.Equal(hash, locator) {
+					start = header.Height
+					break Outer
+				}
+				parent := header.Parent
+				if bytes.Equal(parent, bytes.Repeat([]byte{0}, 32)) {
+					break
+				}
+				var err error
+				header, err = chain.HeaderByHash(parent)
+				if err != nil {
+					log.Error().Err(err).Msg("could not get parent for sync")
+					return
+				}
+			}
+		}
+
+		// return all headers from the found start to the top
+		var headers []*types.Header
+		for height := start + 1; height <= chain.Current().Height; height++ {
+			header, err := chain.HeaderByHeight(height)
+			if err != nil {
+				log.Error().Err(err).Msg("could not get header for sync")
+				return
+			}
+			headers = append(headers, header)
+		}
+
+		// send each header
+		for _, header := range headers {
+			err := net.Send(address, header)
+			if err != nil {
+				log.Error().Err(err).Msg("could not send header for sync")
+				return
+			}
+		}
+
 	case *types.Transaction:
 
-		log.Info().Str("id", hex.EncodeToString(msg.ID())).Msg("transaction message received")
+		hash := msg.Hash()
+
+		log.Info().Str("hash", hex.EncodeToString(hash)).Msg("transaction message received")
 
 		// TODO: validate the transaction
 
 		// tag the peer for having seen the transaction
-		state.Tag(address, msg.ID())
+		peers.Tag(address, hash)
 
 		// handle the transaction for our blockchain state & propagation
 		handlers.Entity(msg)
@@ -59,7 +164,7 @@ func handleMessage(log zerolog.Logger, wg *sync.WaitGroup, handlers Handlers, ne
 		for _, id := range ids {
 			if msg.Bloom.Test(id) {
 				// TODO: figure out implications of false positives here
-				state.Tag(address, id)
+				peers.Tag(address, id)
 				continue
 			}
 			inv = append(inv, id)
@@ -131,7 +236,7 @@ func handleMessage(log zerolog.Logger, wg *sync.WaitGroup, handlers Handlers, ne
 			// TODO: validate transaction
 
 			// tag the peer for having seen the transaction
-			state.Tag(address, tx.ID())
+			peers.Tag(address, tx.Hash())
 
 			// handle the transaction for our blockchain state & propagation
 			handlers.Entity(tx)
