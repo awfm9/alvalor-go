@@ -50,30 +50,32 @@ func (suite *EventSuite) TestEventConnected() {
 	// arrange
 	address := "192.0.2.1:1337"
 
-	handlers := &HandlersMock{}
-	handlers.On("Message", mock.Anything)
-
 	net := &NetworkMock{}
 	net.On("Send", mock.Anything, mock.Anything).Return(nil)
 
-	state := &StateMock{}
-	state.On("Active", mock.Anything)
-	state.On("Inactive", mock.Anything)
-	state.On("Tag", mock.Anything, mock.Anything)
+	chain := &BlockchainMock{}
+
+	peers := &PeersMock{}
+	peers.On("Active", mock.Anything)
+	peers.On("Inactive", mock.Anything)
+	peers.On("Tag", mock.Anything, mock.Anything)
 
 	pool := &PoolMock{}
 	pool.On("Count").Return(0)
 	pool.On("IDs").Return([][]byte{})
 
+	handlers := &HandlersMock{}
+	handlers.On("Message", mock.Anything)
+
 	event := network.Connected{Address: address}
 
 	// act
-	handleEvent(suite.log, suite.wg, handlers, net, state, pool, event)
+	handleEvent(suite.log, suite.wg, net, chain, peers, handlers, event)
 
 	// assert
 	t := suite.T()
 
-	state.AssertCalled(t, "Active", address)
+	peers.AssertCalled(t, "Active", address)
 }
 
 func (suite *EventSuite) TestEventDisconnected() {
@@ -81,30 +83,32 @@ func (suite *EventSuite) TestEventDisconnected() {
 	// arrange
 	address := "192.0.2.1:1337"
 
-	handlers := &HandlersMock{}
-	handlers.On("Message", mock.Anything)
-
 	net := &NetworkMock{}
 	net.On("Send", mock.Anything, mock.Anything).Return(nil)
 
-	state := &StateMock{}
-	state.On("Active", mock.Anything)
-	state.On("Inactive", mock.Anything)
-	state.On("Tag", mock.Anything, mock.Anything)
+	chain := &BlockchainMock{}
+
+	peers := &PeersMock{}
+	peers.On("Active", mock.Anything)
+	peers.On("Inactive", mock.Anything)
+	peers.On("Tag", mock.Anything, mock.Anything)
 
 	pool := &PoolMock{}
 	pool.On("Count").Return(0)
 	pool.On("IDs").Return([][]byte{})
 
+	handlers := &HandlersMock{}
+	handlers.On("Message", mock.Anything)
+
 	event := network.Disconnected{Address: address}
 
 	// act
-	handleEvent(suite.log, suite.wg, handlers, net, state, pool, event)
+	handleEvent(suite.log, suite.wg, net, chain, peers, handlers, event)
 
 	// assert
 	t := suite.T()
 
-	state.AssertCalled(t, "Inactive", address)
+	peers.AssertCalled(t, "Inactive", address)
 }
 
 func (suite *EventSuite) TestEventReceived() {
@@ -113,25 +117,27 @@ func (suite *EventSuite) TestEventReceived() {
 	address := "192.0.2.1:1337"
 	message := "message"
 
-	handlers := &HandlersMock{}
-	handlers.On("Message", mock.Anything, mock.Anything)
-
 	net := &NetworkMock{}
 	net.On("Send", mock.Anything, mock.Anything).Return(nil)
 
-	state := &StateMock{}
-	state.On("Active", mock.Anything)
-	state.On("Inactive", mock.Anything)
-	state.On("Tag", mock.Anything, mock.Anything)
+	chain := &BlockchainMock{}
+
+	peers := &PeersMock{}
+	peers.On("Active", mock.Anything)
+	peers.On("Inactive", mock.Anything)
+	peers.On("Tag", mock.Anything, mock.Anything)
 
 	pool := &PoolMock{}
 	pool.On("Count").Return(0)
 	pool.On("IDs").Return([][]byte{})
 
+	handlers := &HandlersMock{}
+	handlers.On("Message", mock.Anything, mock.Anything)
+
 	event := network.Received{Address: address, Message: message}
 
 	// act
-	handleEvent(suite.log, suite.wg, handlers, net, state, pool, event)
+	handleEvent(suite.log, suite.wg, net, chain, peers, handlers, event)
 
 	// assert
 	t := suite.T()

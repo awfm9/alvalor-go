@@ -25,19 +25,6 @@ import (
 	"github.com/alvalor/alvalor-go/types"
 )
 
-type EntityMock struct {
-	mock.Mock
-}
-
-func (e *EntityMock) ID() []byte {
-	args := e.Called()
-	var id []byte
-	if args.Get(0) != nil {
-		id = args.Get(0).([]byte)
-	}
-	return id
-}
-
 type CodecMock struct {
 	mock.Mock
 }
@@ -117,20 +104,20 @@ func (p *PoolMock) IDs() [][]byte {
 	return set
 }
 
-type StateMock struct {
+type PeersMock struct {
 	mock.Mock
 }
 
-func (s *StateMock) Active(address string) {
-	s.Called(address)
+func (p *PeersMock) Active(address string) {
+	p.Called(address)
 }
 
-func (s *StateMock) Inactive(address string) {
-	s.Called(address)
+func (p *PeersMock) Inactive(address string) {
+	p.Called(address)
 }
 
-func (s *StateMock) Actives() []string {
-	args := s.Called()
+func (p *PeersMock) Actives() []string {
+	args := p.Called()
 	var active []string
 	if args.Get(0) != nil {
 		active = args.Get(0).([]string)
@@ -138,12 +125,12 @@ func (s *StateMock) Actives() []string {
 	return active
 }
 
-func (s *StateMock) Tag(address string, id []byte) {
-	s.Called(address, id)
+func (p *PeersMock) Tag(address string, id []byte) {
+	p.Called(address, id)
 }
 
-func (s *StateMock) Tags(id []byte) []string {
-	args := s.Called(id)
+func (p *PeersMock) Tags(id []byte) []string {
+	args := p.Called(id)
 	var seen []string
 	if args.Get(0) != nil {
 		seen = args.Get(0).([]string)
@@ -183,4 +170,95 @@ func (n *NetworkMock) Send(address string, msg interface{}) error {
 func (n *NetworkMock) Broadcast(msg interface{}, exclude ...string) error {
 	args := n.Called(msg, exclude)
 	return args.Error(0)
+}
+
+type BlockchainMock struct {
+	mock.Mock
+}
+
+func (b *BlockchainMock) Current() *types.Block {
+	args := b.Called()
+	return args.Get(0).(*types.Block)
+}
+
+func (b *BlockchainMock) AddBlock(block *types.Block) error {
+	args := b.Called(block)
+	return args.Error(0)
+}
+
+func (b *BlockchainMock) TransactionByHash(hash []byte) (*types.Transaction, error) {
+	args := b.Called(hash)
+	var tx *types.Transaction
+	if args.Get(0) != nil {
+		tx = args.Get(0).(*types.Transaction)
+	}
+	return tx, args.Error(1)
+}
+
+func (b *BlockchainMock) HashByHeight(height uint32) ([]byte, error) {
+	args := b.Called(height)
+	var hash []byte
+	if args.Get(0) != nil {
+		hash = args.Get(0).([]byte)
+	}
+	return hash, args.Error(1)
+}
+
+func (b *BlockchainMock) HeaderByHash(hash []byte) (*types.Header, error) {
+	args := b.Called(hash)
+	var header *types.Header
+	if args.Get(0) != nil {
+		header = args.Get(0).(*types.Header)
+	}
+	return header, args.Error(1)
+}
+
+func (b *BlockchainMock) HeaderByHeight(height uint32) (*types.Header, error) {
+	args := b.Called(height)
+	var header *types.Header
+	if args.Get(0) != nil {
+		header = args.Get(0).(*types.Header)
+	}
+	return header, args.Error(1)
+}
+
+func (b *BlockchainMock) BlockByHash(hash []byte) (*types.Block, error) {
+	args := b.Called(hash)
+	var block *types.Block
+	if args.Get(0) != nil {
+		block = args.Get(0).(*types.Block)
+	}
+	return block, args.Error(1)
+}
+
+func (b *BlockchainMock) BlockByHeight(height uint32) (*types.Block, error) {
+	args := b.Called(height)
+	var block *types.Block
+	if args.Get(0) != nil {
+		block = args.Get(0).(*types.Block)
+	}
+	return block, args.Error(1)
+}
+
+type PathMock struct {
+	mock.Mock
+}
+
+func (p *PathMock) Add(header *types.Header) error {
+	args := p.Called(header)
+	return args.Error(0)
+}
+
+func (p *PathMock) Has(hash []byte) bool {
+	args := p.Called(hash)
+	return args.Bool(0)
+}
+
+func (p *PathMock) BestHash() []byte {
+	args := p.Called()
+	var hash []byte
+	if args.Get(0) != nil {
+		hash = args.Get(0).([]byte)
+	}
+	return hash
 }

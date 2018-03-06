@@ -58,9 +58,9 @@ func (suite *EntitySuite) TestEntityTransaction() {
 	net.On("Send", address2, mock.Anything).Return(nil)
 	net.On("Send", address3, mock.Anything).Return(nil)
 
-	state := &StateMock{}
-	state.On("Tags", mock.Anything).Return([]string{address2})
-	state.On("Actives").Return([]string{address1, address2, address3})
+	peers := &PeersMock{}
+	peers.On("Tags", mock.Anything).Return([]string{address2})
+	peers.On("Actives").Return([]string{address1, address2, address3})
 
 	pool := &PoolMock{}
 	pool.On("Known", mock.Anything).Return(false)
@@ -69,7 +69,7 @@ func (suite *EntitySuite) TestEntityTransaction() {
 	entity := &types.Transaction{}
 
 	// act
-	handleEntity(suite.log, suite.wg, net, state, pool, entity)
+	handleEntity(suite.log, suite.wg, net, peers, pool, entity)
 
 	// assert
 	t := suite.T()
