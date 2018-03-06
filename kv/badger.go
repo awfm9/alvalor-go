@@ -27,6 +27,11 @@ type Badger struct {
 	kv *badger.DB
 }
 
+// NewBadger creates a new KV store wraper around a badger database.
+func NewBadger(kv *badger.DB) *Badger {
+	return &Badger{kv: kv}
+}
+
 // Put will insert a key-value pair into the database.
 func (b *Badger) Put(key []byte, val []byte) error {
 	err := b.kv.Update(func(tx *badger.Txn) error {
