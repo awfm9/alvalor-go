@@ -176,6 +176,11 @@ type BlockchainMock struct {
 	mock.Mock
 }
 
+func (b *BlockchainMock) Height() uint32 {
+	args := b.Called()
+	return uint32(args.Int(0))
+}
+
 func (b *BlockchainMock) Current() *types.Block {
 	args := b.Called()
 	return args.Get(0).(*types.Block)
@@ -193,6 +198,11 @@ func (b *BlockchainMock) TransactionByHash(hash []byte) (*types.Transaction, err
 		tx = args.Get(0).(*types.Transaction)
 	}
 	return tx, args.Error(1)
+}
+
+func (b *BlockchainMock) HeightByHash(hash []byte) (uint32, error) {
+	args := b.Called(hash)
+	return uint32(args.Int(0)), args.Error(1)
 }
 
 func (b *BlockchainMock) HashByHeight(height uint32) ([]byte, error) {
@@ -244,21 +254,12 @@ type PathMock struct {
 	mock.Mock
 }
 
-func (p *PathMock) Add(header *types.Header) error {
-	args := p.Called(header)
+func (p *PathMock) Add(hash []byte, parent []byte) error {
+	args := p.Called(hash, parent)
 	return args.Error(0)
 }
 
 func (p *PathMock) Has(hash []byte) bool {
 	args := p.Called(hash)
 	return args.Bool(0)
-}
-
-func (p *PathMock) BestHash() []byte {
-	args := p.Called()
-	var hash []byte
-	if args.Get(0) != nil {
-		hash = args.Get(0).([]byte)
-	}
-	return hash
 }

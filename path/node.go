@@ -15,20 +15,10 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with Alvalor.  If not, see <http://www.gnu.org/licenses/>.
 
-package node
+package path
 
-import "github.com/alvalor/alvalor-go/types"
-
-// Blockchain represents an interface to access all blockchain related data.
-type Blockchain interface {
-	Height() uint32
-	Current() *types.Block
-	AddBlock(block *types.Block) error
-	TransactionByHash(hash []byte) (*types.Transaction, error)
-	HeightByHash(hash []byte) (uint32, error)
-	HashByHeight(height uint32) ([]byte, error)
-	HeaderByHash(hash []byte) (*types.Header, error)
-	HeaderByHeight(height uint32) (*types.Header, error)
-	BlockByHash(hash []byte) (*types.Block, error)
-	BlockByHeight(height uint32) (*types.Block, error)
+type node struct {
+	hash     []byte
+	parent   *node
+	children []*node
 }

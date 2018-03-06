@@ -17,6 +17,48 @@
 
 package path
 
+import "errors"
+
 // Path will manage a tree of block hashes to identify the longest valid path.
 type Path struct {
+	root   *node
+	lookup map[string]*node
+}
+
+// New will create a new manager for paths.
+func New(root []byte) *Path {
+	n := &node{
+		hash: root,
+	}
+	p := &Path{
+		root:   n,
+		lookup: make(map[string]*node),
+	}
+	p.lookup[string(root)] = n
+	return p
+}
+
+// Add will add a new hash with the given parent to the path finding.
+func (p *Path) Add(hash []byte, parent []byte) error {
+	_, ok := p.lookup[string(hash)]
+	if ok {
+		return errors.New("hash already known")
+	}
+	par, ok := p.lookup[string(parent)]
+	if !ok {
+		return errors.New("parent not known")
+	}
+	n := &node{
+		hash:   hash,
+		parent: par,
+	}
+	par.children = append(par.children, n)
+	p.lookup[string(hash)] = n
+	return nil
+}
+
+// Has will check whether the given hash is known.
+func (p *Path) Has(hash []byte) bool {
+	_, ok := p.lookup[string(hash)]
+	return ok
 }

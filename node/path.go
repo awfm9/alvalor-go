@@ -19,5 +19,6 @@ package node
 
 // Path manages a tree of block headers and finds the longest path.
 type Path interface {
-	Add(hash []byte, parent []byte)
+	Add(hash []byte, parent []byte) error
+	Has(hash []byte) bool
 }

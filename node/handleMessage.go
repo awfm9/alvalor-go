@@ -27,7 +27,7 @@ import (
 	"github.com/alvalor/alvalor-go/types"
 )
 
-func handleMessage(log zerolog.Logger, wg *sync.WaitGroup, net Network, chain Blockchain, path pathManager, peers peerManager, pool poolManager, handlers Handlers, address string, message interface{}) {
+func handleMessage(log zerolog.Logger, wg *sync.WaitGroup, net Network, chain Blockchain, path Path, peers peerManager, pool poolManager, handlers Handlers, address string, message interface{}) {
 	defer wg.Done()
 
 	// configure logger
@@ -43,8 +43,8 @@ func handleMessage(log zerolog.Logger, wg *sync.WaitGroup, net Network, chain Bl
 		log = log.With().Uint32("height", msg.Height).Str("hash", hex.EncodeToString(msg.Hash)).Logger()
 
 		// don't take any action if we are not behind the peer
-		height := chain.Current().Height
-		if msg.Height <= height {
+		height := chain.Height()
+		if msg.Height <= chain.Height() {
 			log.Debug().Msg("already synced with peer")
 			return
 		}
@@ -56,13 +56,13 @@ func handleMessage(log zerolog.Logger, wg *sync.WaitGroup, net Network, chain Bl
 			return
 		}
 
-		// add the latest synching header to our locator hashes if it's different from chain state
+		// // add the latest synching header to our locator hashes if it's different from chain state
 		var locators [][]byte
-		bestBlock := chain.Current().Hash()
-		bestHeader := path.BestHash()
-		if !bytes.Equal(bestHeader, bestBlock) {
-			locators = append(locators, bestHeader)
-		}
+		// bestBlock := chain.Current().Hash()
+		// bestHeader := path.BestHash()
+		// if !bytes.Equal(bestHeader, bestBlock) {
+		// 	locators = append(locators, bestHeader)
+		// }
 
 		// decide which block locator hashes to include by height
 		var heights []uint32
@@ -113,7 +113,12 @@ func handleMessage(log zerolog.Logger, wg *sync.WaitGroup, net Network, chain Bl
 			for {
 				hash := header.Hash()
 				if bytes.Equal(hash, locator) {
-					start = header.Height
+					var err error
+					start, err = chain.HeightByHash(header.Hash())
+					if err != nil {
+						log.Error().Err(err).Msg("could not get height by hash")
+						return
+					}
 					break Outer
 				}
 				parent := header.Parent
@@ -131,7 +136,7 @@ func handleMessage(log zerolog.Logger, wg *sync.WaitGroup, net Network, chain Bl
 
 		// return all headers from the found start to the top
 		var headers []*types.Header
-		for height := start + 1; height <= chain.Current().Height; height++ {
+		for height := start + 1; height <= chain.Height(); height++ {
 			header, err := chain.HeaderByHeight(height)
 			if err != nil {
 				log.Error().Err(err).Uint32("height", height).Msg("could not get header by height")
@@ -156,7 +161,7 @@ func handleMessage(log zerolog.Logger, wg *sync.WaitGroup, net Network, chain Bl
 		hash := msg.Hash()
 		log = log.With().Str("msg_type", "header").Str("hash", hex.EncodeToString(hash)).Logger()
 
-		// check if we already know the header
+		// check if we already stored the header
 		_, err := chain.HeaderByHash(hash)
 		if err == nil {
 			log.Debug().Msg("header already known")
