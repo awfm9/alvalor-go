@@ -181,9 +181,9 @@ func (b *BlockchainMock) Height() uint32 {
 	return uint32(args.Int(0))
 }
 
-func (b *BlockchainMock) Current() *types.Block {
+func (b *BlockchainMock) Header() *types.Header {
 	args := b.Called()
-	return args.Get(0).(*types.Block)
+	return args.Get(0).(*types.Header)
 }
 
 func (b *BlockchainMock) AddBlock(block *types.Block) error {

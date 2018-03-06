@@ -109,7 +109,7 @@ func handleMessage(log zerolog.Logger, wg *sync.WaitGroup, net Network, chain Bl
 		var start uint32
 	Outer:
 		for _, locator := range msg.Locators {
-			header := &chain.Current().Header
+			header := chain.Header()
 			for {
 				hash := header.Hash()
 				if bytes.Equal(hash, locator) {
