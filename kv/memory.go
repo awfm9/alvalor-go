@@ -45,17 +45,13 @@ func (m *Memory) Has(key []byte) (bool, error) {
 func (m *Memory) Get(key []byte) ([]byte, error) {
 	val, ok := m.kv[string(key)]
 	if !ok {
-		return nil, errors.New("unknown key")
+		return nil, errors.New("key not found")
 	}
 	return val, nil
 }
 
 // Del will delete the key-value pair with the given key.
 func (m *Memory) Del(key []byte) error {
-	_, ok := m.kv[string(key)]
-	if !ok {
-		return errors.New("unknown key")
-	}
 	delete(m.kv, string(key))
 	return nil
 }

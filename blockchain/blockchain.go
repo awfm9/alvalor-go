@@ -64,7 +64,9 @@ func New(heights KV, indices KV, headers Store, transactions Store) (*Blockchain
 // AddBlock adds a block to the blockchain.
 func (bc *Blockchain) AddBlock(block *types.Block) error {
 
-	// TODO: handle reorgs
+	// TODO: handle reorgs & best path block per height
+
+	// TODO: make sure we have parent
 
 	// calculate the hash once and prepare key for height lookups
 	hash := block.Hash()

@@ -27,5 +27,6 @@ struct Transaction {
   transfers @0 :List(Transfer);
   fees @1: List(Fee);
   data @2: Data;
-  signatures @3: List(Data);
+  nonce @3: UInt64;
+  signatures @4: List(Data);
 }

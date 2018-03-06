@@ -86,6 +86,7 @@ func encodeTransaction(seg *capnp.Segment, init initTransaction, e *types.Transa
 	if err != nil {
 		return Transaction{}, errors.Wrap(err, "could not set data")
 	}
+	transaction.SetNonce(e.Nonce)
 	sigs, err := transaction.NewSignatures(int32(len(e.Signatures)))
 	if err != nil {
 		return Transaction{}, errors.Wrap(err, "could not create signature list")
@@ -124,6 +125,7 @@ func decodeTransaction(read initTransaction) (*types.Transaction, error) {
 		Transfers:  make([]*types.Transfer, 0, transfers.Len()),
 		Fees:       make([]*types.Fee, 0, fees.Len()),
 		Data:       data,
+		Nonce:      transaction.Nonce(),
 		Signatures: make([][]byte, 0, signatures.Len()),
 	}
 	for i := 0; i < transfers.Len(); i++ {

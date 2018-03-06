@@ -28,6 +28,7 @@ type Transaction struct {
 	Transfers  []*Transfer
 	Fees       []*Fee
 	Data       []byte
+	Nonce      uint64
 	Signatures [][]byte
 }
 
@@ -47,5 +48,7 @@ func (tx Transaction) Hash() []byte {
 		_, _ = h.Write(buf)
 	}
 	_, _ = h.Write(tx.Data)
+	binary.LittleEndian.PutUint64(buf, tx.Nonce)
+	_, _ = h.Write(buf)
 	return h.Sum(nil)
 }
