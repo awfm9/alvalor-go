@@ -15,10 +15,19 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with Alvalor.  If not, see <http://www.gnu.org/licenses/>.
 
-package node
+package path
 
-// Path manages a tree of block headers and finds the longest path.
-type Path interface {
-	Add(hash []byte, parent []byte) error
-	Has(hash []byte) bool
+func path(n *node) [][]byte {
+	if len(n.children) == 0 {
+		return [][]byte{n.hash}
+	}
+	var best [][]byte
+	for _, child := range n.children {
+		p := path(child)
+		if len(p) <= len(best) {
+			continue
+		}
+		best = p
+	}
+	return append([][]byte{n.hash}, best...)
 }

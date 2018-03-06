@@ -19,32 +19,32 @@ package path
 
 import "errors"
 
-// Path will manage a tree of block hashes to identify the longest valid path.
-type Path struct {
+// Finder will manage a tree of block hashes to identify the longest valid path.
+type Finder struct {
 	root   *node
 	lookup map[string]*node
 }
 
 // New will create a new manager for paths.
-func New(root []byte) *Path {
+func New(root []byte) *Finder {
 	n := &node{
 		hash: root,
 	}
-	p := &Path{
+	f := &Finder{
 		root:   n,
 		lookup: make(map[string]*node),
 	}
-	p.lookup[string(root)] = n
-	return p
+	f.lookup[string(root)] = n
+	return f
 }
 
 // Add will add a new hash with the given parent to the path finding.
-func (p *Path) Add(hash []byte, parent []byte) error {
-	_, ok := p.lookup[string(hash)]
+func (f *Finder) Add(hash []byte, parent []byte) error {
+	_, ok := f.lookup[string(hash)]
 	if ok {
 		return errors.New("hash already known")
 	}
-	par, ok := p.lookup[string(parent)]
+	par, ok := f.lookup[string(parent)]
 	if !ok {
 		return errors.New("parent not known")
 	}
@@ -53,12 +53,18 @@ func (p *Path) Add(hash []byte, parent []byte) error {
 		parent: par,
 	}
 	par.children = append(par.children, n)
-	p.lookup[string(hash)] = n
+	f.lookup[string(hash)] = n
 	return nil
 }
 
 // Has will check whether the given hash is known.
-func (p *Path) Has(hash []byte) bool {
-	_, ok := p.lookup[string(hash)]
+func (f *Finder) Has(hash []byte) bool {
+	_, ok := f.lookup[string(hash)]
 	return ok
+}
+
+// Path will return the hashes along the longest path.
+func (f *Finder) Path() [][]byte {
+	// TODO: ensure the path remains stable even when their is a new equal length path
+	return path(f.root)
 }

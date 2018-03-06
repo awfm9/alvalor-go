@@ -17,16 +17,9 @@
 
 package node
 
-// Entity is any data structure that returns a unique ID.
-type Entity interface {
-	Hash() []byte
-}
-
-// Handlers describes the handlers we need to process everything.
-type Handlers interface {
-	Input(input <-chan interface{})
-	Event(event interface{})
-	Message(address string, message interface{})
-	Entity(entity Entity)
-	Collect(path [][]byte)
+// Finder is in charge of finding the longest path in a tree of block hashes.
+type Finder interface {
+	Add(hash []byte, parent []byte) error
+	Has(hash []byte) bool
+	Path() [][]byte
 }

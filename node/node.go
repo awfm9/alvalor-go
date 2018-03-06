@@ -46,17 +46,17 @@ type Codec interface {
 }
 
 type simpleNode struct {
-	log   zerolog.Logger
-	wg    *sync.WaitGroup
-	net   Network
-	chain Blockchain
-	path  Path
-	peers peerManager
-	pool  poolManager
+	log    zerolog.Logger
+	wg     *sync.WaitGroup
+	net    Network
+	chain  Blockchain
+	finder Finder
+	peers  peerManager
+	pool   poolManager
 }
 
 // New creates a new node to manage the Alvalor blockchain.
-func New(log zerolog.Logger, net Network, chain Blockchain, path Path, codec Codec, input <-chan interface{}) Node {
+func New(log zerolog.Logger, net Network, chain Blockchain, finder Finder, codec Codec, input <-chan interface{}) Node {
 
 	// initialize the node
 	n := &simpleNode{}
@@ -72,7 +72,7 @@ func New(log zerolog.Logger, net Network, chain Blockchain, path Path, codec Cod
 	// store dependency references
 	n.net = net
 	n.chain = chain
-	n.path = path
+	n.finder = finder
 
 	// initialize peer state manager
 	peers := newPeers()
@@ -111,10 +111,13 @@ func (n *simpleNode) Event(event interface{}) {
 
 func (n *simpleNode) Message(address string, message interface{}) {
 	n.wg.Add(1)
-	go handleMessage(n.log, n.wg, n.net, n.chain, n.path, n.peers, n.pool, n, address, message)
+	go handleMessage(n.log, n.wg, n.net, n.chain, n.finder, n.peers, n.pool, n, address, message)
 }
 
 func (n *simpleNode) Entity(entity Entity) {
 	n.wg.Add(1)
 	go handleEntity(n.log, n.wg, n.net, n.peers, n.pool, entity)
+}
+
+func (n *simpleNode) Collect(path [][]byte) {
 }

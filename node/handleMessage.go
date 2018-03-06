@@ -26,7 +26,7 @@ import (
 	"github.com/alvalor/alvalor-go/types"
 )
 
-func handleMessage(log zerolog.Logger, wg *sync.WaitGroup, net Network, chain Blockchain, path Path, peers peerManager, pool poolManager, handlers Handlers, address string, message interface{}) {
+func handleMessage(log zerolog.Logger, wg *sync.WaitGroup, net Network, chain Blockchain, finder Finder, peers peerManager, pool poolManager, handlers Handlers, address string, message interface{}) {
 	defer wg.Done()
 
 	// configure logger
@@ -49,7 +49,7 @@ func handleMessage(log zerolog.Logger, wg *sync.WaitGroup, net Network, chain Bl
 		}
 
 		// check if we are already synching the path to this unstored block
-		ok := path.Has(msg.Hash)
+		ok := finder.Has(msg.Hash)
 		if ok {
 			log.Debug().Msg("already syncing with peer")
 			return
@@ -153,8 +153,7 @@ func handleMessage(log zerolog.Logger, wg *sync.WaitGroup, net Network, chain Bl
 	case *types.Header:
 
 		hash := msg.Hash()
-		parent := msg.Parent
-		log = log.With().Str("msg_type", "header").Hex("hash", hash).Hex("parent", parent).Logger()
+		log = log.With().Str("msg_type", "header").Hex("hash", hash).Hex("parent", msg.Parent).Logger()
 
 		// check if we already stored the header
 		_, err := chain.HeaderByHash(hash)
@@ -164,18 +163,22 @@ func handleMessage(log zerolog.Logger, wg *sync.WaitGroup, net Network, chain Bl
 		}
 
 		// check if we already process the header
-		ok := path.Has(hash)
+		ok := finder.Has(hash)
 		if ok {
 			log.Debug().Msg("header already processing")
 			return
 		}
 
 		// add the header to the path finder
-		err = path.Add(hash, parent)
+		err = finder.Add(hash, msg.Parent)
 		if err != nil {
 			log.Error().Err(err).Msg("could not add header to path")
 			return
 		}
+
+		// collect all information needed to complete this path
+		path := finder.Path()
+		handlers.Collect(path)
 
 		log.Debug().Msg("processed header message")
 
