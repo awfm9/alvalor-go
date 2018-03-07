@@ -30,10 +30,18 @@ type Transaction struct {
 	Data       []byte
 	Nonce      uint64
 	Signatures [][]byte
+	hash       []byte
 }
 
 // Hash returns the unique hash of the transaction.
-func (tx Transaction) Hash() []byte {
+func (tx *Transaction) Hash() []byte {
+	if tx.hash == nil {
+		tx.hash = tx.calc()
+	}
+	return tx.hash
+}
+
+func (tx Transaction) calc() []byte {
 	buf := make([]byte, 8)
 	h, _ := blake2b.New256(nil)
 	for _, transfer := range tx.Transfers {

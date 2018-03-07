@@ -23,17 +23,20 @@ import (
 	"github.com/pkg/errors"
 )
 
-// Store represents a store for different entities.
+// Store represents a store to store entities by unique ID.
 type Store struct {
-	codec Codec
-	kv    KV
+	kv     KV
+	codec  Codec
+	prefix []byte
 }
 
-// New creates a new store to store entities.
-func New(codec Codec, kv KV) *Store {
+// New creates a new store for entities, using the given codec to encode them, the key-value store to save the
+// data and the prefix to add to the key for differentiation with other entities in the same store.
+func New(kv KV, codec Codec, prefix string) *Store {
 	return &Store{
-		codec: codec,
-		kv:    kv,
+		kv:     kv,
+		codec:  codec,
+		prefix: []byte(prefix),
 	}
 }
 
@@ -44,9 +47,10 @@ func (s *Store) Save(entity Entity) error {
 	if err != nil {
 		return errors.Wrap(err, "could not encode entity")
 	}
-	id := entity.ID()
+	hash := entity.Hash()
 	data := buf.Bytes()
-	err = s.kv.Put(id, data)
+	key := append(s.prefix, hash...)
+	err = s.kv.Put(key, data)
 	if err != nil {
 		return errors.Wrap(err, "could not put entity data")
 	}
@@ -55,7 +59,8 @@ func (s *Store) Save(entity Entity) error {
 
 // Retrieve will retrieve an entity from the store.
 func (s *Store) Retrieve(id []byte) (interface{}, error) {
-	data, err := s.kv.Get(id)
+	key := append(s.prefix, id...)
+	data, err := s.kv.Get(key)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get entity data")
 	}
