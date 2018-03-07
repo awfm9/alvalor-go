@@ -19,6 +19,6 @@ package blockchain
 
 // Store represents an entity database.
 type Store interface {
-	Save(entity Entity) error
-	Retrieve(hash []byte) (Entity, error)
+	Save(hash []byte, entity interface{}) error
+	Retrieve(hash []byte) (interface{}, error)
 }

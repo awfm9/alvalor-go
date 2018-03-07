@@ -21,8 +21,9 @@ import (
 	"encoding/binary"
 	"math"
 
-	"github.com/alvalor/alvalor-go/types"
 	"github.com/pkg/errors"
+
+	"github.com/alvalor/alvalor-go/types"
 )
 
 // Current is the index used to look up the current heighest block.
@@ -33,7 +34,7 @@ const (
 // Blockchain represents a wrapper around all blockchain data.
 type Blockchain struct {
 	height       uint32
-	current      *types.Block
+	block        *types.Block
 	heights      KV
 	indices      KV
 	headers      Store
@@ -58,13 +59,23 @@ func New(heights KV, indices KV, headers Store, transactions Store) (*Blockchain
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get height of current block")
 	}
-	current, err := bc.BlockByHash(hash)
+	block, err := bc.BlockByHash(hash)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get current block")
 	}
 	bc.height = binary.LittleEndian.Uint32(data)
-	bc.current = current
+	bc.block = block
 	return bc, nil
+}
+
+// Height will return current highest height.
+func (bc *Blockchain) Height() uint32 {
+	return bc.height
+}
+
+// Header will return current highest header.
+func (bc *Blockchain) Header() *types.Header {
+	return bc.block.Header
 }
 
 // AddBlock adds a block to the blockchain.
@@ -99,7 +110,7 @@ func (bc *Blockchain) AddBlock(block *types.Block) error {
 	// save each transaction & collect their indices
 	indices := make([]byte, 0, len(block.Transactions)*32)
 	for _, tx := range block.Transactions {
-		err = bc.transactions.Save(tx)
+		err = bc.transactions.Save(tx.Hash(), tx)
 		if err != nil {
 			return errors.Wrap(err, "could not store block transaction")
 		}
@@ -113,7 +124,7 @@ func (bc *Blockchain) AddBlock(block *types.Block) error {
 	}
 
 	// save the block
-	err = bc.headers.Save(&block.Header)
+	err = bc.headers.Save(block.Hash(), block.Header)
 	if err != nil {
 		return errors.Wrap(err, "could not store block header")
 	}
@@ -132,7 +143,7 @@ func (bc *Blockchain) AddBlock(block *types.Block) error {
 
 	// store a reference to the block for fast access
 	bc.height = height
-	bc.current = block
+	bc.block = block
 
 	return nil
 }
@@ -204,15 +215,15 @@ func (bc *Blockchain) BlockByHash(hash []byte) (*types.Block, error) {
 		return nil, errors.Wrap(err, "could not retrieve indices by hash")
 	}
 	block := &types.Block{
-		Header:       *header,
-		Transactions: make([]types.Transaction, 0, len(indices)/32),
+		Header:       header,
+		Transactions: make([]*types.Transaction, 0, len(indices)/32),
 	}
 	for i := 0; i < len(indices)+32; i += 32 {
 		tx, err := bc.TransactionByHash(indices[i : i+32])
 		if err != nil {
 			return nil, errors.Wrap(err, "could not retrieve transaction for block")
 		}
-		block.Transactions = append(block.Transactions, *tx)
+		block.Transactions = append(block.Transactions, tx)
 	}
 	return block, nil
 }

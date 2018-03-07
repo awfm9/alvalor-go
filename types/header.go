@@ -33,10 +33,18 @@ type Header struct {
 	Target []byte
 	Time   time.Time
 	Nonce  uint64
+	hash   []byte
 }
 
 // Hash returns the unique hash of header.
 func (hdr Header) Hash() []byte {
+	if hdr.hash == nil {
+		hdr.hash = hdr.calc()
+	}
+	return hdr.hash
+}
+
+func (hdr Header) calc() []byte {
 	h, _ := blake2b.New256(nil)
 	_, _ = h.Write(hdr.Parent)
 	_, _ = h.Write(hdr.State)

@@ -22,14 +22,21 @@ import (
 	"math/rand"
 	"os"
 	"os/signal"
+	"os/user"
+	"path/filepath"
 	"time"
 
 	"github.com/awishformore/zerolog"
+	"github.com/dgraph-io/badger"
 	"github.com/spf13/pflag"
 
+	"github.com/alvalor/alvalor-go/blockchain"
 	"github.com/alvalor/alvalor-go/codec"
+	"github.com/alvalor/alvalor-go/finder"
+	"github.com/alvalor/alvalor-go/kv"
 	"github.com/alvalor/alvalor-go/network"
 	"github.com/alvalor/alvalor-go/node"
+	"github.com/alvalor/alvalor-go/store"
 	"github.com/alvalor/alvalor-go/types"
 )
 
@@ -56,15 +63,22 @@ func main() {
 	zerolog.TimestampFunc = time.Now().UTC
 	log := zerolog.New(os.Stderr).With().Timestamp().Logger().Level(zerolog.InfoLevel)
 
+	// determine current user directory
+	user, err := user.Current()
+	if err != nil {
+		log.Fatal().Err(err).Msg("could not get current user")
+	}
+	dir := filepath.Join(user.HomeDir, ".alvalor")
+
 	// use our efficient capnproto codec for network communication
-	cod := codec.NewProto()
+	codec := codec.NewProto()
 
 	// create channel to pipe messages from network layer to node layer
 	sub := make(chan interface{}, 128)
 
 	// initialize the network component to create our p2p network node
 	address := fmt.Sprintf("%v:%v", cfg.IP, cfg.Port)
-	net := network.New(log, cod, sub,
+	net := network.New(log, codec, sub,
 		network.SetListen(cfg.Listen),
 		network.SetAddress(address),
 		network.SetMinPeers(4),
@@ -77,8 +91,36 @@ func main() {
 		net.Add(address)
 	}
 
+	// make sure the database directory exists
+	dbDir := filepath.Join(dir, "database")
+	err = os.MkdirAll(dbDir, os.ModePerm)
+	if err != nil {
+		log.Fatal().Err(err).Msg("could not create database directory")
+	}
+
+	// initialize the key-value database
+	opts := badger.DefaultOptions
+	opts.Dir = dbDir
+	opts.ValueDir = dbDir
+	db, err := badger.Open(opts)
+	if err != nil {
+		log.Fatal().Err(err).Msg("could not open database")
+	}
+
+	// create the wrapper around badger & initialize entity stores
+	kv := kv.NewBadger(db)
+	blocks := store.New(kv, codec, "b")
+	txs := store.New(kv, codec, "t")
+	chain, err := blockchain.New(kv, kv, blocks, txs)
+	if err != nil {
+		log.Fatal().Err(err).Msg("could not initialize blockchain")
+	}
+
+	// initialize the path finder
+	find := finder.New(chain.Header().Hash())
+
 	// initialize the node subscriber
-	n := node.New(log, net, cod, sub)
+	n := node.New(log, net, chain, find, codec, sub)
 
 	// wait for a stop signal to initialize shutdown
 	stats := time.NewTicker(10 * time.Second)

@@ -19,6 +19,6 @@ package types
 
 // Block represents a proof of work block on the Alvalor base layer.
 type Block struct {
-	Header
-	Transactions []Transaction
+	*Header
+	Transactions []*Transaction
 }
