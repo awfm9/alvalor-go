@@ -41,13 +41,12 @@ func New(kv KV, codec Codec, prefix string) *Store {
 }
 
 // Save will put a new entity into the store.
-func (s *Store) Save(entity Entity) error {
+func (s *Store) Save(hash []byte, entity interface{}) error {
 	buf := &bytes.Buffer{}
 	err := s.codec.Encode(buf, entity)
 	if err != nil {
 		return errors.Wrap(err, "could not encode entity")
 	}
-	hash := entity.Hash()
 	data := buf.Bytes()
 	key := append(s.prefix, hash...)
 	err = s.kv.Put(key, data)
@@ -58,8 +57,8 @@ func (s *Store) Save(entity Entity) error {
 }
 
 // Retrieve will retrieve an entity from the store.
-func (s *Store) Retrieve(id []byte) (interface{}, error) {
-	key := append(s.prefix, id...)
+func (s *Store) Retrieve(hash []byte) (interface{}, error) {
+	key := append(s.prefix, hash...)
 	data, err := s.kv.Get(key)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get entity data")
