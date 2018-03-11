@@ -30,32 +30,32 @@ var (
 	ErrNotFound      = errors.New("key not found")
 )
 
-// Trie represents our own implementation of the patricia merkle trie as specified in the Ethereum
+// Hex represents our own implementation of the patricia merkle trie as specified in the Ethereum
 // yellow paper, with a few simplications due to the simpler structure of the Alvalor blockchain.
-type Trie struct {
+type Hex struct {
 	root node
 	h    hash.Hash
 }
 
-// New creates a new empty trie with no state.
-func New() *Trie {
+// NewHex creates a new empty hex trie.
+func NewHex() *Hex {
 	h, _ := blake2b.New256(nil)
-	t := &Trie{h: h}
+	t := &Hex{h: h}
 	return t
 }
 
 // Put will insert the given data for the given key. It will fail if there already is data with the given key.
-func (t *Trie) Put(key []byte, data []byte) error {
+func (t *Hex) Put(key []byte, data []byte) error {
 	return t.put(key, data, false)
 }
 
 // MustPut will insert the given data for the given key and will overwrite any data that might already be stored under
 // the given key.
-func (t *Trie) MustPut(key []byte, data []byte) {
+func (t *Hex) MustPut(key []byte, data []byte) {
 	t.put(key, data, true)
 }
 
-func (t *Trie) put(key []byte, data []byte, force bool) error {
+func (t *Hex) put(key []byte, data []byte, force bool) error {
 	cur := &t.root
 	path := encode(key)
 	for {
@@ -116,7 +116,7 @@ func (t *Trie) put(key []byte, data []byte, force bool) error {
 
 // Get will retrieve the hash located at the path provided by the given key. If the path doesn't
 // exist or there is no hash at the given location, it returns a nil slice and false.
-func (t *Trie) Get(key []byte) ([]byte, error) {
+func (t *Hex) Get(key []byte) ([]byte, error) {
 	cur := &t.root
 	path := encode(key)
 	for {
@@ -148,7 +148,7 @@ func (t *Trie) Get(key []byte) ([]byte, error) {
 
 // Del will try to delete the hash located at the path provided by the given key. If no hash is
 // found at the given location, it returns false.
-func (t *Trie) Del(key []byte) error {
+func (t *Hex) Del(key []byte) error {
 	var visited []*node
 	cur := &t.root
 	path := encode(key)
@@ -231,12 +231,12 @@ Compact:
 // root node. Currently, it does not do any caching and recomputes the hash from the leafs up. If
 // the root is not initialized, it will return the hash of an empty byte array to uniquely represent
 // a trie without state.
-func (t *Trie) Hash() []byte {
+func (t *Hex) Hash() []byte {
 	return t.nodeHash(t.root)
 }
 
 // nodeHash will return the hash of a given node.
-func (t *Trie) nodeHash(node node) []byte {
+func (t *Hex) nodeHash(node node) []byte {
 	switch n := node.(type) {
 	case *fullNode:
 		var hashes [][]byte

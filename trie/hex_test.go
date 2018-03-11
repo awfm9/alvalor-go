@@ -28,7 +28,7 @@ const TestLength = 1000000
 
 func TestSingle(t *testing.T) {
 	rand.Seed(time.Now().UnixNano())
-	trie := New()
+	trie := NewHex()
 	for i := 0; i < TestLength; i++ {
 		key := make([]byte, 32)
 		hash := make([]byte, 32)
@@ -58,7 +58,7 @@ func TestSingle(t *testing.T) {
 
 func TestBatch(t *testing.T) {
 	rand.Seed(time.Now().UnixNano())
-	trie := New()
+	trie := NewHex()
 	keys := make([][]byte, 0, TestLength)
 	hashes := make([][]byte, 0, TestLength)
 	for i := 0; i < TestLength; i++ {
