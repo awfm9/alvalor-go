@@ -154,35 +154,41 @@ func (t *Bin) put(key []byte, data []byte, force bool) error {
 
 // Get will retrieve the hash located at the path provided by the given key. If the path doesn't
 // exist or there is no hash at the given location, it returns a nil slice and false.
-// func (t *Bin) Get(key []byte) ([]byte, error) {
-// 	cur := &t.root
-// 	path := encode(key)
-// 	for {
-// 		switch n := (*cur).(type) {
-// 		case *hexNode:
-// 			cur = &n.children[path[0]]
-// 			path = path[1:]
-// 		case *shortNode:
-// 			var common []byte
-// 			for i := 0; i < len(n.key); i++ {
-// 				if path[i] != n.key[i] {
-// 					break
-// 				}
-// 				common = append(common, path[i])
-// 			}
-// 			if len(common) == len(n.key) {
-// 				cur = &n.child
-// 				path = path[len(common):]
-// 				continue
-// 			}
-// 			return nil, ErrNotFound
-// 		case valueNode:
-// 			return []byte(n), nil
-// 		case nil:
-// 			return nil, ErrNotFound
-// 		}
-// 	}
-// }
+func (t *Bin) Get(key []byte) ([]byte, error) {
+	cur := &t.root
+	path := bitset.Bytes(key)
+	index := uint(0)
+	for {
+		switch n := (*cur).(type) {
+		case *binFull:
+			if !path.Get(int(index)) {
+				cur = &n.left
+			} else {
+				cur = &n.right
+			}
+			index++
+		case *binShort:
+			nodePath := bitset.Bytes(n.path)
+			var commonCount uint
+			for i := uint(0); i < n.count; i++ {
+				if path.Get(int(i+index)) != nodePath.Get(int(i)) {
+					break
+				}
+				commonCount++
+			}
+			if commonCount == n.count {
+				cur = &n.child
+				index = index + commonCount
+				continue
+			}
+			return nil, ErrNotFound
+		case value:
+			return []byte(n), nil
+		case nil:
+			return nil, ErrNotFound
+		}
+	}
+}
 
 // Del will try to delete the hash located at the path provided by the given key. If no hash is
 // found at the given location, it returns false.
