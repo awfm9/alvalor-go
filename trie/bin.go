@@ -192,84 +192,107 @@ func (t *Bin) Get(key []byte) ([]byte, error) {
 
 // Del will try to delete the hash located at the path provided by the given key. If no hash is
 // found at the given location, it returns false.
-// func (t *Bin) Del(key []byte) error {
-// 	var visited []*node
-// 	cur := &t.root
-// 	path := encode(key)
-// Remove:
-// 	for {
-// 		switch n := (*cur).(type) {
-// 		case *hexNode:
-// 			visited = append(visited, cur)
-// 			cur = &n.children[path[0]]
-// 			path = path[1:]
-// 		case *shortNode:
-// 			visited = append(visited, cur)
-// 			var common []byte
-// 			for i := 0; i < len(n.key); i++ {
-// 				if path[i] != n.key[i] {
-// 					break
-// 				}
-// 				common = append(common, path[i])
-// 			}
-// 			if len(common) == len(n.key) {
-// 				cur = &n.child
-// 				path = path[len(common):]
-// 				continue
-// 			}
-// 			return ErrNotFound
-// 		case valueNode:
-// 			*cur = nil
-// 			break Remove
-// 		case nil:
-// 			return ErrNotFound
-// 		}
-// 	}
-// Compact:
-// 	for len(visited) > 0 {
-// 		cur = visited[len(visited)-1]
-// 		switch n := (*cur).(type) {
-// 		case *shortNode:
-// 			*cur = nil
-// 			visited = visited[:len(visited)-1]
-// 			continue Compact
-// 		case *hexNode:
-// 			var index int
-// 			var child node
-// 			count := 0
-// 			for i, c := range n.children {
-// 				if c != nil {
-// 					index = i
-// 					child = c
-// 					count++
-// 				}
-// 			}
-// 			if count > 1 {
-// 				break Compact
-// 			}
-// 			short := shortNode{
-// 				key:   []byte{byte(index)},
-// 				child: child,
-// 			}
-// 			c, ok := child.(*shortNode)
-// 			if ok {
-// 				short.key = append(short.key, c.key...)
-// 				short.child = c.child
-// 			}
-// 			*cur = &short
-// 			if len(visited) > 1 {
-// 				parent := visited[len(visited)-2]
-// 				p, ok := (*parent).(*shortNode)
-// 				if ok {
-// 					p.key = append(p.key, short.key...)
-// 					p.child = short.child
-// 				}
-// 			}
-// 			break Compact
-// 		}
-// 	}
-// 	return nil
-// }
+func (t *Bin) Del(key []byte) error {
+	var visited []*node
+	cur := &t.root
+	path := bitset.Bytes(key)
+	index := uint(0)
+Remove:
+	for {
+		switch n := (*cur).(type) {
+		case *binFull:
+			visited = append(visited, cur)
+			if !path.Get(int(index)) {
+				cur = &n.left
+			} else {
+				cur = &n.right
+			}
+			index++
+		case *binShort:
+			visited = append(visited, cur)
+			nodePath := bitset.Bytes(n.path)
+			var commonCount uint
+			for i := uint(0); i < n.count; i++ {
+				if path.Get(int(i+index)) != nodePath.Get(int(i)) {
+					break
+				}
+				commonCount++
+			}
+			if commonCount == n.count {
+				cur = &n.child
+				index = index + commonCount
+				continue Remove
+			}
+			return ErrNotFound
+		case value:
+			*cur = nil
+			break Remove
+		case nil:
+			return ErrNotFound
+		}
+	}
+
+	// iterate back to compact the trie
+	var last *node
+
+	// the last node we visited before the value node was either a short or a full node
+	last = visited[len(visited)-1]
+	_, ok := (*last).(*binShort)
+
+	// if it was a short node, delete it
+	if ok {
+		*last = nil
+		visited = visited[:len(visited)-1]
+	}
+
+	// the deleted node (or short node) was attached to a full node or was root
+	last = visited[len(visited)-1]
+	l, ok := (*last).(*binFull)
+
+	// if it was not a full node, it was root and we are done
+	if !ok {
+		return nil
+	}
+
+	// create a substitute short node for the full node with just one child
+	var sub *binShort
+	if l.left != nil {
+		sub = &binShort{count: 1, path: []byte{0}, child: l.left}
+	} else {
+		sub = &binShort{count: 1, path: []byte{1}, child: l.right}
+	}
+	*last = sub
+
+	// if the child is a short node, the full node wasn't last node before the remaining value node
+	// merge the child node into the substitute node
+	c, ok := sub.child.(*binShort)
+	if ok {
+		sub.count = sub.count + c.count
+		sub.path = append(sub.path, c.path...)
+		sub.child = c.child
+	}
+
+	// if there is no parent, the new short node is root and we are done
+	if len(visited) == 1 {
+		return nil
+	}
+
+	// otherwise, the parent could be another short node
+	parent := visited[len(visited)-2]
+	p, ok := (*parent).(*binShort)
+
+	// if the parent is not a short node, it's a full node and we are done
+	if ok {
+		return nil
+	}
+
+	// merge the substitute node into the parent node
+	p.count = p.count + sub.count
+	p.path = append(p.path, sub.path...)
+	p.child = sub.child
+
+	return nil
+}
 
 // Hash will return the hash that represents the trie in its entirety by returning the hash of the
 // root node. Currently, it does not do any caching and recomputes the hash from the leafs up. If
