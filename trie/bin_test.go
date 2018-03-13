@@ -24,12 +24,12 @@ import (
 	"time"
 )
 
-const HexTestLength = 100000
+const BinTestLength = 100000
 
-func TestHexSingle(t *testing.T) {
+func TestBinSingle(t *testing.T) {
 	rand.Seed(time.Now().UnixNano())
-	trie := NewHex()
-	for i := 0; i < HexTestLength; i++ {
+	trie := NewBin()
+	for i := 0; i < BinTestLength; i++ {
 		key := make([]byte, 32)
 		hash := make([]byte, 32)
 		_, _ = rand.Read(key)
@@ -56,12 +56,12 @@ func TestHexSingle(t *testing.T) {
 	}
 }
 
-func TestHexBatch(t *testing.T) {
+func TestBinBatch(t *testing.T) {
 	rand.Seed(time.Now().UnixNano())
-	trie := NewHex()
-	keys := make([][]byte, 0, HexTestLength)
-	hashes := make([][]byte, 0, HexTestLength)
-	for i := 0; i < HexTestLength; i++ {
+	trie := NewBin()
+	keys := make([][]byte, 0, BinTestLength)
+	hashes := make([][]byte, 0, BinTestLength)
+	for i := 0; i < BinTestLength; i++ {
 		key := make([]byte, 32)
 		hash := make([]byte, 32)
 		_, _ = rand.Read(key)

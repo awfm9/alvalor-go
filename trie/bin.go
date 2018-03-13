@@ -245,6 +245,11 @@ Remove:
 		visited = visited[:len(visited)-1]
 	}
 
+	// if we only had the short node, it was root and we are done
+	if len(visited) == 0 {
+		return nil
+	}
+
 	// the deleted node (or short node) was attached to a full node or was root
 	last = visited[len(visited)-1]
 	l, ok := (*last).(*binFull)
@@ -262,6 +267,7 @@ Remove:
 		sub = &binShort{count: 1, path: []byte{1}, child: l.right}
 	}
 	*last = sub
+	visited = visited[:len(visited)-1]
 
 	// if the child is a short node, the full node wasn't last node before the remaining value node
 	// merge the child node into the substitute node
@@ -273,16 +279,16 @@ Remove:
 	}
 
 	// if there is no parent, the new short node is root and we are done
-	if len(visited) == 1 {
+	if len(visited) == 0 {
 		return nil
 	}
 
 	// otherwise, the parent could be another short node
-	parent := visited[len(visited)-2]
+	parent := visited[len(visited)-1]
 	p, ok := (*parent).(*binShort)
 
 	// if the parent is not a short node, it's a full node and we are done
-	if ok {
+	if !ok {
 		return nil
 	}
 
