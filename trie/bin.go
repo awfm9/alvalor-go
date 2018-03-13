@@ -298,37 +298,35 @@ Remove:
 // root node. Currently, it does not do any caching and recomputes the hash from the leafs up. If
 // the root is not initialized, it will return the hash of an empty byte array to uniquely represent
 // a trie without state.
-// func (t *Bin) Hash() []byte {
-// 	return t.nodeHash(t.root)
-// }
+func (t *Bin) Hash() []byte {
+	return t.nodeHash(t.root)
+}
 
 // nodeHash will return the hash of a given node.
-// func (t *Bin) nodeHash(node node) []byte {
-// 	switch n := node.(type) {
-// 	case *hexNode:
-// 		var hashes [][]byte
-// 		for _, child := range n.children {
-// 			hashes = append(hashes, t.nodeHash(child))
-// 		}
-// 		t.h.Reset()
-// 		for _, hash := range hashes {
-// 			t.h.Write(hash)
-// 		}
-// 		return t.h.Sum(nil)
-// 	case *shortNode:
-// 		hash := t.nodeHash(n.child)
-// 		t.h.Reset()
-// 		t.h.Write(n.key)
-// 		t.h.Write(hash)
-// 		return t.h.Sum(nil)
-// 	case valueNode:
-// 		t.h.Reset()
-// 		t.h.Write([]byte(n))
-// 		return t.h.Sum(nil)
-// 	case nil:
-// 		t.h.Reset()
-// 		return t.h.Sum(nil)
-// 	default:
-// 		panic("invalid node type")
-// 	}
-// }
+func (t *Bin) nodeHash(node node) []byte {
+	switch n := node.(type) {
+	case *binFull:
+		left := t.nodeHash(n.left)
+		right := t.nodeHash(n.right)
+		t.h.Reset()
+		t.h.Write(left)
+		t.h.Write(right)
+		return t.h.Sum(nil)
+	case *binShort:
+		hash := t.nodeHash(n.child)
+		t.h.Reset()
+		t.h.Write([]byte{byte(n.count)})
+		t.h.Write(n.path)
+		t.h.Write(hash)
+		return t.h.Sum(nil)
+	case value:
+		t.h.Reset()
+		t.h.Write([]byte(n))
+		return t.h.Sum(nil)
+	case nil:
+		t.h.Reset()
+		return t.h.Sum(nil)
+	default:
+		panic("invalid node type")
+	}
+}
