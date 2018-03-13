@@ -49,28 +49,25 @@ func (t *Bin) MustPut(key []byte, data []byte) {
 	t.put(key, data, true)
 }
 
+// func modify(i int) int {
+// 	i = ((i / 8) * 8) + (7 - i%8)
+// 	return i
+// }
+
 func (t *Bin) put(key []byte, data []byte, force bool) error {
 	cur := &t.root
 	path := bitset.Bytes(key)
 	index := uint(0)
 	for {
 		switch n := (*cur).(type) {
-
-		// full binary node has one left and one right child
 		case *binFull:
-
-			// go left for zero and right for one
 			if !path.Get(int(index)) {
 				cur = &n.left
 			} else {
 				cur = &n.right
 			}
 			index++
-
-		// short binary node has path length, path and child
 		case *binShort:
-
-			// find the amount of common bits between insert path and node path
 			nodePath := bitset.Bytes(n.path)
 			var commonCount uint
 			for i := uint(0); i < n.count; i++ {
@@ -79,27 +76,21 @@ func (t *Bin) put(key []byte, data []byte, force bool) error {
 				}
 				commonCount++
 			}
-
-			// if we have the whole node path in common, simply forward to child
 			if commonCount == n.count {
 				cur = &n.child
 				index = index + commonCount
 				continue
 			}
-
-			// if we have a common count, we insert a common short node first
 			if commonCount > 0 {
 				commonPath := bitset.NewBytes(int(commonCount))
 				for i := uint(0); i < commonCount; i++ {
 					commonPath.SetBool(int(i), path.Get(int(i+index)))
 				}
-				commonNode := &binShort{count: commonCount, path: commonPath}
+				commonNode := &binShort{count: commonCount, path: []byte(commonPath)}
 				*cur = commonNode
 				cur = &commonNode.child
 				index = index + commonCount
 			}
-
-			// then we always insert the node where we split
 			var remain *node
 			splitNode := &binFull{}
 			*cur = splitNode
@@ -111,43 +102,36 @@ func (t *Bin) put(key []byte, data []byte, force bool) error {
 				remain = &splitNode.left
 			}
 			index++
-
-			// if we have remaining path on the initial short node, we insert it
 			remainCount := n.count - commonCount - 1
 			if remainCount > 0 {
 				remainPath := bitset.NewBytes(int(remainCount))
 				for i := uint(0); i < remainCount; i++ {
 					remainPath.SetBool(int(i), nodePath.Get(int(i+commonCount+1)))
 				}
-				remainNode := &binShort{count: remainCount, path: remainPath}
+				remainNode := &binShort{count: remainCount, path: []byte(remainPath)}
 				*remain = remainNode
 				remain = &remainNode.child
 			}
-
-			// finally, we insert the child of the initial short node
 			*remain = n.child
-
 		case value:
 			if !force {
 				return ErrAlreadyExists
 			}
 			*cur = nil
-
 		case nil:
-			if index < 255 {
-				remainCount := 255 - index
-				remainPath := bitset.NewBytes(int(remainCount))
-				for i := uint(0); i < remainCount; i++ {
-					remainPath.SetBool(int(i), path.Get(int(index+i)))
-				}
-				remainNode := &binShort{count: remainCount, path: remainPath}
-				*cur = remainNode
-				cur = &remainNode.child
-				index = 255
-				continue
+			if index == 256 {
+				*cur = value(data)
+				return nil
 			}
-			*cur = value(data)
-			return nil
+			finalCount := 256 - index
+			finalPath := bitset.NewBytes(int(finalCount))
+			for i := uint(0); i < finalCount; i++ {
+				finalPath.SetBool(int(i), path.Get(int(index+i)))
+			}
+			finalNode := &binShort{count: finalCount, path: []byte(finalPath)}
+			*cur = finalNode
+			cur = &finalNode.child
+			index = 256
 		}
 	}
 }
@@ -176,12 +160,11 @@ func (t *Bin) Get(key []byte) ([]byte, error) {
 				}
 				commonCount++
 			}
-			if commonCount == n.count {
-				cur = &n.child
-				index = index + commonCount
-				continue
+			if commonCount != n.count {
+				return nil, ErrNotFound
 			}
-			return nil, ErrNotFound
+			cur = &n.child
+			index = index + commonCount
 		case value:
 			return []byte(n), nil
 		case nil:
@@ -193,7 +176,8 @@ func (t *Bin) Get(key []byte) ([]byte, error) {
 // Del will try to delete the hash located at the path provided by the given key. If no hash is
 // found at the given location, it returns false.
 func (t *Bin) Del(key []byte) error {
-	var visited []*node
+	dummy := node(&dummy{})
+	last, parent, great := &dummy, &dummy, &dummy
 	cur := &t.root
 	path := bitset.Bytes(key)
 	index := uint(0)
@@ -201,7 +185,9 @@ Remove:
 	for {
 		switch n := (*cur).(type) {
 		case *binFull:
-			visited = append(visited, cur)
+			great = parent
+			parent = last
+			last = cur
 			if !path.Get(int(index)) {
 				cur = &n.left
 			} else {
@@ -209,7 +195,9 @@ Remove:
 			}
 			index++
 		case *binShort:
-			visited = append(visited, cur)
+			great = parent
+			parent = last
+			last = cur
 			nodePath := bitset.Bytes(n.path)
 			var commonCount uint
 			for i := uint(0); i < n.count; i++ {
@@ -218,85 +206,69 @@ Remove:
 				}
 				commonCount++
 			}
-			if commonCount == n.count {
-				cur = &n.child
-				index = index + commonCount
-				continue Remove
+			if commonCount != n.count {
+				return ErrNotFound
 			}
-			return ErrNotFound
+			cur = &n.child
+			index = index + commonCount
 		case value:
 			*cur = nil
 			break Remove
-		case nil:
-			return ErrNotFound
 		}
 	}
-
-	// iterate back to compact the trie
-	var last *node
-
-	// the last node we visited before the value node was either a short or a full node
-	last = visited[len(visited)-1]
 	_, ok := (*last).(*binShort)
-
-	// if it was a short node, delete it
 	if ok {
 		*last = nil
-		visited = visited[:len(visited)-1]
+		last = parent
+		parent = great
 	}
-
-	// if we only had the short node, it was root and we are done
-	if len(visited) == 0 {
-		return nil
-	}
-
-	// the deleted node (or short node) was attached to a full node or was root
-	last = visited[len(visited)-1]
 	l, ok := (*last).(*binFull)
-
-	// if it was not a full node, it was root and we are done
 	if !ok {
 		return nil
 	}
-
-	// create a substitute short node for the full node with just one child
-	var sub *binShort
+	var n *binShort
+	newPath := bitset.NewBytes(1)
 	if l.left != nil {
-		sub = &binShort{count: 1, path: []byte{0}, child: l.left}
+		newPath.Unset(0)
+		n = &binShort{count: 1, path: newPath, child: l.left}
 	} else {
-		sub = &binShort{count: 1, path: []byte{1}, child: l.right}
+		newPath.Set(0)
+		n = &binShort{count: 1, path: newPath, child: l.right}
 	}
-	*last = sub
-	visited = visited[:len(visited)-1]
-
-	// if the child is a short node, the full node wasn't last node before the remaining value node
-	// merge the child node into the substitute node
-	c, ok := sub.child.(*binShort)
+	*last = n
+	c, ok := n.child.(*binShort)
 	if ok {
-		sub.count = sub.count + c.count
-		sub.path = append(sub.path, c.path...)
-		sub.child = c.child
+		totalCount := n.count + c.count
+		totalPath := bitset.NewBytes(int(totalCount))
+		subPath := bitset.Bytes(n.path)
+		for i := uint(0); i < n.count; i++ {
+			totalPath.SetBool(int(i), subPath.Get(int(i)))
+		}
+		childPath := bitset.Bytes(c.path)
+		for i := uint(0); i < c.count; i++ {
+			totalPath.SetBool(int(i+n.count), childPath.Get(int(i)))
+		}
+		n.count = totalCount
+		n.path = []byte(totalPath)
+		n.child = c.child
 	}
-
-	// if there is no parent, the new short node is root and we are done
-	if len(visited) == 0 {
-		return nil
-	}
-
-	// otherwise, the parent could be another short node
-	parent := visited[len(visited)-1]
 	p, ok := (*parent).(*binShort)
-
-	// if the parent is not a short node, it's a full node and we are done
 	if !ok {
 		return nil
 	}
-
-	// merge the substitute node into the parent node
-	p.count = p.count + sub.count
-	p.path = append(p.path, sub.path...)
-	p.child = sub.child
-
+	totalCount := p.count + n.count
+	totalPath := bitset.NewBytes(int(totalCount))
+	parPath := bitset.Bytes(p.path)
+	for i := uint(0); i < p.count; i++ {
+		totalPath.SetBool(int(i), parPath.Get(int(i)))
+	}
+	subPath := bitset.Bytes(n.path)
+	for i := uint(0); i < n.count; i++ {
+		totalPath.SetBool(int(i+p.count), subPath.Get(int(i)))
+	}
+	p.count = totalCount
+	p.path = []byte(totalPath)
+	p.child = n.child
 	return nil
 }
 

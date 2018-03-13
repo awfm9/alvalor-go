@@ -55,6 +55,12 @@
   revision = "b7773ae218740a7be65057fc60b366a49b538a44"
 
 [[projects]]
+  branch = "master"
+  name = "github.com/jrick/bitset"
+  packages = ["."]
+  revision = "06eae37cdf93c699c0503c23f998167ce841974c"
+
+[[projects]]
   name = "github.com/pierrec/lz4"
   packages = ["."]
   revision = "2fcda4cb7018ce05a25959d2fe08c83e3329f169"
@@ -159,6 +165,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "7d3d496368d5cf0fc82d7d73c43261c82b948acb66539c32579356b9f79c3268"
+  inputs-digest = "4070e470b5b415f161251fc1534465ec3dc8e69c8aa35a2b96447c53d4732b23"
   solver-name = "gps-cdcl"
   solver-version = 1

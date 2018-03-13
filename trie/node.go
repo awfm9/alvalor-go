@@ -28,6 +28,9 @@ var (
 // node is simply a type definition for the empty interface.
 type node interface{}
 
+// dummy represents a dummy node used for asserts
+type dummy struct{}
+
 // valueNode represents a node that stores the data inserted as value into the trie, which
 // corresponds to the key that we traversed down the trie.
 type value []byte
