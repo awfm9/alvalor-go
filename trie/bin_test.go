@@ -36,22 +36,22 @@ func TestBinSingle(t *testing.T) {
 		_, _ = rand.Read(hash)
 		err := trie.Put(key, hash)
 		if err != nil {
-			t.Fatalf("could not put: %x", key)
+			t.Fatalf("could not put: %x (%v)", key, err)
 		}
 		out, err := trie.Get(key)
 		if err != nil {
-			t.Fatalf("could not get: %x", key)
+			t.Fatalf("could not get: %x (%v)", key, err)
 		}
 		if !bytes.Equal(out, hash) {
 			t.Errorf("wrong hash: %x != %x", out, hash)
 		}
 		err = trie.Del(key)
 		if err != nil {
-			t.Fatalf("could not del: %x", key)
+			t.Fatalf("could not del: %x (%v)", key, err)
 		}
 		_, err = trie.Get(key)
 		if err == nil {
-			t.Fatalf("should not get: %x", key)
+			t.Fatalf("should not get: %x (%v)", key, err)
 		}
 	}
 }
@@ -73,13 +73,13 @@ func TestBinBatch(t *testing.T) {
 		hash := hashes[i]
 		err := trie.Put(key, hash)
 		if err != nil {
-			t.Fatalf("could not put %v: %x", i, key)
+			t.Fatalf("could not put %v: %x (%v)", i, key, err)
 		}
 	}
 	for i, key := range keys {
 		out, err := trie.Get(key)
 		if err != nil {
-			t.Fatalf("could not get %v: %x", i, key)
+			t.Fatalf("could not get %v: %x (%v)", i, key, err)
 		}
 		hash := hashes[i]
 		if !bytes.Equal(out, hash) {
@@ -89,7 +89,7 @@ func TestBinBatch(t *testing.T) {
 	for i, key := range keys {
 		err := trie.Del(key)
 		if err != nil {
-			t.Fatalf("could not del %v: %x", i, key)
+			t.Fatalf("could not del %v: %x (%v)", i, key, err)
 		}
 	}
 	zero := trie.h.Sum(nil)
