@@ -49,11 +49,6 @@ func (t *Bin) MustPut(key []byte, data []byte) {
 	t.put(key, data, true)
 }
 
-// func modify(i int) int {
-// 	i = ((i / 8) * 8) + (7 - i%8)
-// 	return i
-// }
-
 func (t *Bin) put(key []byte, data []byte, force bool) error {
 	cur := &t.root
 	path := bitset.Bytes(key)
