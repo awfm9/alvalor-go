@@ -209,6 +209,8 @@ Remove:
 		case value:
 			*cur = nil
 			break Remove
+		case nil:
+			return ErrNotFound
 		}
 	}
 	_, ok := (*last).(*binShort)
@@ -224,10 +226,10 @@ Remove:
 	var n *binShort
 	newPath := bitset.NewBytes(1)
 	if l.left != nil {
-		newPath.Unset(0)
+		newPath.SetBool(0, false)
 		n = &binShort{count: 1, path: newPath, child: l.left}
 	} else {
-		newPath.Set(0)
+		newPath.SetBool(0, true)
 		n = &binShort{count: 1, path: newPath, child: l.right}
 	}
 	*last = n
