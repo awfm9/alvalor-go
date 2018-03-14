@@ -18,52 +18,45 @@
 package trie
 
 import (
-	"errors"
 	"hash"
 
 	"golang.org/x/crypto/blake2b"
 )
 
-// A list of errors that can be returned by the functions of the trie.
-var (
-	ErrAlreadyExists = errors.New("key already exists")
-	ErrNotFound      = errors.New("key not found")
-)
-
-// Trie represents our own implementation of the patricia merkle trie as specified in the Ethereum
+// Hex represents our own implementation of the patricia merkle trie as specified in the Ethereum
 // yellow paper, with a few simplications due to the simpler structure of the Alvalor blockchain.
-type Trie struct {
+type Hex struct {
 	root node
 	h    hash.Hash
 }
 
-// New creates a new empty trie with no state.
-func New() *Trie {
+// NewHex creates a new empty hex trie.
+func NewHex() *Hex {
 	h, _ := blake2b.New256(nil)
-	t := &Trie{h: h}
+	t := &Hex{h: h}
 	return t
 }
 
 // Put will insert the given data for the given key. It will fail if there already is data with the given key.
-func (t *Trie) Put(key []byte, data []byte) error {
+func (t *Hex) Put(key []byte, data []byte) error {
 	return t.put(key, data, false)
 }
 
 // MustPut will insert the given data for the given key and will overwrite any data that might already be stored under
 // the given key.
-func (t *Trie) MustPut(key []byte, data []byte) {
+func (t *Hex) MustPut(key []byte, data []byte) {
 	t.put(key, data, true)
 }
 
-func (t *Trie) put(key []byte, data []byte, force bool) error {
+func (t *Hex) put(key []byte, data []byte, force bool) error {
 	cur := &t.root
 	path := encode(key)
 	for {
 		switch n := (*cur).(type) {
-		case *fullNode:
+		case *hexFull:
 			cur = &n.children[path[0]]
 			path = path[1:]
-		case *shortNode:
+		case *hexShort:
 			var common []byte
 			for i := 0; i < len(n.key); i++ {
 				if path[i] != n.key[i] {
@@ -82,12 +75,12 @@ func (t *Trie) put(key []byte, data []byte, force bool) error {
 			if len(remain) == 1 {
 				left = n.child
 			} else {
-				left = &shortNode{key: remain[1:], child: n.child}
+				left = &hexShort{key: remain[1:], child: n.child}
 			}
-			full := &fullNode{}
+			full := &hexFull{}
 			full.children[remain[0]] = left
 			if len(common) > 0 {
-				short := &shortNode{key: common, child: full}
+				short := &hexShort{key: common, child: full}
 				*cur = short
 				cur = &short.child
 			} else {
@@ -95,20 +88,20 @@ func (t *Trie) put(key []byte, data []byte, force bool) error {
 				var next node = full
 				cur = &next
 			}
-		case valueNode:
+		case value:
 			if !force {
 				return ErrAlreadyExists
 			}
 			*cur = nil
 		case nil:
 			if len(path) > 0 {
-				short := &shortNode{key: path}
+				short := &hexShort{key: path}
 				*cur = short
 				cur = &short.child
 				path = nil
 				continue
 			}
-			*cur = valueNode(data)
+			*cur = value(data)
 			return nil
 		}
 	}
@@ -116,15 +109,15 @@ func (t *Trie) put(key []byte, data []byte, force bool) error {
 
 // Get will retrieve the hash located at the path provided by the given key. If the path doesn't
 // exist or there is no hash at the given location, it returns a nil slice and false.
-func (t *Trie) Get(key []byte) ([]byte, error) {
+func (t *Hex) Get(key []byte) ([]byte, error) {
 	cur := &t.root
 	path := encode(key)
 	for {
 		switch n := (*cur).(type) {
-		case *fullNode:
+		case *hexFull:
 			cur = &n.children[path[0]]
 			path = path[1:]
-		case *shortNode:
+		case *hexShort:
 			var common []byte
 			for i := 0; i < len(n.key); i++ {
 				if path[i] != n.key[i] {
@@ -138,7 +131,7 @@ func (t *Trie) Get(key []byte) ([]byte, error) {
 				continue
 			}
 			return nil, ErrNotFound
-		case valueNode:
+		case value:
 			return []byte(n), nil
 		case nil:
 			return nil, ErrNotFound
@@ -148,18 +141,18 @@ func (t *Trie) Get(key []byte) ([]byte, error) {
 
 // Del will try to delete the hash located at the path provided by the given key. If no hash is
 // found at the given location, it returns false.
-func (t *Trie) Del(key []byte) error {
+func (t *Hex) Del(key []byte) error {
 	var visited []*node
 	cur := &t.root
 	path := encode(key)
 Remove:
 	for {
 		switch n := (*cur).(type) {
-		case *fullNode:
+		case *hexFull:
 			visited = append(visited, cur)
 			cur = &n.children[path[0]]
 			path = path[1:]
-		case *shortNode:
+		case *hexShort:
 			visited = append(visited, cur)
 			var common []byte
 			for i := 0; i < len(n.key); i++ {
@@ -174,7 +167,7 @@ Remove:
 				continue
 			}
 			return ErrNotFound
-		case valueNode:
+		case value:
 			*cur = nil
 			break Remove
 		case nil:
@@ -185,11 +178,11 @@ Compact:
 	for len(visited) > 0 {
 		cur = visited[len(visited)-1]
 		switch n := (*cur).(type) {
-		case *shortNode:
+		case *hexShort:
 			*cur = nil
 			visited = visited[:len(visited)-1]
 			continue Compact
-		case *fullNode:
+		case *hexFull:
 			var index int
 			var child node
 			count := 0
@@ -203,11 +196,11 @@ Compact:
 			if count > 1 {
 				break Compact
 			}
-			short := shortNode{
+			short := hexShort{
 				key:   []byte{byte(index)},
 				child: child,
 			}
-			c, ok := child.(*shortNode)
+			c, ok := child.(*hexShort)
 			if ok {
 				short.key = append(short.key, c.key...)
 				short.child = c.child
@@ -215,7 +208,7 @@ Compact:
 			*cur = &short
 			if len(visited) > 1 {
 				parent := visited[len(visited)-2]
-				p, ok := (*parent).(*shortNode)
+				p, ok := (*parent).(*hexShort)
 				if ok {
 					p.key = append(p.key, short.key...)
 					p.child = short.child
@@ -231,14 +224,14 @@ Compact:
 // root node. Currently, it does not do any caching and recomputes the hash from the leafs up. If
 // the root is not initialized, it will return the hash of an empty byte array to uniquely represent
 // a trie without state.
-func (t *Trie) Hash() []byte {
+func (t *Hex) Hash() []byte {
 	return t.nodeHash(t.root)
 }
 
 // nodeHash will return the hash of a given node.
-func (t *Trie) nodeHash(node node) []byte {
+func (t *Hex) nodeHash(node node) []byte {
 	switch n := node.(type) {
-	case *fullNode:
+	case *hexFull:
 		var hashes [][]byte
 		for _, child := range n.children {
 			hashes = append(hashes, t.nodeHash(child))
@@ -248,13 +241,13 @@ func (t *Trie) nodeHash(node node) []byte {
 			t.h.Write(hash)
 		}
 		return t.h.Sum(nil)
-	case *shortNode:
+	case *hexShort:
 		hash := t.nodeHash(n.child)
 		t.h.Reset()
 		t.h.Write(n.key)
 		t.h.Write(hash)
 		return t.h.Sum(nil)
-	case valueNode:
+	case value:
 		t.h.Reset()
 		t.h.Write([]byte(n))
 		return t.h.Sum(nil)

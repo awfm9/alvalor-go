@@ -17,22 +17,45 @@
 
 package trie
 
+import "errors"
+
+// A list of errors that can be returned by the functions of the trie.
+var (
+	ErrAlreadyExists = errors.New("key already exists")
+	ErrNotFound      = errors.New("key not found")
+)
+
 // node is simply a type definition for the empty interface.
 type node interface{}
 
+// dummy represents a dummy node used for asserts
+type dummy struct{}
+
 // valueNode represents a node that stores the data inserted as value into the trie, which
 // corresponds to the key that we traversed down the trie.
-type valueNode []byte
+type value []byte
 
 // shortNode represents a combined single path through what would otherwise be several full nodes.
 // It holds the key of the traversed path and a reference to the child node.
-type shortNode struct {
+type hexShort struct {
 	key   []byte
 	child node
 }
 
-// fullNode represents a full node in the patricia merkle trie that has sixteen children, one per
+type binShort struct {
+	path  []byte
+	count uint
+	child node
+}
+
+// binNode represents a full node in the binary patricia merkle tree, with one child to the left and one to the right.
+type binFull struct {
+	left  node
+	right node
+}
+
+// hexNode represents a full node in the patricia merkle trie that has sixteen children, one per
 // possible value of the next nibble of the key/path.
-type fullNode struct {
+type hexFull struct {
 	children [16]node
 }

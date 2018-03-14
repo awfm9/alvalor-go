@@ -24,44 +24,49 @@ import (
 	"time"
 )
 
-const TestLength = 1000000
+const BinTestLength = 100000
 
-func TestSingle(t *testing.T) {
+func TestBinSingle(t *testing.T) {
 	rand.Seed(time.Now().UnixNano())
-	trie := New()
-	for i := 0; i < TestLength; i++ {
+	trie := NewBin()
+	zero := trie.h.Sum(nil)
+	for i := 0; i < BinTestLength; i++ {
 		key := make([]byte, 32)
 		hash := make([]byte, 32)
 		_, _ = rand.Read(key)
 		_, _ = rand.Read(hash)
 		err := trie.Put(key, hash)
 		if err != nil {
-			t.Fatalf("could not put: %x", key)
+			t.Fatalf("could not put: %x (%v)", key, err)
 		}
 		out, err := trie.Get(key)
 		if err != nil {
-			t.Fatalf("could not get: %x", key)
+			t.Fatalf("could not get: %x (%v)", key, err)
 		}
 		if !bytes.Equal(out, hash) {
 			t.Errorf("wrong hash: %x != %x", out, hash)
 		}
 		err = trie.Del(key)
 		if err != nil {
-			t.Fatalf("could not del: %x", key)
+			t.Fatalf("could not del: %x (%v)", key, err)
 		}
 		_, err = trie.Get(key)
 		if err == nil {
-			t.Fatalf("should not get: %x", key)
+			t.Fatalf("should not get: %x (%v)", key, err)
+		}
+		hash = trie.Hash()
+		if !bytes.Equal(hash, zero) {
+			t.Fatalf("root hash not zero: %x != %x", hash, zero)
 		}
 	}
 }
 
-func TestBatch(t *testing.T) {
+func TestBinBatch(t *testing.T) {
 	rand.Seed(time.Now().UnixNano())
-	trie := New()
-	keys := make([][]byte, 0, TestLength)
-	hashes := make([][]byte, 0, TestLength)
-	for i := 0; i < TestLength; i++ {
+	trie := NewBin()
+	keys := make([][]byte, 0, BinTestLength)
+	hashes := make([][]byte, 0, BinTestLength)
+	for i := 0; i < BinTestLength; i++ {
 		key := make([]byte, 32)
 		hash := make([]byte, 32)
 		_, _ = rand.Read(key)
@@ -73,13 +78,13 @@ func TestBatch(t *testing.T) {
 		hash := hashes[i]
 		err := trie.Put(key, hash)
 		if err != nil {
-			t.Fatalf("could not put %v: %x", i, key)
+			t.Fatalf("could not put %v: %x (%v)", i, key, err)
 		}
 	}
 	for i, key := range keys {
 		out, err := trie.Get(key)
 		if err != nil {
-			t.Fatalf("could not get %v: %x", i, key)
+			t.Fatalf("could not get %v: %x (%v)", i, key, err)
 		}
 		hash := hashes[i]
 		if !bytes.Equal(out, hash) {
@@ -89,7 +94,7 @@ func TestBatch(t *testing.T) {
 	for i, key := range keys {
 		err := trie.Del(key)
 		if err != nil {
-			t.Fatalf("could not del %v: %x", i, key)
+			t.Fatalf("could not del %v: %x (%v)", i, key, err)
 		}
 	}
 	zero := trie.h.Sum(nil)

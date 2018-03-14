@@ -79,7 +79,7 @@ func New(log zerolog.Logger, net Network, chain Blockchain, finder Finder, codec
 	n.peers = peers
 
 	// initialize simple transaction pool
-	store := trie.New()
+	store := trie.NewBin()
 	pool := newPool(codec, store)
 	n.pool = pool
 
