@@ -20,7 +20,7 @@ package types
 import (
 	"encoding/binary"
 
-	"golang.org/x/crypto/blake2b"
+	"golang.org/x/crypto/blake2s"
 )
 
 // Transaction represents an atomic standard transaction on the Alvalor network.
@@ -43,7 +43,7 @@ func (tx *Transaction) Hash() []byte {
 
 func (tx Transaction) calc() []byte {
 	buf := make([]byte, 8)
-	h, _ := blake2b.New256(nil)
+	h, _ := blake2s.New256(nil)
 	for _, transfer := range tx.Transfers {
 		_, _ = h.Write(transfer.From)
 		_, _ = h.Write(transfer.To)

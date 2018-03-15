@@ -23,7 +23,7 @@ import (
 	"time"
 
 	"github.com/alvalor/alvalor-go/types"
-	"golang.org/x/crypto/blake2b"
+	"golang.org/x/crypto/sha3"
 )
 
 // Naive represents a naive miner which is not efficient but easy to understand.
@@ -106,7 +106,7 @@ Loop:
 			// go on
 		}
 		binary.LittleEndian.PutUint64(nv.data[168:176], nonce)
-		hash := blake2b.Sum256(nv.data)
+		hash := sha3.Sum256(nv.data)
 		if bytes.Compare(hash[:], nv.data[128:160]) < 0 {
 			unix := binary.LittleEndian.Uint64(nv.data[160:168])
 			header := types.Header{

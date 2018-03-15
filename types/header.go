@@ -21,7 +21,7 @@ import (
 	"encoding/binary"
 	"time"
 
-	"golang.org/x/crypto/blake2b"
+	"golang.org/x/crypto/blake2s"
 )
 
 // Header represents the header data of a block that will be hashed.
@@ -45,7 +45,7 @@ func (hdr Header) Hash() []byte {
 }
 
 func (hdr Header) calc() []byte {
-	h, _ := blake2b.New256(nil)
+	h, _ := blake2s.New256(nil)
 	_, _ = h.Write(hdr.Parent)
 	_, _ = h.Write(hdr.State)
 	_, _ = h.Write(hdr.Delta)
