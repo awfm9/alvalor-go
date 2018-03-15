@@ -21,7 +21,7 @@ import (
 	"hash"
 
 	"github.com/jrick/bitset"
-	"golang.org/x/crypto/blake2b"
+	"golang.org/x/crypto/blake2s"
 )
 
 // Bin represents our own implementation of the patricia merkle trie as specified in the Ethereum
@@ -33,7 +33,7 @@ type Bin struct {
 
 // NewBin creates a new empty hex trie.
 func NewBin() *Bin {
-	h, _ := blake2b.New256(nil)
+	h, _ := blake2s.New256(nil)
 	t := &Bin{h: h}
 	return t
 }

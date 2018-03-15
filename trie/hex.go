@@ -20,7 +20,7 @@ package trie
 import (
 	"hash"
 
-	"golang.org/x/crypto/blake2b"
+	"golang.org/x/crypto/blake2s"
 )
 
 // Hex represents our own implementation of the patricia merkle trie as specified in the Ethereum
@@ -32,7 +32,7 @@ type Hex struct {
 
 // NewHex creates a new empty hex trie.
 func NewHex() *Hex {
-	h, _ := blake2b.New256(nil)
+	h, _ := blake2s.New256(nil)
 	t := &Hex{h: h}
 	return t
 }
