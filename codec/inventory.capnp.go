@@ -33,23 +33,23 @@ func (s Inventory) String() string {
 	return str
 }
 
-func (s Inventory) Ids() (capnp.DataList, error) {
+func (s Inventory) Hashes() (capnp.DataList, error) {
 	p, err := s.Struct.Ptr(0)
 	return capnp.DataList{List: p.List()}, err
 }
 
-func (s Inventory) HasIds() bool {
+func (s Inventory) HasHashes() bool {
 	p, err := s.Struct.Ptr(0)
 	return p.IsValid() || err != nil
 }
 
-func (s Inventory) SetIds(v capnp.DataList) error {
+func (s Inventory) SetHashes(v capnp.DataList) error {
 	return s.Struct.SetPtr(0, v.List.ToPtr())
 }
 
-// NewIds sets the ids field to a newly
+// NewHashes sets the hashes field to a newly
 // allocated capnp.DataList, preferring placement in s's segment.
-func (s Inventory) NewIds(n int32) (capnp.DataList, error) {
+func (s Inventory) NewHashes(n int32) (capnp.DataList, error) {
 	l, err := capnp.NewDataList(s.Struct.Segment(), n)
 	if err != nil {
 		return capnp.DataList{}, err
@@ -90,9 +90,9 @@ const schema_9fd0f7eb12926b5d = "x\xda2pct`2d\xf5\xe7d`\x08\xcca" +
 	"\x97\xe5\x92\xf0L\x16\x10k*\x8b=\xc3\x7f\x06\xf9\xff" +
 	"\x99ye\xa9y%\xf9EL\x95z\xc9\x89\x05y\x05" +
 	"V\x9eP\x01\xc6\xca\x00F\xc6@\x16f\x16\x06\x06\x16" +
-	"F\x06\x06A^%\x06\x86@\x0ef\xc6@\x15&F" +
-	"\xf6\xcc\x94bF>\x06\xc6\x00fFF^\x06&\x10" +
-	"\x13\x10\x00\x00\xff\xff\xef\x07\x1f\xde"
+	"F\x06\x06A^+\x06\x86@\x0ef\xc6@\x15&F" +
+	"\xfb\x8c\xc4\xe2\x8c\xd4bF>\x06\xc6\x00fFF^" +
+	"\x06&\x10\x13\x10\x00\x00\xff\xffi\xf0!j"
 
 func init() {
 	schemas.Register(schema_9fd0f7eb12926b5d,

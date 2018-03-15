@@ -17,8 +17,10 @@
 
 package finder
 
+import "github.com/alvalor/alvalor-go/types"
+
 type node struct {
-	hash     []byte
+	hash     types.Hash
 	parent   *node
 	children []*node
 }

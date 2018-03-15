@@ -22,6 +22,7 @@ import (
 	capnp "zombiezen.com/go/capnproto2"
 
 	"github.com/alvalor/alvalor-go/node"
+	"github.com/alvalor/alvalor-go/types"
 )
 
 type initInventory func() (Inventory, error)
@@ -39,14 +40,14 @@ func encodeInventory(seg *capnp.Segment, create initInventory, e *node.Inventory
 	if err != nil {
 		return Inventory{}, errors.Wrap(err, "could not create inventory")
 	}
-	ids, err := inventory.NewIds(int32(len(e.IDs)))
+	hashes, err := inventory.NewHashes(int32(len(e.Hashes)))
 	if err != nil {
-		return Inventory{}, errors.Wrap(err, "could not create ID list")
+		return Inventory{}, errors.Wrap(err, "could not create hash list")
 	}
-	for i, id := range e.IDs {
-		err = ids.Set(i, id)
+	for i, hash := range e.Hashes {
+		err = hashes.Set(i, hash[:])
 		if err != nil {
-			return Inventory{}, errors.Wrap(err, "could not set ID")
+			return Inventory{}, errors.Wrap(err, "could not set hash")
 		}
 	}
 	return inventory, nil
@@ -57,19 +58,19 @@ func decodeInventory(read initInventory) (*node.Inventory, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "could not read inventory")
 	}
-	ids, err := inventory.Ids()
+	hashes, err := inventory.Hashes()
 	if err != nil {
-		return nil, errors.Wrap(err, "could not read ID list")
+		return nil, errors.Wrap(err, "could not read hash list")
 	}
 	e := &node.Inventory{
-		IDs: make([][]byte, 0, ids.Len()),
+		Hashes: make([]types.Hash, hashes.Len()),
 	}
-	for i := 0; i < ids.Len(); i++ {
-		id, err := ids.At(i)
+	for i := 0; i < hashes.Len(); i++ {
+		hash, err := hashes.At(i)
 		if err != nil {
-			return nil, errors.Wrap(err, "could not get ID")
+			return nil, errors.Wrap(err, "could not get hash")
 		}
-		e.IDs = append(e.IDs, id)
+		copy(e.Hashes[i][:], hash)
 	}
 	return e, nil
 }

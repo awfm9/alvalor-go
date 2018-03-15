@@ -21,5 +21,5 @@ $Go.import("codec");
 
 @0x88b5d31dcdf19e4d;
 struct Request {
-  ids @0: List(Data);
+  hashes @0: List(Data);
 }

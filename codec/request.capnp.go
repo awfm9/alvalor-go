@@ -33,23 +33,23 @@ func (s Request) String() string {
 	return str
 }
 
-func (s Request) Ids() (capnp.DataList, error) {
+func (s Request) Hashes() (capnp.DataList, error) {
 	p, err := s.Struct.Ptr(0)
 	return capnp.DataList{List: p.List()}, err
 }
 
-func (s Request) HasIds() bool {
+func (s Request) HasHashes() bool {
 	p, err := s.Struct.Ptr(0)
 	return p.IsValid() || err != nil
 }
 
-func (s Request) SetIds(v capnp.DataList) error {
+func (s Request) SetHashes(v capnp.DataList) error {
 	return s.Struct.SetPtr(0, v.List.ToPtr())
 }
 
-// NewIds sets the ids field to a newly
+// NewHashes sets the hashes field to a newly
 // allocated capnp.DataList, preferring placement in s's segment.
-func (s Request) NewIds(n int32) (capnp.DataList, error) {
+func (s Request) NewHashes(n int32) (capnp.DataList, error) {
 	l, err := capnp.NewDataList(s.Struct.Segment(), n)
 	if err != nil {
 		return capnp.DataList{}, err
@@ -90,9 +90,9 @@ const schema_88b5d31dcdf19e4d = "x\xda2pet`2d\xf5\xe7d`\x08\xcca" +
 	"/\xcb&\xe1\xa9, \xd6D\x16{\x86\xff\x0c\xf2\xff" +
 	"\x8bR\x0bKS\x8bK\xf4\x18\x93\x13\x0b\xf2\x0a\xac\x82" +
 	"R\xe5\xc1\xfc\x00F\xc6@\x16f\x16\x06\x06\x16F\x06" +
-	"\x06A^%\x06\x86@\x0ef\xc6@\x15&F\xf6\xcc" +
-	"\x94bF>\x06\xc6\x00fFF^\x06&\x10\x13\x10" +
-	"\x00\x00\xff\xffI\xaf\x1ee"
+	"\x06A^+\x06\x86@\x0ef\xc6@\x15&F\xfb\x8c" +
+	"\xc4\xe2\x8c\xd4bF>\x06\xc6\x00fFF^\x06&" +
+	"\x10\x13\x10\x00\x00\xff\xff\xc0\x1e\x1f\xf1"
 
 func init() {
 	schemas.Register(schema_88b5d31dcdf19e4d,
