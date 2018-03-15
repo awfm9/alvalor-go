@@ -62,7 +62,7 @@ func (suite *EventSuite) TestEventConnected() {
 
 	pool := &PoolMock{}
 	pool.On("Count").Return(0)
-	pool.On("IDs").Return([][]byte{})
+	pool.On("Hashes").Return([][]byte{})
 
 	handlers := &HandlersMock{}
 	handlers.On("Message", mock.Anything)

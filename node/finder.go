@@ -17,9 +17,11 @@
 
 package node
 
+import "github.com/alvalor/alvalor-go/types"
+
 // Finder is in charge of finding the longest path in a tree of block hashes.
 type Finder interface {
-	Add(hash []byte, parent []byte) error
-	Has(hash []byte) bool
-	Path() [][]byte
+	Add(hash types.Hash, parent types.Hash) error
+	Has(hash types.Hash) bool
+	Path() []types.Hash
 }

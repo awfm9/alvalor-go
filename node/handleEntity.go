@@ -33,7 +33,7 @@ func handleEntity(log zerolog.Logger, wg *sync.WaitGroup, net Network, peers pee
 	)
 
 	// configure logger
-	log = log.With().Str("component", "entity").Hex("hash", hash).Logger()
+	log = log.With().Str("component", "entity").Hex("hash", hash[:]).Logger()
 	log.Debug().Msg("entity routine started")
 	defer log.Debug().Msg("entity routine stopped")
 

@@ -24,11 +24,11 @@ type Blockchain interface {
 	Height() uint32
 	Header() *types.Header
 	AddBlock(block *types.Block) error
-	TransactionByHash(hash []byte) (*types.Transaction, error)
-	HeightByHash(hash []byte) (uint32, error)
-	HashByHeight(height uint32) ([]byte, error)
-	HeaderByHash(hash []byte) (*types.Header, error)
+	TransactionByHash(hash types.Hash) (*types.Transaction, error)
+	HeightByHash(hash types.Hash) (uint32, error)
+	HashByHeight(height uint32) (types.Hash, error)
+	HeaderByHash(hash types.Hash) (*types.Header, error)
 	HeaderByHeight(height uint32) (*types.Header, error)
-	BlockByHash(hash []byte) (*types.Block, error)
+	BlockByHash(hash types.Hash) (*types.Block, error)
 	BlockByHeight(height uint32) (*types.Block, error)
 }

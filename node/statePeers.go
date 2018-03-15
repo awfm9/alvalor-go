@@ -17,26 +17,30 @@
 
 package node
 
-import "sync"
+import (
+	"sync"
+
+	"github.com/alvalor/alvalor-go/types"
+)
 
 type peerManager interface {
 	Active(address string)
 	Inactive(address string)
 	Actives() []string
-	Tag(address string, id []byte)
-	Tags(id []byte) []string
+	Tag(address string, hash types.Hash)
+	Tags(hash types.Hash) []string
 }
 
 type simplePeers struct {
 	sync.Mutex
 	actives map[string]bool
-	tags    map[string][]string
+	tags    map[types.Hash][]string
 }
 
 func newPeers() *simplePeers {
 	return &simplePeers{
 		actives: make(map[string]bool),
-		tags:    make(map[string][]string),
+		tags:    make(map[types.Hash][]string),
 	}
 }
 
@@ -66,16 +70,16 @@ func (s *simplePeers) Actives() []string {
 	return actives
 }
 
-func (s *simplePeers) Tag(address string, id []byte) {
+func (s *simplePeers) Tag(address string, hash types.Hash) {
 	s.Lock()
 	defer s.Unlock()
 
-	s.tags[string(id)] = append(s.tags[string(id)], address)
+	s.tags[hash] = append(s.tags[hash], address)
 }
 
-func (s *simplePeers) Tags(id []byte) []string {
+func (s *simplePeers) Tags(hash types.Hash) []string {
 	s.Lock()
 	defer s.Unlock()
 
-	return s.tags[string(id)]
+	return s.tags[hash]
 }

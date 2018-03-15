@@ -21,6 +21,8 @@ import (
 	"bytes"
 
 	"github.com/pkg/errors"
+
+	"github.com/alvalor/alvalor-go/types"
 )
 
 // Store represents a store to store entities by unique ID.
@@ -41,14 +43,14 @@ func New(kv KV, codec Codec, prefix string) *Store {
 }
 
 // Save will put a new entity into the store.
-func (s *Store) Save(hash []byte, entity interface{}) error {
+func (s *Store) Save(hash types.Hash, entity interface{}) error {
 	buf := &bytes.Buffer{}
 	err := s.codec.Encode(buf, entity)
 	if err != nil {
 		return errors.Wrap(err, "could not encode entity")
 	}
 	data := buf.Bytes()
-	key := append(s.prefix, hash...)
+	key := append(s.prefix, hash[:]...)
 	err = s.kv.Put(key, data)
 	if err != nil {
 		return errors.Wrap(err, "could not put entity data")
@@ -57,8 +59,8 @@ func (s *Store) Save(hash []byte, entity interface{}) error {
 }
 
 // Retrieve will retrieve an entity from the store.
-func (s *Store) Retrieve(hash []byte) (interface{}, error) {
-	key := append(s.prefix, hash...)
+func (s *Store) Retrieve(hash types.Hash) (interface{}, error) {
+	key := append(s.prefix, hash[:]...)
 	data, err := s.kv.Get(key)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get entity data")
