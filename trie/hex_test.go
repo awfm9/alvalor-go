@@ -98,3 +98,84 @@ func TestHexBatch(t *testing.T) {
 		t.Fatalf("root hash not zero: %x != %x", hash, zero)
 	}
 }
+
+func BenchmarkHexInsert(b *testing.B) {
+	t := NewHex()
+	keys := make([][]byte, 0, b.N)
+	hashes := make([][]byte, 0, b.N)
+	for i := 0; i < b.N; i++ {
+		key := make([]byte, 32)
+		hash := make([]byte, 32)
+		_, _ = rand.Read(key)
+		_, _ = rand.Read(hash)
+		keys = append(keys, key)
+		hashes = append(hashes, hash)
+	}
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		t.MustPut(keys[i], hashes[i])
+	}
+}
+
+func BenchmarkHexRetrieve(b *testing.B) {
+	t := NewHex()
+	keys := make([][]byte, 0, b.N)
+	hashes := make([][]byte, 0, b.N)
+	for i := 0; i < b.N; i++ {
+		key := make([]byte, 32)
+		hash := make([]byte, 32)
+		_, _ = rand.Read(key)
+		_, _ = rand.Read(hash)
+		keys = append(keys, key)
+		hashes = append(hashes, hash)
+	}
+	for i := 0; i < b.N; i++ {
+		t.MustPut(keys[i], hashes[i])
+	}
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		t.Get(keys[i])
+	}
+}
+
+func BenchmarkHexDelete(b *testing.B) {
+	t := NewHex()
+	keys := make([][]byte, 0, b.N)
+	hashes := make([][]byte, 0, b.N)
+	for i := 0; i < b.N; i++ {
+		key := make([]byte, 32)
+		hash := make([]byte, 32)
+		_, _ = rand.Read(key)
+		_, _ = rand.Read(hash)
+		keys = append(keys, key)
+		hashes = append(hashes, hash)
+	}
+	for i := 0; i < b.N; i++ {
+		t.MustPut(keys[i], hashes[i])
+	}
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		t.Del(keys[i])
+	}
+}
+
+func BenchmarkHexHash(b *testing.B) {
+	t := NewHex()
+	keys := make([][]byte, 0, b.N)
+	hashes := make([][]byte, 0, b.N)
+	for i := 0; i < b.N; i++ {
+		key := make([]byte, 32)
+		hash := make([]byte, 32)
+		_, _ = rand.Read(key)
+		_, _ = rand.Read(hash)
+		keys = append(keys, key)
+		hashes = append(hashes, hash)
+	}
+	for i := 0; i < b.N; i++ {
+		t.MustPut(keys[i], hashes[i])
+	}
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		t.Hash()
+	}
+}
