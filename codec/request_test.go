@@ -24,12 +24,13 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"github.com/alvalor/alvalor-go/node"
+	"github.com/alvalor/alvalor-go/types"
 )
 
 func TestRequest(t *testing.T) {
 	proto := &Proto{}
 	request := &node.Request{
-		IDs: [][]byte{
+		Hashes: []types.Hash{
 			{11, 12, 13},
 			{21, 22, 23},
 			{31, 32, 33},

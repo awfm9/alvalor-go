@@ -22,6 +22,7 @@ import (
 	capnp "zombiezen.com/go/capnproto2"
 
 	"github.com/alvalor/alvalor-go/node"
+	"github.com/alvalor/alvalor-go/types"
 )
 
 type initRequest func() (Request, error)
@@ -39,14 +40,14 @@ func encodeRequest(seg *capnp.Segment, create initRequest, e *node.Request) (Req
 	if err != nil {
 		return Request{}, errors.Wrap(err, "could not create request")
 	}
-	ids, err := request.NewIds(int32(len(e.IDs)))
+	hashes, err := request.NewHashes(int32(len(e.Hashes)))
 	if err != nil {
-		return Request{}, errors.Wrap(err, "could not create ID list")
+		return Request{}, errors.Wrap(err, "could not create hash list")
 	}
-	for i, id := range e.IDs {
-		err = ids.Set(i, id)
+	for i, hash := range e.Hashes {
+		err = hashes.Set(i, hash[:])
 		if err != nil {
-			return Request{}, errors.Wrap(err, "could not set ID")
+			return Request{}, errors.Wrap(err, "could not set hash")
 		}
 	}
 	return request, nil
@@ -57,19 +58,19 @@ func decodeRequest(read initRequest) (*node.Request, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "could not read request")
 	}
-	ids, err := request.Ids()
+	hashes, err := request.Hashes()
 	if err != nil {
-		return nil, errors.Wrap(err, "could not read ID list")
+		return nil, errors.Wrap(err, "could not read hash list")
 	}
 	e := &node.Request{
-		IDs: make([][]byte, 0, ids.Len()),
+		Hashes: make([]types.Hash, hashes.Len()),
 	}
-	for i := 0; i < ids.Len(); i++ {
-		id, err := ids.At(i)
+	for i := 0; i < hashes.Len(); i++ {
+		hash, err := hashes.At(i)
 		if err != nil {
-			return nil, errors.Wrap(err, "could not get ID")
+			return nil, errors.Wrap(err, "could not get hash")
 		}
-		e.IDs = append(e.IDs, id)
+		copy(e.Hashes[i][:], hash)
 	}
 	return e, nil
 }

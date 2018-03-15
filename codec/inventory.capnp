@@ -21,5 +21,5 @@ $Go.import("codec");
 
 @0x9fd0f7eb12926b5d;
 struct Inventory {
-  ids @0: List(Data);
+  hashes @0: List(Data);
 }

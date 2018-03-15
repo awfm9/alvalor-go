@@ -17,11 +17,13 @@
 
 package finder
 
-func path(n *node) [][]byte {
+import "github.com/alvalor/alvalor-go/types"
+
+func path(n *node) []types.Hash {
 	if len(n.children) == 0 {
-		return [][]byte{n.hash}
+		return []types.Hash{n.hash}
 	}
-	var best [][]byte
+	var best []types.Hash
 	for _, child := range n.children {
 		p := path(child)
 		if len(p) <= len(best) {
@@ -29,5 +31,5 @@ func path(n *node) [][]byte {
 		}
 		best = p
 	}
-	return append([][]byte{n.hash}, best...)
+	return append([]types.Hash{n.hash}, best...)
 }
