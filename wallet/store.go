@@ -20,9 +20,9 @@ package wallet
 import (
 	"bytes"
 
-	"github.com/alvalor/alvalor-go/futhark"
 	"github.com/pkg/errors"
 	argon2 "github.com/tvdburgt/go-argon2"
+	"golang.org/x/crypto/ed25519"
 )
 
 // Salt variable.
@@ -72,7 +72,7 @@ func (s *Store) generate(data []byte, salt []byte) ([]byte, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "could not compute hash")
 	}
-	_, priv, err := futhark.GenerateKey(bytes.NewReader(hash[:64]))
+	_, priv, err := ed25519.GenerateKey(bytes.NewReader(hash[:64]))
 	if err != nil {
 		return nil, errors.Wrap(err, "could not generate private key")
 	}
