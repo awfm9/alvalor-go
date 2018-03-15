@@ -26,12 +26,12 @@ import (
 // Status message shares our top block height.
 type Status struct {
 	Height uint32
-	Hash   []byte
+	Hash   types.Hash
 }
 
 // Sync requests headers we are missing.
 type Sync struct {
-	Locators [][]byte
+	Locators []types.Hash
 }
 
 // Mempool is a message containing details about the memory pool.
@@ -41,12 +41,12 @@ type Mempool struct {
 
 // Inventory is a message containing a list of transaction hashes.
 type Inventory struct {
-	IDs [][]byte
+	Hashes []types.Hash
 }
 
 // Request requests a number of transactions for the memory pool.
 type Request struct {
-	IDs [][]byte
+	Hashes []types.Hash
 }
 
 // Batch is a batch of transactions to send as one message.

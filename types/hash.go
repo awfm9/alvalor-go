@@ -15,12 +15,10 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with Alvalor.  If not, see <http://www.gnu.org/licenses/>.
 
-package blockchain
+package types
 
-import "github.com/alvalor/alvalor-go/types"
+// ZeroHash represents a hash of all zeroes.
+var ZeroHash = [32]byte{0}
 
-// Store represents an entity database.
-type Store interface {
-	Save(hash types.Hash, entity interface{}) error
-	Retrieve(hash types.Hash) (interface{}, error)
-}
+// Hash represents the 256-bit hashes used as IDs for our entities.
+type Hash [32]byte

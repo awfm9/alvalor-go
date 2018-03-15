@@ -49,13 +49,15 @@ func New(heights KV, indices KV, headers Store, transactions Store) (*Blockchain
 		headers:      headers,
 		transactions: transactions,
 	}
-	data := make([]byte, 4)
-	binary.LittleEndian.PutUint32(data, Current)
-	hash, err := bc.heights.Get(data)
+	buf := make([]byte, 4)
+	binary.LittleEndian.PutUint32(buf, Current)
+	data, err := bc.heights.Get(buf)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get hash of current block")
 	}
-	data, err = bc.heights.Get(hash)
+	var hash types.Hash
+	copy(hash[:], data)
+	data, err = bc.heights.Get(hash[:])
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get height of current block")
 	}
@@ -96,13 +98,13 @@ func (bc *Blockchain) AddBlock(block *types.Block) error {
 
 	// mapp the block hash to the block height
 	binary.LittleEndian.PutUint32(data, height)
-	err = bc.heights.Put(hash, data)
+	err = bc.heights.Put(hash[:], data)
 	if err != nil {
 		return errors.Wrap(err, "could not map block hash to height")
 	}
 
 	// map the block height to the block hash
-	err = bc.heights.Put(data, hash)
+	err = bc.heights.Put(data, hash[:])
 	if err != nil {
 		return errors.Wrap(err, "could not map block height to hash")
 	}
@@ -114,11 +116,12 @@ func (bc *Blockchain) AddBlock(block *types.Block) error {
 		if err != nil {
 			return errors.Wrap(err, "could not store block transaction")
 		}
-		indices = append(indices, tx.Hash()...)
+		txHash := tx.Hash()
+		indices = append(indices, txHash[:]...)
 	}
 
 	// map the block hash to the transaction indices
-	err = bc.indices.Put(hash, indices)
+	err = bc.indices.Put(hash[:], indices)
 	if err != nil {
 		return errors.Wrap(err, "could not store block transaction IDs")
 	}
@@ -136,7 +139,7 @@ func (bc *Blockchain) AddBlock(block *types.Block) error {
 
 	// map the current height to the block hash
 	binary.LittleEndian.PutUint32(data, Current)
-	err = bc.heights.Put(data, hash)
+	err = bc.heights.Put(data, hash[:])
 	if err != nil {
 		return errors.Wrap(err, "could not map current height to hash")
 	}
@@ -149,8 +152,8 @@ func (bc *Blockchain) AddBlock(block *types.Block) error {
 }
 
 // HeightByHash returns the height of a block for the given hash.
-func (bc *Blockchain) HeightByHash(hash []byte) (uint32, error) {
-	data, err := bc.heights.Get(hash)
+func (bc *Blockchain) HeightByHash(hash types.Hash) (uint32, error) {
+	data, err := bc.heights.Get(hash[:])
 	if err != nil {
 		return 0, errors.Wrap(err, "could not retrieve height by hash")
 	}
@@ -159,18 +162,20 @@ func (bc *Blockchain) HeightByHash(hash []byte) (uint32, error) {
 }
 
 // HashByHeight returns the hash of the block at the given height.
-func (bc *Blockchain) HashByHeight(height uint32) ([]byte, error) {
+func (bc *Blockchain) HashByHeight(height uint32) (types.Hash, error) {
 	key := make([]byte, 4)
 	binary.LittleEndian.PutUint32(key, height)
-	hash, err := bc.heights.Get(key)
+	data, err := bc.heights.Get(key)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not retrieve hash by height")
+		return types.ZeroHash, errors.Wrap(err, "could not retrieve hash by height")
 	}
+	var hash types.Hash
+	copy(hash[:], data)
 	return hash, nil
 }
 
 // HeaderByHash retrieves a header by its hash.
-func (bc *Blockchain) HeaderByHash(hash []byte) (*types.Header, error) {
+func (bc *Blockchain) HeaderByHash(hash types.Hash) (*types.Header, error) {
 	entity, err := bc.headers.Retrieve(hash)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not retrieve header by hash")
@@ -192,7 +197,7 @@ func (bc *Blockchain) HeaderByHeight(height uint32) (*types.Header, error) {
 }
 
 // TransactionByHash retrieves a transaction by its hash.
-func (bc *Blockchain) TransactionByHash(hash []byte) (*types.Transaction, error) {
+func (bc *Blockchain) TransactionByHash(hash types.Hash) (*types.Transaction, error) {
 	entity, err := bc.transactions.Retrieve(hash)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not retrieve transaction by hash")
@@ -205,12 +210,12 @@ func (bc *Blockchain) TransactionByHash(hash []byte) (*types.Transaction, error)
 }
 
 // BlockByHash retrieves a block by its hash.
-func (bc *Blockchain) BlockByHash(hash []byte) (*types.Block, error) {
+func (bc *Blockchain) BlockByHash(hash types.Hash) (*types.Block, error) {
 	header, err := bc.HeaderByHash(hash)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not retrieve header for block")
 	}
-	indices, err := bc.indices.Get(hash)
+	indices, err := bc.indices.Get(hash[:])
 	if err != nil {
 		return nil, errors.Wrap(err, "could not retrieve indices by hash")
 	}
@@ -218,8 +223,10 @@ func (bc *Blockchain) BlockByHash(hash []byte) (*types.Block, error) {
 		Header:       header,
 		Transactions: make([]*types.Transaction, 0, len(indices)/32),
 	}
+	var index types.Hash
 	for i := 0; i < len(indices)+32; i += 32 {
-		tx, err := bc.TransactionByHash(indices[i : i+32])
+		copy(index[:], indices[i:i+32])
+		tx, err := bc.TransactionByHash(index)
 		if err != nil {
 			return nil, errors.Wrap(err, "could not retrieve transaction for block")
 		}

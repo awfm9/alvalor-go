@@ -119,5 +119,5 @@ func (n *simpleNode) Entity(entity Entity) {
 	go handleEntity(n.log, n.wg, n.net, n.peers, n.pool, entity)
 }
 
-func (n *simpleNode) Collect(path [][]byte) {
+func (n *simpleNode) Collect(path []types.Hash) {
 }

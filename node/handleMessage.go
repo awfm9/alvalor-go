@@ -18,7 +18,6 @@
 package node
 
 import (
-	"bytes"
 	"sync"
 
 	"github.com/awishformore/zerolog"
@@ -39,7 +38,7 @@ func handleMessage(log zerolog.Logger, wg *sync.WaitGroup, net Network, chain Bl
 
 	case *Status:
 
-		log = log.With().Str("msg_type", "status").Uint32("height", msg.Height).Hex("hash", msg.Hash).Logger()
+		log = log.With().Str("msg_type", "status").Uint32("height", msg.Height).Hex("hash", msg.Hash[:]).Logger()
 
 		// don't take any action if we are not behind the peer
 		height := chain.Height()
@@ -56,7 +55,7 @@ func handleMessage(log zerolog.Logger, wg *sync.WaitGroup, net Network, chain Bl
 		}
 
 		// // add the latest synching header to our locator hashes if it's different from chain state
-		var locators [][]byte
+		var locators []types.Hash
 		// TODO: rethink & implement
 		// bestBlock := chain.Current().Hash()
 		// bestHeader := path.BestHash()
@@ -100,7 +99,7 @@ func handleMessage(log zerolog.Logger, wg *sync.WaitGroup, net Network, chain Bl
 
 	case *Sync:
 
-		log = log.With().Str("msg_type", "sync").Hexs("locators", msg.Locators).Logger()
+		log = log.With().Str("msg_type", "sync").Logger()
 
 		// try finding a locator hash in our best path
 		var common uint32
@@ -109,8 +108,8 @@ func handleMessage(log zerolog.Logger, wg *sync.WaitGroup, net Network, chain Bl
 			header := chain.Header()
 			for {
 				hash := header.Hash()
-				if bytes.Equal(hash, locator) {
-					log = log.With().Hex("common_hash", hash).Logger()
+				if hash == locator {
+					log = log.With().Hex("hash", hash[:]).Logger()
 					var err error
 					common, err = chain.HeightByHash(header.Hash())
 					if err != nil {
@@ -121,13 +120,13 @@ func handleMessage(log zerolog.Logger, wg *sync.WaitGroup, net Network, chain Bl
 					break Outer
 				}
 				parent := header.Parent
-				if bytes.Equal(parent, bytes.Repeat([]byte{0}, 32)) {
+				if parent == types.ZeroHash {
 					break
 				}
 				var err error
 				header, err = chain.HeaderByHash(parent)
 				if err != nil {
-					log.Error().Err(err).Hex("hash", parent).Msg("could not get header by hash")
+					log.Error().Err(err).Hex("hash", parent[:]).Msg("could not get header by hash")
 					return
 				}
 			}
@@ -157,7 +156,9 @@ func handleMessage(log zerolog.Logger, wg *sync.WaitGroup, net Network, chain Bl
 
 	case *types.Header:
 
-		log = log.With().Str("msg_type", "header").Hex("hash", msg.Hash()).Hex("parent", msg.Parent).Logger()
+		hash := msg.Hash()
+
+		log = log.With().Str("msg_type", "header").Hex("hash", hash[:]).Hex("parent", msg.Parent[:]).Logger()
 
 		// check if we already stored the header
 		_, err := chain.HeaderByHash(msg.Hash())
@@ -188,7 +189,9 @@ func handleMessage(log zerolog.Logger, wg *sync.WaitGroup, net Network, chain Bl
 
 	case *types.Transaction:
 
-		log = log.With().Str("msg_type", "transaction").Hex("hash", msg.Hash()).Logger()
+		hash := msg.Hash()
+
+		log = log.With().Str("msg_type", "transaction").Hex("hash", hash[:]).Logger()
 
 		// check if we already know the transaction
 		_, err := chain.TransactionByHash(msg.Hash())
@@ -212,21 +215,21 @@ func handleMessage(log zerolog.Logger, wg *sync.WaitGroup, net Network, chain Bl
 		log = log.With().Str("msg_type", "mempool").Uint("num_cap", msg.Bloom.Cap()).Logger()
 
 		// find transactions in our memory pool the peer misses
-		var inv [][]byte
-		ids := pool.IDs()
-		for _, id := range ids {
-			if msg.Bloom.Test(id) {
+		var inv []types.Hash
+		hashes := pool.Hashes()
+		for _, hash := range hashes {
+			if msg.Bloom.Test(hash[:]) {
 				// TODO: figure out implications of false positives here
-				peers.Tag(address, id)
+				peers.Tag(address, hash)
 				continue
 			}
-			inv = append(inv, id)
+			inv = append(inv, hash)
 		}
 
 		log = log.With().Int("num_inv", len(inv)).Logger()
 
 		// send the list of transaction IDs they do not have
-		inventory := &Inventory{IDs: inv}
+		inventory := &Inventory{Hashes: hashes}
 		err := net.Send(address, inventory)
 		if err != nil {
 			log.Error().Err(err).Msg("could not share inventory")
@@ -237,23 +240,23 @@ func handleMessage(log zerolog.Logger, wg *sync.WaitGroup, net Network, chain Bl
 
 	case *Inventory:
 
-		log = log.With().Int("num_inv", len(msg.IDs)).Logger()
+		log = log.With().Int("num_inv", len(msg.Hashes)).Logger()
 
 		// create list of transactions that we are missing
-		var req [][]byte
-		for _, id := range msg.IDs {
-			ok := pool.Known(id)
+		var req []types.Hash
+		for _, hash := range msg.Hashes {
+			ok := pool.Known(hash)
 			if ok {
 				continue
 			}
-			req = append(req, id)
+			req = append(req, hash)
 		}
 
 		log = log.With().Int("num_req", len(req)).Logger()
 
 		// request the missing transactions from the peer
 		// TODO: better to add into a pending queue
-		request := &Request{IDs: req}
+		request := &Request{Hashes: req}
 		err := net.Send(address, request)
 		if err != nil {
 			log.Error().Err(err).Msg("could not request transactions")
@@ -264,15 +267,15 @@ func handleMessage(log zerolog.Logger, wg *sync.WaitGroup, net Network, chain Bl
 
 	case *Request:
 
-		log = log.With().Int("num_req", len(msg.IDs)).Logger()
+		log = log.With().Int("num_req", len(msg.Hashes)).Logger()
 
 		// collect each transaction that we have from the set of requested IDs
 		var transactions []*types.Transaction
-		for _, hash := range msg.IDs {
+		for _, hash := range msg.Hashes {
 			tx, err := pool.Get(hash)
 			if err != nil {
 				// TODO: somehow punish peer for requesting something we didn't announce
-				log.Error().Err(err).Hex("hash", hash).Msg("requested transaction unknown")
+				log.Error().Err(err).Hex("hash", hash[:]).Msg("requested transaction unknown")
 				continue
 			}
 			transactions = append(transactions, tx)

@@ -26,34 +26,35 @@ import (
 
 // Header represents the header data of a block that will be hashed.
 type Header struct {
-	Parent []byte
-	State  []byte
-	Delta  []byte
-	Miner  []byte
-	Target []byte
-	Time   time.Time
+	Parent Hash
+	State  Hash
+	Delta  Hash
+	Miner  Hash
+	Target uint64
 	Nonce  uint64
-	hash   []byte
+	Time   time.Time
+	hash   Hash
 }
 
 // Hash returns the unique hash of header.
-func (hdr Header) Hash() []byte {
-	if hdr.hash == nil {
-		hdr.hash = hdr.calc()
+func (hdr Header) Hash() Hash {
+	if hdr.hash == ZeroHash {
+		hash := hdr.calc()
+		copy(hdr.hash[:], hash)
 	}
 	return hdr.hash
 }
 
 func (hdr Header) calc() []byte {
 	h, _ := blake2s.New256(nil)
-	_, _ = h.Write(hdr.Parent)
-	_, _ = h.Write(hdr.State)
-	_, _ = h.Write(hdr.Delta)
-	_, _ = h.Write(hdr.Miner)
-	_, _ = h.Write(hdr.Target)
-	data := make([]byte, 16)
-	binary.LittleEndian.PutUint64(data[:8], uint64(hdr.Time.Unix()))
-	binary.LittleEndian.PutUint64(data[8:], hdr.Nonce)
+	_, _ = h.Write(hdr.Parent[:])
+	_, _ = h.Write(hdr.State[:])
+	_, _ = h.Write(hdr.Delta[:])
+	_, _ = h.Write(hdr.Miner[:])
+	data := make([]byte, 24)
+	binary.LittleEndian.PutUint64(data[:8], hdr.Target)
+	binary.LittleEndian.PutUint64(data[8:16], uint64(hdr.Time.Unix()))
+	binary.LittleEndian.PutUint64(data[16:], hdr.Nonce)
 	_, _ = h.Write(data)
 	return h.Sum(nil)
 }

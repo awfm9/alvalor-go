@@ -35,25 +35,25 @@ type Store interface {
 
 type poolManager interface {
 	Add(tx *types.Transaction) error
-	Get(hash []byte) (*types.Transaction, error)
-	Remove(hash []byte) error
+	Get(hash types.Hash) (*types.Transaction, error)
+	Remove(hash types.Hash) error
 	Count() uint
-	Known(hash []byte) bool
-	IDs() [][]byte
+	Known(hash types.Hash) bool
+	Hashes() []types.Hash
 }
 
 type simplePool struct {
 	sync.Mutex
-	codec Codec
-	store Store
-	ids   map[string]struct{}
+	codec  Codec
+	store  Store
+	hashes map[types.Hash]struct{}
 }
 
 func newPool(codec Codec, store Store) *simplePool {
 	p := &simplePool{
-		codec: codec,
-		store: store,
-		ids:   make(map[string]struct{}),
+		codec:  codec,
+		store:  store,
+		hashes: make(map[types.Hash]struct{}),
 	}
 	return p
 }
@@ -70,22 +70,22 @@ func (p *simplePool) Add(tx *types.Transaction) error {
 
 	hash := tx.Hash()
 	data := buf.Bytes()
-	err = p.store.Put(hash, data)
+	err = p.store.Put(hash[:], data)
 	if err != nil {
 		return errors.Wrap(err, "could not put data")
 	}
 
 	// TODO: fix tests to check ids entry
-	p.ids[string(hash)] = struct{}{}
+	p.hashes[hash] = struct{}{}
 
 	return nil
 }
 
-func (p *simplePool) Get(hash []byte) (*types.Transaction, error) {
+func (p *simplePool) Get(hash types.Hash) (*types.Transaction, error) {
 	p.Lock()
 	defer p.Unlock()
 
-	data, err := p.store.Get(hash)
+	data, err := p.store.Get(hash[:])
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get data")
 	}
@@ -99,17 +99,17 @@ func (p *simplePool) Get(hash []byte) (*types.Transaction, error) {
 	return tx.(*types.Transaction), nil
 }
 
-func (p *simplePool) Remove(hash []byte) error {
+func (p *simplePool) Remove(hash types.Hash) error {
 	p.Lock()
 	defer p.Unlock()
 
-	err := p.store.Del(hash)
+	err := p.store.Del(hash[:])
 	if err != nil {
 		return errors.Wrap(err, "could not del data")
 	}
 
 	// TODO: fix tests to check ids entry
-	delete(p.ids, string(hash))
+	delete(p.hashes, hash)
 
 	return nil
 }
@@ -119,26 +119,26 @@ func (p *simplePool) Count() uint {
 	defer p.Unlock()
 
 	// TODO: check tests to use ids for count
-	return uint(len(p.ids))
+	return uint(len(p.hashes))
 }
 
-func (p *simplePool) Known(hash []byte) bool {
+func (p *simplePool) Known(hash types.Hash) bool {
 	p.Lock()
 	defer p.Unlock()
 
 	// TODO: check tests to use lookup for known
-	_, ok := p.ids[string(hash)]
+	_, ok := p.hashes[hash]
 	return ok
 }
 
-func (p *simplePool) IDs() [][]byte {
+func (p *simplePool) Hashes() []types.Hash {
 	p.Lock()
 	defer p.Unlock()
 
-	ids := make([][]byte, 0, len(p.ids))
-	for hash := range p.ids {
-		ids = append(ids, []byte(hash))
+	hashes := make([]types.Hash, 0, len(p.hashes))
+	for hash := range p.hashes {
+		hashes = append(hashes, hash)
 	}
 
-	return ids
+	return hashes
 }

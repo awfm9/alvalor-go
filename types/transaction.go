@@ -30,13 +30,14 @@ type Transaction struct {
 	Data       []byte
 	Nonce      uint64
 	Signatures [][]byte
-	hash       []byte
+	hash       Hash
 }
 
 // Hash returns the unique hash of the transaction.
-func (tx *Transaction) Hash() []byte {
-	if tx.hash == nil {
-		tx.hash = tx.calc()
+func (tx *Transaction) Hash() Hash {
+	if tx.hash == ZeroHash {
+		hash := tx.calc()
+		copy(tx.hash[:], hash)
 	}
 	return tx.hash
 }
