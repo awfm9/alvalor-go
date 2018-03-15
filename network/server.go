@@ -21,7 +21,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/awishformore/zerolog"
+	"github.com/rs/zerolog"
 )
 
 func handleServing(log zerolog.Logger, wg *sync.WaitGroup, cfg *Config, peers peerManager, handlers handlerManager, stop <-chan struct{}) {

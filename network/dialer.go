@@ -22,7 +22,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/awishformore/zerolog"
+	"github.com/rs/zerolog"
 )
 
 func handleDialing(log zerolog.Logger, wg *sync.WaitGroup, cfg *Config, peers peerManager, pending pendingManager, book addressManager, rep reputationManager, handlers handlerManager, stop <-chan struct{}) {

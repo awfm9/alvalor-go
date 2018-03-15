@@ -15,8 +15,9 @@
 
 [[projects]]
   name = "github.com/awishformore/zerolog"
-  packages = [".","internal/json"]
-  revision = "425d4d7f88048d4652f4352c42f4078496fa5c54"
+  packages = ["."]
+  revision = "56a970de510213e50dbaa39ad73ac07c9ec75606"
+  version = "v1.5.0"
 
 [[projects]]
   name = "github.com/davecgh/go-spew"
@@ -85,10 +86,16 @@
   version = "v1.0.0"
 
 [[projects]]
+  branch = "master"
+  name = "github.com/rs/zerolog"
+  packages = [".","internal/json"]
+  revision = "1c575db92819e737bf5f8751e6cc90d2ccd273e1"
+
+[[projects]]
+  branch = "master"
   name = "github.com/satori/go.uuid"
   packages = ["."]
-  revision = "f58768cc1a7a7e77a3bd49e98cdd21419399b6a3"
-  version = "v1.2.0"
+  revision = "36e9d2ebbde5e3f13ab2e25625fd453271d6522e"
 
 [[projects]]
   name = "github.com/spaolacci/murmur3"
@@ -142,19 +149,19 @@
   branch = "master"
   name = "golang.org/x/crypto"
   packages = ["blake2s","ed25519","ed25519/internal/edwards25519","pbkdf2","sha3"]
-  revision = "c4a91bd4f524f10d064139674cf55852e055ad01"
+  revision = "21652f85b0fdddb6c2b6b77a5beca5c5a908174a"
 
 [[projects]]
   branch = "master"
   name = "golang.org/x/net"
   packages = ["context","internal/timeseries","trace"]
-  revision = "892bf7b0c6e2f93b51166bf3882e50277fa5afc6"
+  revision = "e0c57d8f86c17f0724497efcb3bc617e82834821"
 
 [[projects]]
   branch = "master"
   name = "golang.org/x/sys"
   packages = ["unix"]
-  revision = "8c0ece68c28377f4c326d85b94f8df0dace46f80"
+  revision = "cc7307a45468e49eaf2997c890f14aa03a26917b"
 
 [[projects]]
   name = "zombiezen.com/go/capnproto2"
@@ -165,6 +172,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "4489f27794d5de7877fa4e4a100e29e0d243e5d13ac9ef868c20da7b7682c4f7"
+  inputs-digest = "6c028e783efcac1b1aa157abb0a52e5b741b95fb4f77c7994a61b96487042790"
   solver-name = "gps-cdcl"
   solver-version = 1

@@ -20,7 +20,7 @@ package node
 import (
 	"sync"
 
-	"github.com/awishformore/zerolog"
+	"github.com/rs/zerolog"
 )
 
 func handleInput(log zerolog.Logger, wg *sync.WaitGroup, handlers Handlers, subscription <-chan interface{}) {

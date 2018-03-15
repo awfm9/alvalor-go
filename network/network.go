@@ -25,7 +25,7 @@ import (
 
 	multierror "github.com/hashicorp/go-multierror"
 	"github.com/pkg/errors"
-	"github.com/awishformore/zerolog"
+	"github.com/rs/zerolog"
 	uuid "github.com/satori/go.uuid"
 )
 
@@ -85,7 +85,7 @@ func New(log zerolog.Logger, codec Codec, subscriber chan<- interface{}, options
 		minPeers:   3,
 		maxPeers:   10,
 		maxPending: 16,
-		nonce:      uuid.NewV4().Bytes(),
+		nonce:      uuid.Must(uuid.NewV4()).Bytes(),
 		interval:   time.Second,
 		codec:      codec,
 		bufferSize: 16,
