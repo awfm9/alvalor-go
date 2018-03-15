@@ -21,7 +21,7 @@ import (
 	"bytes"
 	"sync"
 
-	"github.com/awishformore/zerolog"
+	"github.com/rs/zerolog"
 )
 
 func handleConnecting(log zerolog.Logger, wg *sync.WaitGroup, cfg *Config, pending pendingManager, peers peerManager, rep reputationManager, book addressManager, dialer dialWrapper, events eventManager, address string) {

@@ -22,7 +22,7 @@ import (
 	"sync"
 
 	"github.com/pkg/errors"
-	"github.com/awishformore/zerolog"
+	"github.com/rs/zerolog"
 )
 
 func handleReceiving(log zerolog.Logger, wg *sync.WaitGroup, cfg *Config, rep reputationManager, peers peerManager, address string, r io.Reader, input chan<- interface{}) {

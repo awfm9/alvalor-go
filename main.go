@@ -26,8 +26,8 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/awishformore/zerolog"
 	"github.com/dgraph-io/badger"
+	"github.com/rs/zerolog"
 	"github.com/spf13/pflag"
 
 	"github.com/alvalor/alvalor-go/blockchain"
