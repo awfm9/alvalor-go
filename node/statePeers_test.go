@@ -21,6 +21,8 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+
+	"github.com/alvalor/alvalor-go/types"
 )
 
 func TestNewPeers(t *testing.T) {
@@ -82,37 +84,37 @@ func TestPeersActives(t *testing.T) {
 }
 
 func TestPeersTag(t *testing.T) {
-	id1 := []byte{1, 2, 3, 4}
-	id2 := []byte{5, 6, 7, 8}
+	id1 := [32]byte{1, 2, 3, 4}
+	id2 := [32]byte{5, 6, 7, 8}
 	address1 := "192.0.2.100:1337"
 	address2 := "192.0.2.200:1337"
-	peers := &simplePeers{tags: make(map[string][]string)}
+	peers := &simplePeers{tags: make(map[types.Hash][]string)}
 
 	peers.Tag(address1, id1)
-	if assert.Len(t, peers.tags[string(id1)], 1) {
-		assert.Contains(t, peers.tags[string(id1)], address1)
+	if assert.Len(t, peers.tags[id1], 1) {
+		assert.Contains(t, peers.tags[id1], address1)
 	}
 
-	assert.Empty(t, peers.tags[string(id2)])
+	assert.Empty(t, peers.tags[id2])
 
 	peers.Tag(address1, id2)
-	if assert.Len(t, peers.tags[string(id2)], 1) {
-		assert.Contains(t, peers.tags[string(id2)], address1)
+	if assert.Len(t, peers.tags[id2], 1) {
+		assert.Contains(t, peers.tags[id2], address1)
 	}
 
 	peers.Tag(address2, id1)
-	if assert.Len(t, peers.tags[string(id1)], 2) {
-		assert.Contains(t, peers.tags[string(id1)], address2)
+	if assert.Len(t, peers.tags[id1], 2) {
+		assert.Contains(t, peers.tags[id1], address2)
 	}
 }
 
 func TestPeersTags(t *testing.T) {
-	id := []byte{1, 2, 3, 4}
+	id := [32]byte{1, 2, 3, 4}
 	address1 := "192.0.2.100:1337"
 	address2 := "192.0.2.200:1337"
-	peers := &simplePeers{tags: make(map[string][]string)}
+	peers := &simplePeers{tags: make(map[types.Hash][]string)}
 
-	peers.tags[string(id)] = []string{address1, address2}
+	peers.tags[id] = []string{address1, address2}
 	tags := peers.Tags(id)
 	assert.ElementsMatch(t, []string{address1, address2}, tags)
 }

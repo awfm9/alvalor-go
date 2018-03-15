@@ -33,7 +33,7 @@ func TestNewPeerManager(t *testing.T) {
 	assert.Equal(t, handlers, peers.handlers)
 	assert.Equal(t, min, peers.min)
 	assert.Equal(t, max, peers.max)
-	assert.Equal(t, uint(16), peers.buffer)
+	assert.NotZero(t, peers.buffer)
 	assert.NotNil(t, peers.reg)
 }
 

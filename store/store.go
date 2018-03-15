@@ -20,8 +20,9 @@ package store
 import (
 	"bytes"
 
-	"github.com/alvalor/alvalor-go/types"
 	"github.com/pkg/errors"
+
+	"github.com/alvalor/alvalor-go/types"
 )
 
 // Store represents a store to store entities by unique ID.

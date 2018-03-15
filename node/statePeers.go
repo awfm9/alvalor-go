@@ -34,13 +34,13 @@ type peerManager interface {
 type simplePeers struct {
 	sync.Mutex
 	actives map[string]bool
-	tags    map[string][]string
+	tags    map[types.Hash][]string
 }
 
 func newPeers() *simplePeers {
 	return &simplePeers{
 		actives: make(map[string]bool),
-		tags:    make(map[string][]string),
+		tags:    make(map[types.Hash][]string),
 	}
 }
 
@@ -74,12 +74,12 @@ func (s *simplePeers) Tag(address string, hash types.Hash) {
 	s.Lock()
 	defer s.Unlock()
 
-	s.tags[string(hash[:])] = append(s.tags[string(hash[:])], address)
+	s.tags[hash] = append(s.tags[hash], address)
 }
 
 func (s *simplePeers) Tags(hash types.Hash) []string {
 	s.Lock()
 	defer s.Unlock()
 
-	return s.tags[string(hash[:])]
+	return s.tags[hash]
 }

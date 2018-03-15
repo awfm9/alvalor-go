@@ -71,13 +71,13 @@ func (p *PoolMock) Add(tx *types.Transaction) error {
 	return args.Error(0)
 }
 
-func (p *PoolMock) Known(id []byte) bool {
-	args := p.Called(id)
+func (p *PoolMock) Known(hash types.Hash) bool {
+	args := p.Called(hash)
 	return args.Bool(0)
 }
 
-func (p *PoolMock) Get(id []byte) (*types.Transaction, error) {
-	args := p.Called(id)
+func (p *PoolMock) Get(hash types.Hash) (*types.Transaction, error) {
+	args := p.Called(hash)
 	var tx *types.Transaction
 	if args.Get(0) != nil {
 		tx = args.Get(0).(*types.Transaction)
@@ -85,8 +85,8 @@ func (p *PoolMock) Get(id []byte) (*types.Transaction, error) {
 	return tx, args.Error(1)
 }
 
-func (p *PoolMock) Remove(id []byte) error {
-	args := p.Called(id)
+func (p *PoolMock) Remove(hash types.Hash) error {
+	args := p.Called(hash)
 	return args.Error(0)
 }
 
@@ -95,11 +95,11 @@ func (p *PoolMock) Count() uint {
 	return uint(args.Int(0))
 }
 
-func (p *PoolMock) IDs() [][]byte {
+func (p *PoolMock) Hashes() []types.Hash {
 	args := p.Called()
-	var set [][]byte
+	var set []types.Hash
 	if args.Get(0) != nil {
-		set = args.Get(0).([][]byte)
+		set = args.Get(0).([]types.Hash)
 	}
 	return set
 }
@@ -125,12 +125,12 @@ func (p *PeersMock) Actives() []string {
 	return active
 }
 
-func (p *PeersMock) Tag(address string, id []byte) {
-	p.Called(address, id)
+func (p *PeersMock) Tag(address string, hash types.Hash) {
+	p.Called(address, hash)
 }
 
-func (p *PeersMock) Tags(id []byte) []string {
-	args := p.Called(id)
+func (p *PeersMock) Tags(hash types.Hash) []string {
+	args := p.Called(hash)
 	var seen []string
 	if args.Get(0) != nil {
 		seen = args.Get(0).([]string)
@@ -158,7 +158,7 @@ func (h *HandlersMock) Entity(entity Entity) {
 	h.Called(entity)
 }
 
-func (h *HandlersMock) Collect(path [][]byte) {
+func (h *HandlersMock) Collect(path []types.Hash) {
 	h.Called(path)
 }
 
@@ -195,7 +195,7 @@ func (b *BlockchainMock) AddBlock(block *types.Block) error {
 	return args.Error(0)
 }
 
-func (b *BlockchainMock) TransactionByHash(hash []byte) (*types.Transaction, error) {
+func (b *BlockchainMock) TransactionByHash(hash types.Hash) (*types.Transaction, error) {
 	args := b.Called(hash)
 	var tx *types.Transaction
 	if args.Get(0) != nil {
@@ -204,21 +204,17 @@ func (b *BlockchainMock) TransactionByHash(hash []byte) (*types.Transaction, err
 	return tx, args.Error(1)
 }
 
-func (b *BlockchainMock) HeightByHash(hash []byte) (uint32, error) {
+func (b *BlockchainMock) HeightByHash(hash types.Hash) (uint32, error) {
 	args := b.Called(hash)
 	return uint32(args.Int(0)), args.Error(1)
 }
 
-func (b *BlockchainMock) HashByHeight(height uint32) ([]byte, error) {
+func (b *BlockchainMock) HashByHeight(height uint32) (types.Hash, error) {
 	args := b.Called(height)
-	var hash []byte
-	if args.Get(0) != nil {
-		hash = args.Get(0).([]byte)
-	}
-	return hash, args.Error(1)
+	return args.Get(0).(types.Hash), args.Error(1)
 }
 
-func (b *BlockchainMock) HeaderByHash(hash []byte) (*types.Header, error) {
+func (b *BlockchainMock) HeaderByHash(hash types.Hash) (*types.Header, error) {
 	args := b.Called(hash)
 	var header *types.Header
 	if args.Get(0) != nil {
@@ -236,7 +232,7 @@ func (b *BlockchainMock) HeaderByHeight(height uint32) (*types.Header, error) {
 	return header, args.Error(1)
 }
 
-func (b *BlockchainMock) BlockByHash(hash []byte) (*types.Block, error) {
+func (b *BlockchainMock) BlockByHash(hash types.Hash) (*types.Block, error) {
 	args := b.Called(hash)
 	var block *types.Block
 	if args.Get(0) != nil {
@@ -258,21 +254,21 @@ type FinderMock struct {
 	mock.Mock
 }
 
-func (f *FinderMock) Add(hash []byte, parent []byte) error {
+func (f *FinderMock) Add(hash types.Hash, parent types.Hash) error {
 	args := f.Called(hash, parent)
 	return args.Error(0)
 }
 
-func (f *FinderMock) Has(hash []byte) bool {
+func (f *FinderMock) Has(hash types.Hash) bool {
 	args := f.Called(hash)
 	return args.Bool(0)
 }
 
-func (f *FinderMock) Path() [][]byte {
+func (f *FinderMock) Path() []types.Hash {
 	args := f.Called()
-	var path [][]byte
+	var path []types.Hash
 	if args.Get(0) != nil {
-		path = args.Get(0).([][]byte)
+		path = args.Get(0).([]types.Hash)
 	}
 	return path
 }
