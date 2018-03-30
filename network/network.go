@@ -49,18 +49,19 @@ type Network interface {
 
 // simpleNetwork represents a simple network wrapper.
 type simpleNetwork struct {
-	log        zerolog.Logger
-	wg         *sync.WaitGroup
-	cfg        *Config
-	dialer     dialWrapper
-	listener   listenWrapper
-	book       addressManager
-	pending    pendingManager
-	peers      peerManager
-	rep        reputationManager
-	subscriber chan<- interface{}
-	events     eventManager
-	stop       chan struct{}
+	log         zerolog.Logger
+	wg          *sync.WaitGroup
+	cfg         *Config
+	dialer      dialWrapper
+	listener    listenWrapper
+	book        addressManager
+	pending     pendingManager
+	peers       peerManager
+	rep         reputationManager
+	subscriber  <-chan interface{}
+	subscribers map[string][]chan interface{}
+	events      eventManager
+	stop        chan struct{}
 }
 
 // New will initialize the network component.
@@ -112,7 +113,9 @@ func New(log zerolog.Logger, codec Codec, subscriber chan<- interface{}, options
 	net.rep = rep
 
 	// create the subscriber channel
-	net.subscriber = subscriber
+	//TODO: Change client to use new subscribe func
+	net.subscriber = make(chan interface{}, 128)
+	net.subscribers = make(map[string][]chan interface{})
 
 	// create the channel that will shut everything down
 	stop := make(chan struct{})
@@ -133,8 +136,15 @@ func New(log zerolog.Logger, codec Codec, subscriber chan<- interface{}, options
 	net.Dropper()
 	net.Server()
 	net.Dialer()
+	net.Subscriber()
 
 	return net
+}
+
+func (net *simpleNetwork) Subscribe(addresses []string, subscriber chan interface{}) {
+	for _, address := range addresses {
+		net.subscribers[address] = append(net.subscribers[address], subscriber)
+	}
 }
 
 func (net *simpleNetwork) Dropper() {
@@ -150,6 +160,10 @@ func (net *simpleNetwork) Server() {
 func (net *simpleNetwork) Dialer() {
 	net.wg.Add(1)
 	go handleDialing(net.log, net.wg, net.cfg, net.peers, net.pending, net.book, net.rep, net, net.stop)
+}
+
+func (net *simpleNetwork) Subscriber() {
+	go handleSubscriber(net.subscriber, net.subscribers)
 }
 
 func (net *simpleNetwork) Listener() {
@@ -198,7 +212,7 @@ func (net *simpleNetwork) Stop() {
 		net.peers.Drop(address)
 	}
 	net.wg.Wait()
-	close(net.subscriber)
+	//close(net.subscriber)
 }
 
 // Broadcast broadcasts a message to all peers.
