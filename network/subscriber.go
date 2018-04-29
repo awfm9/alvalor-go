@@ -23,7 +23,9 @@ import (
 )
 
 func handleSubscriber(log zerolog.Logger, subscriber chan interface{}, subscribers map[string][]chan<- interface{}) {
-
+	log = log.With().Str("component", "subscriber").Logger()
+	log.Debug().Msg("subscriber routine started")
+	defer log.Debug().Msg("subscriber routine stopped")
 Loop:
 	for {
 		select {
@@ -45,8 +47,6 @@ Loop:
 }
 
 func triggerSubscribers(log zerolog.Logger, subscribers map[string][]chan<- interface{}, msg interface{}, addr string) {
-	log = log.With().Str("component", "subscriber").Logger()
-
 	activeSubscribers := append(subscribers[addr], subscribers[""]...)
 	duplicateLookup := make(map[chan<- interface{}]struct{})
 	for _, activeSubscriber := range activeSubscribers {
@@ -55,7 +55,7 @@ func triggerSubscribers(log zerolog.Logger, subscribers map[string][]chan<- inte
 			select {
 			case activeSubscriber <- msg:
 			case <-time.After(10 * time.Millisecond):
-				log.Info().Msg("subscriber is stalling")
+				log.Debug().Msg("subscriber is stalling")
 			}
 		}
 		duplicateLookup[activeSubscriber] = struct{}{}
