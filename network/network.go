@@ -49,22 +49,23 @@ type Network interface {
 
 // simpleNetwork represents a simple network wrapper.
 type simpleNetwork struct {
-	log        zerolog.Logger
-	wg         *sync.WaitGroup
-	cfg        *Config
-	dialer     dialWrapper
-	listener   listenWrapper
-	book       addressManager
-	pending    pendingManager
-	peers      peerManager
-	rep        reputationManager
-	subscriber chan<- interface{}
-	events     eventManager
-	stop       chan struct{}
+	log               zerolog.Logger
+	wg                *sync.WaitGroup
+	cfg               *Config
+	dialer            dialWrapper
+	listener          listenWrapper
+	book              addressManager
+	pending           pendingManager
+	peers             peerManager
+	rep               reputationManager
+	innerSubscriber   chan interface{}
+	publicSubscribers map[string][]chan<- interface{}
+	events            eventManager
+	stop              chan struct{}
 }
 
 // New will initialize the network component.
-func New(log zerolog.Logger, codec Codec, subscriber chan<- interface{}, options ...func(*Config)) Network {
+func New(log zerolog.Logger, codec Codec, options ...func(*Config)) Network {
 
 	// initialize the launcher for all handlers
 	net := &simpleNetwork{}
@@ -112,7 +113,8 @@ func New(log zerolog.Logger, codec Codec, subscriber chan<- interface{}, options
 	net.rep = rep
 
 	// create the subscriber channel
-	net.subscriber = subscriber
+	net.innerSubscriber = make(chan interface{}, 128)
+	net.publicSubscribers = make(map[string][]chan<- interface{})
 
 	// create the channel that will shut everything down
 	stop := make(chan struct{})
@@ -126,15 +128,26 @@ func New(log zerolog.Logger, codec Codec, subscriber chan<- interface{}, options
 	dialer := &simpleDialWrapper{}
 	net.dialer = dialer
 
-	events := &simpleEventManager{subscriber: subscriber}
+	events := &simpleEventManager{subscriber: net.innerSubscriber}
 	net.events = events
 
 	// initialize the initial handlers
 	net.Dropper()
 	net.Server()
 	net.Dialer()
+	net.Subscriber()
 
 	return net
+}
+
+func (net *simpleNetwork) Subscribe(subscriber chan<- interface{}, addresses ...string) {
+	if len(addresses) == 0 {
+		net.publicSubscribers[""] = append(net.publicSubscribers[""], subscriber)
+	}
+
+	for _, address := range addresses {
+		net.publicSubscribers[address] = append(net.publicSubscribers[address], subscriber)
+	}
 }
 
 func (net *simpleNetwork) Dropper() {
@@ -150,6 +163,10 @@ func (net *simpleNetwork) Server() {
 func (net *simpleNetwork) Dialer() {
 	net.wg.Add(1)
 	go handleDialing(net.log, net.wg, net.cfg, net.peers, net.pending, net.book, net.rep, net, net.stop)
+}
+
+func (net *simpleNetwork) Subscriber() {
+	go handleSubscriber(net.innerSubscriber, net.publicSubscribers)
 }
 
 func (net *simpleNetwork) Listener() {
@@ -198,7 +215,12 @@ func (net *simpleNetwork) Stop() {
 		net.peers.Drop(address)
 	}
 	net.wg.Wait()
-	close(net.subscriber)
+	close(net.innerSubscriber)
+	for _, channels := range net.publicSubscribers {
+		for _, channel := range channels {
+			close(channel)
+		}
+	}
 }
 
 // Broadcast broadcasts a message to all peers.
