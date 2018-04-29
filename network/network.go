@@ -215,7 +215,12 @@ func (net *simpleNetwork) Stop() {
 		net.peers.Drop(address)
 	}
 	net.wg.Wait()
-	//close(net.subscriber)
+	close(net.innerSubscriber)
+	for _, channels := range net.publicSubscribers {
+		for _, channel := range channels {
+			close(channel)
+		}
+	}
 }
 
 // Broadcast broadcasts a message to all peers.
