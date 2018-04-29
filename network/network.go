@@ -141,7 +141,7 @@ func New(log zerolog.Logger, codec Codec, subscriber chan<- interface{}, options
 	return net
 }
 
-func (net *simpleNetwork) Subscribe(addresses []string, subscriber chan interface{}) {
+func (net *simpleNetwork) Subscribe(subscriber chan interface{}, addresses ...string) {
 	for _, address := range addresses {
 		net.subscribers[address] = append(net.subscribers[address], subscriber)
 	}
