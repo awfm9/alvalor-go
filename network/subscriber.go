@@ -26,7 +26,6 @@ Loop:
 			if !ok {
 				break Loop
 			}
-
 			switch msg := message.(type) {
 			case *Disconnected:
 				triggerSubscribers(subscribers, msg, msg.Address)
@@ -36,7 +35,6 @@ Loop:
 				triggerSubscribers(subscribers, msg, msg.Address)
 			default:
 			}
-
 		}
 	}
 }
