@@ -17,7 +17,7 @@
 
 package network
 
-func handleSubscriber(subscriber <-chan interface{}, subscribers map[string][]chan interface{}) {
+func handleSubscriber(subscriber chan interface{}, subscribers map[string][]chan<- interface{}) {
 
 Loop:
 	for {
@@ -41,16 +41,17 @@ Loop:
 	}
 }
 
-func triggerSubscribers(subscribers map[string][]chan interface{}, msg interface{}, addr string) {
-	activeSubscribers := subscribers[addr]
-	lookup := make(map[chan interface{}]struct{})
+func triggerSubscribers(subscribers map[string][]chan<- interface{}, msg interface{}, addr string) {
+	activeSubscribers := append(subscribers[addr], subscribers[""]...)
+
+	duplicateLookup := make(map[chan<- interface{}]struct{})
 	for _, activeSubscriber := range activeSubscribers {
-		_, ok := lookup[activeSubscriber]
+		_, ok := duplicateLookup[activeSubscriber]
 		//TODO: Check if it correctly compares references for map
 		if !ok {
 			//TODO: Need to check for closed channel
 			activeSubscriber <- msg
 		}
-		lookup[activeSubscriber] = struct{}{}
+		duplicateLookup[activeSubscriber] = struct{}{}
 	}
 }

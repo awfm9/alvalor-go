@@ -49,23 +49,23 @@ type Network interface {
 
 // simpleNetwork represents a simple network wrapper.
 type simpleNetwork struct {
-	log         zerolog.Logger
-	wg          *sync.WaitGroup
-	cfg         *Config
-	dialer      dialWrapper
-	listener    listenWrapper
-	book        addressManager
-	pending     pendingManager
-	peers       peerManager
-	rep         reputationManager
-	subscriber  <-chan interface{}
-	subscribers map[string][]chan interface{}
-	events      eventManager
-	stop        chan struct{}
+	log               zerolog.Logger
+	wg                *sync.WaitGroup
+	cfg               *Config
+	dialer            dialWrapper
+	listener          listenWrapper
+	book              addressManager
+	pending           pendingManager
+	peers             peerManager
+	rep               reputationManager
+	innerSubscriber   chan interface{}
+	publicSubscribers map[string][]chan<- interface{}
+	events            eventManager
+	stop              chan struct{}
 }
 
 // New will initialize the network component.
-func New(log zerolog.Logger, codec Codec, subscriber chan<- interface{}, options ...func(*Config)) Network {
+func New(log zerolog.Logger, codec Codec, options ...func(*Config)) Network {
 
 	// initialize the launcher for all handlers
 	net := &simpleNetwork{}
@@ -113,9 +113,8 @@ func New(log zerolog.Logger, codec Codec, subscriber chan<- interface{}, options
 	net.rep = rep
 
 	// create the subscriber channel
-	//TODO: Change client to use new subscribe func
-	net.subscriber = make(chan interface{}, 128)
-	net.subscribers = make(map[string][]chan interface{})
+	net.innerSubscriber = make(chan interface{}, 128)
+	net.publicSubscribers = make(map[string][]chan<- interface{})
 
 	// create the channel that will shut everything down
 	stop := make(chan struct{})
@@ -129,7 +128,7 @@ func New(log zerolog.Logger, codec Codec, subscriber chan<- interface{}, options
 	dialer := &simpleDialWrapper{}
 	net.dialer = dialer
 
-	events := &simpleEventManager{subscriber: subscriber}
+	events := &simpleEventManager{subscriber: net.innerSubscriber}
 	net.events = events
 
 	// initialize the initial handlers
@@ -141,9 +140,13 @@ func New(log zerolog.Logger, codec Codec, subscriber chan<- interface{}, options
 	return net
 }
 
-func (net *simpleNetwork) Subscribe(subscriber chan interface{}, addresses ...string) {
+func (net *simpleNetwork) Subscribe(subscriber chan<- interface{}, addresses ...string) {
+	if len(addresses) == 0 {
+		net.publicSubscribers[""] = append(net.publicSubscribers[""], subscriber)
+	}
+
 	for _, address := range addresses {
-		net.subscribers[address] = append(net.subscribers[address], subscriber)
+		net.publicSubscribers[address] = append(net.publicSubscribers[address], subscriber)
 	}
 }
 
@@ -163,7 +166,7 @@ func (net *simpleNetwork) Dialer() {
 }
 
 func (net *simpleNetwork) Subscriber() {
-	go handleSubscriber(net.subscriber, net.subscribers)
+	go handleSubscriber(net.innerSubscriber, net.publicSubscribers)
 }
 
 func (net *simpleNetwork) Listener() {
