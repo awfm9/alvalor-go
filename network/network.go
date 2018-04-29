@@ -160,7 +160,8 @@ func (net *simpleNetwork) Dialer() {
 }
 
 func (net *simpleNetwork) Subscriber() {
-	go handleSubscriber(net.log, net.innerSubscriber, net.publicSubscribers)
+	net.wg.Add(1)
+	go handleSubscriber(net.log, net.wg, net.innerSubscriber, net.publicSubscribers)
 }
 
 func (net *simpleNetwork) Listener() {

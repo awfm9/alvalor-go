@@ -19,10 +19,13 @@ package network
 
 import (
 	"github.com/rs/zerolog"
+	"sync"
 	"time"
 )
 
-func handleSubscriber(log zerolog.Logger, subscriber chan interface{}, subscribers map[chan<- interface{}][]func(interface{}) bool) {
+func handleSubscriber(log zerolog.Logger, wg *sync.WaitGroup, subscriber chan interface{}, subscribers map[chan<- interface{}][]func(interface{}) bool) {
+	defer wg.Done()
+
 	log = log.With().Str("component", "subscriber").Logger()
 	log.Debug().Msg("subscriber routine started")
 	defer log.Debug().Msg("subscriber routine stopped")
