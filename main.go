@@ -87,6 +87,17 @@ func main() {
 
 	net.Subscribe(sub)
 
+	//Examples, going to remove those later
+	//TODO: Remove examples
+	net.Subscribe(sub, network.ConnectedMsgFilter("192.168.4.44"),
+		network.DisconnectedMsgFilter("192.168.4.55"))
+
+	net.Subscribe(sub, network.AnyMsgFilter("192.168.4.44"))
+
+	net.Subscribe(sub, network.AnyMsgFilter())
+
+	net.Subscribe(sub, network.ConnectedMsgFilter())
+
 	// add own address & bootstrapping nodes
 	net.Add(address)
 	for _, address := range cfg.Bootstrap {
