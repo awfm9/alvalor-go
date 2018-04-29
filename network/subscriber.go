@@ -22,42 +22,46 @@ import (
 	"time"
 )
 
-func handleSubscriber(log zerolog.Logger, subscriber chan interface{}, subscribers map[string][]chan<- interface{}) {
+func handleSubscriber(log zerolog.Logger, subscriber chan interface{}, subscribers map[chan<- interface{}][]func(interface{}) bool) {
 	log = log.With().Str("component", "subscriber").Logger()
 	log.Debug().Msg("subscriber routine started")
 	defer log.Debug().Msg("subscriber routine stopped")
 Loop:
 	for {
 		select {
-		case message, ok := <-subscriber:
+		case msg, ok := <-subscriber:
 			if !ok {
 				break Loop
 			}
-			switch msg := message.(type) {
-			case *Disconnected:
-				triggerSubscribers(log, subscribers, msg, msg.Address)
-			case *Connected:
-				triggerSubscribers(log, subscribers, msg, msg.Address)
-			case *Received:
-				triggerSubscribers(log, subscribers, msg, msg.Address)
-			default:
+			triggerSubscribers(log, msg, subscribers)
+		}
+	}
+}
+
+func triggerSubscribers(log zerolog.Logger, msg interface{}, subscribers map[chan<- interface{}][]func(interface{}) bool) {
+	for subscriber, filters := range subscribers {
+		if len(filters) == 0 {
+			//Zero filters is same as any filter
+			if triggerSubscriber(log, subscriber, msg, AnyMsgFilter()) {
+				continue
+			}
+		}
+		for _, filter := range filters {
+			if triggerSubscriber(log, subscriber, msg, filter) {
+				break
 			}
 		}
 	}
 }
 
-func triggerSubscribers(log zerolog.Logger, subscribers map[string][]chan<- interface{}, msg interface{}, addr string) {
-	activeSubscribers := append(subscribers[addr], subscribers[""]...)
-	duplicateLookup := make(map[chan<- interface{}]struct{})
-	for _, activeSubscriber := range activeSubscribers {
-		_, ok := duplicateLookup[activeSubscriber]
-		if !ok {
-			select {
-			case activeSubscriber <- msg:
-			case <-time.After(10 * time.Millisecond):
-				log.Debug().Msg("subscriber is stalling")
-			}
+func triggerSubscriber(log zerolog.Logger, subscriber chan<- interface{}, msg interface{}, filter func(interface{}) bool) bool {
+	if filter(msg) {
+		select {
+		case subscriber <- msg:
+		case <-time.After(10 * time.Millisecond):
+			log.Debug().Msg("subscriber is stalling")
 		}
-		duplicateLookup[activeSubscriber] = struct{}{}
+		return true
 	}
+	return false
 }

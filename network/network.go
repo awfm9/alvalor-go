@@ -59,7 +59,7 @@ type simpleNetwork struct {
 	peers             peerManager
 	rep               reputationManager
 	innerSubscriber   chan interface{}
-	publicSubscribers map[string][]chan<- interface{}
+	publicSubscribers map[chan<- interface{}][]func(interface{}) bool
 	events            eventManager
 	stop              chan struct{}
 }
@@ -114,7 +114,7 @@ func New(log zerolog.Logger, codec Codec, options ...func(*Config)) Network {
 
 	// create the subscriber channel
 	net.innerSubscriber = make(chan interface{}, 128)
-	net.publicSubscribers = make(map[string][]chan<- interface{})
+	net.publicSubscribers = make(map[chan<- interface{}][]func(interface{}) bool)
 
 	// create the channel that will shut everything down
 	stop := make(chan struct{})
@@ -140,14 +140,8 @@ func New(log zerolog.Logger, codec Codec, options ...func(*Config)) Network {
 	return net
 }
 
-func (net *simpleNetwork) Subscribe(subscriber chan<- interface{}, addresses ...string) {
-	if len(addresses) == 0 {
-		net.publicSubscribers[""] = append(net.publicSubscribers[""], subscriber)
-	}
-
-	for _, address := range addresses {
-		net.publicSubscribers[address] = append(net.publicSubscribers[address], subscriber)
-	}
+func (net *simpleNetwork) Subscribe(subscriber chan<- interface{}, filters ...func(interface{}) bool) {
+	net.publicSubscribers[subscriber] = filters
 }
 
 func (net *simpleNetwork) Dropper() {
@@ -216,10 +210,8 @@ func (net *simpleNetwork) Stop() {
 	}
 	net.wg.Wait()
 	close(net.innerSubscriber)
-	for _, channels := range net.publicSubscribers {
-		for _, channel := range channels {
-			close(channel)
-		}
+	for channel := range net.publicSubscribers {
+		close(channel)
 	}
 }
 

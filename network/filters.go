@@ -41,3 +41,55 @@ func isFailBefore(rep reputationManager, cutoff time.Time) func(string) bool {
 		return rep.Fail(address).Before(cutoff)
 	}
 }
+
+//DisconnectedMsgFilter filter for Disconnected message type
+func DisconnectedMsgFilter(addresses ...string) func(interface{}) bool {
+	return func(msg interface{}) bool {
+		switch message := msg.(type) {
+		case *Disconnected:
+			return len(addresses) == 0 || contains(addresses, message.Address)
+		default:
+			return false
+		}
+	}
+}
+
+//ConnectedMsgFilter filter for Connected message type
+func ConnectedMsgFilter(addresses ...string) func(interface{}) bool {
+	return func(msg interface{}) bool {
+		switch message := msg.(type) {
+		case *Connected:
+			return len(addresses) == 0 || contains(addresses, message.Address)
+		default:
+			return false
+		}
+	}
+}
+
+//ReceivedMsgFilter filter for Received message type
+func ReceivedMsgFilter(addresses ...string) func(interface{}) bool {
+	return func(msg interface{}) bool {
+		switch message := msg.(type) {
+		case *Received:
+			return len(addresses) == 0 || contains(addresses, message.Address)
+		default:
+			return false
+		}
+	}
+}
+
+//AnyMsgFilter filter for any message type
+func AnyMsgFilter(addresses ...string) func(interface{}) bool {
+	return func(msg interface{}) bool {
+		return ConnectedMsgFilter(addresses...)(msg) || DisconnectedMsgFilter(addresses...)(msg) || ReceivedMsgFilter(addresses...)(msg)
+	}
+}
+
+func contains(addresses []string, addr string) bool {
+	for _, address := range addresses {
+		if address == addr {
+			return true
+		}
+	}
+	return false
+}
