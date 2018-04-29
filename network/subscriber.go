@@ -17,7 +17,12 @@
 
 package network
 
-func handleSubscriber(subscriber chan interface{}, subscribers map[string][]chan<- interface{}) {
+import (
+	"github.com/rs/zerolog"
+	"time"
+)
+
+func handleSubscriber(log zerolog.Logger, subscriber chan interface{}, subscribers map[string][]chan<- interface{}) {
 
 Loop:
 	for {
@@ -28,27 +33,30 @@ Loop:
 			}
 			switch msg := message.(type) {
 			case *Disconnected:
-				triggerSubscribers(subscribers, msg, msg.Address)
+				triggerSubscribers(log, subscribers, msg, msg.Address)
 			case *Connected:
-				triggerSubscribers(subscribers, msg, msg.Address)
+				triggerSubscribers(log, subscribers, msg, msg.Address)
 			case *Received:
-				triggerSubscribers(subscribers, msg, msg.Address)
+				triggerSubscribers(log, subscribers, msg, msg.Address)
 			default:
 			}
 		}
 	}
 }
 
-func triggerSubscribers(subscribers map[string][]chan<- interface{}, msg interface{}, addr string) {
-	activeSubscribers := append(subscribers[addr], subscribers[""]...)
+func triggerSubscribers(log zerolog.Logger, subscribers map[string][]chan<- interface{}, msg interface{}, addr string) {
+	log = log.With().Str("component", "subscriber").Logger()
 
+	activeSubscribers := append(subscribers[addr], subscribers[""]...)
 	duplicateLookup := make(map[chan<- interface{}]struct{})
 	for _, activeSubscriber := range activeSubscribers {
 		_, ok := duplicateLookup[activeSubscriber]
-		//TODO: Check if it correctly compares references for map
 		if !ok {
-			//TODO: Need to check for closed channel
-			activeSubscriber <- msg
+			select {
+			case activeSubscriber <- msg:
+			case <-time.After(10 * time.Millisecond):
+				log.Info().Msg("subscriber is stalling")
+			}
 		}
 		duplicateLookup[activeSubscriber] = struct{}{}
 	}
