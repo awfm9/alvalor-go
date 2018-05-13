@@ -39,12 +39,12 @@ Loop:
 			}
 			if len(sub.filters) == 0 {
 				//Zero filters is same as any filter
-				if triggerSubscriber(log, sub.buffer, msg, AnyMsgFilter()) {
+				if triggerSubscriber(log, sub.channel, msg, AnyMsgFilter()) {
 					continue
 				}
 			}
 			for _, filter := range sub.filters {
-				if triggerSubscriber(log, sub.buffer, msg, filter) {
+				if triggerSubscriber(log, sub.channel, msg, filter) {
 					continue
 				}
 			}
