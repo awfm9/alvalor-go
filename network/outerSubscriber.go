@@ -23,35 +23,29 @@ import (
 	"time"
 )
 
-func handleSubscriber(log zerolog.Logger, wg *sync.WaitGroup, subscriber chan interface{}, subscribers map[chan<- interface{}][]func(interface{}) bool) {
+func handleOuterSubscriber(log zerolog.Logger, wg *sync.WaitGroup, sub subscriber) {
 	defer wg.Done()
 
-	log = log.With().Str("component", "subscriber").Logger()
-	log.Debug().Msg("subscriber routine started")
-	defer log.Debug().Msg("subscriber routine stopped")
+	log = log.With().Str("component", "outerSubscriber").Logger()
+	log.Debug().Msg("handleOuterSubscriber routine started")
+	defer log.Debug().Msg("handleOuterSubscriber routine stopped")
 Loop:
 	for {
 		select {
-		case msg, ok := <-subscriber:
+		case msg, ok := <-sub.buffer:
 			if !ok {
 				break Loop
 			}
-			triggerSubscribers(log, msg, subscribers)
-		}
-	}
-}
-
-func triggerSubscribers(log zerolog.Logger, msg interface{}, subscribers map[chan<- interface{}][]func(interface{}) bool) {
-	for subscriber, filters := range subscribers {
-		if len(filters) == 0 {
-			//Zero filters is same as any filter
-			if triggerSubscriber(log, subscriber, msg, AnyMsgFilter()) {
-				continue
+			if len(sub.filters) == 0 {
+				//Zero filters is same as any filter
+				if triggerSubscriber(log, sub.buffer, msg, AnyMsgFilter()) {
+					continue
+				}
 			}
-		}
-		for _, filter := range filters {
-			if triggerSubscriber(log, subscriber, msg, filter) {
-				break
+			for _, filter := range sub.filters {
+				if triggerSubscriber(log, sub.buffer, msg, filter) {
+					break
+				}
 			}
 		}
 	}

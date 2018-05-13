@@ -59,9 +59,15 @@ type simpleNetwork struct {
 	peers             peerManager
 	rep               reputationManager
 	innerSubscriber   chan interface{}
-	publicSubscribers map[chan<- interface{}][]func(interface{}) bool
+	publicSubscribers []subscriber
 	events            eventManager
 	stop              chan struct{}
+}
+
+type subscriber struct {
+	channel chan<- interface{}
+	buffer  chan interface{}
+	filters []func(interface{}) bool
 }
 
 // New will initialize the network component.
@@ -114,7 +120,7 @@ func New(log zerolog.Logger, codec Codec, options ...func(*Config)) Network {
 
 	// create the subscriber channel
 	net.innerSubscriber = make(chan interface{}, 128)
-	net.publicSubscribers = make(map[chan<- interface{}][]func(interface{}) bool)
+	net.publicSubscribers = []subscriber{}
 
 	// create the channel that will shut everything down
 	stop := make(chan struct{})
@@ -135,13 +141,16 @@ func New(log zerolog.Logger, codec Codec, options ...func(*Config)) Network {
 	net.Dropper()
 	net.Server()
 	net.Dialer()
-	net.Subscriber()
+	net.InnerSubscriber()
 
 	return net
 }
 
-func (net *simpleNetwork) Subscribe(subscriber chan<- interface{}, filters ...func(interface{}) bool) {
-	net.publicSubscribers[subscriber] = filters
+func (net *simpleNetwork) Subscribe(channel chan<- interface{}, filters ...func(interface{}) bool) {
+	sub := subscriber{filters: filters, channel: channel, buffer: make(chan interface{}, 128)}
+	net.publicSubscribers = append(net.publicSubscribers, sub)
+	net.wg.Add(1)
+	go net.OuterSubscriber(sub)
 }
 
 func (net *simpleNetwork) Dropper() {
@@ -159,9 +168,14 @@ func (net *simpleNetwork) Dialer() {
 	go handleDialing(net.log, net.wg, net.cfg, net.peers, net.pending, net.book, net.rep, net, net.stop)
 }
 
-func (net *simpleNetwork) Subscriber() {
+func (net *simpleNetwork) InnerSubscriber() {
 	net.wg.Add(1)
-	go handleSubscriber(net.log, net.wg, net.innerSubscriber, net.publicSubscribers)
+	go handleInnerSubscriber(net.log, net.wg, net.innerSubscriber, net.publicSubscribers)
+}
+
+func (net *simpleNetwork) OuterSubscriber(sub subscriber) {
+	net.wg.Add(1)
+	go handleOuterSubscriber(net.log, net.wg, sub)
 }
 
 func (net *simpleNetwork) Listener() {
@@ -211,8 +225,9 @@ func (net *simpleNetwork) Stop() {
 	}
 	net.wg.Wait()
 	close(net.innerSubscriber)
-	for channel := range net.publicSubscribers {
-		close(channel)
+	for _, sub := range net.publicSubscribers {
+		close(sub.channel)
+		close(sub.buffer)
 	}
 }
 
