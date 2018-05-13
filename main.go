@@ -87,17 +87,6 @@ func main() {
 
 	net.Subscribe(sub)
 
-	//Examples, going to remove those later
-	//TODO: Remove examples
-	net.Subscribe(sub, network.MsgFilter(connected, "192.168.4.44"),
-		network.MsgFilter(disconnected, "192.168.4.55"))
-
-	net.Subscribe(sub, network.AnyMsgFilter("192.168.4.44"))
-
-	net.Subscribe(sub, network.AnyMsgFilter())
-
-	net.Subscribe(sub, network.MsgFilter(connected))
-
 	// add own address & bootstrapping nodes
 	net.Add(address)
 	for _, address := range cfg.Bootstrap {
@@ -134,6 +123,8 @@ func main() {
 
 	// initialize the node subscriber
 	n := node.New(log, net, chain, find, codec, sub)
+	nodeSub := make(chan interface{}, 128)
+	n.Subscribe(nodeSub)
 
 	// wait for a stop signal to initialize shutdown
 	stats := time.NewTicker(10 * time.Second)
