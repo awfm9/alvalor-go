@@ -19,12 +19,19 @@ package node
 
 import "github.com/alvalor/alvalor-go/types"
 
-//TransactionMsgFilter filter for Received message type
-func TransactionMsgFilter(hashes ...types.Hash) func(interface{}) bool {
+//MsgType enum.
+type MsgType uint16
+
+const (
+	transaction MsgType = 1
+)
+
+//MsgFilter filter for Received message type
+func MsgFilter(msgType MsgType, hashes ...types.Hash) func(interface{}) bool {
 	return func(msg interface{}) bool {
 		switch message := msg.(type) {
 		case *Transaction:
-			return len(hashes) == 0 || contains(hashes, message.hash)
+			return msgType == transaction && len(hashes) == 0 || contains(hashes, message.hash)
 		default:
 			return false
 		}
@@ -34,7 +41,7 @@ func TransactionMsgFilter(hashes ...types.Hash) func(interface{}) bool {
 //AnyMsgFilter filter for any message type
 func AnyMsgFilter(hashes ...types.Hash) func(interface{}) bool {
 	return func(msg interface{}) bool {
-		return TransactionMsgFilter(hashes...)(msg) //Add more once you add new message types
+		return MsgFilter(transaction, hashes...)(msg) //Add more once you add new message types
 	}
 }
 
