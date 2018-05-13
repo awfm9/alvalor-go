@@ -89,14 +89,14 @@ func main() {
 
 	//Examples, going to remove those later
 	//TODO: Remove examples
-	net.Subscribe(sub, network.ConnectedMsgFilter("192.168.4.44"),
-		network.DisconnectedMsgFilter("192.168.4.55"))
+	net.Subscribe(sub, network.MsgFilter(connected, "192.168.4.44"),
+		network.MsgFilter(disconnected, "192.168.4.55"))
 
 	net.Subscribe(sub, network.AnyMsgFilter("192.168.4.44"))
 
 	net.Subscribe(sub, network.AnyMsgFilter())
 
-	net.Subscribe(sub, network.ConnectedMsgFilter())
+	net.Subscribe(sub, network.MsgFilter(connected))
 
 	// add own address & bootstrapping nodes
 	net.Add(address)

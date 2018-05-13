@@ -42,36 +42,25 @@ func isFailBefore(rep reputationManager, cutoff time.Time) func(string) bool {
 	}
 }
 
-//DisconnectedMsgFilter filter for Disconnected message type
-func DisconnectedMsgFilter(addresses ...string) func(interface{}) bool {
-	return func(msg interface{}) bool {
-		switch message := msg.(type) {
-		case *Disconnected:
-			return len(addresses) == 0 || contains(addresses, message.Address)
-		default:
-			return false
-		}
-	}
-}
+//MsgType enum.
+type MsgType uint16
 
-//ConnectedMsgFilter filter for Connected message type
-func ConnectedMsgFilter(addresses ...string) func(interface{}) bool {
+const (
+	connected    MsgType = 1
+	disconnected MsgType = 2
+	received     MsgType = 3
+)
+
+//MsgFilter can be used to filter out message types.
+func MsgFilter(msgType MsgType, addresses ...string) func(interface{}) bool {
 	return func(msg interface{}) bool {
 		switch message := msg.(type) {
 		case *Connected:
-			return len(addresses) == 0 || contains(addresses, message.Address)
-		default:
-			return false
-		}
-	}
-}
-
-//ReceivedMsgFilter filter for Received message type
-func ReceivedMsgFilter(addresses ...string) func(interface{}) bool {
-	return func(msg interface{}) bool {
-		switch message := msg.(type) {
+			return msgType == connected && len(addresses) == 0 || contains(addresses, message.Address)
+		case *Disconnected:
+			return msgType == disconnected && len(addresses) == 0 || contains(addresses, message.Address)
 		case *Received:
-			return len(addresses) == 0 || contains(addresses, message.Address)
+			return msgType == received && len(addresses) == 0 || contains(addresses, message.Address)
 		default:
 			return false
 		}
@@ -81,7 +70,7 @@ func ReceivedMsgFilter(addresses ...string) func(interface{}) bool {
 //AnyMsgFilter filter for any message type
 func AnyMsgFilter(addresses ...string) func(interface{}) bool {
 	return func(msg interface{}) bool {
-		return ConnectedMsgFilter(addresses...)(msg) || DisconnectedMsgFilter(addresses...)(msg) || ReceivedMsgFilter(addresses...)(msg)
+		return MsgFilter(connected, addresses...)(msg) || MsgFilter(disconnected, addresses...)(msg) || MsgFilter(received, addresses...)(msg)
 	}
 }
 
