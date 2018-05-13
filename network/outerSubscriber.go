@@ -18,9 +18,10 @@
 package network
 
 import (
-	"github.com/rs/zerolog"
 	"sync"
 	"time"
+
+	"github.com/rs/zerolog"
 )
 
 func handleOuterSubscriber(log zerolog.Logger, wg *sync.WaitGroup, sub subscriber) {
@@ -44,7 +45,7 @@ Loop:
 			}
 			for _, filter := range sub.filters {
 				if triggerSubscriber(log, sub.buffer, msg, filter) {
-					break
+					continue
 				}
 			}
 		}

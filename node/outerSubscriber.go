@@ -45,7 +45,7 @@ Loop:
 			}
 			for _, filter := range sub.filters {
 				if triggerSubscriber(log, sub.buffer, msg, filter) {
-					break
+					continue
 				}
 			}
 		}
