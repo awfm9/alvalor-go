@@ -18,12 +18,13 @@
 package network
 
 import (
-	"github.com/rs/zerolog"
 	"sync"
 	"time"
+
+	"github.com/rs/zerolog"
 )
 
-func handleInnerSubscriber(log zerolog.Logger, wg *sync.WaitGroup, subscriber chan interface{}, subscribers []subscriber) {
+func handleInnerSubscriber(log zerolog.Logger, wg *sync.WaitGroup, innerSubscriber chan interface{}, subscribers []subscriber) {
 	defer wg.Done()
 
 	log = log.With().Str("component", "innerSubscriber").Logger()
@@ -32,7 +33,7 @@ func handleInnerSubscriber(log zerolog.Logger, wg *sync.WaitGroup, subscriber ch
 Loop:
 	for {
 		select {
-		case msg, ok := <-subscriber:
+		case msg, ok := <-innerSubscriber:
 			if !ok {
 				break Loop
 			}
