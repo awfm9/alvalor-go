@@ -154,3 +154,12 @@ func (n *simpleNode) OuterSubscriber(sub subscriber) {
 	n.wg.Add(1)
 	go handleOuterSubscriber(n.log, n.wg, sub)
 }
+
+func (n *simpleNode) Stop() {
+	n.wg.Wait()
+	close(n.innerSubscriber)
+	for _, sub := range n.publicSubscribers {
+		close(sub.channel)
+		close(sub.buffer)
+	}
+}
