@@ -46,13 +46,16 @@ type Codec interface {
 }
 
 type simpleNode struct {
-	log    zerolog.Logger
-	wg     *sync.WaitGroup
-	net    Network
-	chain  Blockchain
-	finder Finder
-	peers  peerManager
-	pool   poolManager
+	log               zerolog.Logger
+	wg                *sync.WaitGroup
+	net               Network
+	chain             Blockchain
+	finder            Finder
+	peers             peerManager
+	pool              poolManager
+	events            eventManager
+	innerSubscriber   chan interface{}
+	publicSubscribers map[chan<- interface{}][]func(interface{}) bool
 }
 
 // New creates a new node to manage the Alvalor blockchain.
@@ -83,10 +86,21 @@ func New(log zerolog.Logger, net Network, chain Blockchain, finder Finder, codec
 	pool := newPool(codec, store)
 	n.pool = pool
 
+	// create the subscriber channel
+	n.innerSubscriber = make(chan interface{}, 128)
+	n.publicSubscribers = make(map[chan<- interface{}][]func(interface{}) bool)
+
 	// handle all input messages we get
 	n.Input(input)
+	n.events = &simpleEventManager{subscriber: n.innerSubscriber}
+
+	n.Subscriber()
 
 	return n
+}
+
+func (n *simpleNode) Subscribe(subscriber chan<- interface{}, filters ...func(interface{}) bool) {
+	n.publicSubscribers[subscriber] = filters
 }
 
 func (n *simpleNode) Submit(tx *types.Transaction) {
@@ -116,8 +130,13 @@ func (n *simpleNode) Message(address string, message interface{}) {
 
 func (n *simpleNode) Entity(entity Entity) {
 	n.wg.Add(1)
-	go handleEntity(n.log, n.wg, n.net, n.peers, n.pool, entity)
+	go handleEntity(n.log, n.wg, n.net, n.peers, n.pool, entity, n.events)
 }
 
 func (n *simpleNode) Collect(path []types.Hash) {
+}
+
+func (n *simpleNode) Subscriber() {
+	n.wg.Add(1)
+	go handleSubscriber(n.log, n.wg, n.innerSubscriber, n.publicSubscribers)
 }

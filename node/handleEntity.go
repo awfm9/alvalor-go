@@ -25,7 +25,7 @@ import (
 	"github.com/alvalor/alvalor-go/types"
 )
 
-func handleEntity(log zerolog.Logger, wg *sync.WaitGroup, net Network, peers peerManager, pool poolManager, entity Entity) {
+func handleEntity(log zerolog.Logger, wg *sync.WaitGroup, net Network, peers peerManager, pool poolManager, entity Entity, events eventManager) {
 	defer wg.Done()
 
 	var (
@@ -54,6 +54,8 @@ func handleEntity(log zerolog.Logger, wg *sync.WaitGroup, net Network, peers pee
 			log.Error().Err(err).Msg("could not add transaction to pool")
 			return
 		}
+
+		events.Transaction(hash)
 
 		// create lookup to know who to exclude from broadcast
 		tags := peers.Tags(hash)
