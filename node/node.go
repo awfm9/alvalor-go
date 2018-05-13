@@ -55,7 +55,13 @@ type simpleNode struct {
 	pool              poolManager
 	events            eventManager
 	innerSubscriber   chan interface{}
-	publicSubscribers map[chan<- interface{}][]func(interface{}) bool
+	publicSubscribers []subscriber
+}
+
+type subscriber struct {
+	channel chan<- interface{}
+	buffer  chan interface{}
+	filters []func(interface{}) bool
 }
 
 // New creates a new node to manage the Alvalor blockchain.
@@ -88,19 +94,22 @@ func New(log zerolog.Logger, net Network, chain Blockchain, finder Finder, codec
 
 	// create the subscriber channel
 	n.innerSubscriber = make(chan interface{}, 128)
-	n.publicSubscribers = make(map[chan<- interface{}][]func(interface{}) bool)
+	n.publicSubscribers = []subscriber{}
 
 	// handle all input messages we get
 	n.Input(input)
 	n.events = &simpleEventManager{subscriber: n.innerSubscriber}
 
-	n.Subscriber()
+	n.InnerSubscriber()
 
 	return n
 }
 
-func (n *simpleNode) Subscribe(subscriber chan<- interface{}, filters ...func(interface{}) bool) {
-	n.publicSubscribers[subscriber] = filters
+func (n *simpleNode) Subscribe(channel chan<- interface{}, filters ...func(interface{}) bool) {
+	sub := subscriber{filters: filters, channel: channel, buffer: make(chan interface{}, 128)}
+	n.publicSubscribers = append(n.publicSubscribers, sub)
+	n.wg.Add(1)
+	n.OuterSubscriber(sub)
 }
 
 func (n *simpleNode) Submit(tx *types.Transaction) {
@@ -136,7 +145,12 @@ func (n *simpleNode) Entity(entity Entity) {
 func (n *simpleNode) Collect(path []types.Hash) {
 }
 
-func (n *simpleNode) Subscriber() {
+func (n *simpleNode) InnerSubscriber() {
 	n.wg.Add(1)
-	go handleSubscriber(n.log, n.wg, n.innerSubscriber, n.publicSubscribers)
+	go handleInnerSubscriber(n.log, n.wg, n.innerSubscriber, n.publicSubscribers)
+}
+
+func (n *simpleNode) OuterSubscriber(sub subscriber) {
+	n.wg.Add(1)
+	go handleOuterSubscriber(n.log, n.wg, sub)
 }
