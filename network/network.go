@@ -150,7 +150,7 @@ func (net *simpleNetwork) Subscribe(channel chan<- interface{}, filters ...func(
 	sub := subscriber{filters: filters, channel: channel, buffer: make(chan interface{}, 128)}
 	net.publicSubscribers = append(net.publicSubscribers, sub)
 	net.wg.Add(1)
-	go net.OuterSubscriber(sub)
+	net.OuterSubscriber(sub)
 }
 
 func (net *simpleNetwork) Dropper() {
