@@ -14,12 +14,6 @@
   revision = "18fdff33d8fa6779a6eb859c3fbe0d330b340da2"
 
 [[projects]]
-  name = "github.com/awishformore/zerolog"
-  packages = ["."]
-  revision = "56a970de510213e50dbaa39ad73ac07c9ec75606"
-  version = "v1.5.0"
-
-[[projects]]
   name = "github.com/davecgh/go-spew"
   packages = ["spew"]
   revision = "346938d642f2ec3594ed81d874461961cd0faa76"
@@ -172,6 +166,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "6c028e783efcac1b1aa157abb0a52e5b741b95fb4f77c7994a61b96487042790"
+  inputs-digest = "0babc0ab6abb904d72c301f08d757ffc6394b6042f35d6fea78f523a34044426"
   solver-name = "gps-cdcl"
   solver-version = 1

@@ -23,7 +23,7 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/awishformore/zerolog"
+	"github.com/rs/zerolog"
 	uuid "github.com/satori/go.uuid"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/suite"
