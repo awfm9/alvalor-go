@@ -46,7 +46,7 @@ func (suite *AcceptorSuite) SetupTest() {
 	suite.wg.Add(1)
 	suite.cfg = Config{
 		network: Odin,
-		nonce:   uuid.NewV4().Bytes(),
+		nonce:   uuid.Must(uuid.NewV4()).Bytes(),
 	}
 }
 
@@ -54,7 +54,7 @@ func (suite *AcceptorSuite) TestAcceptorSuccess() {
 
 	// arrange
 	address := "192.0.2.100:1337"
-	nonce := uuid.NewV4().Bytes()
+	nonce := uuid.Must(uuid.NewV4()).Bytes()
 	syn := append(suite.cfg.network, nonce...)
 
 	addr := &AddrMock{}
@@ -106,7 +106,7 @@ func (suite *AcceptorSuite) TestAcceptorClaimFails() {
 
 	// arrange
 	address := "192.0.2.100:1337"
-	nonce := uuid.NewV4().Bytes()
+	nonce := uuid.Must(uuid.NewV4()).Bytes()
 	syn := append(suite.cfg.network, nonce...)
 
 	addr := &AddrMock{}
@@ -158,7 +158,7 @@ func (suite *AcceptorSuite) TestAcceptorReadFails() {
 
 	// arrange
 	address := "192.0.2.100:1337"
-	nonce := uuid.NewV4().Bytes()
+	nonce := uuid.Must(uuid.NewV4()).Bytes()
 	syn := append(suite.cfg.network, nonce...)
 
 	addr := &AddrMock{}
@@ -210,7 +210,7 @@ func (suite *AcceptorSuite) TestAcceptorNetworkMismatch() {
 
 	// arrange
 	address := "192.0.2.100:1337"
-	nonce := uuid.NewV4().Bytes()
+	nonce := uuid.Must(uuid.NewV4()).Bytes()
 	syn := append([]byte{1, 2, 3, 4}, nonce...)
 
 	addr := &AddrMock{}
@@ -313,7 +313,7 @@ func (suite *AcceptorSuite) TestAcceptorWriteFails() {
 
 	// arrange
 	address := "192.0.2.100:1337"
-	nonce := uuid.NewV4().Bytes()
+	nonce := uuid.Must(uuid.NewV4()).Bytes()
 	syn := append(suite.cfg.network, nonce...)
 
 	addr := &AddrMock{}
@@ -365,7 +365,7 @@ func (suite *AcceptorSuite) TestAcceptorAddPeerFails() {
 
 	// arrange
 	address := "192.0.2.100:1337"
-	nonce := uuid.NewV4().Bytes()
+	nonce := uuid.Must(uuid.NewV4()).Bytes()
 	syn := append(suite.cfg.network, nonce...)
 
 	addr := &AddrMock{}
