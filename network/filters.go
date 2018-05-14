@@ -41,3 +41,44 @@ func isFailBefore(rep reputationManager, cutoff time.Time) func(string) bool {
 		return rep.Fail(address).Before(cutoff)
 	}
 }
+
+//MsgType enum.
+type MsgType uint16
+
+const (
+	connected    MsgType = 1
+	disconnected MsgType = 2
+	received     MsgType = 3
+)
+
+//MsgFilter can be used to filter out message types.
+func MsgFilter(msgType MsgType, addresses ...string) func(interface{}) bool {
+	return func(msg interface{}) bool {
+		switch message := msg.(type) {
+		case *Connected:
+			return msgType == connected && len(addresses) == 0 || contains(addresses, message.Address)
+		case *Disconnected:
+			return msgType == disconnected && len(addresses) == 0 || contains(addresses, message.Address)
+		case *Received:
+			return msgType == received && len(addresses) == 0 || contains(addresses, message.Address)
+		default:
+			return false
+		}
+	}
+}
+
+//AnyMsgFilter filter for any message type
+func AnyMsgFilter(addresses ...string) func(interface{}) bool {
+	return func(msg interface{}) bool {
+		return MsgFilter(connected, addresses...)(msg) || MsgFilter(disconnected, addresses...)(msg) || MsgFilter(received, addresses...)(msg)
+	}
+}
+
+func contains(addresses []string, addr string) bool {
+	for _, address := range addresses {
+		if address == addr {
+			return true
+		}
+	}
+	return false
+}

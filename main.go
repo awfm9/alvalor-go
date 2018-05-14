@@ -78,12 +78,14 @@ func main() {
 
 	// initialize the network component to create our p2p network node
 	address := fmt.Sprintf("%v:%v", cfg.IP, cfg.Port)
-	net := network.New(log, codec, sub,
+	net := network.New(log, codec,
 		network.SetListen(cfg.Listen),
 		network.SetAddress(address),
 		network.SetMinPeers(4),
 		network.SetMaxPeers(16),
 	)
+
+	net.Subscribe(sub)
 
 	// add own address & bootstrapping nodes
 	net.Add(address)
@@ -121,6 +123,8 @@ func main() {
 
 	// initialize the node subscriber
 	n := node.New(log, net, chain, find, codec, sub)
+	nodeSub := make(chan interface{}, 128)
+	n.Subscribe(nodeSub)
 
 	// wait for a stop signal to initialize shutdown
 	stats := time.NewTicker(10 * time.Second)

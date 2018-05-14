@@ -46,13 +46,22 @@ type Codec interface {
 }
 
 type simpleNode struct {
-	log    zerolog.Logger
-	wg     *sync.WaitGroup
-	net    Network
-	chain  Blockchain
-	finder Finder
-	peers  peerManager
-	pool   poolManager
+	log               zerolog.Logger
+	wg                *sync.WaitGroup
+	net               Network
+	chain             Blockchain
+	finder            Finder
+	peers             peerManager
+	pool              poolManager
+	events            eventManager
+	innerSubscriber   chan interface{}
+	publicSubscribers []subscriber
+}
+
+type subscriber struct {
+	channel chan<- interface{}
+	buffer  chan interface{}
+	filters []func(interface{}) bool
 }
 
 // New creates a new node to manage the Alvalor blockchain.
@@ -83,10 +92,24 @@ func New(log zerolog.Logger, net Network, chain Blockchain, finder Finder, codec
 	pool := newPool(codec, store)
 	n.pool = pool
 
+	// create the subscriber channel
+	n.innerSubscriber = make(chan interface{}, 128)
+	n.publicSubscribers = []subscriber{}
+
 	// handle all input messages we get
 	n.Input(input)
+	n.events = &simpleEventManager{subscriber: n.innerSubscriber}
+
+	n.InnerSubscriber()
 
 	return n
+}
+
+func (n *simpleNode) Subscribe(channel chan<- interface{}, filters ...func(interface{}) bool) {
+	sub := subscriber{filters: filters, channel: channel, buffer: make(chan interface{}, 128)}
+	n.publicSubscribers = append(n.publicSubscribers, sub)
+	n.wg.Add(1)
+	n.OuterSubscriber(sub)
 }
 
 func (n *simpleNode) Submit(tx *types.Transaction) {
@@ -116,8 +139,27 @@ func (n *simpleNode) Message(address string, message interface{}) {
 
 func (n *simpleNode) Entity(entity Entity) {
 	n.wg.Add(1)
-	go handleEntity(n.log, n.wg, n.net, n.peers, n.pool, entity)
+	go handleEntity(n.log, n.wg, n.net, n.peers, n.pool, entity, n.events)
 }
 
 func (n *simpleNode) Collect(path []types.Hash) {
+}
+
+func (n *simpleNode) InnerSubscriber() {
+	n.wg.Add(1)
+	go handleInnerSubscriber(n.log, n.wg, n.innerSubscriber, n.publicSubscribers)
+}
+
+func (n *simpleNode) OuterSubscriber(sub subscriber) {
+	n.wg.Add(1)
+	go handleOuterSubscriber(n.log, n.wg, sub)
+}
+
+func (n *simpleNode) Stop() {
+	n.wg.Wait()
+	close(n.innerSubscriber)
+	for _, sub := range n.publicSubscribers {
+		close(sub.channel)
+		close(sub.buffer)
+	}
 }
