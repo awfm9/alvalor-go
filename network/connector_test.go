@@ -46,7 +46,7 @@ func (suite *ConnectorSuite) SetupTest() {
 	suite.wg.Add(1)
 	suite.cfg = Config{
 		network: []byte{1, 3, 3, 7},
-		nonce:   uuid.NewV4().Bytes(),
+		nonce:   uuid.Must(uuid.NewV4()).Bytes(),
 	}
 }
 
@@ -54,7 +54,7 @@ func (suite *ConnectorSuite) TestConnectorSuccess() {
 
 	// arrange
 	address := "192.0.2.100:1337"
-	nonce := uuid.NewV4().Bytes()
+	nonce := uuid.Must(uuid.NewV4()).Bytes()
 	ack := append(suite.cfg.network, nonce...)
 
 	conn := &ConnMock{}
@@ -106,7 +106,7 @@ func (suite *ConnectorSuite) TestConnectorClaimFails() {
 
 	// arrange
 	address := "192.0.2.100:1337"
-	nonce := uuid.NewV4().Bytes()
+	nonce := uuid.Must(uuid.NewV4()).Bytes()
 	ack := append(suite.cfg.network, nonce...)
 
 	conn := &ConnMock{}
@@ -158,7 +158,7 @@ func (suite *ConnectorSuite) TestConnectorDialFails() {
 
 	// arrange
 	address := "192.0.2.100:1337"
-	nonce := uuid.NewV4().Bytes()
+	nonce := uuid.Must(uuid.NewV4()).Bytes()
 	ack := append(suite.cfg.network, nonce...)
 
 	conn := &ConnMock{}
@@ -210,7 +210,7 @@ func (suite *ConnectorSuite) TestConnectorWriteFails() {
 
 	// arrange
 	address := "192.0.2.100:1337"
-	nonce := uuid.NewV4().Bytes()
+	nonce := uuid.Must(uuid.NewV4()).Bytes()
 	ack := append(suite.cfg.network, nonce...)
 
 	conn := &ConnMock{}
@@ -262,7 +262,7 @@ func (suite *ConnectorSuite) TestConnectorReadFails() {
 
 	// arrange
 	address := "192.0.2.100:1337"
-	nonce := uuid.NewV4().Bytes()
+	nonce := uuid.Must(uuid.NewV4()).Bytes()
 	ack := append(suite.cfg.network, nonce...)
 
 	conn := &ConnMock{}
@@ -314,7 +314,7 @@ func (suite *ConnectorSuite) TestConnectorNetworkMismatch() {
 
 	// arrange
 	address := "192.0.2.100:1337"
-	nonce := uuid.NewV4().Bytes()
+	nonce := uuid.Must(uuid.NewV4()).Bytes()
 	ack := append([]byte{1, 2, 3, 4}, nonce...)
 
 	conn := &ConnMock{}
@@ -417,7 +417,7 @@ func (suite *ConnectorSuite) TestConnectorNonceKnown() {
 
 	// arrange
 	address := "192.0.2.100:1337"
-	nonce := uuid.NewV4().Bytes()
+	nonce := uuid.Must(uuid.NewV4()).Bytes()
 	ack := append(suite.cfg.network, nonce...)
 
 	conn := &ConnMock{}
@@ -469,7 +469,7 @@ func (suite *ConnectorSuite) TestConnectorAddPeerFails() {
 
 	// arrange
 	address := "192.0.2.100:1337"
-	nonce := uuid.NewV4().Bytes()
+	nonce := uuid.Must(uuid.NewV4()).Bytes()
 	ack := append(suite.cfg.network, nonce...)
 
 	conn := &ConnMock{}
