@@ -19,8 +19,9 @@ package node
 
 import (
 	"errors"
-	"github.com/alvalor/alvalor-go/types"
 	"time"
+
+	"github.com/alvalor/alvalor-go/types"
 )
 
 type eventManager interface {
@@ -28,12 +29,12 @@ type eventManager interface {
 }
 
 type simpleEventManager struct {
-	subscriber chan<- interface{}
+	stream chan<- interface{}
 }
 
 func (mgr *simpleEventManager) Transaction(hash types.Hash) error {
 	select {
-	case mgr.subscriber <- Transaction{hash: hash}:
+	case mgr.stream <- Transaction{hash: hash}:
 	case <-time.After(10 * time.Millisecond):
 		return errors.New("subscriber stalling")
 	}

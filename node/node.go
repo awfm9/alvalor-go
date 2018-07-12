@@ -46,16 +46,16 @@ type Codec interface {
 }
 
 type simpleNode struct {
-	log               zerolog.Logger
-	wg                *sync.WaitGroup
-	net               Network
-	chain             Blockchain
-	finder            Finder
-	peers             peerManager
-	pool              poolManager
-	events            eventManager
-	innerSubscriber   chan interface{}
-	publicSubscribers []subscriber
+	log         zerolog.Logger
+	wg          *sync.WaitGroup
+	net         Network
+	chain       Blockchain
+	finder      Finder
+	peers       peerManager
+	pool        poolManager
+	events      eventManager
+	stream      chan interface{}
+	subscribers []subscriber
 }
 
 type subscriber struct {
@@ -93,12 +93,11 @@ func New(log zerolog.Logger, net Network, chain Blockchain, finder Finder, codec
 	n.pool = pool
 
 	// create the subscriber channel
-	n.innerSubscriber = make(chan interface{}, 128)
-	n.publicSubscribers = []subscriber{}
+	n.stream = make(chan interface{}, 128)
 
 	// handle all input messages we get
 	n.Input(input)
-	n.events = &simpleEventManager{subscriber: n.innerSubscriber}
+	n.events = &simpleEventManager{stream: n.stream}
 
 	n.InnerSubscriber()
 
@@ -107,9 +106,8 @@ func New(log zerolog.Logger, net Network, chain Blockchain, finder Finder, codec
 
 func (n *simpleNode) Subscribe(channel chan<- interface{}, filters ...func(interface{}) bool) {
 	sub := subscriber{filters: filters, channel: channel, buffer: make(chan interface{}, 128)}
-	n.publicSubscribers = append(n.publicSubscribers, sub)
-	n.wg.Add(1)
-	n.OuterSubscriber(sub)
+	n.subscribers = append(n.subscribers, sub)
+	n.Subscriber(sub)
 }
 
 func (n *simpleNode) Submit(tx *types.Transaction) {
@@ -147,18 +145,18 @@ func (n *simpleNode) Collect(path []types.Hash) {
 
 func (n *simpleNode) InnerSubscriber() {
 	n.wg.Add(1)
-	go handleInnerSubscriber(n.log, n.wg, n.innerSubscriber, n.publicSubscribers)
+	go handleInnerSubscriber(n.log, n.wg, n.stream, n.subscribers)
 }
 
-func (n *simpleNode) OuterSubscriber(sub subscriber) {
+func (n *simpleNode) Subscriber(sub subscriber) {
 	n.wg.Add(1)
 	go handleOuterSubscriber(n.log, n.wg, sub)
 }
 
 func (n *simpleNode) Stop() {
 	n.wg.Wait()
-	close(n.innerSubscriber)
-	for _, sub := range n.publicSubscribers {
+	close(n.stream)
+	for _, sub := range n.subscribers {
 		close(sub.channel)
 		close(sub.buffer)
 	}

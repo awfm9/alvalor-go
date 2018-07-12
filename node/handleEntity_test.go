@@ -66,10 +66,12 @@ func (suite *EntitySuite) TestEntityTransaction() {
 	pool.On("Known", mock.Anything).Return(false)
 	pool.On("Add", mock.Anything).Return(nil)
 
+	events := &EventManagerMock{}
+
 	entity := &types.Transaction{}
 
 	// act
-	handleEntity(suite.log, suite.wg, net, peers, pool, entity)
+	handleEntity(suite.log, suite.wg, net, peers, pool, entity, events)
 
 	// assert
 	t := suite.T()
