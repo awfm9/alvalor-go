@@ -25,7 +25,7 @@ import (
 	"github.com/alvalor/alvalor-go/types"
 )
 
-func handleMessage(log zerolog.Logger, wg *sync.WaitGroup, net Network, chain Blockchain, finder Finder, peers peerManager, pool poolManager, handlers Handlers, address string, message interface{}) {
+func handleMessage(log zerolog.Logger, wg *sync.WaitGroup, net Network, chain Blockchain, finder PathFinder, peers peerManager, pool poolManager, handlers Handlers, address string, message interface{}) {
 	defer wg.Done()
 
 	// configure logger
@@ -47,12 +47,12 @@ func handleMessage(log zerolog.Logger, wg *sync.WaitGroup, net Network, chain Bl
 			return
 		}
 
-		// check if we are already synching the path to this unstored block
-		ok := finder.Has(msg.Hash)
-		if ok {
-			log.Debug().Msg("already syncing potential path")
-			return
-		}
+		// // check if we are already synching the path to this unstored block
+		// ok := path.Has(msg.Hash)
+		// if ok {
+		// 	log.Debug().Msg("already syncing potential path")
+		// 	return
+		// }
 
 		// // add the latest synching header to our locator hashes if it's different from chain state
 		var locators []types.Hash
@@ -167,23 +167,23 @@ func handleMessage(log zerolog.Logger, wg *sync.WaitGroup, net Network, chain Bl
 			return
 		}
 
-		// check if we already process the header
-		ok := finder.Has(msg.Hash())
-		if ok {
-			log.Debug().Msg("header already processing")
-			return
-		}
-
-		// add the header to the path finder
-		err = finder.Add(msg.Hash(), msg.Parent)
-		if err != nil {
-			log.Error().Err(err).Msg("could not add header to path")
-			return
-		}
-
-		// collect all information needed to complete this path
-		path := finder.Path()
-		handlers.Collect(path)
+		// // check if we already process the header
+		// ok := finder.Has(msg.Hash())
+		// if ok {
+		// 	log.Debug().Msg("header already processing")
+		// 	return
+		// }
+		//
+		// // add the header to the path finder
+		// err = path.Add(msg.Hash(), msg.Parent)
+		// if err != nil {
+		// 	log.Error().Err(err).Msg("could not add header to path")
+		// 	return
+		// }
+		//
+		// // collect all information needed to complete this path
+		// path := path.Path()
+		// handlers.Collect(path)
 
 		log.Debug().Msg("processed header message")
 

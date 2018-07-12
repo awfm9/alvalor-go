@@ -17,47 +17,66 @@
 
 package node
 
-import "github.com/alvalor/alvalor-go/types"
+import (
+	"bytes"
 
-// Finder is in charge of finding the longest path in a tree of block hashes.
-type Finder interface {
-	Add(hash types.Hash, parent types.Hash) error
-	Has(hash types.Hash) bool
-	Path() []types.Hash
-}
+	"github.com/alvalor/alvalor-go/types"
+)
 
-// OptimalFinder represents an implementation of a longest header path finder that always returns the optimal the path
-// with the highest total difficulty.
-type OptimalFinder struct {
-	headers map[types.Hash]*types.Header
-	pending map[types.Hash]struct{}
+// PathFinder keeps track of all block headers and the path with most difficulty.
+type PathFinder interface {
+	Add(block *types.Block)
+	Weight(hash types.Hash) uint64
 }
 
 type node struct {
 	weight uint64
+	header *types.Header
+	parent *node
 }
 
-// Add will add a new header to the OptimalFinder.
-func (of *OptimalFinder) Add(header *types.Header) {
+// SimplePathFinder is a simple pathfinder using caching to efficiently find the longest paths.
+type SimplePathFinder struct {
+	root  *node
+	heads []*node
+}
 
-	// if we already know the header we return
-	_, ok := of.headers[header.Hash()]
-	if ok {
+// NewPathFinder creates a new pathfinder using the provided block as source for the path.
+func NewPathFinder(source *types.Header) *SimplePathFinder {
+	root := &node{weight: 0, header: source, parent: nil}
+	path := &SimplePathFinder{
+		root:  root,
+		heads: []*node{root},
+	}
+	return path
+}
+
+// Add will add a new block header to the pathfinder.
+func (pf *SimplePathFinder) Add(header *types.Header) {
+
+	// first try to find the parent in the tree heads
+	// if we find it there, we can just replace it
+	for i, head := range pf.heads {
+		if !bytes.Equal(head.header.Hash[:], header.Parent[:]) {
+			continue
+		}
+		n := &node{weight: head.weight + header.Diff, header: header, parent: head}
+		pf.heads[i] = n
 		return
 	}
 
-	// add the new header to the list of known headers
-	of.headers[header.Hash()] = header
+	// otherwise, we have to iterate back from all heads
+	// TODO
+}
 
-	// if we don't know the parent, keep the header in pending state
-	parent, ok := of.headers[header.Parent]
-	if !ok {
-		of.pending[header.Hash()] = struct{}{}
-		return
+// Best will return the head of the longest path.
+func (pf *SimplePathFinder) Best() (*types.Header, uint64) {
+	best := pf.root
+	for _, head := range pf.heads {
+		if head.weight <= best.weight {
+			continue
+		}
+		best = head
 	}
-
-	// create a pathfinding node for the new header
-	n := &node{
-		weight: parent.Diff,
-	}
+	return best.header, best.weight
 }

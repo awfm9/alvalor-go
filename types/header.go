@@ -33,19 +33,10 @@ type Header struct {
 	Diff   uint64
 	Nonce  uint64
 	Time   time.Time
-	hash   Hash
+	Hash   Hash
 }
 
-// Hash returns the unique hash of header.
-func (hdr Header) Hash() Hash {
-	if hdr.hash == ZeroHash {
-		hash := hdr.calc()
-		copy(hdr.hash[:], hash)
-	}
-	return hdr.hash
-}
-
-func (hdr Header) calc() []byte {
+func (hdr Header) calc() {
 	h, _ := blake2s.New256(nil)
 	_, _ = h.Write(hdr.Parent[:])
 	_, _ = h.Write(hdr.State[:])
@@ -56,5 +47,6 @@ func (hdr Header) calc() []byte {
 	binary.LittleEndian.PutUint64(data[8:16], uint64(hdr.Time.Unix()))
 	binary.LittleEndian.PutUint64(data[16:], hdr.Nonce)
 	_, _ = h.Write(data)
-	return h.Sum(nil)
+	hash := h.Sum(nil)
+	copy(hdr.Hash[:], hash)
 }
