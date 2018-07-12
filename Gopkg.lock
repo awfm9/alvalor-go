@@ -8,6 +8,12 @@
   revision = "28f7e881ca57bc00e028f9ede9f0d9104cfeef5e"
 
 [[projects]]
+  branch = "fixed"
+  name = "github.com/alvalor/go.uuid"
+  packages = ["."]
+  revision = "c28de757d2bddd99163ebef5361dbc1d918a3872"
+
+[[projects]]
   branch = "master"
   name = "github.com/andreburgaud/crypt2go"
   packages = ["ecb"]
@@ -22,8 +28,8 @@
 [[projects]]
   name = "github.com/dgraph-io/badger"
   packages = [".","options","protos","skl","table","y"]
-  revision = "3ff1bfbb11c02c78c11269096669396c2d2cbbd3"
-  version = "v1.5.0"
+  revision = "391b6d3b93e6014fe8c2971fcc0c1266e47dbbd9"
+  version = "v1.5.3"
 
 [[projects]]
   branch = "master"
@@ -50,10 +56,10 @@
   revision = "b7773ae218740a7be65057fc60b366a49b538a44"
 
 [[projects]]
-  branch = "master"
   name = "github.com/jrick/bitset"
   packages = ["."]
   revision = "06eae37cdf93c699c0503c23f998167ce841974c"
+  version = "v1.0.0"
 
 [[projects]]
   name = "github.com/pierrec/lz4"
@@ -83,13 +89,7 @@
   branch = "master"
   name = "github.com/rs/zerolog"
   packages = [".","internal/cbor","internal/json"]
-  revision = "b5207c012d2c2d73bec68f517ef281fdad38114b"
-
-[[projects]]
-  branch = "master"
-  name = "github.com/satori/go.uuid"
-  packages = ["."]
-  revision = "36e9d2ebbde5e3f13ab2e25625fd453271d6522e"
+  revision = "9cd6f6eef2d7e9041629e2dd853778a9b2abddbd"
 
 [[projects]]
   name = "github.com/spaolacci/murmur3"
@@ -106,14 +106,14 @@
 [[projects]]
   name = "github.com/stretchr/objx"
   packages = ["."]
-  revision = "facf9a85c22f48d2f52f2380e4efce1768749a89"
-  version = "v0.1"
+  revision = "477a77ecc69700c7cdeb1fa9e129548e1c1c393c"
+  version = "v0.1.1"
 
 [[projects]]
   name = "github.com/stretchr/testify"
   packages = ["assert","mock","require","suite"]
-  revision = "12b6f73e6084dad08a7c6e575284b177ecafbc71"
-  version = "v1.2.1"
+  revision = "f35b8ab0b5a2cef36673838d662e249dd9c94686"
+  version = "v1.2.2"
 
 [[projects]]
   branch = "master"
@@ -122,10 +122,10 @@
   revision = "9701dff161fc00c54b89963fb392754f6c4bf024"
 
 [[projects]]
-  branch = "master"
   name = "github.com/tyler-smith/go-bip39"
-  packages = ["."]
-  revision = "8e7a99b3e716f36d3b080a9a70f9eb45abe4edcc"
+  packages = [".","wordlists"]
+  revision = "2af0a847066a4f2669040ccd44a79c8eca10806a"
+  version = "v1"
 
 [[projects]]
   name = "github.com/willf/bitset"
@@ -143,29 +143,29 @@
   branch = "master"
   name = "golang.org/x/crypto"
   packages = ["blake2s","ed25519","ed25519/internal/edwards25519","pbkdf2","sha3"]
-  revision = "94e3fad7f1b4eed4ec147751ad6b4c4d33f00611"
+  revision = "a49355c7e3f8fe157a85be2f77e6e269a0f89602"
 
 [[projects]]
   branch = "master"
   name = "golang.org/x/net"
   packages = ["context","internal/timeseries","trace"]
-  revision = "2491c5de3490fced2f6cff376127c667efeed857"
+  revision = "cffdcf672aee934982473246bc7e9a8ba446aa9b"
 
 [[projects]]
   branch = "master"
   name = "golang.org/x/sys"
   packages = ["cpu","unix"]
-  revision = "d0faeb539838e250bd0a9db4182d48d4a1915181"
+  revision = "1b2967e3c290b7c545b3db0deeda16e9be4f98a2"
 
 [[projects]]
   name = "zombiezen.com/go/capnproto2"
   packages = [".","encoding/text","internal/nodemap","internal/packed","internal/schema","internal/strquote","schemas"]
-  revision = "243bfedb776812540b7e2fb8d4e5c19814ab1ed8"
-  version = "v2.17.0"
+  revision = "7cfd211c19c7f5783c695f3654efa46f0df259c3"
+  version = "v2.17.1"
 
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "0babc0ab6abb904d72c301f08d757ffc6394b6042f35d6fea78f523a34044426"
+  inputs-digest = "3c3eb2072172a53c8bfabfcd913e5956290d3159295367b707c9d8ed087cb26c"
   solver-name = "gps-cdcl"
   solver-version = 1

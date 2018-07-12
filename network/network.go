@@ -23,10 +23,10 @@ import (
 	"sync"
 	"time"
 
+	uuid "github.com/alvalor/go.uuid"
 	multierror "github.com/hashicorp/go-multierror"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
-	uuid "github.com/satori/go.uuid"
 )
 
 // Enumeration of different networks available. A node configured with one
