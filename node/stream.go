@@ -10,7 +10,7 @@
 // Alvalor is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU Affero General Public License for more detailb.
+// GNU Affero General Public License for more details.
 //
 // You should have received a copy of the GNU Affero General Public License
 // along with Alvalor.  If not, see <http://www.gnu.org/licenses/>.
@@ -18,10 +18,32 @@
 package node
 
 import (
-	"github.com/alvalor/alvalor-go/types"
+	"sync"
+	"time"
+
+	"github.com/rs/zerolog"
 )
 
-//Transaction event
-type Transaction struct {
-	hash types.Hash
+func handleStream(log zerolog.Logger, wg *sync.WaitGroup, stream chan interface{}, subscribers []subscriber) {
+	defer wg.Done()
+
+	log = log.With().Str("component", "stream").Logger()
+	log.Debug().Msg("subscriber routine started")
+	defer log.Debug().Msg("subscriber routine stopped")
+Loop:
+	for {
+		select {
+		case msg, ok := <-stream:
+			if !ok {
+				break Loop
+			}
+			for _, subscriber := range subscribers {
+				select {
+				case subscriber.buffer <- msg:
+				case <-time.After(10 * time.Millisecond):
+					log.Debug().Msg("stream buffer is stalling")
+				}
+			}
+		}
+	}
 }
