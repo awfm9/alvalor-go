@@ -107,11 +107,11 @@ func handleMessage(log zerolog.Logger, wg *sync.WaitGroup, net Network, chain Bl
 		for _, locator := range msg.Locators {
 			header := chain.Header()
 			for {
-				hash := header.Hash()
+				hash := header.Hash
 				if hash == locator {
 					log = log.With().Hex("hash", hash[:]).Logger()
 					var err error
-					common, err = chain.HeightByHash(header.Hash())
+					common, err = chain.HeightByHash(header.Hash)
 					if err != nil {
 						log.Error().Err(err).Msg("could not get height by hash")
 						return
@@ -156,12 +156,13 @@ func handleMessage(log zerolog.Logger, wg *sync.WaitGroup, net Network, chain Bl
 
 	case *types.Header:
 
-		hash := msg.Hash()
+		// make sure we precompute the hash and store it
+		msg.Hash = msg.GetHash()
 
-		log = log.With().Str("msg_type", "header").Hex("hash", hash[:]).Hex("parent", msg.Parent[:]).Logger()
+		log = log.With().Str("msg_type", "header").Hex("hash", msg.Hash[:]).Hex("parent", msg.Parent[:]).Logger()
 
 		// check if we already stored the header
-		_, err := chain.HeaderByHash(msg.Hash())
+		_, err := chain.HeaderByHash(msg.Hash)
 		if err == nil {
 			log.Debug().Msg("header already known")
 			return

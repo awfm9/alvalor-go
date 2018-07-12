@@ -39,7 +39,7 @@ func handleEvent(log zerolog.Logger, wg *sync.WaitGroup, net Network, chain Bloc
 		peers.Active(e.Address)
 		status := &Status{
 			Height: chain.Height(),
-			Hash:   chain.Header().Hash(),
+			Hash:   chain.Header().Hash,
 		}
 		err := net.Send(e.Address, status)
 		if err != nil {

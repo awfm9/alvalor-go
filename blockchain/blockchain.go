@@ -93,18 +93,18 @@ func (bc *Blockchain) AddBlock(block *types.Block) error {
 
 	// calculate the hash once and prepare key for height lookups
 	height++
-	hash := block.Hash()
+	block.Hash = block.GetHash()
 	data := make([]byte, 4)
 
 	// mapp the block hash to the block height
 	binary.LittleEndian.PutUint32(data, height)
-	err = bc.heights.Put(hash[:], data)
+	err = bc.heights.Put(block.Hash[:], data)
 	if err != nil {
 		return errors.Wrap(err, "could not map block hash to height")
 	}
 
 	// map the block height to the block hash
-	err = bc.heights.Put(data, hash[:])
+	err = bc.heights.Put(data, block.Hash[:])
 	if err != nil {
 		return errors.Wrap(err, "could not map block height to hash")
 	}
@@ -121,13 +121,13 @@ func (bc *Blockchain) AddBlock(block *types.Block) error {
 	}
 
 	// map the block hash to the transaction indices
-	err = bc.indices.Put(hash[:], indices)
+	err = bc.indices.Put(block.Hash[:], indices)
 	if err != nil {
 		return errors.Wrap(err, "could not store block transaction IDs")
 	}
 
 	// save the block
-	err = bc.headers.Save(block.Hash(), block.Header)
+	err = bc.headers.Save(block.Hash, block.Header)
 	if err != nil {
 		return errors.Wrap(err, "could not store block header")
 	}
@@ -139,7 +139,7 @@ func (bc *Blockchain) AddBlock(block *types.Block) error {
 
 	// map the current height to the block hash
 	binary.LittleEndian.PutUint32(data, Current)
-	err = bc.heights.Put(data, hash[:])
+	err = bc.heights.Put(data, block.Hash[:])
 	if err != nil {
 		return errors.Wrap(err, "could not map current height to hash")
 	}
@@ -184,6 +184,7 @@ func (bc *Blockchain) HeaderByHash(hash types.Hash) (*types.Header, error) {
 	if !ok {
 		return nil, errors.New("could not convert entity to header")
 	}
+	header.Hash = header.GetHash()
 	return header, nil
 }
 
