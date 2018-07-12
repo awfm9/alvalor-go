@@ -25,3 +25,39 @@ type Finder interface {
 	Has(hash types.Hash) bool
 	Path() []types.Hash
 }
+
+// OptimalFinder represents an implementation of a longest header path finder that always returns the optimal the path
+// with the highest total difficulty.
+type OptimalFinder struct {
+	headers map[types.Hash]*types.Header
+	pending map[types.Hash]struct{}
+}
+
+type node struct {
+	weight uint64
+}
+
+// Add will add a new header to the OptimalFinder.
+func (of *OptimalFinder) Add(header *types.Header) {
+
+	// if we already know the header we return
+	_, ok := of.headers[header.Hash()]
+	if ok {
+		return
+	}
+
+	// add the new header to the list of known headers
+	of.headers[header.Hash()] = header
+
+	// if we don't know the parent, keep the header in pending state
+	parent, ok := of.headers[header.Parent]
+	if !ok {
+		of.pending[header.Hash()] = struct{}{}
+		return
+	}
+
+	// create a pathfinding node for the new header
+	n := &node{
+		weight: parent.Diff,
+	}
+}

@@ -30,7 +30,7 @@ type Header struct {
 	State  Hash
 	Delta  Hash
 	Miner  Hash
-	Target uint64
+	Diff   uint64
 	Nonce  uint64
 	Time   time.Time
 	hash   Hash
@@ -52,7 +52,7 @@ func (hdr Header) calc() []byte {
 	_, _ = h.Write(hdr.Delta[:])
 	_, _ = h.Write(hdr.Miner[:])
 	data := make([]byte, 24)
-	binary.LittleEndian.PutUint64(data[:8], hdr.Target)
+	binary.LittleEndian.PutUint64(data[:8], hdr.Diff)
 	binary.LittleEndian.PutUint64(data[8:16], uint64(hdr.Time.Unix()))
 	binary.LittleEndian.PutUint64(data[16:], hdr.Nonce)
 	_, _ = h.Write(data)

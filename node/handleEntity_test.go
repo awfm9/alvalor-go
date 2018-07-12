@@ -71,7 +71,11 @@ func (suite *EntitySuite) TestEntityTransaction() {
 	entity := &types.Transaction{}
 
 	// act
+<<<<<<< HEAD
 	handleEntity(suite.log, suite.wg, net, peers, pool, entity, events)
+=======
+	handleEntity(suite.log, suite.wg, net, peers, pool, entity, nil)
+>>>>>>> started optimal path finder work
 
 	// assert
 	t := suite.T()
