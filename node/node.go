@@ -99,7 +99,7 @@ func New(log zerolog.Logger, net Network, chain Blockchain, finder Finder, codec
 	n.Input(input)
 	n.events = &simpleEventManager{stream: n.stream}
 
-	n.InnerSubscriber()
+	n.Stream()
 
 	return n
 }
@@ -143,14 +143,14 @@ func (n *simpleNode) Entity(entity Entity) {
 func (n *simpleNode) Collect(path []types.Hash) {
 }
 
-func (n *simpleNode) InnerSubscriber() {
+func (n *simpleNode) Stream() {
 	n.wg.Add(1)
-	go handleInnerSubscriber(n.log, n.wg, n.stream, n.subscribers)
+	go handleStream(n.log, n.wg, n.stream, n.subscribers)
 }
 
 func (n *simpleNode) Subscriber(sub subscriber) {
 	n.wg.Add(1)
-	go handleOuterSubscriber(n.log, n.wg, sub)
+	go handleSubscriber(n.log, n.wg, sub)
 }
 
 func (n *simpleNode) Stop() {
