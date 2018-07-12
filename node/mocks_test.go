@@ -272,3 +272,12 @@ func (f *FinderMock) Path() []types.Hash {
 	}
 	return path
 }
+
+type EventManagerMock struct {
+	mock.Mock
+}
+
+func (em *EventManagerMock) Transaction(hash types.Hash) error {
+	args := em.Called(hash)
+	return args.Error(0)
+}
