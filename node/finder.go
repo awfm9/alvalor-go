@@ -57,7 +57,7 @@ func (pf *SimplePathFinder) Add(header *types.Header) {
 	// first try to find the parent in the tree heads
 	// if we find it there, we can just replace it
 	for i, head := range pf.heads {
-		if !bytes.Equal(head.header.Hash[:], header.Parent[:]) {
+		if !bytes.Equal(header.Parent[:], head.header.Hash[:]) {
 			continue
 		}
 		n := &node{weight: head.weight + header.Diff, header: header, parent: head}
@@ -66,6 +66,21 @@ func (pf *SimplePathFinder) Add(header *types.Header) {
 	}
 
 	// otherwise, we have to iterate back from all heads
+	for _, head := range pf.heads {
+		cur := head.parent
+		for {
+			if bytes.Equal(header.Parent[:], cur.header.Hash[:]) {
+				n := &node{weight: cur.weight + header.Diff, header: header, parent: cur}
+				pf.heads = append(pf.heads, n)
+				return
+			}
+			if cur.parent == nil {
+				break
+			}
+		}
+	}
+
+	// in this case, it's an unconnected block and we should keep it in a list of pendings
 	// TODO
 }
 
