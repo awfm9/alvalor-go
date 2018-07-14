@@ -31,4 +31,5 @@ type Handlers interface {
 	Message(address string, message interface{})
 	Entity(entity Entity)
 	Collect(path []types.Hash)
+	Header(address string, header *types.Header)
 }

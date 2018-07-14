@@ -23,6 +23,7 @@ import (
 
 	"github.com/rs/zerolog"
 
+	"github.com/Workiva/go-datastructures/queue"
 	"github.com/alvalor/alvalor-go/trie"
 	"github.com/alvalor/alvalor-go/types"
 )
@@ -46,16 +47,18 @@ type Codec interface {
 }
 
 type simpleNode struct {
-	log         zerolog.Logger
-	wg          *sync.WaitGroup
-	net         Network
-	chain       Blockchain
-	finder      Finder
-	peers       peerManager
-	pool        poolManager
-	events      eventManager
-	stream      chan interface{}
-	subscribers []subscriber
+	log             zerolog.Logger
+	wg              *sync.WaitGroup
+	net             Network
+	chain           Blockchain
+	finder          Finder
+	peers           peerManager
+	pool            poolManager
+	events          eventManager
+	stream          chan interface{}
+	subscribers     []subscriber
+	headerReceivers map[string]queue.Queue
+	stop            chan struct{}
 }
 
 type subscriber struct {
@@ -66,7 +69,6 @@ type subscriber struct {
 
 // New creates a new node to manage the Alvalor blockchain.
 func New(log zerolog.Logger, net Network, chain Blockchain, finder Finder, codec Codec, input <-chan interface{}) Node {
-
 	// initialize the node
 	n := &simpleNode{}
 
@@ -95,11 +97,16 @@ func New(log zerolog.Logger, net Network, chain Blockchain, finder Finder, codec
 	// create the subscriber channel
 	n.stream = make(chan interface{}, 128)
 
+	n.stop = make(chan struct{})
+
+	n.headerReceivers = make(map[string]queue.Queue)
+
 	// handle all input messages we get
 	n.Input(input)
 	n.events = &simpleEventManager{stream: n.stream}
 
 	n.Stream()
+	n.SendHeaders()
 
 	return n
 }
@@ -155,9 +162,27 @@ func (n *simpleNode) Subscriber(sub subscriber) {
 
 func (n *simpleNode) Stop() {
 	n.wg.Wait()
+	close(n.stop)
 	close(n.stream)
 	for _, sub := range n.subscribers {
 		close(sub.channel)
 		close(sub.buffer)
 	}
+}
+
+func (n *simpleNode) SendHeaders() {
+	n.wg.Add(1)
+	go handleHeaders(n.log, n.wg, n.net, n.headerReceivers, n.stop)
+}
+
+func (n *simpleNode) Header(address string, header *types.Header) {
+	if val, ok := n.headerReceivers[address]; ok {
+		val.Put(header)
+	} else {
+		//TODO why there is a limit
+		q := queue.New(1024)
+		q.Put(header)
+		n.headerReceivers[address] = *q
+	}
+
 }

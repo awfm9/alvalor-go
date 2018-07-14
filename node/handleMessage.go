@@ -145,11 +145,7 @@ func handleMessage(log zerolog.Logger, wg *sync.WaitGroup, net Network, chain Bl
 
 		// send each header
 		for _, header := range headers {
-			err := net.Send(address, header)
-			if err != nil {
-				log.Error().Err(err).Msg("could not send header")
-				return
-			}
+			handlers.Header(address, header)
 		}
 
 		log.Debug().Msg("processed synchronization message")
