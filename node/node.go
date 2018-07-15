@@ -100,6 +100,7 @@ func New(log zerolog.Logger, net Network, chain Blockchain, finder Finder, codec
 
 	n.stop = make(chan struct{})
 
+	// create map of queues where each key is an address of the header receiver
 	n.headerReceivers = make(map[string]*queue.Queue)
 	n.headerReceiversLock = sync.Mutex{}
 
@@ -183,7 +184,7 @@ func (n *simpleNode) Header(address string, header *types.Header) {
 }
 
 func (n *simpleNode) getQueue(address string) *queue.Queue {
-	n.headerReceiversLock.Unlock()
+	n.headerReceiversLock.Lock()
 	defer n.headerReceiversLock.Unlock()
 
 	if q, ok := n.headerReceivers[address]; ok {
