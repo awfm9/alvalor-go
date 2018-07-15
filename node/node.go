@@ -47,18 +47,19 @@ type Codec interface {
 }
 
 type simpleNode struct {
-	log             zerolog.Logger
-	wg              *sync.WaitGroup
-	net             Network
-	chain           Blockchain
-	finder          Finder
-	peers           peerManager
-	pool            poolManager
-	events          eventManager
-	stream          chan interface{}
-	subscribers     []subscriber
-	headerReceivers map[string]*queue.Queue
-	stop            chan struct{}
+	log                 zerolog.Logger
+	wg                  *sync.WaitGroup
+	net                 Network
+	chain               Blockchain
+	finder              Finder
+	peers               peerManager
+	pool                poolManager
+	events              eventManager
+	stream              chan interface{}
+	subscribers         []subscriber
+	headerReceivers     map[string]*queue.Queue
+	headerReceiversLock sync.Mutex
+	stop                chan struct{}
 }
 
 type subscriber struct {
@@ -100,6 +101,7 @@ func New(log zerolog.Logger, net Network, chain Blockchain, finder Finder, codec
 	n.stop = make(chan struct{})
 
 	n.headerReceivers = make(map[string]*queue.Queue)
+	n.headerReceiversLock = sync.Mutex{}
 
 	// handle all input messages we get
 	n.Input(input)
@@ -176,13 +178,19 @@ func (n *simpleNode) SendHeaders() {
 }
 
 func (n *simpleNode) Header(address string, header *types.Header) {
-	if val, ok := n.headerReceivers[address]; ok {
-		val.Put(header)
-	} else {
-		//TODO why there is a limit
-		q := queue.New(1024)
-		q.Put(header)
-		n.headerReceivers[address] = q
+	q := n.getQueue(address)
+	q.Put(header)
+}
+
+func (n *simpleNode) getQueue(address string) *queue.Queue {
+	n.headerReceiversLock.Unlock()
+	defer n.headerReceiversLock.Unlock()
+
+	if q, ok := n.headerReceivers[address]; ok {
+		return q
 	}
 
+	q := queue.New(1024)
+	n.headerReceivers[address] = q
+	return q
 }
