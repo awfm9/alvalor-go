@@ -23,6 +23,7 @@ import (
 
 	"github.com/rs/zerolog"
 
+	"github.com/Workiva/go-datastructures/queue"
 	"github.com/alvalor/alvalor-go/trie"
 	"github.com/alvalor/alvalor-go/types"
 )
@@ -46,16 +47,19 @@ type Codec interface {
 }
 
 type simpleNode struct {
-	log         zerolog.Logger
-	wg          *sync.WaitGroup
-	net         Network
-	chain       Blockchain
-	finder      Finder
-	peers       peerManager
-	pool        poolManager
-	events      eventManager
-	stream      chan interface{}
-	subscribers []subscriber
+	log                 zerolog.Logger
+	wg                  *sync.WaitGroup
+	net                 Network
+	chain               Blockchain
+	finder              Finder
+	peers               peerManager
+	pool                poolManager
+	events              eventManager
+	stream              chan interface{}
+	subscribers         []subscriber
+	headerReceivers     map[string]*queue.Queue
+	headerReceiversLock sync.Mutex
+	stop                chan struct{}
 }
 
 type subscriber struct {
@@ -95,11 +99,19 @@ func New(log zerolog.Logger, net Network, chain Blockchain, finder Finder, codec
 	// create the subscriber channel
 	n.stream = make(chan interface{}, 128)
 
+	// create the channel for shutdown
+	n.stop = make(chan struct{})
+
+	// create map of queues where each key is an address of the header receiver
+	n.headerReceivers = make(map[string]*queue.Queue)
+	n.headerReceiversLock = sync.Mutex{}
+
 	// handle all input messages we get
 	n.Input(input)
 	n.events = &simpleEventManager{stream: n.stream}
 
 	n.Stream()
+	n.SendHeaders()
 
 	return n
 }
@@ -155,9 +167,33 @@ func (n *simpleNode) Subscriber(sub subscriber) {
 
 func (n *simpleNode) Stop() {
 	n.wg.Wait()
+	close(n.stop)
 	close(n.stream)
 	for _, sub := range n.subscribers {
 		close(sub.channel)
 		close(sub.buffer)
 	}
+}
+
+func (n *simpleNode) SendHeaders() {
+	n.wg.Add(1)
+	go handleHeaders(n.log, n.wg, n.net, n.headerReceivers, n.stop)
+}
+
+func (n *simpleNode) Header(address string, header *types.Header) {
+	q := n.getQueue(address)
+	q.Put(header)
+}
+
+func (n *simpleNode) getQueue(address string) *queue.Queue {
+	n.headerReceiversLock.Lock()
+	defer n.headerReceiversLock.Unlock()
+
+	if q, ok := n.headerReceivers[address]; ok {
+		return q
+	}
+
+	q := queue.New(1024)
+	n.headerReceivers[address] = q
+	return q
 }
