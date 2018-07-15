@@ -25,7 +25,7 @@ import (
 	"time"
 )
 
-func handleHeaders(log zerolog.Logger, wg *sync.WaitGroup, net Network, receivers map[string]queue.Queue, stop <-chan struct{}) {
+func handleHeaders(log zerolog.Logger, wg *sync.WaitGroup, net Network, receivers map[string]*queue.Queue, stop <-chan struct{}) {
 	defer wg.Done()
 
 	log = log.With().Str("component", "headers").Logger()

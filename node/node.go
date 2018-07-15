@@ -57,7 +57,7 @@ type simpleNode struct {
 	events          eventManager
 	stream          chan interface{}
 	subscribers     []subscriber
-	headerReceivers map[string]queue.Queue
+	headerReceivers map[string]*queue.Queue
 	stop            chan struct{}
 }
 
@@ -99,7 +99,7 @@ func New(log zerolog.Logger, net Network, chain Blockchain, finder Finder, codec
 
 	n.stop = make(chan struct{})
 
-	n.headerReceivers = make(map[string]queue.Queue)
+	n.headerReceivers = make(map[string]*queue.Queue)
 
 	// handle all input messages we get
 	n.Input(input)
@@ -182,7 +182,7 @@ func (n *simpleNode) Header(address string, header *types.Header) {
 		//TODO why there is a limit
 		q := queue.New(1024)
 		q.Put(header)
-		n.headerReceivers[address] = *q
+		n.headerReceivers[address] = q
 	}
 
 }
