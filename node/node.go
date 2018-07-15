@@ -70,6 +70,7 @@ type subscriber struct {
 
 // New creates a new node to manage the Alvalor blockchain.
 func New(log zerolog.Logger, net Network, chain Blockchain, finder Finder, codec Codec, input <-chan interface{}) Node {
+
 	// initialize the node
 	n := &simpleNode{}
 
@@ -98,6 +99,7 @@ func New(log zerolog.Logger, net Network, chain Blockchain, finder Finder, codec
 	// create the subscriber channel
 	n.stream = make(chan interface{}, 128)
 
+	// create the channel for shutdown
 	n.stop = make(chan struct{})
 
 	// create map of queues where each key is an address of the header receiver
