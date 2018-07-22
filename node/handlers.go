@@ -30,4 +30,5 @@ type Handlers interface {
 	Message(address string, message interface{})
 	Entity(entity Entity)
 	Collect(path []types.Hash)
+	RequestTransactions(hashes []types.Hash, addr string)
 }
