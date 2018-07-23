@@ -50,7 +50,7 @@ type simpleNode struct {
 	wg          *sync.WaitGroup
 	net         Network
 	chain       Blockchain
-	path        PathFinder
+	path        pathManager
 	peers       peerManager
 	pool        poolManager
 	events      eventManager
@@ -65,7 +65,7 @@ type subscriber struct {
 }
 
 // New creates a new node to manage the Alvalor blockchain.
-func New(log zerolog.Logger, net Network, chain Blockchain, path PathFinder, codec Codec, input <-chan interface{}) Node {
+func New(log zerolog.Logger, net Network, chain Blockchain, codec Codec, input <-chan interface{}) Node {
 
 	// initialize the node
 	n := &simpleNode{}
@@ -81,7 +81,7 @@ func New(log zerolog.Logger, net Network, chain Blockchain, path PathFinder, cod
 	// store dependency references
 	n.net = net
 	n.chain = chain
-	n.path = path
+	n.path = nil // TODO
 
 	// initialize peer state manager
 	peers := newPeers()
