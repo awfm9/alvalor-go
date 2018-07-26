@@ -17,8 +17,15 @@
 
 package types
 
+import "encoding/hex"
+
 // ZeroHash represents a hash of all zeroes.
 var ZeroHash = [32]byte{0}
 
 // Hash represents the 256-bit hashes used as IDs for our entities.
 type Hash [32]byte
+
+// String prints a hash as a hex string.
+func (h Hash) String() string {
+	return hex.EncodeToString(h[:])
+}

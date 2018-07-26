@@ -254,17 +254,17 @@ type FinderMock struct {
 	mock.Mock
 }
 
-func (f *FinderMock) Add(hash types.Hash, parent types.Hash) error {
-	args := f.Called(hash, parent)
+func (f *FinderMock) Add(header *types.Header) error {
+	args := f.Called(header)
 	return args.Error(0)
 }
 
-func (f *FinderMock) Has(hash types.Hash) bool {
+func (f *FinderMock) Knows(hash types.Hash) bool {
 	args := f.Called(hash)
 	return args.Bool(0)
 }
 
-func (f *FinderMock) Path() []types.Hash {
+func (f *FinderMock) Longest() []types.Hash {
 	args := f.Called()
 	var path []types.Hash
 	if args.Get(0) != nil {

@@ -26,35 +26,29 @@ import (
 
 // Header represents the header data of a block that will be hashed.
 type Header struct {
+	Hash   Hash
 	Parent Hash
 	State  Hash
 	Delta  Hash
 	Miner  Hash
-	Target uint64
+	Diff   uint64
 	Nonce  uint64
 	Time   time.Time
-	hash   Hash
 }
 
-// Hash returns the unique hash of header.
-func (hdr Header) Hash() Hash {
-	if hdr.hash == ZeroHash {
-		hash := hdr.calc()
-		copy(hdr.hash[:], hash)
-	}
-	return hdr.hash
-}
-
-func (hdr Header) calc() []byte {
+// GetHash calculates the hash of the block
+func (hdr Header) GetHash() Hash {
+	var hash Hash
 	h, _ := blake2s.New256(nil)
 	_, _ = h.Write(hdr.Parent[:])
 	_, _ = h.Write(hdr.State[:])
 	_, _ = h.Write(hdr.Delta[:])
 	_, _ = h.Write(hdr.Miner[:])
 	data := make([]byte, 24)
-	binary.LittleEndian.PutUint64(data[:8], hdr.Target)
+	binary.LittleEndian.PutUint64(data[:8], hdr.Diff)
 	binary.LittleEndian.PutUint64(data[8:16], uint64(hdr.Time.Unix()))
 	binary.LittleEndian.PutUint64(data[16:], hdr.Nonce)
 	_, _ = h.Write(data)
-	return h.Sum(nil)
+	copy(hdr.Hash[:], h.Sum(nil))
+	return hash
 }

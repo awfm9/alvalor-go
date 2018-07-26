@@ -25,7 +25,7 @@ import (
 	"github.com/alvalor/alvalor-go/types"
 )
 
-func handleMessage(log zerolog.Logger, wg *sync.WaitGroup, net Network, chain Blockchain, finder Finder, peers peerManager, pool poolManager, handlers Handlers, address string, message interface{}) {
+func handleMessage(log zerolog.Logger, wg *sync.WaitGroup, net Network, chain Blockchain, finder pathManager, peers peerManager, pool poolManager, handlers Handlers, address string, message interface{}) {
 	defer wg.Done()
 
 	// configure logger
@@ -48,7 +48,7 @@ func handleMessage(log zerolog.Logger, wg *sync.WaitGroup, net Network, chain Bl
 		}
 
 		// check if we are already synching the path to this unstored block
-		ok := finder.Has(msg.Hash)
+		ok := finder.Knows(msg.Hash)
 		if ok {
 			log.Debug().Msg("already syncing potential path")
 			return
@@ -107,11 +107,11 @@ func handleMessage(log zerolog.Logger, wg *sync.WaitGroup, net Network, chain Bl
 		for _, locator := range msg.Locators {
 			header := chain.Header()
 			for {
-				hash := header.Hash()
+				hash := header.Hash
 				if hash == locator {
 					log = log.With().Hex("hash", hash[:]).Logger()
 					var err error
-					common, err = chain.HeightByHash(header.Hash())
+					common, err = chain.HeightByHash(header.Hash)
 					if err != nil {
 						log.Error().Err(err).Msg("could not get height by hash")
 						return
@@ -156,33 +156,35 @@ func handleMessage(log zerolog.Logger, wg *sync.WaitGroup, net Network, chain Bl
 
 	case *types.Header:
 
-		hash := msg.Hash()
+		// make sure we precompute the hash and store it
+		msg.Hash = msg.GetHash()
 
-		log = log.With().Str("msg_type", "header").Hex("hash", hash[:]).Hex("parent", msg.Parent[:]).Logger()
+		log = log.With().Str("msg_type", "header").Hex("hash", msg.Hash[:]).Hex("parent", msg.Parent[:]).Logger()
 
 		// check if we already stored the header
-		_, err := chain.HeaderByHash(msg.Hash())
+		_, err := chain.HeaderByHash(msg.Hash)
 		if err == nil {
 			log.Debug().Msg("header already known")
 			return
 		}
 
 		// check if we already process the header
-		ok := finder.Has(msg.Hash())
+		ok := finder.Knows(msg.Hash)
 		if ok {
 			log.Debug().Msg("header already processing")
 			return
 		}
 
 		// add the header to the path finder
-		err = finder.Add(msg.Hash(), msg.Parent)
+		// TODO: add pool of pending headers with missing parents
 		if err != nil {
 			log.Error().Err(err).Msg("could not add header to path")
 			return
 		}
 
 		// collect all information needed to complete this path
-		path := finder.Path()
+		// TODO: this logic will probably be changed
+		path := finder.Longest()
 		handlers.Collect(path)
 
 		log.Debug().Msg("processed header message")
