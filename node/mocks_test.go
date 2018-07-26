@@ -259,6 +259,15 @@ func (f *FinderMock) Add(header *types.Header) error {
 	return args.Error(0)
 }
 
+func (f *FinderMock) Header(hash types.Hash) (*types.Header, error) {
+	args := f.Called(hash)
+	var header *types.Header
+	if args.Get(0) != nil {
+		header = args.Get(0).(*types.Header)
+	}
+	return header, args.Error(0)
+}
+
 func (f *FinderMock) Knows(hash types.Hash) bool {
 	args := f.Called(hash)
 	return args.Bool(0)

@@ -41,13 +41,12 @@ func handleMessage(log zerolog.Logger, wg *sync.WaitGroup, net Network, chain Bl
 		log = log.With().Str("msg_type", "status").Uint32("height", msg.Height).Hex("hash", msg.Hash[:]).Logger()
 
 		// don't take any action if we are not behind the peer
-		height := chain.Height()
 		if msg.Height <= chain.Height() {
 			log.Debug().Msg("not behind peer height")
 			return
 		}
 
-		// check if we are already synching the path to this unstored block
+		// check if the best header of our peer is already known
 		ok := finder.Knows(msg.Hash)
 		if ok {
 			log.Debug().Msg("already syncing potential path")
@@ -56,31 +55,21 @@ func handleMessage(log zerolog.Logger, wg *sync.WaitGroup, net Network, chain Bl
 
 		// // add the latest synching header to our locator hashes if it's different from chain state
 		var locators []types.Hash
-		// TODO: rethink & implement
-		// bestBlock := chain.Current().Hash()
-		// bestHeader := path.BestHash()
-		// if !bytes.Equal(bestHeader, bestBlock) {
-		// 	locators = append(locators, bestHeader)
-		// }
-
-		// decide which block locator hashes to include by height
-		var heights []uint32
-		for h, step := height, uint32(1); h > 0; h -= step {
-			if len(heights) >= 8 {
+		path := finder.Longest()
+		index := 0
+		step := 1
+		for {
+			locators = append(locators, path[index])
+			if index == len(locators)-1 {
+				break
+			}
+			if len(locators) >= 8 {
 				step *= 2
 			}
-			heights = append(heights, h)
-		}
-		heights = append(heights, 0)
-
-		// retrieve the hashes from the blockchain database
-		for _, height := range heights {
-			hash, err := chain.HashByHeight(height)
-			if err != nil {
-				log.Error().Err(err).Uint32("height", height).Msg("could not get hash by height")
-				return
+			index += step
+			if index > len(locators)-1 {
+				index = len(locators) - 1
 			}
-			locators = append(locators, hash)
 		}
 
 		log = log.With().Int("locators", len(locators)).Logger()
@@ -101,43 +90,29 @@ func handleMessage(log zerolog.Logger, wg *sync.WaitGroup, net Network, chain Bl
 
 		log = log.With().Str("msg_type", "sync").Logger()
 
-		// try finding a locator hash in our best path
-		var common uint32
-	Outer:
+		// create index of all locator hashes
+		lookup := make(map[types.Hash]struct{})
 		for _, locator := range msg.Locators {
-			header := chain.Header()
-			for {
-				hash := header.Hash
-				if hash == locator {
-					log = log.With().Hex("hash", hash[:]).Logger()
-					var err error
-					common, err = chain.HeightByHash(header.Hash)
-					if err != nil {
-						log.Error().Err(err).Msg("could not get height by hash")
-						return
-					}
-					log = log.With().Uint32("common_height", common).Logger()
-					break Outer
-				}
-				parent := header.Parent
-				if parent == types.ZeroHash {
-					break
-				}
-				var err error
-				header, err = chain.HeaderByHash(parent)
-				if err != nil {
-					log.Error().Err(err).Hex("hash", parent[:]).Msg("could not get header by hash")
-					return
-				}
+			lookup[locator] = struct{}{}
+		}
+
+		// collect all header hashes the other node doesn't have
+		var missing []types.Hash
+		path := finder.Longest()
+		for _, hash := range path {
+			_, ok := lookup[hash]
+			if ok {
+				continue
 			}
+			missing = append(missing, hash)
 		}
 
 		// return all headers from the found start to the top
 		var headers []*types.Header
-		for height := common + 1; height <= chain.Height(); height++ {
-			header, err := chain.HeaderByHeight(height)
+		for _, hash := range missing {
+			header, err := finder.Header(hash)
 			if err != nil {
-				log.Error().Err(err).Uint32("height", height).Msg("could not get header by height")
+				log.Error().Err(err).Hex("hash", hash[:]).Msg("could not get header from finder")
 				return
 			}
 			headers = append(headers, header)
@@ -147,7 +122,7 @@ func handleMessage(log zerolog.Logger, wg *sync.WaitGroup, net Network, chain Bl
 		for _, header := range headers {
 			err := net.Send(address, header)
 			if err != nil {
-				log.Error().Err(err).Msg("could not send header")
+				log.Error().Err(err).Hex("hash", header.Hash[:]).Msg("could not send header")
 				return
 			}
 		}

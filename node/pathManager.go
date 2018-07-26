@@ -25,6 +25,7 @@ import (
 
 type pathManager interface {
 	Add(header *types.Header) error
+	Header(hash types.Hash) (*types.Header, error)
 	Knows(hash types.Hash) bool
 	Longest() []types.Hash
 }
@@ -51,6 +52,15 @@ func newSimplePaths(root *types.Header) *simplePath {
 func (sp *simplePath) Knows(hash types.Hash) bool {
 	_, ok := sp.headers[hash]
 	return ok
+}
+
+// Header returns the given header.
+func (sp *simplePath) Header(hash types.Hash) (*types.Header, error) {
+	header, ok := sp.headers[hash]
+	if !ok {
+		return nil, errors.New("header not found")
+	}
+	return header, nil
 }
 
 // Add adds a new header to the graph.
