@@ -81,7 +81,10 @@ func New(log zerolog.Logger, net Network, chain Blockchain, codec Codec, input <
 	// store dependency references
 	n.net = net
 	n.chain = chain
-	n.path = nil // TODO
+
+	// initialize header path finder
+	root := chain.Header()
+	n.path = newSimplePaths(root)
 
 	// initialize peer state manager
 	peers := newPeers()
