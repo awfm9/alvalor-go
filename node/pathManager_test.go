@@ -90,5 +90,106 @@ func TestSimplePathAddValidHeader(t *testing.T) {
 	}
 }
 
-func TestSimplePathLongest(t *testing.T) {
+func TestSimplePathLongestRootOnly(t *testing.T) {
+
+	header := &types.Header{Hash: types.Hash{1}, Parent: types.Hash{0}, Diff: 1}
+
+	sp := newSimplePaths(header)
+
+	path := sp.Longest()
+
+	assert.Equal(t, path, []types.Hash{header.Hash})
+}
+
+func TestSimplePathLongestLinearOnly(t *testing.T) {
+
+	header1 := &types.Header{Hash: types.Hash{1}, Parent: types.Hash{0}, Diff: 1}
+	header2 := &types.Header{Hash: types.Hash{2}, Parent: types.Hash{1}, Diff: 1}
+	header3 := &types.Header{Hash: types.Hash{3}, Parent: types.Hash{2}, Diff: 1}
+	header4 := &types.Header{Hash: types.Hash{4}, Parent: types.Hash{3}, Diff: 1}
+
+	sp := newSimplePaths(header1)
+	_ = sp.Add(header2)
+	_ = sp.Add(header3)
+	_ = sp.Add(header4)
+
+	path := sp.Longest()
+
+	assert.Equal(t, path, []types.Hash{header4.Hash, header3.Hash, header2.Hash, header1.Hash})
+}
+
+func TestSimplePathLongestShortHeavy(t *testing.T) {
+
+	header1 := &types.Header{Hash: types.Hash{1}, Parent: types.Hash{0}, Diff: 1}
+	header2 := &types.Header{Hash: types.Hash{2}, Parent: types.Hash{1}, Diff: 1}
+	header3 := &types.Header{Hash: types.Hash{3}, Parent: types.Hash{2}, Diff: 1}
+	header4 := &types.Header{Hash: types.Hash{4}, Parent: types.Hash{3}, Diff: 1}
+	header5 := &types.Header{Hash: types.Hash{5}, Parent: types.Hash{1}, Diff: 10}
+
+	sp := newSimplePaths(header1)
+	_ = sp.Add(header2)
+	_ = sp.Add(header3)
+	_ = sp.Add(header4)
+	_ = sp.Add(header5)
+
+	path := sp.Longest()
+
+	assert.Equal(t, path, []types.Hash{header5.Hash, header1.Hash})
+
+}
+
+func TestSimplePathLongestLongHeavy(t *testing.T) {
+
+	header1 := &types.Header{Hash: types.Hash{1}, Parent: types.Hash{0}, Diff: 1}
+	header2 := &types.Header{Hash: types.Hash{2}, Parent: types.Hash{1}, Diff: 5}
+	header3 := &types.Header{Hash: types.Hash{3}, Parent: types.Hash{2}, Diff: 5}
+	header4 := &types.Header{Hash: types.Hash{4}, Parent: types.Hash{3}, Diff: 5}
+	header5 := &types.Header{Hash: types.Hash{5}, Parent: types.Hash{1}, Diff: 10}
+
+	sp := newSimplePaths(header1)
+	_ = sp.Add(header2)
+	_ = sp.Add(header3)
+	_ = sp.Add(header4)
+	_ = sp.Add(header5)
+
+	path := sp.Longest()
+
+	assert.Equal(t, path, []types.Hash{header4.Hash, header3.Hash, header2.Hash, header1.Hash})
+}
+
+func TestSimplePathLongestEqualHeavy(t *testing.T) {
+
+	header1 := &types.Header{Hash: types.Hash{1}, Parent: types.Hash{0}, Diff: 1}
+
+	header2 := &types.Header{Hash: types.Hash{2}, Parent: types.Hash{1}, Diff: 4}
+	header3 := &types.Header{Hash: types.Hash{3}, Parent: types.Hash{1}, Diff: 16}
+	header4 := &types.Header{Hash: types.Hash{4}, Parent: types.Hash{1}, Diff: 8}
+	header5 := &types.Header{Hash: types.Hash{5}, Parent: types.Hash{1}, Diff: 32}
+
+	header6 := &types.Header{Hash: types.Hash{6}, Parent: types.Hash{2}, Diff: 4}
+	header7 := &types.Header{Hash: types.Hash{7}, Parent: types.Hash{2}, Diff: 16}
+	header8 := &types.Header{Hash: types.Hash{8}, Parent: types.Hash{3}, Diff: 8}
+	header9 := &types.Header{Hash: types.Hash{9}, Parent: types.Hash{3}, Diff: 32}
+	header10 := &types.Header{Hash: types.Hash{10}, Parent: types.Hash{4}, Diff: 4}
+	header11 := &types.Header{Hash: types.Hash{11}, Parent: types.Hash{4}, Diff: 16}
+	header12 := &types.Header{Hash: types.Hash{12}, Parent: types.Hash{5}, Diff: 8}
+	header13 := &types.Header{Hash: types.Hash{13}, Parent: types.Hash{5}, Diff: 32}
+
+	sp := newSimplePaths(header1)
+	_ = sp.Add(header2)
+	_ = sp.Add(header3)
+	_ = sp.Add(header4)
+	_ = sp.Add(header5)
+	_ = sp.Add(header6)
+	_ = sp.Add(header7)
+	_ = sp.Add(header8)
+	_ = sp.Add(header9)
+	_ = sp.Add(header10)
+	_ = sp.Add(header11)
+	_ = sp.Add(header12)
+	_ = sp.Add(header13)
+
+	path := sp.Longest()
+
+	assert.Equal(t, path, []types.Hash{header13.Hash, header5.Hash, header1.Hash})
 }

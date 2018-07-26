@@ -108,6 +108,7 @@ func (sp *simplePath) Longest() []types.Hash {
 		path = append(path, header.Hash)
 		header = sp.headers[header.Parent]
 	}
+	path = append(path, sp.root)
 
 	return path
 }
