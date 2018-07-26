@@ -26,47 +26,67 @@ import (
 )
 
 func TestNewSimplePath(t *testing.T) {
-
 	root := &types.Header{Hash: types.Hash{1}}
-
 	sp := newSimplePaths(root)
-
-	assert.Equal(t, root.Hash, sp.root, "root header hash not saved")
+	assert.NotNil(t, sp.headers, "header map not initialized")
+	assert.NotNil(t, sp.children, "children map not initialized")
+	assert.Equal(t, root.Hash, sp.root, "root hash not saved")
 	if assert.NotEmpty(t, sp.headers, "root header not saved") {
-		assert.Equal(t, root, sp.headers[root.Hash], "root header not in map")
+		assert.Equal(t, root, sp.headers[root.Hash], "root header not at correct index")
 	}
 }
 
-func TestSimplePathAdd(t *testing.T) {
+func TestSimplePathAddExistingHash(t *testing.T) {
 
-	header1 := &types.Header{Hash: types.Hash{1}}
-	header2 := &types.Header{Hash: types.Hash{2}, Parent: types.Hash{1}}
-	header3 := &types.Header{Hash: types.Hash{3}, Parent: types.Hash{2}}
-	header4 := &types.Header{Hash: types.Hash{4}}
+	header := &types.Header{Hash: types.Hash{1}, Parent: types.Hash{0}}
 
-	sp := simplePath{
-		headers:  map[types.Hash]*types.Header{header1.Hash: header1},
+	sp := &simplePath{
+		headers:  make(map[types.Hash]*types.Header),
 		children: make(map[types.Hash][]types.Hash),
 	}
 
+	sp.headers[header.Parent] = &types.Header{}
+	sp.headers[header.Hash] = &types.Header{}
+	err := sp.Add(header)
+
+	assert.NotNil(t, err, "could insert duplicate header")
+}
+
+func TestSimplePathAddMissingParent(t *testing.T) {
+
+	header := &types.Header{Hash: types.Hash{1}, Parent: types.Hash{0}}
+
+	sp := &simplePath{
+		headers:  make(map[types.Hash]*types.Header),
+		children: make(map[types.Hash][]types.Hash),
+	}
+
+	err := sp.Add(header)
+
+	assert.NotNil(t, err, "could insert with missing parent")
+}
+
+func TestSimplePathAddValidHeader(t *testing.T) {
+
+	header1 := &types.Header{Hash: types.Hash{1}, Parent: types.Hash{0}}
+	header2 := &types.Header{Hash: types.Hash{2}, Parent: types.Hash{1}}
+
+	sp := &simplePath{
+		headers:  make(map[types.Hash]*types.Header),
+		children: make(map[types.Hash][]types.Hash),
+	}
+
+	sp.headers[header1.Hash] = header1
 	err := sp.Add(header2)
-	if assert.Nil(t, err, "adding header2 failed") {
-		assert.Len(t, sp.headers, 2, "header not added to map")
-	}
 
-	err = sp.Add(header3)
-	if assert.Nil(t, err, "adding header3 failed") {
-		assert.Len(t, sp.headers, 3, "header not added to map")
+	assert.Nil(t, err, "could not insert valid header")
+	assert.Len(t, sp.headers, 2, "header map wrong size")
+	if assert.Contains(t, sp.headers, header2.Hash, "second header not saved") {
+		assert.Equal(t, sp.headers[header2.Hash], header2, "second header incorrect")
 	}
-
-	err = sp.Add(header4)
-	if assert.NotNil(t, err, "adding header4 succeeded") {
-		assert.Len(t, sp.headers, 3, "header added to map")
-	}
-
-	err = sp.Add(header1)
-	if assert.NotNil(t, err, "adding header1 succeeded") {
-		assert.Len(t, sp.headers, 3, "header added to map")
+	assert.Len(t, sp.children, 1, "children map wrong size")
+	if assert.Contains(t, sp.children, header2.Parent, "header child not saved") {
+		assert.Contains(t, sp.children[header2.Parent], header2.Hash, "header child hash not saved")
 	}
 }
 
