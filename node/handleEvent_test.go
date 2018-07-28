@@ -53,8 +53,6 @@ func (suite *EventSuite) TestEventConnected() {
 	net := &NetworkMock{}
 	net.On("Send", mock.Anything, mock.Anything).Return(nil)
 
-	chain := &BlockchainMock{}
-
 	finder := &PathfinderMock{}
 
 	peers := &PeersMock{}
@@ -72,7 +70,7 @@ func (suite *EventSuite) TestEventConnected() {
 	event := network.Connected{Address: address}
 
 	// act
-	handleEvent(suite.log, suite.wg, net, finder, chain, peers, handlers, event)
+	handleEvent(suite.log, suite.wg, net, finder, peers, handlers, event)
 
 	// assert
 	t := suite.T()
@@ -87,8 +85,6 @@ func (suite *EventSuite) TestEventDisconnected() {
 
 	net := &NetworkMock{}
 	net.On("Send", mock.Anything, mock.Anything).Return(nil)
-
-	chain := &BlockchainMock{}
 
 	finder := &PathfinderMock{}
 
@@ -107,7 +103,7 @@ func (suite *EventSuite) TestEventDisconnected() {
 	event := network.Disconnected{Address: address}
 
 	// act
-	handleEvent(suite.log, suite.wg, net, finder, chain, peers, handlers, event)
+	handleEvent(suite.log, suite.wg, net, finder, peers, handlers, event)
 
 	// assert
 	t := suite.T()
@@ -123,8 +119,6 @@ func (suite *EventSuite) TestEventReceived() {
 
 	net := &NetworkMock{}
 	net.On("Send", mock.Anything, mock.Anything).Return(nil)
-
-	chain := &BlockchainMock{}
 
 	finder := &PathfinderMock{}
 
@@ -143,7 +137,7 @@ func (suite *EventSuite) TestEventReceived() {
 	event := network.Received{Address: address, Message: message}
 
 	// act
-	handleEvent(suite.log, suite.wg, net, finder, chain, peers, handlers, event)
+	handleEvent(suite.log, suite.wg, net, finder, peers, handlers, event)
 
 	// assert
 	t := suite.T()

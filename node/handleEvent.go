@@ -25,7 +25,7 @@ import (
 	"github.com/alvalor/alvalor-go/network"
 )
 
-func handleEvent(log zerolog.Logger, wg *sync.WaitGroup, net Network, finder pathfinder, chain Blockchain, peers peerManager, handlers Handlers, event interface{}) {
+func handleEvent(log zerolog.Logger, wg *sync.WaitGroup, net Network, finder pathfinder, peers peerManager, handlers Handlers, event interface{}) {
 	defer wg.Done()
 
 	// configure logger

@@ -53,6 +53,8 @@ func (suite *EntitySuite) TestEntityTransaction() {
 	address2 := "192.0.2.2:1337"
 	address3 := "192.0.2.3:1337"
 
+	entity := &types.Transaction{}
+
 	net := &NetworkMock{}
 	net.On("Send", address1, mock.Anything).Return(errors.New("could not send"))
 	net.On("Send", address2, mock.Anything).Return(nil)
@@ -67,8 +69,7 @@ func (suite *EntitySuite) TestEntityTransaction() {
 	pool.On("Add", mock.Anything).Return(nil)
 
 	events := &EventManagerMock{}
-
-	entity := &types.Transaction{}
+	events.On("Transaction", entity.Hash()).Return(nil)
 
 	// act
 	handleEntity(suite.log, suite.wg, net, peers, pool, entity, events)

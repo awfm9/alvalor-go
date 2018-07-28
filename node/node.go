@@ -130,7 +130,7 @@ func (n *simpleNode) Input(input <-chan interface{}) {
 
 func (n *simpleNode) Event(event interface{}) {
 	n.wg.Add(1)
-	go handleEvent(n.log, n.wg, n.net, n.finder, n.chain, n.peers, n, event)
+	go handleEvent(n.log, n.wg, n.net, n.finder, n.peers, n, event)
 }
 
 func (n *simpleNode) Message(address string, message interface{}) {
