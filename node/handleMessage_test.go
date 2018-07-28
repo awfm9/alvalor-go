@@ -52,6 +52,7 @@ func (suite *MessageSuite) TestMessageTransaction() {
 	address := "192.0.2.100:1337"
 
 	msg := &types.Transaction{}
+	msg.Hash = msg.GetHash()
 
 	net := &NetworkMock{}
 
