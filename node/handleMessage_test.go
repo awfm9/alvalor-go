@@ -56,7 +56,7 @@ func (suite *MessageSuite) TestMessageTransaction() {
 	net := &NetworkMock{}
 
 	chain := &BlockchainMock{}
-	chain.On("TransactionByHash", msg.Hash()).Return(nil, errors.New("not found"))
+	chain.On("TransactionByHash", msg.Hash).Return(nil, errors.New("not found"))
 
 	finder := &PathfinderMock{}
 
@@ -74,6 +74,6 @@ func (suite *MessageSuite) TestMessageTransaction() {
 	// assert
 	t := suite.T()
 
-	peers.AssertCalled(t, "Tag", address, msg.Hash())
+	peers.AssertCalled(t, "Tag", address, msg.Hash)
 	handlers.AssertCalled(t, "Entity", msg)
 }

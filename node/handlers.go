@@ -21,7 +21,6 @@ import "github.com/alvalor/alvalor-go/types"
 
 // Entity is any data structure that returns a unique ID.
 type Entity interface {
-	Hash() types.Hash
 }
 
 // Handlers describes the handlers we need to process everything.

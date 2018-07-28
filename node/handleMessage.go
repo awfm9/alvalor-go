@@ -155,12 +155,13 @@ func handleMessage(log zerolog.Logger, wg *sync.WaitGroup, net Network, chain Bl
 
 	case *types.Transaction:
 
-		hash := msg.Hash()
+		// initialize the transaction hash
+		msg.Hash = msg.GetHash()
 
-		log = log.With().Str("msg_type", "transaction").Hex("hash", hash[:]).Logger()
+		log = log.With().Str("msg_type", "transaction").Hex("hash", msg.Hash[:]).Logger()
 
 		// check if we already know the transaction
-		_, err := chain.TransactionByHash(msg.Hash())
+		_, err := chain.TransactionByHash(msg.Hash)
 		if err == nil {
 			log.Debug().Msg("transaction already known")
 			return
@@ -169,7 +170,7 @@ func handleMessage(log zerolog.Logger, wg *sync.WaitGroup, net Network, chain Bl
 		// TODO: validate the transaction
 
 		// tag the peer for having seen the transaction
-		peers.Tag(address, msg.Hash())
+		peers.Tag(address, msg.Hash)
 
 		// handle the transaction for our blockchain state & propagation
 		handlers.Entity(msg)
@@ -268,7 +269,7 @@ func handleMessage(log zerolog.Logger, wg *sync.WaitGroup, net Network, chain Bl
 			// TODO: validate transaction
 
 			// tag the peer for having seen the transaction
-			peers.Tag(address, tx.Hash())
+			peers.Tag(address, tx.Hash)
 
 			// handle the transaction for our blockchain state & propagation
 			handlers.Entity(tx)

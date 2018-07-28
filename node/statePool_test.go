@@ -47,9 +47,9 @@ func TestPoolAdd(t *testing.T) {
 	codec.On("Encode", mock.Anything, tx3).Return(nil)
 
 	store := &StoreMock{}
-	store.On("Put", tx1.Hash(), mock.Anything).Return(nil)
-	store.On("Put", tx2.Hash(), mock.Anything).Return(nil)
-	store.On("Put", tx3.Hash(), mock.Anything).Return(errors.New("could not put"))
+	store.On("Put", tx1.Hash, mock.Anything).Return(nil)
+	store.On("Put", tx2.Hash, mock.Anything).Return(nil)
+	store.On("Put", tx3.Hash, mock.Anything).Return(errors.New("could not put"))
 
 	pool := simplePool{
 		codec:  codec,
@@ -69,9 +69,9 @@ func TestPoolAdd(t *testing.T) {
 
 func TestPoolGet(t *testing.T) {
 
-	id1 := [32]byte{1, 2, 3, 4}
-	id2 := [32]byte{4, 5, 6, 7}
-	id3 := [32]byte{8, 9, 0, 1}
+	id1 := types.Hash{1, 2, 3, 4}
+	id2 := types.Hash{4, 5, 6, 7}
+	id3 := types.Hash{8, 9, 0, 1}
 
 	tx1 := &types.Transaction{Data: id1[:]}
 	tx3 := &types.Transaction{Data: id3[:]}
@@ -102,8 +102,8 @@ func TestPoolGet(t *testing.T) {
 
 func TestPoolRemove(t *testing.T) {
 
-	id1 := [32]byte{1, 2, 3, 4}
-	id2 := [32]byte{4, 5, 6, 7}
+	id1 := types.Hash{1, 2, 3, 4}
+	id2 := types.Hash{4, 5, 6, 7}
 
 	store := &StoreMock{}
 	store.On("Del", id1).Return(nil)
@@ -123,8 +123,8 @@ func TestPoolRemove(t *testing.T) {
 
 func TestPoolKnown(t *testing.T) {
 
-	id1 := [32]byte{1, 2, 3, 4}
-	id2 := [32]byte{5, 6, 7, 8}
+	id1 := types.Hash{1, 2, 3, 4}
+	id2 := types.Hash{5, 6, 7, 8}
 
 	pool := simplePool{
 		hashes: make(map[types.Hash]struct{}),

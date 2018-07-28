@@ -69,7 +69,7 @@ func (suite *EntitySuite) TestEntityTransaction() {
 	pool.On("Add", mock.Anything).Return(nil)
 
 	events := &EventManagerMock{}
-	events.On("Transaction", entity.Hash()).Return(nil)
+	events.On("Transaction", entity.Hash).Return(nil)
 
 	// act
 	handleEntity(suite.log, suite.wg, net, peers, pool, entity, events)
