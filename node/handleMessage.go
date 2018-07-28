@@ -25,7 +25,7 @@ import (
 	"github.com/alvalor/alvalor-go/types"
 )
 
-func handleMessage(log zerolog.Logger, wg *sync.WaitGroup, net Network, chain Blockchain, finder pathManager, peers peerManager, pool poolManager, handlers Handlers, address string, message interface{}) {
+func handleMessage(log zerolog.Logger, wg *sync.WaitGroup, net Network, chain Blockchain, finder pathfinder, peers peerManager, pool poolManager, handlers Handlers, address string, message interface{}) {
 	defer wg.Done()
 
 	// configure logger
@@ -38,50 +38,35 @@ func handleMessage(log zerolog.Logger, wg *sync.WaitGroup, net Network, chain Bl
 
 	case *Status:
 
-		log = log.With().Str("msg_type", "status").Uint32("height", msg.Height).Hex("hash", msg.Hash[:]).Logger()
+		log = log.With().Str("msg_type", "status").Uint64("distance", msg.Distance).Hex("hash", msg.Hash[:]).Logger()
 
-		// don't take any action if we are not behind the peer
-		height := chain.Height()
-		if msg.Height <= chain.Height() {
-			log.Debug().Msg("not behind peer height")
+		// if we are on a better path, we can ignore the status message
+		path, distance := finder.Longest()
+		if distance >= msg.Distance {
+			log.Debug().Msg("already beating distance")
 			return
 		}
 
-		// check if we are already synching the path to this unstored block
+		// check if the best header of our peer is already known
 		ok := finder.Knows(msg.Hash)
 		if ok {
-			log.Debug().Msg("already syncing potential path")
+			log.Debug().Msg("already aware of path")
 			return
 		}
 
-		// // add the latest synching header to our locator hashes if it's different from chain state
+		// collect headers from the top of our longest path backwards
+		// use increasing distance after first 8, finish with root (genesis)
 		var locators []types.Hash
-		// TODO: rethink & implement
-		// bestBlock := chain.Current().Hash()
-		// bestHeader := path.BestHash()
-		// if !bytes.Equal(bestHeader, bestBlock) {
-		// 	locators = append(locators, bestHeader)
-		// }
-
-		// decide which block locator hashes to include by height
-		var heights []uint32
-		for h, step := height, uint32(1); h > 0; h -= step {
-			if len(heights) >= 8 {
+		index := 0
+		step := 1
+		for index < len(path)-1 {
+			locators = append(locators, path[index])
+			if len(locators) >= 8 {
 				step *= 2
 			}
-			heights = append(heights, h)
+			index += step
 		}
-		heights = append(heights, 0)
-
-		// retrieve the hashes from the blockchain database
-		for _, height := range heights {
-			hash, err := chain.HashByHeight(height)
-			if err != nil {
-				log.Error().Err(err).Uint32("height", height).Msg("could not get hash by height")
-				return
-			}
-			locators = append(locators, hash)
-		}
+		locators = append(locators, path[len(path)-1])
 
 		log = log.With().Int("locators", len(locators)).Logger()
 
@@ -101,43 +86,29 @@ func handleMessage(log zerolog.Logger, wg *sync.WaitGroup, net Network, chain Bl
 
 		log = log.With().Str("msg_type", "sync").Logger()
 
-		// try finding a locator hash in our best path
-		var common uint32
-	Outer:
+		// create index of all locator hashes
+		lookup := make(map[types.Hash]struct{})
 		for _, locator := range msg.Locators {
-			header := chain.Header()
-			for {
-				hash := header.Hash
-				if hash == locator {
-					log = log.With().Hex("hash", hash[:]).Logger()
-					var err error
-					common, err = chain.HeightByHash(header.Hash)
-					if err != nil {
-						log.Error().Err(err).Msg("could not get height by hash")
-						return
-					}
-					log = log.With().Uint32("common_height", common).Logger()
-					break Outer
-				}
-				parent := header.Parent
-				if parent == types.ZeroHash {
-					break
-				}
-				var err error
-				header, err = chain.HeaderByHash(parent)
-				if err != nil {
-					log.Error().Err(err).Hex("hash", parent[:]).Msg("could not get header by hash")
-					return
-				}
+			lookup[locator] = struct{}{}
+		}
+
+		// collect all header hashes the other node doesn't have
+		var missing []types.Hash
+		path, _ := finder.Longest()
+		for _, hash := range path {
+			_, ok := lookup[hash]
+			if ok {
+				continue
 			}
+			missing = append(missing, hash)
 		}
 
 		// return all headers from the found start to the top
 		var headers []*types.Header
-		for height := common + 1; height <= chain.Height(); height++ {
-			header, err := chain.HeaderByHeight(height)
+		for _, hash := range missing {
+			header, err := finder.Header(hash)
 			if err != nil {
-				log.Error().Err(err).Uint32("height", height).Msg("could not get header by height")
+				log.Error().Err(err).Hex("hash", hash[:]).Msg("could not get header from finder")
 				return
 			}
 			headers = append(headers, header)
@@ -147,7 +118,7 @@ func handleMessage(log zerolog.Logger, wg *sync.WaitGroup, net Network, chain Bl
 		for _, header := range headers {
 			err := net.Send(address, header)
 			if err != nil {
-				log.Error().Err(err).Msg("could not send header")
+				log.Error().Err(err).Hex("hash", header.Hash[:]).Msg("could not send header")
 				return
 			}
 		}
@@ -162,41 +133,35 @@ func handleMessage(log zerolog.Logger, wg *sync.WaitGroup, net Network, chain Bl
 		log = log.With().Str("msg_type", "header").Hex("hash", msg.Hash[:]).Hex("parent", msg.Parent[:]).Logger()
 
 		// check if we already stored the header
-		_, err := chain.HeaderByHash(msg.Hash)
-		if err == nil {
+		ok := finder.Knows(msg.Hash)
+		if ok {
 			log.Debug().Msg("header already known")
 			return
 		}
 
-		// check if we already process the header
-		ok := finder.Knows(msg.Hash)
-		if ok {
-			log.Debug().Msg("header already processing")
-			return
-		}
-
 		// add the header to the path finder
-		// TODO: add pool of pending headers with missing parents
+		err := finder.Add(msg)
 		if err != nil {
-			log.Error().Err(err).Msg("could not add header to path")
+			log.Error().Err(err).Msg("could not add header to pathfinder")
 			return
 		}
 
 		// collect all information needed to complete this path
 		// TODO: this logic will probably be changed
-		path := finder.Longest()
+		path, _ := finder.Longest()
 		handlers.Collect(path)
 
 		log.Debug().Msg("processed header message")
 
 	case *types.Transaction:
 
-		hash := msg.Hash()
+		// initialize the transaction hash
+		msg.Hash = msg.GetHash()
 
-		log = log.With().Str("msg_type", "transaction").Hex("hash", hash[:]).Logger()
+		log = log.With().Str("msg_type", "transaction").Hex("hash", msg.Hash[:]).Logger()
 
 		// check if we already know the transaction
-		_, err := chain.TransactionByHash(msg.Hash())
+		_, err := chain.TransactionByHash(msg.Hash)
 		if err == nil {
 			log.Debug().Msg("transaction already known")
 			return
@@ -205,7 +170,7 @@ func handleMessage(log zerolog.Logger, wg *sync.WaitGroup, net Network, chain Bl
 		// TODO: validate the transaction
 
 		// tag the peer for having seen the transaction
-		peers.Tag(address, msg.Hash())
+		peers.Tag(address, msg.Hash)
 
 		// handle the transaction for our blockchain state & propagation
 		handlers.Entity(msg)
@@ -304,7 +269,7 @@ func handleMessage(log zerolog.Logger, wg *sync.WaitGroup, net Network, chain Bl
 			// TODO: validate transaction
 
 			// tag the peer for having seen the transaction
-			peers.Tag(address, tx.Hash())
+			peers.Tag(address, tx.Hash)
 
 			// handle the transaction for our blockchain state & propagation
 			handlers.Entity(tx)

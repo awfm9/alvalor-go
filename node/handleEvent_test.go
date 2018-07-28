@@ -27,6 +27,7 @@ import (
 	"github.com/stretchr/testify/suite"
 
 	"github.com/alvalor/alvalor-go/network"
+	"github.com/alvalor/alvalor-go/types"
 )
 
 func TestEvent(t *testing.T) {
@@ -53,7 +54,8 @@ func (suite *EventSuite) TestEventConnected() {
 	net := &NetworkMock{}
 	net.On("Send", mock.Anything, mock.Anything).Return(nil)
 
-	chain := &BlockchainMock{}
+	finder := &PathfinderMock{}
+	finder.On("Longest").Return([]types.Hash{types.ZeroHash}, 0)
 
 	peers := &PeersMock{}
 	peers.On("Active", mock.Anything)
@@ -70,7 +72,7 @@ func (suite *EventSuite) TestEventConnected() {
 	event := network.Connected{Address: address}
 
 	// act
-	handleEvent(suite.log, suite.wg, net, chain, peers, handlers, event)
+	handleEvent(suite.log, suite.wg, net, finder, peers, handlers, event)
 
 	// assert
 	t := suite.T()
@@ -86,7 +88,7 @@ func (suite *EventSuite) TestEventDisconnected() {
 	net := &NetworkMock{}
 	net.On("Send", mock.Anything, mock.Anything).Return(nil)
 
-	chain := &BlockchainMock{}
+	finder := &PathfinderMock{}
 
 	peers := &PeersMock{}
 	peers.On("Active", mock.Anything)
@@ -103,7 +105,7 @@ func (suite *EventSuite) TestEventDisconnected() {
 	event := network.Disconnected{Address: address}
 
 	// act
-	handleEvent(suite.log, suite.wg, net, chain, peers, handlers, event)
+	handleEvent(suite.log, suite.wg, net, finder, peers, handlers, event)
 
 	// assert
 	t := suite.T()
@@ -120,7 +122,7 @@ func (suite *EventSuite) TestEventReceived() {
 	net := &NetworkMock{}
 	net.On("Send", mock.Anything, mock.Anything).Return(nil)
 
-	chain := &BlockchainMock{}
+	finder := &PathfinderMock{}
 
 	peers := &PeersMock{}
 	peers.On("Active", mock.Anything)
@@ -137,7 +139,7 @@ func (suite *EventSuite) TestEventReceived() {
 	event := network.Received{Address: address, Message: message}
 
 	// act
-	handleEvent(suite.log, suite.wg, net, chain, peers, handlers, event)
+	handleEvent(suite.log, suite.wg, net, finder, peers, handlers, event)
 
 	// assert
 	t := suite.T()

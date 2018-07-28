@@ -25,7 +25,7 @@ import (
 	"github.com/alvalor/alvalor-go/network"
 )
 
-func handleEvent(log zerolog.Logger, wg *sync.WaitGroup, net Network, chain Blockchain, peers peerManager, handlers Handlers, event interface{}) {
+func handleEvent(log zerolog.Logger, wg *sync.WaitGroup, net Network, finder pathfinder, peers peerManager, handlers Handlers, event interface{}) {
 	defer wg.Done()
 
 	// configure logger
@@ -36,10 +36,13 @@ func handleEvent(log zerolog.Logger, wg *sync.WaitGroup, net Network, chain Bloc
 	switch e := event.(type) {
 
 	case network.Connected:
+
 		peers.Active(e.Address)
+
+		path, distance := finder.Longest()
 		status := &Status{
-			Height: chain.Height(),
-			Hash:   chain.Header().Hash,
+			Distance: distance,
+			Hash:     path[0],
 		}
 		err := net.Send(e.Address, status)
 		if err != nil {

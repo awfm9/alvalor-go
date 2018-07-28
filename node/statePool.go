@@ -68,15 +68,14 @@ func (p *simplePool) Add(tx *types.Transaction) error {
 		return errors.Wrap(err, "could not encode transaction")
 	}
 
-	hash := tx.Hash()
 	data := buf.Bytes()
-	err = p.store.Put(hash[:], data)
+	err = p.store.Put(tx.Hash[:], data)
 	if err != nil {
 		return errors.Wrap(err, "could not put data")
 	}
 
 	// TODO: fix tests to check ids entry
-	p.hashes[hash] = struct{}{}
+	p.hashes[tx.Hash] = struct{}{}
 
 	return nil
 }

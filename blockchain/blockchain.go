@@ -112,12 +112,11 @@ func (bc *Blockchain) AddBlock(block *types.Block) error {
 	// save each transaction & collect their indices
 	indices := make([]byte, 0, len(block.Transactions)*32)
 	for _, tx := range block.Transactions {
-		err = bc.transactions.Save(tx.Hash(), tx)
+		err = bc.transactions.Save(tx.Hash, tx)
 		if err != nil {
 			return errors.Wrap(err, "could not store block transaction")
 		}
-		txHash := tx.Hash()
-		indices = append(indices, txHash[:]...)
+		indices = append(indices, tx.Hash[:]...)
 	}
 
 	// map the block hash to the transaction indices
@@ -207,6 +206,7 @@ func (bc *Blockchain) TransactionByHash(hash types.Hash) (*types.Transaction, er
 	if !ok {
 		return nil, errors.New("could not convert entity to transaction")
 	}
+	tx.Hash = tx.GetHash()
 	return tx, nil
 }
 

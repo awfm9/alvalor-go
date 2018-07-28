@@ -25,24 +25,17 @@ import (
 
 // Transaction represents an atomic standard transaction on the Alvalor network.
 type Transaction struct {
+	Hash       Hash
 	Transfers  []*Transfer
 	Fees       []*Fee
 	Data       []byte
 	Nonce      uint64
 	Signatures [][]byte
-	hash       Hash
 }
 
-// Hash returns the unique hash of the transaction.
-func (tx *Transaction) Hash() Hash {
-	if tx.hash == ZeroHash {
-		hash := tx.calc()
-		copy(tx.hash[:], hash)
-	}
-	return tx.hash
-}
-
-func (tx Transaction) calc() []byte {
+// GetHash returns the unique hash of the transaction.
+func (tx *Transaction) GetHash() Hash {
+	var hash Hash
 	buf := make([]byte, 8)
 	h, _ := blake2s.New256(nil)
 	for _, transfer := range tx.Transfers {
@@ -59,5 +52,7 @@ func (tx Transaction) calc() []byte {
 	_, _ = h.Write(tx.Data)
 	binary.LittleEndian.PutUint64(buf, tx.Nonce)
 	_, _ = h.Write(buf)
-	return h.Sum(nil)
+	tmp := h.Sum(nil)
+	copy(hash[:], tmp)
+	return hash
 }

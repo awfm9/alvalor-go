@@ -41,15 +41,19 @@ func TestPoolAdd(t *testing.T) {
 	tx2 := &types.Transaction{Data: []byte{4, 5, 6, 7}}
 	tx3 := &types.Transaction{Data: []byte{8, 9, 0, 1}}
 
+	tx1.Hash = tx1.GetHash()
+	tx2.Hash = tx2.GetHash()
+	tx3.Hash = tx3.GetHash()
+
 	codec := &CodecMock{}
 	codec.On("Encode", mock.Anything, tx1).Return(nil)
 	codec.On("Encode", mock.Anything, tx2).Return(errors.New("could not encode"))
 	codec.On("Encode", mock.Anything, tx3).Return(nil)
 
 	store := &StoreMock{}
-	store.On("Put", tx1.Hash(), mock.Anything).Return(nil)
-	store.On("Put", tx2.Hash(), mock.Anything).Return(nil)
-	store.On("Put", tx3.Hash(), mock.Anything).Return(errors.New("could not put"))
+	store.On("Put", tx1.Hash[:], mock.Anything).Return(nil)
+	store.On("Put", tx2.Hash[:], mock.Anything).Return(nil)
+	store.On("Put", tx3.Hash[:], mock.Anything).Return(errors.New("could not put"))
 
 	pool := simplePool{
 		codec:  codec,
@@ -69,17 +73,20 @@ func TestPoolAdd(t *testing.T) {
 
 func TestPoolGet(t *testing.T) {
 
-	id1 := [32]byte{1, 2, 3, 4}
-	id2 := [32]byte{4, 5, 6, 7}
-	id3 := [32]byte{8, 9, 0, 1}
+	id1 := types.Hash{1, 2, 3, 4}
+	id2 := types.Hash{4, 5, 6, 7}
+	id3 := types.Hash{8, 9, 0, 1}
 
 	tx1 := &types.Transaction{Data: id1[:]}
 	tx3 := &types.Transaction{Data: id3[:]}
 
+	tx1.Hash = tx1.GetHash()
+	tx3.Hash = tx3.GetHash()
+
 	store := &StoreMock{}
-	store.On("Get", id1).Return(id1, nil)
-	store.On("Get", id2).Return(id2, errors.New("could not get"))
-	store.On("Get", id3).Return(id3, nil)
+	store.On("Get", id1[:]).Return(id1[:], nil)
+	store.On("Get", id2[:]).Return(id2[:], errors.New("could not get"))
+	store.On("Get", id3[:]).Return(id3[:], nil)
 
 	// this is not ideal, but the way returns are evaluated immediately, we can't
 	// use the closure of the Run function to switch on the buffer contents
@@ -102,12 +109,12 @@ func TestPoolGet(t *testing.T) {
 
 func TestPoolRemove(t *testing.T) {
 
-	id1 := [32]byte{1, 2, 3, 4}
-	id2 := [32]byte{4, 5, 6, 7}
+	id1 := types.Hash{1, 2, 3, 4}
+	id2 := types.Hash{4, 5, 6, 7}
 
 	store := &StoreMock{}
-	store.On("Del", id1).Return(nil)
-	store.On("Del", id2).Return(errors.New("could not del"))
+	store.On("Del", id1[:]).Return(nil)
+	store.On("Del", id2[:]).Return(errors.New("could not del"))
 
 	pool := simplePool{
 		store:  store,
@@ -123,8 +130,8 @@ func TestPoolRemove(t *testing.T) {
 
 func TestPoolKnown(t *testing.T) {
 
-	id1 := [32]byte{1, 2, 3, 4}
-	id2 := [32]byte{5, 6, 7, 8}
+	id1 := types.Hash{1, 2, 3, 4}
+	id2 := types.Hash{5, 6, 7, 8}
 
 	pool := simplePool{
 		hashes: make(map[types.Hash]struct{}),

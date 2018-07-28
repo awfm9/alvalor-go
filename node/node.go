@@ -50,7 +50,7 @@ type simpleNode struct {
 	wg          *sync.WaitGroup
 	net         Network
 	chain       Blockchain
-	path        pathManager
+	finder      pathfinder
 	peers       peerManager
 	pool        poolManager
 	events      eventManager
@@ -84,7 +84,7 @@ func New(log zerolog.Logger, net Network, chain Blockchain, codec Codec, input <
 
 	// initialize header path finder
 	root := chain.Header()
-	n.path = newSimplePaths(root)
+	n.finder = newSimplePathfinder(root)
 
 	// initialize peer state manager
 	peers := newPeers()
@@ -130,12 +130,12 @@ func (n *simpleNode) Input(input <-chan interface{}) {
 
 func (n *simpleNode) Event(event interface{}) {
 	n.wg.Add(1)
-	go handleEvent(n.log, n.wg, n.net, n.chain, n.peers, n, event)
+	go handleEvent(n.log, n.wg, n.net, n.finder, n.peers, n, event)
 }
 
 func (n *simpleNode) Message(address string, message interface{}) {
 	n.wg.Add(1)
-	go handleMessage(n.log, n.wg, n.net, n.chain, n.path, n.peers, n.pool, n, address, message)
+	go handleMessage(n.log, n.wg, n.net, n.chain, n.finder, n.peers, n.pool, n, address, message)
 }
 
 func (n *simpleNode) Entity(entity Entity) {

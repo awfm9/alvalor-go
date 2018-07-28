@@ -28,12 +28,8 @@ import (
 func handleEntity(log zerolog.Logger, wg *sync.WaitGroup, net Network, peers peerManager, pool poolManager, entity Entity, events eventManager) {
 	defer wg.Done()
 
-	var (
-		hash = entity.Hash()
-	)
-
 	// configure logger
-	log = log.With().Str("component", "entity").Hex("hash", hash[:]).Logger()
+	log = log.With().Str("component", "entity").Logger()
 	log.Debug().Msg("entity routine started")
 	defer log.Debug().Msg("entity routine stopped")
 
@@ -41,8 +37,10 @@ func handleEntity(log zerolog.Logger, wg *sync.WaitGroup, net Network, peers pee
 
 	case *types.Transaction:
 
+		log = log.With().Str("entity_type", "transaction").Hex("hash", e.Hash[:]).Logger()
+
 		// check if we already know the transaction; if so, ignore it
-		ok := pool.Known(hash)
+		ok := pool.Known(e.Hash)
 		if ok {
 			log.Debug().Msg("transaction already known")
 			return
@@ -55,10 +53,10 @@ func handleEntity(log zerolog.Logger, wg *sync.WaitGroup, net Network, peers pee
 			return
 		}
 
-		events.Transaction(hash)
+		events.Transaction(e.Hash)
 
 		// create lookup to know who to exclude from broadcast
-		tags := peers.Tags(hash)
+		tags := peers.Tags(e.Hash)
 		lookup := make(map[string]struct{}, len(tags))
 		for _, address := range tags {
 			lookup[address] = struct{}{}
