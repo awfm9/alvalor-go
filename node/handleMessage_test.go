@@ -54,7 +54,7 @@ func (suite *MessageSuite) TestMessageTransaction() {
 
 	chain := &BlockchainMock{}
 
-	finder := &FinderMock{}
+	finder := &PathfinderMock{}
 
 	peers := &PeersMock{}
 	peers.On("Tag", mock.Anything, mock.Anything)

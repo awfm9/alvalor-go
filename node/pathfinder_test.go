@@ -25,9 +25,9 @@ import (
 	"github.com/alvalor/alvalor-go/types"
 )
 
-func TestNewSimplePath(t *testing.T) {
+func TestNewSimpleHeader(t *testing.T) {
 	root := &types.Header{Hash: types.Hash{1}}
-	sp := newSimplePaths(root)
+	sp := newSimplePathfinder(root)
 	assert.NotNil(t, sp.headers, "header map not initialized")
 	assert.NotNil(t, sp.children, "children map not initialized")
 	assert.Equal(t, root.Hash, sp.root, "root hash not saved")
@@ -40,7 +40,7 @@ func TestSimplePathAddExistingHash(t *testing.T) {
 
 	header := &types.Header{Hash: types.Hash{1}, Parent: types.Hash{0}}
 
-	sp := &simplePath{
+	sp := &simplePathfinder{
 		headers:  make(map[types.Hash]*types.Header),
 		children: make(map[types.Hash][]types.Hash),
 	}
@@ -56,7 +56,7 @@ func TestSimplePathAddMissingParent(t *testing.T) {
 
 	header := &types.Header{Hash: types.Hash{1}, Parent: types.Hash{0}}
 
-	sp := &simplePath{
+	sp := &simplePathfinder{
 		headers:  make(map[types.Hash]*types.Header),
 		children: make(map[types.Hash][]types.Hash),
 	}
@@ -71,7 +71,7 @@ func TestSimplePathAddValidHeader(t *testing.T) {
 	header1 := &types.Header{Hash: types.Hash{1}, Parent: types.Hash{0}}
 	header2 := &types.Header{Hash: types.Hash{2}, Parent: types.Hash{1}}
 
-	sp := &simplePath{
+	sp := &simplePathfinder{
 		headers:  make(map[types.Hash]*types.Header),
 		children: make(map[types.Hash][]types.Hash),
 	}
@@ -94,7 +94,7 @@ func TestSimplePathLongestRootOnly(t *testing.T) {
 
 	header := &types.Header{Hash: types.Hash{1}, Parent: types.Hash{0}, Diff: 1}
 
-	sp := newSimplePaths(header)
+	sp := newSimplePathfinder(header)
 
 	path := sp.Longest()
 
@@ -108,7 +108,7 @@ func TestSimplePathLongestLinearOnly(t *testing.T) {
 	header3 := &types.Header{Hash: types.Hash{3}, Parent: types.Hash{2}, Diff: 1}
 	header4 := &types.Header{Hash: types.Hash{4}, Parent: types.Hash{3}, Diff: 1}
 
-	sp := newSimplePaths(header1)
+	sp := newSimplePathfinder(header1)
 	_ = sp.Add(header2)
 	_ = sp.Add(header3)
 	_ = sp.Add(header4)
@@ -126,7 +126,7 @@ func TestSimplePathLongestShortHeavy(t *testing.T) {
 	header4 := &types.Header{Hash: types.Hash{4}, Parent: types.Hash{3}, Diff: 1}
 	header5 := &types.Header{Hash: types.Hash{5}, Parent: types.Hash{1}, Diff: 10}
 
-	sp := newSimplePaths(header1)
+	sp := newSimplePathfinder(header1)
 	_ = sp.Add(header2)
 	_ = sp.Add(header3)
 	_ = sp.Add(header4)
@@ -146,7 +146,7 @@ func TestSimplePathLongestLongHeavy(t *testing.T) {
 	header4 := &types.Header{Hash: types.Hash{4}, Parent: types.Hash{3}, Diff: 5}
 	header5 := &types.Header{Hash: types.Hash{5}, Parent: types.Hash{1}, Diff: 10}
 
-	sp := newSimplePaths(header1)
+	sp := newSimplePathfinder(header1)
 	_ = sp.Add(header2)
 	_ = sp.Add(header3)
 	_ = sp.Add(header4)
@@ -175,7 +175,7 @@ func TestSimplePathLongestEqualHeavy(t *testing.T) {
 	header12 := &types.Header{Hash: types.Hash{12}, Parent: types.Hash{5}, Diff: 8}
 	header13 := &types.Header{Hash: types.Hash{13}, Parent: types.Hash{5}, Diff: 32}
 
-	sp := newSimplePaths(header1)
+	sp := newSimplePathfinder(header1)
 	_ = sp.Add(header2)
 	_ = sp.Add(header3)
 	_ = sp.Add(header4)

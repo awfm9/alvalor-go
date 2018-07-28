@@ -23,23 +23,23 @@ import (
 	"github.com/alvalor/alvalor-go/types"
 )
 
-type pathManager interface {
+type pathfinder interface {
 	Add(header *types.Header) error
 	Header(hash types.Hash) (*types.Header, error)
 	Knows(hash types.Hash) bool
 	Longest() []types.Hash
 }
 
-// simplePath is a path manager using topological sort of all added headers to find the longest path to the root.
-type simplePath struct {
+// simplePathfinder is a path manager using topological sort of all added headers to find the longest path to the root.
+type simplePathfinder struct {
 	root     types.Hash
 	headers  map[types.Hash]*types.Header
 	children map[types.Hash][]types.Hash
 }
 
-// newsimplePath creates a new simple path manager using the given header as root.
-func newSimplePaths(root *types.Header) *simplePath {
-	sp := &simplePath{
+// newSimplePathfinder creates a new simple path manager using the given header as root.
+func newSimplePathfinder(root *types.Header) *simplePathfinder {
+	sp := &simplePathfinder{
 		root:     root.Hash,
 		headers:  make(map[types.Hash]*types.Header),
 		children: make(map[types.Hash][]types.Hash),
@@ -49,13 +49,13 @@ func newSimplePaths(root *types.Header) *simplePath {
 }
 
 // Knows checks if the given hash is already known.
-func (sp *simplePath) Knows(hash types.Hash) bool {
+func (sp *simplePathfinder) Knows(hash types.Hash) bool {
 	_, ok := sp.headers[hash]
 	return ok
 }
 
 // Header returns the given header.
-func (sp *simplePath) Header(hash types.Hash) (*types.Header, error) {
+func (sp *simplePathfinder) Header(hash types.Hash) (*types.Header, error) {
 	header, ok := sp.headers[hash]
 	if !ok {
 		return nil, errors.New("header not found")
@@ -64,7 +64,7 @@ func (sp *simplePath) Header(hash types.Hash) (*types.Header, error) {
 }
 
 // Add adds a new header to the graph.
-func (sp *simplePath) Add(header *types.Header) error {
+func (sp *simplePathfinder) Add(header *types.Header) error {
 	_, ok := sp.headers[header.Hash]
 	if ok {
 		return errors.New("header already in graph")
@@ -79,7 +79,7 @@ func (sp *simplePath) Add(header *types.Header) error {
 }
 
 // Longest returns the longest path of the graph.
-func (sp *simplePath) Longest() []types.Hash {
+func (sp *simplePathfinder) Longest() []types.Hash {
 
 	// create a topological sort of all headers starting at the root
 	var hash types.Hash

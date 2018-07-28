@@ -250,17 +250,17 @@ func (b *BlockchainMock) BlockByHeight(height uint32) (*types.Block, error) {
 	return block, args.Error(1)
 }
 
-type FinderMock struct {
+type PathfinderMock struct {
 	mock.Mock
 }
 
-func (f *FinderMock) Add(header *types.Header) error {
-	args := f.Called(header)
+func (p *PathfinderMock) Add(header *types.Header) error {
+	args := p.Called(header)
 	return args.Error(0)
 }
 
-func (f *FinderMock) Header(hash types.Hash) (*types.Header, error) {
-	args := f.Called(hash)
+func (p *PathfinderMock) Header(hash types.Hash) (*types.Header, error) {
+	args := p.Called(hash)
 	var header *types.Header
 	if args.Get(0) != nil {
 		header = args.Get(0).(*types.Header)
@@ -268,13 +268,13 @@ func (f *FinderMock) Header(hash types.Hash) (*types.Header, error) {
 	return header, args.Error(0)
 }
 
-func (f *FinderMock) Knows(hash types.Hash) bool {
-	args := f.Called(hash)
+func (p *PathfinderMock) Knows(hash types.Hash) bool {
+	args := p.Called(hash)
 	return args.Bool(0)
 }
 
-func (f *FinderMock) Longest() []types.Hash {
-	args := f.Called()
+func (p *PathfinderMock) Longest() []types.Hash {
+	args := p.Called()
 	var path []types.Hash
 	if args.Get(0) != nil {
 		path = args.Get(0).([]types.Hash)
