@@ -133,23 +133,16 @@ func handleMessage(log zerolog.Logger, wg *sync.WaitGroup, net Network, chain Bl
 		log = log.With().Str("msg_type", "header").Hex("hash", msg.Hash[:]).Hex("parent", msg.Parent[:]).Logger()
 
 		// check if we already stored the header
-		_, err := chain.HeaderByHash(msg.Hash)
-		if err == nil {
+		ok := finder.Knows(msg.Hash)
+		if ok {
 			log.Debug().Msg("header already known")
 			return
 		}
 
-		// check if we already process the header
-		ok := finder.Knows(msg.Hash)
-		if ok {
-			log.Debug().Msg("header already processing")
-			return
-		}
-
 		// add the header to the path finder
-		// TODO: add pool of pending headers with missing parents
+		err := finder.Add(msg)
 		if err != nil {
-			log.Error().Err(err).Msg("could not add header to path")
+			log.Error().Err(err).Msg("could not add header to pathfinder")
 			return
 		}
 
