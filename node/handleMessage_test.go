@@ -18,6 +18,7 @@
 package node
 
 import (
+	"errors"
 	"io/ioutil"
 	"sync"
 	"testing"
@@ -50,9 +51,12 @@ func (suite *MessageSuite) TestMessageTransaction() {
 	// arrange
 	address := "192.0.2.100:1337"
 
+	msg := &types.Transaction{}
+
 	net := &NetworkMock{}
 
 	chain := &BlockchainMock{}
+	chain.On("TransactionByHash", msg.Hash()).Return(nil, errors.New("not found"))
 
 	finder := &PathfinderMock{}
 
@@ -63,8 +67,6 @@ func (suite *MessageSuite) TestMessageTransaction() {
 
 	handlers := &HandlersMock{}
 	handlers.On("Entity", mock.Anything)
-
-	msg := &types.Transaction{}
 
 	// act
 	handleMessage(suite.log, suite.wg, net, chain, finder, peers, pool, handlers, address, msg)
