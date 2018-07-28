@@ -37,8 +37,9 @@ func handleEvent(log zerolog.Logger, wg *sync.WaitGroup, net Network, finder pat
 
 	case network.Connected:
 
-		path, distance := finder.Longest()
 		peers.Active(e.Address)
+
+		path, distance := finder.Longest()
 		status := &Status{
 			Distance: distance,
 			Hash:     path[0],
