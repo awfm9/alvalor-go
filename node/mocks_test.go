@@ -273,13 +273,13 @@ func (p *PathfinderMock) Knows(hash types.Hash) bool {
 	return args.Bool(0)
 }
 
-func (p *PathfinderMock) Longest() []types.Hash {
+func (p *PathfinderMock) Longest() ([]types.Hash, uint64) {
 	args := p.Called()
 	var path []types.Hash
 	if args.Get(0) != nil {
 		path = args.Get(0).([]types.Hash)
 	}
-	return path
+	return path, uint64(args.Int(1))
 }
 
 type EventManagerMock struct {

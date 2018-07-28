@@ -38,39 +38,35 @@ func handleMessage(log zerolog.Logger, wg *sync.WaitGroup, net Network, chain Bl
 
 	case *Status:
 
-		log = log.With().Str("msg_type", "status").Uint32("height", msg.Height).Hex("hash", msg.Hash[:]).Logger()
+		log = log.With().Str("msg_type", "status").Uint64("distance", msg.Distance).Hex("hash", msg.Hash[:]).Logger()
 
-		// don't take any action if we are not behind the peer
-		if msg.Height <= chain.Height() {
-			log.Debug().Msg("not behind peer height")
+		// if we are on a better path, we can ignore the status message
+		path, distance := finder.Longest()
+		if distance >= msg.Distance {
+			log.Debug().Msg("already beating distance")
 			return
 		}
 
 		// check if the best header of our peer is already known
 		ok := finder.Knows(msg.Hash)
 		if ok {
-			log.Debug().Msg("already syncing potential path")
+			log.Debug().Msg("already aware of path")
 			return
 		}
 
-		// // add the latest synching header to our locator hashes if it's different from chain state
+		// collect headers from the top of our longest path backwards
+		// use increasing distance after first 8, finish with root (genesis)
 		var locators []types.Hash
-		path := finder.Longest()
 		index := 0
 		step := 1
-		for {
+		for index < len(path)-1 {
 			locators = append(locators, path[index])
-			if index == len(locators)-1 {
-				break
-			}
 			if len(locators) >= 8 {
 				step *= 2
 			}
 			index += step
-			if index > len(locators)-1 {
-				index = len(locators) - 1
-			}
 		}
+		locators = append(locators, path[len(path)-1])
 
 		log = log.With().Int("locators", len(locators)).Logger()
 
@@ -98,7 +94,7 @@ func handleMessage(log zerolog.Logger, wg *sync.WaitGroup, net Network, chain Bl
 
 		// collect all header hashes the other node doesn't have
 		var missing []types.Hash
-		path := finder.Longest()
+		path, _ := finder.Longest()
 		for _, hash := range path {
 			_, ok := lookup[hash]
 			if ok {
@@ -159,7 +155,7 @@ func handleMessage(log zerolog.Logger, wg *sync.WaitGroup, net Network, chain Bl
 
 		// collect all information needed to complete this path
 		// TODO: this logic will probably be changed
-		path := finder.Longest()
+		path, _ := finder.Longest()
 		handlers.Collect(path)
 
 		log.Debug().Msg("processed header message")

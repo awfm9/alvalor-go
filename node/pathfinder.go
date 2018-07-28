@@ -27,7 +27,7 @@ type pathfinder interface {
 	Add(header *types.Header) error
 	Header(hash types.Hash) (*types.Header, error)
 	Knows(hash types.Hash) bool
-	Longest() []types.Hash
+	Longest() ([]types.Hash, uint64)
 }
 
 // simplePathfinder is a path manager using topological sort of all added headers to find the longest path to the root.
@@ -35,6 +35,7 @@ type simplePathfinder struct {
 	root     types.Hash
 	headers  map[types.Hash]*types.Header
 	children map[types.Hash][]types.Hash
+	pending  map[types.Hash][]*types.Header
 }
 
 // newSimplePathfinder creates a new simple path manager using the given header as root.
@@ -43,6 +44,7 @@ func newSimplePathfinder(root *types.Header) *simplePathfinder {
 		root:     root.Hash,
 		headers:  make(map[types.Hash]*types.Header),
 		children: make(map[types.Hash][]types.Hash),
+		pending:  make(map[types.Hash][]*types.Header),
 	}
 	sp.headers[root.Hash] = root
 	return sp
@@ -65,21 +67,38 @@ func (sp *simplePathfinder) Header(hash types.Hash) (*types.Header, error) {
 
 // Add adds a new header to the graph.
 func (sp *simplePathfinder) Add(header *types.Header) error {
+
+	// if we already know the header, fail
 	_, ok := sp.headers[header.Hash]
 	if ok {
 		return errors.New("header already in graph")
 	}
+
+	// if we don't know the parent, add to pending headers and skip rest
 	_, ok = sp.headers[header.Parent]
 	if !ok {
-		return errors.New("header parent not in graph")
+		sp.pending[header.Parent] = append(sp.pending[header.Parent], header)
+		return nil
 	}
+
+	// if we have the parent, add it to its children and register header
 	sp.children[header.Parent] = append(sp.children[header.Parent], header.Hash)
 	sp.headers[header.Hash] = header
+
+	// then check if any pending headers have this header as parent
+	children, ok := sp.pending[header.Hash]
+	if ok {
+		delete(sp.pending, header.Hash)
+		for _, child := range children {
+			_ = sp.Add(child)
+		}
+	}
+
 	return nil
 }
 
 // Longest returns the longest path of the graph.
-func (sp *simplePathfinder) Longest() []types.Hash {
+func (sp *simplePathfinder) Longest() ([]types.Hash, uint64) {
 
 	// create a topological sort of all headers starting at the root
 	var hash types.Hash
@@ -115,7 +134,7 @@ func (sp *simplePathfinder) Longest() []types.Hash {
 
 	// if we have no distance, we are stuck at the root
 	if max == 0 {
-		return []types.Hash{sp.root}
+		return []types.Hash{sp.root}, 0
 	}
 
 	// otherwise, iterate back to parents from best child
@@ -127,5 +146,5 @@ func (sp *simplePathfinder) Longest() []types.Hash {
 	}
 	path = append(path, sp.root)
 
-	return path
+	return path, max
 }

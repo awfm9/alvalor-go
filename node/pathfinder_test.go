@@ -96,7 +96,7 @@ func TestSimplePathLongestRootOnly(t *testing.T) {
 
 	sp := newSimplePathfinder(header)
 
-	path := sp.Longest()
+	path, _ := sp.Longest()
 
 	assert.Equal(t, path, []types.Hash{header.Hash})
 }
@@ -113,7 +113,7 @@ func TestSimplePathLongestLinearOnly(t *testing.T) {
 	_ = sp.Add(header3)
 	_ = sp.Add(header4)
 
-	path := sp.Longest()
+	path, _ := sp.Longest()
 
 	assert.Equal(t, path, []types.Hash{header4.Hash, header3.Hash, header2.Hash, header1.Hash})
 }
@@ -132,7 +132,7 @@ func TestSimplePathLongestShortHeavy(t *testing.T) {
 	_ = sp.Add(header4)
 	_ = sp.Add(header5)
 
-	path := sp.Longest()
+	path, _ := sp.Longest()
 
 	assert.Equal(t, path, []types.Hash{header5.Hash, header1.Hash})
 
@@ -152,7 +152,7 @@ func TestSimplePathLongestLongHeavy(t *testing.T) {
 	_ = sp.Add(header4)
 	_ = sp.Add(header5)
 
-	path := sp.Longest()
+	path, _ := sp.Longest()
 
 	assert.Equal(t, path, []types.Hash{header4.Hash, header3.Hash, header2.Hash, header1.Hash})
 }
@@ -189,7 +189,7 @@ func TestSimplePathLongestEqualHeavy(t *testing.T) {
 	_ = sp.Add(header12)
 	_ = sp.Add(header13)
 
-	path := sp.Longest()
+	path, _ := sp.Longest()
 
 	assert.Equal(t, path, []types.Hash{header13.Hash, header5.Hash, header1.Hash})
 }

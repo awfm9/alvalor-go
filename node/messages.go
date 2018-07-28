@@ -25,8 +25,8 @@ import (
 
 // Status message shares our top block height.
 type Status struct {
-	Height uint32
-	Hash   types.Hash
+	Distance uint64
+	Hash     types.Hash
 }
 
 // Sync requests headers we are missing.

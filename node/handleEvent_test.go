@@ -55,6 +55,8 @@ func (suite *EventSuite) TestEventConnected() {
 
 	chain := &BlockchainMock{}
 
+	finder := &PathfinderMock{}
+
 	peers := &PeersMock{}
 	peers.On("Active", mock.Anything)
 	peers.On("Inactive", mock.Anything)
@@ -70,7 +72,7 @@ func (suite *EventSuite) TestEventConnected() {
 	event := network.Connected{Address: address}
 
 	// act
-	handleEvent(suite.log, suite.wg, net, chain, peers, handlers, event)
+	handleEvent(suite.log, suite.wg, net, finder, chain, peers, handlers, event)
 
 	// assert
 	t := suite.T()
@@ -88,6 +90,8 @@ func (suite *EventSuite) TestEventDisconnected() {
 
 	chain := &BlockchainMock{}
 
+	finder := &PathfinderMock{}
+
 	peers := &PeersMock{}
 	peers.On("Active", mock.Anything)
 	peers.On("Inactive", mock.Anything)
@@ -103,7 +107,7 @@ func (suite *EventSuite) TestEventDisconnected() {
 	event := network.Disconnected{Address: address}
 
 	// act
-	handleEvent(suite.log, suite.wg, net, chain, peers, handlers, event)
+	handleEvent(suite.log, suite.wg, net, finder, chain, peers, handlers, event)
 
 	// assert
 	t := suite.T()
@@ -122,6 +126,8 @@ func (suite *EventSuite) TestEventReceived() {
 
 	chain := &BlockchainMock{}
 
+	finder := &PathfinderMock{}
+
 	peers := &PeersMock{}
 	peers.On("Active", mock.Anything)
 	peers.On("Inactive", mock.Anything)
@@ -137,7 +143,7 @@ func (suite *EventSuite) TestEventReceived() {
 	event := network.Received{Address: address, Message: message}
 
 	// act
-	handleEvent(suite.log, suite.wg, net, chain, peers, handlers, event)
+	handleEvent(suite.log, suite.wg, net, finder, chain, peers, handlers, event)
 
 	// assert
 	t := suite.T()
