@@ -53,3 +53,8 @@ type Request struct {
 type Batch struct {
 	Transactions []*types.Transaction
 }
+
+type internalTransactionRequest struct {
+	hashes []types.Hash
+	addr   string
+}

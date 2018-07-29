@@ -25,7 +25,7 @@ import (
 	"github.com/rs/zerolog"
 )
 
-func handleTransactionRequests(log zerolog.Logger, wg *sync.WaitGroup, net Network, requests map[types.Hash][]string, stop <-chan struct{}) {
+func handleTransactionRequests(log zerolog.Logger, wg *sync.WaitGroup, net Network, requestsStream <-chan interface{}, stop <-chan struct{}) {
 	defer wg.Done()
 
 	log = log.With().Str("component", "transaction requests").Logger()
@@ -39,7 +39,8 @@ func handleTransactionRequests(log zerolog.Logger, wg *sync.WaitGroup, net Netwo
 		case <-ticker.C:
 		}
 
-		outgoingRequests := transformToOutgoingRequests(requests)
+		requestMessages := getRequestMessages(requestsStream)
+		outgoingRequests := transformToOutgoingRequests(requestMessages)
 
 		for addr, hashes := range outgoingRequests {
 			request := &Request{Hashes: hashes}
@@ -50,6 +51,41 @@ func handleTransactionRequests(log zerolog.Logger, wg *sync.WaitGroup, net Netwo
 			}
 		}
 	}
+}
+
+func getRequestMessages(requestsStream <-chan interface{}) map[types.Hash][]string {
+	requestMessages := make(map[types.Hash][]string)
+	ticker := time.NewTicker(time.Second * 1)
+Loop:
+	for {
+		select {
+		case <-ticker.C:
+			//Collect request messages only for 1 second
+			break Loop
+		case msg, ok := <-requestsStream:
+			if !ok {
+				break Loop
+			}
+
+			switch requestMsg := msg.(type) {
+			case *internalTransactionRequest:
+				{
+					for _, hash := range requestMsg.hashes {
+						if hashAddr, ok := requestMessages[hash]; ok {
+							requestMessages[hash] = append(hashAddr, requestMsg.addr)
+							continue
+						}
+
+						requestMessages[hash] = []string{requestMsg.addr}
+					}
+				}
+			}
+		case <-time.After(100 * time.Millisecond):
+			//Only wait for transaction requests for 100 ms
+			break Loop
+		}
+	}
+	return requestMessages
 }
 
 // tranforms map of [tx hashes -> peers addr which have it] to the map of [peer addr -> tx hashes to request]
