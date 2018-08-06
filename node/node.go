@@ -46,16 +46,19 @@ type Codec interface {
 }
 
 type simpleNode struct {
-	log         zerolog.Logger
-	wg          *sync.WaitGroup
-	net         Network
-	chain       Blockchain
-	finder      pathfinder
-	peers       peerManager
-	pool        poolManager
-	events      eventManager
-	stream      chan interface{}
-	subscribers []subscriber
+	log                       zerolog.Logger
+	wg                        *sync.WaitGroup
+	net                       Network
+	chain                     Blockchain
+	finder                    pathfinder
+	peers                     peerManager
+	pool                      poolManager
+	events                    eventManager
+	stream                    chan interface{}
+	subscribers               []subscriber
+	requestedTransactions     map[types.Hash][]string
+	stop                      chan struct{}
+	transactionRequestsStream chan interface{}
 }
 
 type subscriber struct {
@@ -98,11 +101,20 @@ func New(log zerolog.Logger, net Network, chain Blockchain, codec Codec, input <
 	// create the subscriber channel
 	n.stream = make(chan interface{}, 128)
 
+	// create requested transactions dictionary to send this message evenly
+	n.transactionRequestsStream = make(chan interface{}, 128)
+
+	// create the channel for shutdown
+	n.stop = make(chan struct{})
+
 	// handle all input messages we get
 	n.Input(input)
 	n.events = &simpleEventManager{stream: n.stream}
 
 	n.Stream()
+
+	// send transaction requests
+	n.TransactionRequests()
 
 	return n
 }
@@ -156,8 +168,18 @@ func (n *simpleNode) Subscriber(sub subscriber) {
 	go handleSubscriber(n.log, n.wg, sub)
 }
 
+func (n *simpleNode) RequestTransactions(hashes []types.Hash, addr string) {
+	n.transactionRequestsStream <- &internalTransactionRequest{hashes: hashes, addr: addr}
+}
+
+func (n *simpleNode) TransactionRequests() {
+	n.wg.Add(1)
+	go handleTransactionRequests(n.log, n.wg, n.net, n.transactionRequestsStream, n.stop)
+}
+
 func (n *simpleNode) Stop() {
 	n.wg.Wait()
+	close(n.stop)
 	close(n.stream)
 	for _, sub := range n.subscribers {
 		close(sub.channel)

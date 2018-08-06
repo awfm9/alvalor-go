@@ -162,6 +162,10 @@ func (h *HandlersMock) Collect(path []types.Hash) {
 	h.Called(path)
 }
 
+func (h *HandlersMock) RequestTransactions(hashes []types.Hash, address string) {
+	h.Called(hashes, address)
+}
+
 type NetworkMock struct {
 	mock.Mock
 }
