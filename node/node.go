@@ -46,20 +46,6 @@ type Codec interface {
 }
 
 type simpleNode struct {
-<<<<<<< HEAD
-	log                   zerolog.Logger
-	wg                    *sync.WaitGroup
-	net                   Network
-	chain                 Blockchain
-	finder                pathfinder
-	peers                 peerManager
-	pool                  poolManager
-	events                eventManager
-	stream                chan interface{}
-	subscribers           []subscriber
-	requestedTransactions map[types.Hash][]string
-	stop                  chan struct{}
-=======
 	log                       zerolog.Logger
 	wg                        *sync.WaitGroup
 	net                       Network
@@ -70,9 +56,9 @@ type simpleNode struct {
 	events                    eventManager
 	stream                    chan interface{}
 	subscribers               []subscriber
-	transactionRequestsStream chan interface{}
+	requestedTransactions     map[types.Hash][]string
 	stop                      chan struct{}
->>>>>>> Updated handling of transation requests to use channel instead of shared dictionary.
+	transactionRequestsStream chan interface{}
 }
 
 type subscriber struct {

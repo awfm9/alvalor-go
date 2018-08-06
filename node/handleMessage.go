@@ -36,55 +36,16 @@ func handleMessage(log zerolog.Logger, wg *sync.WaitGroup, net Network, chain Bl
 	// process the message according to type
 	switch msg := message.(type) {
 
-	case *Status:
+	case *Sync:
 
-		log = log.With().Str("msg_type", "status").Uint64("distance", msg.Distance).Hex("hash", msg.Hash[:]).Logger()
+		log = log.With().Str("msg_type", "status").Uint64("distance", msg.Distance).Int("locators", len(msg.Locators)).Logger()
 
 		// if we are on a better path, we can ignore the status message
 		path, distance := finder.Longest()
-		if distance >= msg.Distance {
-			log.Debug().Msg("already beating distance")
+		if distance < msg.Distance {
+			log.Debug().Msg("behind peer, waiting for headers")
 			return
 		}
-
-		// check if the best header of our peer is already known
-		ok := finder.Knows(msg.Hash)
-		if ok {
-			log.Debug().Msg("already aware of path")
-			return
-		}
-
-		// collect headers from the top of our longest path backwards
-		// use increasing distance after first 8, finish with root (genesis)
-		var locators []types.Hash
-		index := 0
-		step := 1
-		for index < len(path)-1 {
-			locators = append(locators, path[index])
-			if len(locators) >= 8 {
-				step *= 2
-			}
-			index += step
-		}
-		locators = append(locators, path[len(path)-1])
-
-		log = log.With().Int("locators", len(locators)).Logger()
-
-		// create the synchronization request & send
-		sync := &Sync{
-			Locators: locators,
-		}
-		err := net.Send(address, sync)
-		if err != nil {
-			log.Error().Err(err).Msg("could not send synchronization")
-			return
-		}
-
-		log.Debug().Msg("processed status message")
-
-	case *Sync:
-
-		log = log.With().Str("msg_type", "sync").Logger()
 
 		// create index of all locator hashes
 		lookup := make(map[types.Hash]struct{})
@@ -92,35 +53,24 @@ func handleMessage(log zerolog.Logger, wg *sync.WaitGroup, net Network, chain Bl
 			lookup[locator] = struct{}{}
 		}
 
-		// collect all header hashes the other node doesn't have
-		var missing []types.Hash
-		path, _ := finder.Longest()
+		// collect all header hashes on our best path until we run into a locator
+		var hashes []types.Hash
 		for _, hash := range path {
 			_, ok := lookup[hash]
 			if ok {
-				continue
+				break
 			}
-			missing = append(missing, hash)
+			hashes = append(hashes, hash)
 		}
 
-		// return all headers from the found start to the top
-		var headers []*types.Header
-		for _, hash := range missing {
-			header, err := finder.Header(hash)
-			if err != nil {
-				log.Error().Err(err).Hex("hash", hash[:]).Msg("could not get header from finder")
-				return
-			}
-			headers = append(headers, header)
+		// send the partial path to our current discance to the other node
+		p := Path{
+			Hashes: hashes,
 		}
-
-		// send each header
-		for _, header := range headers {
-			err := net.Send(address, header)
-			if err != nil {
-				log.Error().Err(err).Hex("hash", header.Hash[:]).Msg("could not send header")
-				return
-			}
+		err := net.Send(address, p)
+		if err != nil {
+			log.Error().Err(err).Msg("could not send path")
+			return
 		}
 
 		log.Debug().Msg("processed synchronization message")
@@ -146,10 +96,7 @@ func handleMessage(log zerolog.Logger, wg *sync.WaitGroup, net Network, chain Bl
 			return
 		}
 
-		// collect all information needed to complete this path
-		// TODO: this logic will probably be changed
-		path, _ := finder.Longest()
-		handlers.Collect(path)
+		// handle the header
 
 		log.Debug().Msg("processed header message")
 

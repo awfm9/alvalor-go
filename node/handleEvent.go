@@ -23,6 +23,7 @@ import (
 	"github.com/rs/zerolog"
 
 	"github.com/alvalor/alvalor-go/network"
+	"github.com/alvalor/alvalor-go/types"
 )
 
 func handleEvent(log zerolog.Logger, wg *sync.WaitGroup, net Network, finder pathfinder, peers peerManager, handlers Handlers, event interface{}) {
@@ -39,12 +40,29 @@ func handleEvent(log zerolog.Logger, wg *sync.WaitGroup, net Network, finder pat
 
 		peers.Active(e.Address)
 
+		// get list of hashes from our best path and the current distance
 		path, distance := finder.Longest()
-		status := &Status{
-			Distance: distance,
-			Hash:     path[0],
+
+		// collect headers from the top of our longest path backwards
+		// use increasing distance after first 8, finish with root (genesis)
+		var locators []types.Hash
+		index := 0
+		step := 1
+		for index < len(path)-1 {
+			locators = append(locators, path[index])
+			if len(locators) >= 8 {
+				step *= 2
+			}
+			index += step
 		}
-		err := net.Send(e.Address, status)
+		locators = append(locators, path[len(path)-1])
+
+		// send our current distance and locator hashes
+		sync := &Sync{
+			Distance: distance,
+			Locators: locators,
+		}
+		err := net.Send(e.Address, sync)
 		if err != nil {
 			log.Error().Err(err).Msg("could not send status message")
 			return
