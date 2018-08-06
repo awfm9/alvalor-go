@@ -33,18 +33,8 @@ type Sync struct {
 	Locators []types.Hash
 }
 
-// Path message shares the partial path from a header hash to our best header.
+// Path message shares a partial path from to our best header.
 type Path struct {
-	Hashes []types.Hash
-}
-
-// RequestHeaders requests a number of headers for download.
-type RequestHeaders struct {
-	Hashes []types.Hash
-}
-
-// Headers shares a number of headers.
-type Headers struct {
 	Headers []*types.Header
 }
 

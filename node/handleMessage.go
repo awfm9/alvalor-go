@@ -94,9 +94,22 @@ func handleMessage(log zerolog.Logger, wg *sync.WaitGroup, net Network, chain Bl
 			hashes = append(hashes, hash)
 		}
 
+		// collect all the headers from our pathfinder
+		// go in reverse order so we start with the oldest header first
+		var headers []*types.Header
+		for i := len(hashes) - 1; i >= 0; i-- {
+			hash := hashes[i]
+			header, err := finder.Header(hash)
+			if err != nil {
+				log.Error().Err(err).Hex("hash", hash[:]).Msg("could not retrieve header")
+				return
+			}
+			headers = append(headers, header)
+		}
+
 		// send the partial path to our current distance to the other node
 		p := Path{
-			Hashes: hashes,
+			Headers: headers,
 		}
 		err := net.Send(address, p)
 		if err != nil {
@@ -108,7 +121,7 @@ func handleMessage(log zerolog.Logger, wg *sync.WaitGroup, net Network, chain Bl
 
 	case *Path:
 
-		log = log.With().Str("msg_type", "path").Int("hashes", len(msg.Hashes)).Logger()
+		log = log.With().Str("msg_type", "path").Int("num_headers", len(msg.Headers)).Logger()
 
 		log.Debug().Msg("processed path message")
 
