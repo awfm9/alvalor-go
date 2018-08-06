@@ -222,15 +222,9 @@ func handleMessage(log zerolog.Logger, wg *sync.WaitGroup, net Network, chain Bl
 		log = log.With().Int("num_req", len(req)).Logger()
 
 		// request the missing transactions from the peer
-		// TODO: better to add into a pending queue
-		request := &Request{Hashes: req}
-		err := net.Send(address, request)
-		if err != nil {
-			log.Error().Err(err).Msg("could not request transactions")
-			return
-		}
+		handlers.RequestTransactions(req, address)
 
-		log.Debug().Msg("processed inventory message")
+		log.Debug().Msg("processed inventory message, enqued request")
 
 	case *Request:
 
