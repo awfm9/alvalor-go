@@ -129,103 +129,11 @@ func handleMessage(log zerolog.Logger, wg *sync.WaitGroup, net Network, chain Bl
 
 		log.Debug().Msg("processed path message")
 
-	case *types.Transaction:
-
-		log = log.With().Str("msg_type", "transaction").Logger()
-
-		handlers.Entity(msg)
-
-		log.Debug().Msg("processed transaction message")
-
-	case *Mempool:
-
-		log = log.With().Str("msg_type", "mempool").Uint("num_cap", msg.Bloom.Cap()).Logger()
-
-		// find transactions in our memory pool the peer misses
-		var inv []types.Hash
-		hashes := pool.Hashes()
-		for _, hash := range hashes {
-			if msg.Bloom.Test(hash[:]) {
-				// TODO: figure out implications of false positives here
-				peers.Tag(address, hash)
-				continue
-			}
-			inv = append(inv, hash)
-		}
-
-		log = log.With().Int("num_inv", len(inv)).Logger()
-
-		// send the list of transaction IDs they do not have
-		inventory := &Inventory{Hashes: hashes}
-		err := net.Send(address, inventory)
-		if err != nil {
-			log.Error().Err(err).Msg("could not share inventory")
-			return
-		}
-
-		log.Debug().Msg("processed mempool message")
-
-	case *Inventory:
-
-		log = log.With().Int("num_inv", len(msg.Hashes)).Logger()
-
-		// create list of transactions that we are missing
-		var req []types.Hash
-		for _, hash := range msg.Hashes {
-			ok := pool.Known(hash)
-			if ok {
-				continue
-			}
-			req = append(req, hash)
-		}
-
-		log = log.With().Int("num_req", len(req)).Logger()
-
-		// request the missing transactions from the peer
-		handlers.RequestTransactions(req, address)
-
-		log.Debug().Msg("processed inventory message, enqued request")
-
-	case *Request:
-
-		log = log.With().Int("num_req", len(msg.Hashes)).Logger()
-
-		// collect each transaction that we have from the set of requested IDs
-		var transactions []*types.Transaction
-		for _, hash := range msg.Hashes {
-			tx, err := pool.Get(hash)
-			if err != nil {
-				// TODO: somehow punish peer for requesting something we didn't announce
-				log.Error().Err(err).Hex("hash", hash[:]).Msg("requested transaction unknown")
-				continue
-			}
-			transactions = append(transactions, tx)
-		}
-
-		log = log.With().Int("num_txs", len(transactions)).Logger()
-
-		// send the transactions in a batch
-		batch := &Batch{Transactions: transactions}
-		err := net.Send(address, batch)
-		if err != nil {
-			log.Error().Err(err).Msg("could not send transactions")
-			return
-		}
-
-		log.Debug().Msg("processed request message")
-
 	case *Batch:
 
-		log = log.With().Int("num_txs", len(msg.Transactions)).Logger()
+		log = log.With().Str("msg_type", "batch").Int("num_transactions", len(msg.Transactions)).Logger()
 
 		for _, tx := range msg.Transactions {
-
-			// TODO: validate transaction
-
-			// tag the peer for having seen the transaction
-			peers.Tag(address, tx.Hash)
-
-			// handle the transaction for our blockchain state & propagation
 			handlers.Entity(tx)
 		}
 
