@@ -28,8 +28,11 @@ import (
 func handleEntity(log zerolog.Logger, wg *sync.WaitGroup, net Network, finder pathfinder, peers peerManager, pool poolManager, entity Entity, events eventManager) {
 	defer wg.Done()
 
+	// precompute the entity hash
+	hash := entity.GetHash()
+
 	// configure logger
-	log = log.With().Str("component", "entity").Logger()
+	log = log.With().Str("component", "entity").Hex("hash", hash[:]).Logger()
 	log.Debug().Msg("entity routine started")
 	defer log.Debug().Msg("entity routine stopped")
 
@@ -37,7 +40,9 @@ func handleEntity(log zerolog.Logger, wg *sync.WaitGroup, net Network, finder pa
 
 	case *types.Header:
 
-		log = log.With().Str("entity_type", "header").Hex("hash", e.Hash[:]).Logger()
+		e.Hash = hash
+
+		log = log.With().Str("entity_type", "header").Logger()
 
 		ok := finder.Knows(e.Hash)
 		if ok {
@@ -57,7 +62,9 @@ func handleEntity(log zerolog.Logger, wg *sync.WaitGroup, net Network, finder pa
 
 	case *types.Transaction:
 
-		log = log.With().Str("entity_type", "transaction").Hex("hash", e.Hash[:]).Logger()
+		e.Hash = hash
+
+		log = log.With().Str("entity_type", "transaction").Logger()
 
 		// check if we already know the transaction; if so, ignore it
 		ok := pool.Known(e.Hash)
