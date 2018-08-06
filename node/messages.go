@@ -23,15 +23,29 @@ import (
 	"github.com/alvalor/alvalor-go/types"
 )
 
-// Sync message shares our current best distance and locator hashes for our best path.
-type Sync struct {
+// Status message shares our current best distance and locator hashes for our best path.
+type Status struct {
 	Distance uint64
+}
+
+// Sync message shares locator hashes from our current best path.
+type Sync struct {
 	Locators []types.Hash
 }
 
 // Path message shares the partial path from a header hash to our best header.
 type Path struct {
 	Hashes []types.Hash
+}
+
+// RequestHeaders requests a number of headers for download.
+type RequestHeaders struct {
+	Hashes []types.Hash
+}
+
+// Headers shares a number of headers.
+type Headers struct {
+	Headers []*types.Header
 }
 
 // Mempool is a message containing details about the memory pool.

@@ -36,16 +36,46 @@ func handleMessage(log zerolog.Logger, wg *sync.WaitGroup, net Network, chain Bl
 	// process the message according to type
 	switch msg := message.(type) {
 
-	case *Sync:
+	case *Status:
 
-		log = log.With().Str("msg_type", "status").Uint64("distance", msg.Distance).Int("locators", len(msg.Locators)).Logger()
+		log = log.With().Str("msg_type", "status").Uint64("distance", msg.Distance).Logger()
 
 		// if we are on a better path, we can ignore the status message
 		path, distance := finder.Longest()
-		if distance < msg.Distance {
-			log.Debug().Msg("behind peer, waiting for headers")
+		if distance >= msg.Distance {
+			log.Debug().Msg("not behind peer")
 			return
 		}
+
+		// collect headers from the top of our longest path backwards
+		// use increasing distance after first 8, finish with root (genesis)
+		var locators []types.Hash
+		index := 0
+		step := 1
+		for index < len(path)-1 {
+			locators = append(locators, path[index])
+			if len(locators) >= 8 {
+				step *= 2
+			}
+			index += step
+		}
+		locators = append(locators, path[len(path)-1])
+
+		// send synchronization message
+		sync := &Sync{
+			Locators: locators,
+		}
+		err := net.Send(address, sync)
+		if err != nil {
+			log.Error().Err(err).Msg("could not send sync message")
+			return
+		}
+
+		log.Debug().Msg("processed status message")
+
+	case *Sync:
+
+		log = log.With().Str("msg_type", "sync").Int("num_locators", len(msg.Locators)).Logger()
 
 		// create index of all locator hashes
 		lookup := make(map[types.Hash]struct{})
@@ -54,6 +84,7 @@ func handleMessage(log zerolog.Logger, wg *sync.WaitGroup, net Network, chain Bl
 		}
 
 		// collect all header hashes on our best path until we run into a locator
+		path, _ := finder.Longest()
 		var hashes []types.Hash
 		for _, hash := range path {
 			_, ok := lookup[hash]
@@ -63,7 +94,7 @@ func handleMessage(log zerolog.Logger, wg *sync.WaitGroup, net Network, chain Bl
 			hashes = append(hashes, hash)
 		}
 
-		// send the partial path to our current discance to the other node
+		// send the partial path to our current distance to the other node
 		p := Path{
 			Hashes: hashes,
 		}
@@ -73,7 +104,13 @@ func handleMessage(log zerolog.Logger, wg *sync.WaitGroup, net Network, chain Bl
 			return
 		}
 
-		log.Debug().Msg("processed synchronization message")
+		log.Debug().Msg("processed sync message")
+
+	case *Path:
+
+		log = log.With().Str("msg_type", "path").Int("hashes", len(msg.Hashes)).Logger()
+
+		log.Debug().Msg("processed path message")
 
 	case *types.Header:
 
