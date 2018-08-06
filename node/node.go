@@ -152,7 +152,7 @@ func (n *simpleNode) Message(address string, message interface{}) {
 
 func (n *simpleNode) Entity(entity Entity) {
 	n.wg.Add(1)
-	go handleEntity(n.log, n.wg, n.net, n.peers, n.pool, entity, n.events)
+	go handleEntity(n.log, n.wg, n.net, n.finder, n.peers, n.pool, entity, n.events)
 }
 
 func (n *simpleNode) Collect(path []types.Hash) {

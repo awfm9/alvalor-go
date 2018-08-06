@@ -121,34 +121,17 @@ func handleMessage(log zerolog.Logger, wg *sync.WaitGroup, net Network, chain Bl
 
 	case *Path:
 
+		for _, header := range msg.Headers {
+			header.Hash = header.GetHash()
+		}
+
 		log = log.With().Str("msg_type", "path").Int("num_headers", len(msg.Headers)).Logger()
 
+		for _, header := range msg.Headers {
+			handlers.Entity(header)
+		}
+
 		log.Debug().Msg("processed path message")
-
-	case *types.Header:
-
-		// make sure we precompute the hash and store it
-		msg.Hash = msg.GetHash()
-
-		log = log.With().Str("msg_type", "header").Hex("hash", msg.Hash[:]).Hex("parent", msg.Parent[:]).Logger()
-
-		// check if we already stored the header
-		ok := finder.Knows(msg.Hash)
-		if ok {
-			log.Debug().Msg("header already known")
-			return
-		}
-
-		// add the header to the path finder
-		err := finder.Add(msg)
-		if err != nil {
-			log.Error().Err(err).Msg("could not add header to pathfinder")
-			return
-		}
-
-		// handle the header
-
-		log.Debug().Msg("processed header message")
 
 	case *types.Transaction:
 

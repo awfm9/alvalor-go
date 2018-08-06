@@ -290,6 +290,11 @@ type EventManagerMock struct {
 	mock.Mock
 }
 
+func (em *EventManagerMock) Header(hash types.Hash) error {
+	args := em.Called(hash)
+	return args.Error(0)
+}
+
 func (em *EventManagerMock) Transaction(hash types.Hash) error {
 	args := em.Called(hash)
 	return args.Error(0)

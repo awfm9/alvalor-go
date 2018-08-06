@@ -60,6 +60,8 @@ func (suite *EntitySuite) TestEntityTransaction() {
 	net.On("Send", address2, mock.Anything).Return(nil)
 	net.On("Send", address3, mock.Anything).Return(nil)
 
+	finder := &PathfinderMock{}
+
 	peers := &PeersMock{}
 	peers.On("Tags", mock.Anything).Return([]string{address2})
 	peers.On("Actives").Return([]string{address1, address2, address3})
@@ -72,7 +74,7 @@ func (suite *EntitySuite) TestEntityTransaction() {
 	events.On("Transaction", entity.Hash).Return(nil)
 
 	// act
-	handleEntity(suite.log, suite.wg, net, peers, pool, entity, events)
+	handleEntity(suite.log, suite.wg, net, finder, peers, pool, entity, events)
 
 	// assert
 	t := suite.T()

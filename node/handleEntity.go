@@ -25,7 +25,7 @@ import (
 	"github.com/alvalor/alvalor-go/types"
 )
 
-func handleEntity(log zerolog.Logger, wg *sync.WaitGroup, net Network, peers peerManager, pool poolManager, entity Entity, events eventManager) {
+func handleEntity(log zerolog.Logger, wg *sync.WaitGroup, net Network, finder pathfinder, peers peerManager, pool poolManager, entity Entity, events eventManager) {
 	defer wg.Done()
 
 	// configure logger
@@ -34,6 +34,26 @@ func handleEntity(log zerolog.Logger, wg *sync.WaitGroup, net Network, peers pee
 	defer log.Debug().Msg("entity routine stopped")
 
 	switch e := entity.(type) {
+
+	case *types.Header:
+
+		log = log.With().Str("entity_type", "header").Hex("hash", e.Hash[:]).Logger()
+
+		ok := finder.Knows(e.Hash)
+		if ok {
+			log.Debug().Msg("header already known")
+			return
+		}
+
+		err := finder.Add(e)
+		if err != nil {
+			log.Error().Err(err).Msg("could not add header")
+			return
+		}
+
+		events.Header(e.Hash)
+
+		log.Debug().Msg("header processed")
 
 	case *types.Transaction:
 
@@ -49,7 +69,7 @@ func handleEntity(log zerolog.Logger, wg *sync.WaitGroup, net Network, peers pee
 		// add the transaction to the transaction pool
 		err := pool.Add(e)
 		if err != nil {
-			log.Error().Err(err).Msg("could not add transaction to pool")
+			log.Error().Err(err).Msg("could not add transaction")
 			return
 		}
 
@@ -79,5 +99,7 @@ func handleEntity(log zerolog.Logger, wg *sync.WaitGroup, net Network, peers pee
 				continue
 			}
 		}
+
+		log.Debug().Msg("transaction processed")
 	}
 }
