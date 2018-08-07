@@ -36,14 +36,15 @@ type Path struct {
 	Headers []*types.Header
 }
 
-// Request requests a number of transactions for the memory pool.
-type Request struct {
-	Hashes []types.Hash
+// Confirm is a request to get the transactions list for a given block.
+type Confirm struct {
+	Hash types.Hash
 }
 
-// Batch is a batch of transactions to send as one message.
-type Batch struct {
-	Transactions []*types.Transaction
+// Inventory is the list of transaction hashes of a given block.
+type Inventory struct {
+	Hash   types.Hash
+	Hashes []types.Hash
 }
 
 type internalTransactionRequest struct {

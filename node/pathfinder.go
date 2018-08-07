@@ -39,14 +39,15 @@ type simplePathfinder struct {
 }
 
 // newSimplePathfinder creates a new simple path manager using the given header as root.
-func newSimplePathfinder(root *types.Header) *simplePathfinder {
+func newSimplePathfinder(chain blockchain) *simplePathfinder {
+	// TODO: update to use the new blockchain interface
 	sp := &simplePathfinder{
-		root:     root.Hash,
+		// root:     root.Hash,
 		headers:  make(map[types.Hash]*types.Header),
 		children: make(map[types.Hash][]types.Hash),
 		pending:  make(map[types.Hash][]*types.Header),
 	}
-	sp.headers[root.Hash] = root
+	// sp.headers[root.Hash] = root
 	return sp
 }
 

@@ -42,9 +42,10 @@ func handleTransactionRequests(log zerolog.Logger, wg *sync.WaitGroup, net Netwo
 		requestMessages := getRequestMessages(requestsStream)
 		requestsQueue := newTransactionRequestsQueue(requestMessages)
 
-		for addr, hashes := range requestsQueue.getData() {
-			request := &Request{Hashes: hashes}
-			err := net.Send(addr, request)
+		for addr := range requestsQueue.getData() {
+			// TODO: rewrite
+			// request := &Request{Hashes: hashes}
+			err := net.Send(addr, nil)
 			if err != nil {
 				log.Error().Err(err).Msg("could not request transactions")
 				return

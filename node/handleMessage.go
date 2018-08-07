@@ -25,7 +25,7 @@ import (
 	"github.com/alvalor/alvalor-go/types"
 )
 
-func handleMessage(log zerolog.Logger, wg *sync.WaitGroup, net Network, chain Blockchain, finder pathfinder, peers peerManager, pool poolManager, handlers Handlers, address string, message interface{}) {
+func handleMessage(log zerolog.Logger, wg *sync.WaitGroup, net Network, finder pathfinder, chain blockchain, handlers Handlers, address string, message interface{}) {
 	defer wg.Done()
 
 	// configure logger
@@ -36,6 +36,12 @@ func handleMessage(log zerolog.Logger, wg *sync.WaitGroup, net Network, chain Bl
 	// process the message according to type
 	switch msg := message.(type) {
 
+	// The Status message is handshake sent by both peers on a new connection.
+	// It contains the distance of their best path and helps each peer to
+	// determine whether they should request missing headers from the other. If a
+	// peer is behind, it should send a Sync message with a number of locator
+	// hashes of block headers, to request the missing headers from the peer who
+	// is ahead.
 	case *Status:
 
 		log = log.With().Str("msg_type", "status").Uint64("distance", msg.Distance).Logger()
@@ -73,6 +79,11 @@ func handleMessage(log zerolog.Logger, wg *sync.WaitGroup, net Network, chain Bl
 
 		log.Debug().Msg("processed status message")
 
+	// The Sync message is a request for block headers. It contains a number
+	// of locator hashes that allows the receiving peer to find the last common
+	// block header with the requesting peer on the best path. The receiving peer
+	// should then send a Path message with the missing headers in chronological
+	// order, from oldest to newest.
 	case *Sync:
 
 		log = log.With().Str("msg_type", "sync").Int("num_locators", len(msg.Locators)).Logger()
@@ -119,6 +130,10 @@ func handleMessage(log zerolog.Logger, wg *sync.WaitGroup, net Network, chain Bl
 
 		log.Debug().Msg("processed sync message")
 
+	// The Path message is a reply to the Sync message, which contains the missing
+	// block headers on the best path, as identified by the locator hashes. They
+	// should be ordered by chronological order, from oldest to newest, in order
+	// to allow the most efficient construction of the best path.
 	case *Path:
 
 		log = log.With().Str("msg_type", "path").Int("num_headers", len(msg.Headers)).Logger()
@@ -129,13 +144,38 @@ func handleMessage(log zerolog.Logger, wg *sync.WaitGroup, net Network, chain Bl
 
 		log.Debug().Msg("processed path message")
 
-	case *Batch:
+	// The Confirm message is a request sent by peers who want to reconstruct a
+	// certain block by downloading its transactions. It contains the hash of
+	// the block, as well as a list of hashes of all the transactions. They can
+	// then be queued for parralellized downloading.
+	case *Confirm:
 
-		log = log.With().Str("msg_type", "batch").Int("num_transactions", len(msg.Transactions)).Logger()
+		log = log.With().Str("msg_type", "confirm").Hex("hash", msg.Hash[:]).Logger()
 
-		for _, tx := range msg.Transactions {
-			handlers.Entity(tx)
+		// retrieve the hashes from the block manager
+		var hashes []types.Hash
+		hashes, err := chain.Inventory(msg.Hash)
+		if err != nil {
+			log.Error().Err(err).Msg("could not retrieve block inventory")
+			return
 		}
+
+		// send the inventory message to the peer
+		inv := &Inventory{
+			Hash:   msg.Hash,
+			Hashes: hashes,
+		}
+		err = net.Send(address, inv)
+		if err != nil {
+			log.Error().Err(err).Msg("could not send inventory message")
+			return
+		}
+
+		log.Debug().Msg("processed confirm message")
+
+	case *Inventory:
+
+		log = log.With().Str("msg_type", "batch").Hex("hash", msg.Hash[:]).Int("num_hashes", len(msg.Hashes)).Logger()
 
 		log.Debug().Msg("processed batch message")
 	}
