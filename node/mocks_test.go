@@ -71,7 +71,7 @@ func (p *PoolMock) Add(tx *types.Transaction) error {
 	return args.Error(0)
 }
 
-func (p *PoolMock) Known(hash types.Hash) bool {
+func (p *PoolMock) Knows(hash types.Hash) bool {
 	args := p.Called(hash)
 	return args.Bool(0)
 }

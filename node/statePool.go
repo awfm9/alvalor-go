@@ -38,7 +38,7 @@ type poolManager interface {
 	Get(hash types.Hash) (*types.Transaction, error)
 	Remove(hash types.Hash) error
 	Count() uint
-	Known(hash types.Hash) bool
+	Knows(hash types.Hash) bool
 	Hashes() []types.Hash
 }
 
@@ -121,7 +121,7 @@ func (p *simplePool) Count() uint {
 	return uint(len(p.hashes))
 }
 
-func (p *simplePool) Known(hash types.Hash) bool {
+func (p *simplePool) Knows(hash types.Hash) bool {
 	p.Lock()
 	defer p.Unlock()
 
