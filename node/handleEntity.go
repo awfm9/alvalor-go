@@ -25,7 +25,7 @@ import (
 	"github.com/alvalor/alvalor-go/types"
 )
 
-func handleEntity(log zerolog.Logger, wg *sync.WaitGroup, net Network, finder pathfinder, peers peerManager, pool poolManager, entity Entity, events eventManager) {
+func handleEntity(log zerolog.Logger, wg *sync.WaitGroup, net Network, finder pathfinder, peers peerManager, pool poolManager, download downloader, entity Entity, events eventManager, handlers Handlers) {
 	defer wg.Done()
 
 	// precompute the entity hash
@@ -51,6 +51,9 @@ func handleEntity(log zerolog.Logger, wg *sync.WaitGroup, net Network, finder pa
 			return
 		}
 
+		// check the validity of the header
+		// TODO
+
 		// otherwise, we try to add it to our header manager
 		err := finder.Add(e)
 		if err != nil {
@@ -62,7 +65,16 @@ func handleEntity(log zerolog.Logger, wg *sync.WaitGroup, net Network, finder pa
 		events.Header(e.Hash)
 
 		// finally, we should propagate it to peers who don't know it
-		// TODO
+		peers := peers.Tags(e.Hash)
+		err = net.Broadcast(e, peers...)
+		if err != nil {
+			log.Error().Err(err).Msg("could not propagate entity")
+			return
+		}
+
+		// set the new longest path with the downloader
+		path, _ := finder.Longest()
+		download.Follow(path)
 
 		log.Debug().Msg("header processed")
 
@@ -79,6 +91,9 @@ func handleEntity(log zerolog.Logger, wg *sync.WaitGroup, net Network, finder pa
 			return
 		}
 
+		// check the validity of the transaction
+		// TODO
+
 		// add the transaction to the transaction pool
 		err := pool.Add(e)
 		if err != nil {
@@ -89,28 +104,11 @@ func handleEntity(log zerolog.Logger, wg *sync.WaitGroup, net Network, finder pa
 		events.Transaction(e.Hash)
 
 		// create lookup to know who to exclude from broadcast
-		tags := peers.Tags(e.Hash)
-		lookup := make(map[string]struct{}, len(tags))
-		for _, address := range tags {
-			lookup[address] = struct{}{}
-		}
-
-		// for each active peer
-		actives := peers.Actives()
-		for _, address := range actives {
-
-			// skip if he already knows the transaction
-			_, ok := lookup[address]
-			if ok {
-				continue
-			}
-
-			// otherwise, send the transaction
-			err := net.Send(address, entity)
-			if err != nil {
-				log.Error().Err(err).Str("address", address).Msg("could not propagate entity")
-				continue
-			}
+		peers := peers.Tags(e.Hash)
+		err = net.Broadcast(e, peers...)
+		if err != nil {
+			log.Error().Err(err).Msg("could not propagate entity")
+			return
 		}
 
 		log.Debug().Msg("transaction processed")
