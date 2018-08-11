@@ -25,7 +25,7 @@ import (
 	"github.com/alvalor/alvalor-go/types"
 )
 
-func handleMessage(log zerolog.Logger, wg *sync.WaitGroup, net Network, chain Blockchain, finder pathfinder, peers peerManager, pool poolManager, handlers Handlers, address string, message interface{}) {
+func handleMessage(log zerolog.Logger, wg *sync.WaitGroup, net Network, finder pathfinder, chain blockchain, handlers Handlers, address string, message interface{}) {
 	defer wg.Done()
 
 	// configure logger
@@ -36,16 +36,57 @@ func handleMessage(log zerolog.Logger, wg *sync.WaitGroup, net Network, chain Bl
 	// process the message according to type
 	switch msg := message.(type) {
 
-	case *Sync:
+	// The Status message is handshake sent by both peers on a new connection.
+	// It contains the distance of their best path and helps each peer to
+	// determine whether they should request missing headers from the other. If a
+	// peer is behind, it should send a Sync message with a number of locator
+	// hashes of block headers, to request the missing headers from the peer who
+	// is ahead.
+	case *Status:
 
-		log = log.With().Str("msg_type", "status").Uint64("distance", msg.Distance).Int("locators", len(msg.Locators)).Logger()
+		log = log.With().Str("msg_type", "status").Uint64("distance", msg.Distance).Logger()
 
 		// if we are on a better path, we can ignore the status message
 		path, distance := finder.Longest()
-		if distance < msg.Distance {
-			log.Debug().Msg("behind peer, waiting for headers")
+		if distance >= msg.Distance {
+			log.Debug().Msg("not behind peer")
 			return
 		}
+
+		// collect headers from the top of our longest path backwards
+		// use increasing distance after first 8, finish with root (genesis)
+		var locators []types.Hash
+		index := 0
+		step := 1
+		for index < len(path)-1 {
+			locators = append(locators, path[index])
+			if len(locators) >= 8 {
+				step *= 2
+			}
+			index += step
+		}
+		locators = append(locators, path[len(path)-1])
+
+		// send synchronization message
+		sync := &Sync{
+			Locators: locators,
+		}
+		err := net.Send(address, sync)
+		if err != nil {
+			log.Error().Err(err).Msg("could not send sync message")
+			return
+		}
+
+		log.Debug().Msg("processed status message")
+
+	// The Sync message is a request for block headers. It contains a number
+	// of locator hashes that allows the receiving peer to find the last common
+	// block header with the requesting peer on the best path. The receiving peer
+	// should then send a Path message with the missing headers in chronological
+	// order, from oldest to newest.
+	case *Sync:
+
+		log = log.With().Str("msg_type", "sync").Int("num_locators", len(msg.Locators)).Logger()
 
 		// create index of all locator hashes
 		lookup := make(map[types.Hash]struct{})
@@ -54,6 +95,7 @@ func handleMessage(log zerolog.Logger, wg *sync.WaitGroup, net Network, chain Bl
 		}
 
 		// collect all header hashes on our best path until we run into a locator
+		path, _ := finder.Longest()
 		var hashes []types.Hash
 		for _, hash := range path {
 			_, ok := lookup[hash]
@@ -63,9 +105,22 @@ func handleMessage(log zerolog.Logger, wg *sync.WaitGroup, net Network, chain Bl
 			hashes = append(hashes, hash)
 		}
 
-		// send the partial path to our current discance to the other node
+		// collect all the headers from our pathfinder
+		// go in reverse order so we start with the oldest header first
+		var headers []*types.Header
+		for i := len(hashes) - 1; i >= 0; i-- {
+			hash := hashes[i]
+			header, err := finder.Header(hash)
+			if err != nil {
+				log.Error().Err(err).Hex("hash", hash[:]).Msg("could not retrieve header")
+				return
+			}
+			headers = append(headers, header)
+		}
+
+		// send the partial path to our current distance to the other node
 		p := Path{
-			Hashes: hashes,
+			Headers: headers,
 		}
 		err := net.Send(address, p)
 		if err != nil {
@@ -73,148 +128,54 @@ func handleMessage(log zerolog.Logger, wg *sync.WaitGroup, net Network, chain Bl
 			return
 		}
 
-		log.Debug().Msg("processed synchronization message")
+		log.Debug().Msg("processed sync message")
 
-	case *types.Header:
+	// The Path message is a reply to the Sync message, which contains the missing
+	// block headers on the best path, as identified by the locator hashes. They
+	// should be ordered by chronological order, from oldest to newest, in order
+	// to allow the most efficient construction of the best path.
+	case *Path:
 
-		// make sure we precompute the hash and store it
-		msg.Hash = msg.GetHash()
+		log = log.With().Str("msg_type", "path").Int("num_headers", len(msg.Headers)).Logger()
 
-		log = log.With().Str("msg_type", "header").Hex("hash", msg.Hash[:]).Hex("parent", msg.Parent[:]).Logger()
-
-		// check if we already stored the header
-		ok := finder.Knows(msg.Hash)
-		if ok {
-			log.Debug().Msg("header already known")
-			return
+		for _, header := range msg.Headers {
+			handlers.Entity(header)
 		}
 
-		// add the header to the path finder
-		err := finder.Add(msg)
+		log.Debug().Msg("processed path message")
+
+	// The Confirm message is a request sent by peers who want to reconstruct a
+	// certain block by downloading its transactions. It contains the hash of
+	// the block, as well as a list of hashes of all the transactions. They can
+	// then be queued for parralellized downloading.
+	case *Confirm:
+
+		log = log.With().Str("msg_type", "confirm").Hex("hash", msg.Hash[:]).Logger()
+
+		// retrieve the hashes from the block manager
+		var hashes []types.Hash
+		hashes, err := chain.Inventory(msg.Hash)
 		if err != nil {
-			log.Error().Err(err).Msg("could not add header to pathfinder")
+			log.Error().Err(err).Msg("could not retrieve block inventory")
 			return
 		}
 
-		// handle the header
-
-		log.Debug().Msg("processed header message")
-
-	case *types.Transaction:
-
-		// initialize the transaction hash
-		msg.Hash = msg.GetHash()
-
-		log = log.With().Str("msg_type", "transaction").Hex("hash", msg.Hash[:]).Logger()
-
-		// check if we already know the transaction
-		_, err := chain.TransactionByHash(msg.Hash)
-		if err == nil {
-			log.Debug().Msg("transaction already known")
-			return
+		// send the inventory message to the peer
+		inv := &Inventory{
+			Hash:   msg.Hash,
+			Hashes: hashes,
 		}
-
-		// TODO: validate the transaction
-
-		// tag the peer for having seen the transaction
-		peers.Tag(address, msg.Hash)
-
-		// handle the transaction for our blockchain state & propagation
-		handlers.Entity(msg)
-
-		log.Debug().Msg("processed transaction message")
-
-	case *Mempool:
-
-		log = log.With().Str("msg_type", "mempool").Uint("num_cap", msg.Bloom.Cap()).Logger()
-
-		// find transactions in our memory pool the peer misses
-		var inv []types.Hash
-		hashes := pool.Hashes()
-		for _, hash := range hashes {
-			if msg.Bloom.Test(hash[:]) {
-				// TODO: figure out implications of false positives here
-				peers.Tag(address, hash)
-				continue
-			}
-			inv = append(inv, hash)
-		}
-
-		log = log.With().Int("num_inv", len(inv)).Logger()
-
-		// send the list of transaction IDs they do not have
-		inventory := &Inventory{Hashes: hashes}
-		err := net.Send(address, inventory)
+		err = net.Send(address, inv)
 		if err != nil {
-			log.Error().Err(err).Msg("could not share inventory")
+			log.Error().Err(err).Msg("could not send inventory message")
 			return
 		}
 
-		log.Debug().Msg("processed mempool message")
+		log.Debug().Msg("processed confirm message")
 
 	case *Inventory:
 
-		log = log.With().Int("num_inv", len(msg.Hashes)).Logger()
-
-		// create list of transactions that we are missing
-		var req []types.Hash
-		for _, hash := range msg.Hashes {
-			ok := pool.Known(hash)
-			if ok {
-				continue
-			}
-			req = append(req, hash)
-		}
-
-		log = log.With().Int("num_req", len(req)).Logger()
-
-		// request the missing transactions from the peer
-		handlers.RequestTransactions(req, address)
-
-		log.Debug().Msg("processed inventory message, enqued request")
-
-	case *Request:
-
-		log = log.With().Int("num_req", len(msg.Hashes)).Logger()
-
-		// collect each transaction that we have from the set of requested IDs
-		var transactions []*types.Transaction
-		for _, hash := range msg.Hashes {
-			tx, err := pool.Get(hash)
-			if err != nil {
-				// TODO: somehow punish peer for requesting something we didn't announce
-				log.Error().Err(err).Hex("hash", hash[:]).Msg("requested transaction unknown")
-				continue
-			}
-			transactions = append(transactions, tx)
-		}
-
-		log = log.With().Int("num_txs", len(transactions)).Logger()
-
-		// send the transactions in a batch
-		batch := &Batch{Transactions: transactions}
-		err := net.Send(address, batch)
-		if err != nil {
-			log.Error().Err(err).Msg("could not send transactions")
-			return
-		}
-
-		log.Debug().Msg("processed request message")
-
-	case *Batch:
-
-		log = log.With().Int("num_txs", len(msg.Transactions)).Logger()
-
-		for _, tx := range msg.Transactions {
-
-			// TODO: validate transaction
-
-			// tag the peer for having seen the transaction
-			peers.Tag(address, tx.Hash)
-
-			// handle the transaction for our blockchain state & propagation
-			handlers.Entity(tx)
-		}
+		log = log.With().Str("msg_type", "batch").Hex("hash", msg.Hash[:]).Int("num_hashes", len(msg.Hashes)).Logger()
 
 		log.Debug().Msg("processed batch message")
 	}

@@ -71,7 +71,7 @@ func (p *PoolMock) Add(tx *types.Transaction) error {
 	return args.Error(0)
 }
 
-func (p *PoolMock) Known(hash types.Hash) bool {
+func (p *PoolMock) Knows(hash types.Hash) bool {
 	args := p.Called(hash)
 	return args.Bool(0)
 }
@@ -288,6 +288,11 @@ func (p *PathfinderMock) Longest() ([]types.Hash, uint64) {
 
 type EventManagerMock struct {
 	mock.Mock
+}
+
+func (em *EventManagerMock) Header(hash types.Hash) error {
+	args := em.Called(hash)
+	return args.Error(0)
 }
 
 func (em *EventManagerMock) Transaction(hash types.Hash) error {

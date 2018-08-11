@@ -128,7 +128,7 @@ func TestPoolRemove(t *testing.T) {
 	assert.NotNil(t, err)
 }
 
-func TestPoolKnown(t *testing.T) {
+func TestPoolKnows(t *testing.T) {
 
 	id1 := types.Hash{1, 2, 3, 4}
 	id2 := types.Hash{5, 6, 7, 8}
@@ -138,9 +138,9 @@ func TestPoolKnown(t *testing.T) {
 	}
 	pool.hashes[id1] = struct{}{}
 
-	ok := pool.Known(id1)
+	ok := pool.Knows(id1)
 	assert.True(t, ok)
 
-	ok = pool.Known(id2)
+	ok = pool.Knows(id2)
 	assert.False(t, ok)
 }

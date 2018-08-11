@@ -18,7 +18,6 @@
 package node
 
 import (
-	"errors"
 	"io/ioutil"
 	"sync"
 	"testing"
@@ -56,25 +55,17 @@ func (suite *MessageSuite) TestMessageTransaction() {
 
 	net := &NetworkMock{}
 
-	chain := &BlockchainMock{}
-	chain.On("TransactionByHash", msg.Hash).Return(nil, errors.New("not found"))
-
 	finder := &PathfinderMock{}
-
-	peers := &PeersMock{}
-	peers.On("Tag", mock.Anything, mock.Anything)
-
-	pool := &PoolMock{}
 
 	handlers := &HandlersMock{}
 	handlers.On("Entity", mock.Anything)
 
 	// act
-	handleMessage(suite.log, suite.wg, net, chain, finder, peers, pool, handlers, address, msg)
+	// TODO: introduce new blockchain interface
+	handleMessage(suite.log, suite.wg, net, finder, nil, handlers, address, msg)
 
 	// assert
 	t := suite.T()
 
-	peers.AssertCalled(t, "Tag", address, msg.Hash)
 	handlers.AssertCalled(t, "Entity", msg)
 }

@@ -21,7 +21,12 @@ import (
 	"github.com/alvalor/alvalor-go/types"
 )
 
-//Transaction event
+// Header event
+type Header struct {
+	hash types.Hash
+}
+
+// Transaction event
 type Transaction struct {
 	hash types.Hash
 }

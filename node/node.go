@@ -49,7 +49,7 @@ type simpleNode struct {
 	log                       zerolog.Logger
 	wg                        *sync.WaitGroup
 	net                       Network
-	chain                     Blockchain
+	chain                     blockchain
 	finder                    pathfinder
 	peers                     peerManager
 	pool                      poolManager
@@ -68,7 +68,7 @@ type subscriber struct {
 }
 
 // New creates a new node to manage the Alvalor blockchain.
-func New(log zerolog.Logger, net Network, chain Blockchain, codec Codec, input <-chan interface{}) Node {
+func New(log zerolog.Logger, net Network, chain blockchain, codec Codec, input <-chan interface{}) Node {
 
 	// initialize the node
 	n := &simpleNode{}
@@ -86,8 +86,7 @@ func New(log zerolog.Logger, net Network, chain Blockchain, codec Codec, input <
 	n.chain = chain
 
 	// initialize header path finder
-	root := chain.Header()
-	n.finder = newSimplePathfinder(root)
+	n.finder = newSimplePathfinder(chain)
 
 	// initialize peer state manager
 	peers := newPeers()
@@ -147,12 +146,13 @@ func (n *simpleNode) Event(event interface{}) {
 
 func (n *simpleNode) Message(address string, message interface{}) {
 	n.wg.Add(1)
-	go handleMessage(n.log, n.wg, n.net, n.chain, n.finder, n.peers, n.pool, n, address, message)
+	// TODO: introduce new blockchain interface
+	go handleMessage(n.log, n.wg, n.net, n.finder, nil, n, address, message)
 }
 
 func (n *simpleNode) Entity(entity Entity) {
 	n.wg.Add(1)
-	go handleEntity(n.log, n.wg, n.net, n.peers, n.pool, entity, n.events)
+	go handleEntity(n.log, n.wg, n.net, n.finder, n.peers, n.pool, entity, n.events)
 }
 
 func (n *simpleNode) Collect(path []types.Hash) {
@@ -173,8 +173,8 @@ func (n *simpleNode) RequestTransactions(hashes []types.Hash, addr string) {
 }
 
 func (n *simpleNode) TransactionRequests() {
-	n.wg.Add(1)
-	go handleTransactionRequests(n.log, n.wg, n.net, n.transactionRequestsStream, n.stop)
+	// n.wg.Add(1)
+	// go handleTransactionRequests(n.log, n.wg, n.net, n.transactionRequestsStream, n.stop)
 }
 
 func (n *simpleNode) Stop() {

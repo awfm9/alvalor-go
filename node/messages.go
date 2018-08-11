@@ -18,40 +18,33 @@
 package node
 
 import (
-	"github.com/willf/bloom"
-
 	"github.com/alvalor/alvalor-go/types"
 )
 
-// Sync message shares our current best distance and locator hashes for our best path.
-type Sync struct {
+// Status message shares our current best distance and locator hashes for our best path.
+type Status struct {
 	Distance uint64
+}
+
+// Sync message shares locator hashes from our current best path.
+type Sync struct {
 	Locators []types.Hash
 }
 
-// Path message shares the partial path from a header hash to our best header.
+// Path message shares a partial path from to our best header.
 type Path struct {
-	Hashes []types.Hash
+	Headers []*types.Header
 }
 
-// Mempool is a message containing details about the memory pool.
-type Mempool struct {
-	Bloom *bloom.BloomFilter
+// Confirm is a request to get the transactions list for a given block.
+type Confirm struct {
+	Hash types.Hash
 }
 
-// Inventory is a message containing a list of transaction hashes.
+// Inventory is the list of transaction hashes of a given block.
 type Inventory struct {
+	Hash   types.Hash
 	Hashes []types.Hash
-}
-
-// Request requests a number of transactions for the memory pool.
-type Request struct {
-	Hashes []types.Hash
-}
-
-// Batch is a batch of transactions to send as one message.
-type Batch struct {
-	Transactions []*types.Transaction
 }
 
 type internalTransactionRequest struct {

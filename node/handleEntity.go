@@ -25,22 +25,55 @@ import (
 	"github.com/alvalor/alvalor-go/types"
 )
 
-func handleEntity(log zerolog.Logger, wg *sync.WaitGroup, net Network, peers peerManager, pool poolManager, entity Entity, events eventManager) {
+func handleEntity(log zerolog.Logger, wg *sync.WaitGroup, net Network, finder pathfinder, peers peerManager, pool poolManager, entity Entity, events eventManager) {
 	defer wg.Done()
 
+	// precompute the entity hash
+	hash := entity.GetHash()
+
 	// configure logger
-	log = log.With().Str("component", "entity").Logger()
+	log = log.With().Str("component", "entity").Hex("hash", hash[:]).Logger()
 	log.Debug().Msg("entity routine started")
 	defer log.Debug().Msg("entity routine stopped")
 
 	switch e := entity.(type) {
 
+	case *types.Header:
+
+		e.Hash = hash
+
+		log = log.With().Str("entity_type", "header").Logger()
+
+		// if we already know the header, we ignore it
+		ok := finder.Knows(e.Hash)
+		if ok {
+			log.Debug().Msg("header already known")
+			return
+		}
+
+		// otherwise, we try to add it to our header manager
+		err := finder.Add(e)
+		if err != nil {
+			log.Error().Err(err).Msg("could not add header")
+			return
+		}
+
+		// we let subscribers know that we received a new header
+		events.Header(e.Hash)
+
+		// finally, we should propagate it to peers who don't know it
+		// TODO
+
+		log.Debug().Msg("header processed")
+
 	case *types.Transaction:
 
-		log = log.With().Str("entity_type", "transaction").Hex("hash", e.Hash[:]).Logger()
+		e.Hash = hash
+
+		log = log.With().Str("entity_type", "transaction").Logger()
 
 		// check if we already know the transaction; if so, ignore it
-		ok := pool.Known(e.Hash)
+		ok := pool.Knows(e.Hash)
 		if ok {
 			log.Debug().Msg("transaction already known")
 			return
@@ -49,7 +82,7 @@ func handleEntity(log zerolog.Logger, wg *sync.WaitGroup, net Network, peers pee
 		// add the transaction to the transaction pool
 		err := pool.Add(e)
 		if err != nil {
-			log.Error().Err(err).Msg("could not add transaction to pool")
+			log.Error().Err(err).Msg("could not add transaction")
 			return
 		}
 
@@ -79,5 +112,7 @@ func handleEntity(log zerolog.Logger, wg *sync.WaitGroup, net Network, peers pee
 				continue
 			}
 		}
+
+		log.Debug().Msg("transaction processed")
 	}
 }

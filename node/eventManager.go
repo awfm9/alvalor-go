@@ -25,11 +25,21 @@ import (
 )
 
 type eventManager interface {
+	Header(hash types.Hash) error
 	Transaction(hash types.Hash) error
 }
 
 type simpleEventManager struct {
 	stream chan<- interface{}
+}
+
+func (mgr *simpleEventManager) Header(hash types.Hash) error {
+	select {
+	case mgr.stream <- Header{hash: hash}:
+	case <-time.After(10 * time.Millisecond):
+		return errors.New("subscriber stalling")
+	}
+	return nil
 }
 
 func (mgr *simpleEventManager) Transaction(hash types.Hash) error {

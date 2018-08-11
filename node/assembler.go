@@ -19,20 +19,8 @@ package node
 
 import "github.com/alvalor/alvalor-go/types"
 
-type blockchain interface {
-	Inventory(hash types.Hash) ([]types.Hash, error)
+type assembler interface {
+	AddHeader(header *types.Header)
+	AddMapping(hash types.Hash, hashes []types.Hash)
+	AddTransaction(tx *types.Transaction)
 }
-
-// // Blockchain represents an interface to access all blockchain related data.
-// type Blockchain interface {
-// 	Height() uint32
-// 	Header() *types.Header
-// 	AddBlock(block *types.Block) error
-// 	TransactionByHash(hash types.Hash) (*types.Transaction, error)
-// 	HeightByHash(hash types.Hash) (uint32, error)
-// 	HashByHeight(height uint32) (types.Hash, error)
-// 	HeaderByHash(hash types.Hash) (*types.Header, error)
-// 	HeaderByHeight(height uint32) (*types.Header, error)
-// 	BlockByHash(hash types.Hash) (*types.Block, error)
-// 	BlockByHeight(height uint32) (*types.Block, error)
-// }
