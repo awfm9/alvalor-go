@@ -59,6 +59,7 @@ type simpleNode struct {
 	requestedTransactions     map[types.Hash][]string
 	stop                      chan struct{}
 	transactionRequestsStream chan interface{}
+	downloader                downloader
 }
 
 type subscriber struct {
@@ -96,6 +97,8 @@ func New(log zerolog.Logger, net Network, chain blockchain, codec Codec, input <
 	store := trie.NewBin()
 	pool := newPool(codec, store)
 	n.pool = pool
+
+	n.downloader = newSimpleDownloader()
 
 	// create the subscriber channel
 	n.stream = make(chan interface{}, 128)
@@ -152,7 +155,7 @@ func (n *simpleNode) Message(address string, message interface{}) {
 
 func (n *simpleNode) Entity(entity Entity) {
 	n.wg.Add(1)
-	go handleEntity(n.log, n.wg, n.net, n.finder, n.peers, n.pool, entity, n.events, n)
+	go handleEntity(n.log, n.wg, n.net, n.finder, n.peers, n.pool, n.downloader, entity, n.events, n)
 }
 
 func (n *simpleNode) Stream() {
