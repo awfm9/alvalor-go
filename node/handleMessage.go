@@ -165,6 +165,7 @@ func handleMessage(log zerolog.Logger, wg *sync.WaitGroup, net Network, finder p
 			Hash:   msg.Hash,
 			Hashes: hashes,
 		}
+		//send inventory request in parallel to all peers that we know have it, load distributed evenly
 		err = net.Send(address, inv)
 		if err != nil {
 			log.Error().Err(err).Msg("could not send inventory message")

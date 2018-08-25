@@ -47,7 +47,7 @@ type Inventory struct {
 	Hashes []types.Hash
 }
 
-type internalTransactionRequest struct {
-	hashes []types.Hash
-	addr   string
+type blockRequest struct {
+	hash types.Hash
+	addr string
 }

@@ -20,24 +20,26 @@ package node
 import "github.com/alvalor/alvalor-go/types"
 
 type downloader interface {
-	Follow(hash []types.Hash)
-	Complete(hash types.Hash)
+	Follow(hash []types.Hash, addr string)
+	Complete(hash types.Hash, addr string)
 	Abort(hash types.Hash)
 }
 
 type simpleDownloader struct {
-	current map[types.Hash]struct{}
-	running map[types.Hash]<-chan struct{}
+	current  map[types.Hash]struct{}
+	running  map[types.Hash]<-chan struct{}
+	handlers Handlers
 }
 
-func newSimpleDownloader() *simpleDownloader {
+func newSimpleDownloader(handlers Handlers) *simpleDownloader {
 	return &simpleDownloader{
-		running: make(map[types.Hash]<-chan struct{}),
+		running:  make(map[types.Hash]<-chan struct{}),
+		handlers: handlers,
 	}
 }
 
 // Follow sets a new path through the header tree to follow and complete.
-func (sd *simpleDownloader) Follow(path []types.Hash) {
+func (sd *simpleDownloader) Follow(path []types.Hash, addr string) {
 
 	// for each new hash on the path, we start the download of transactions
 	lookup := make(map[types.Hash]struct{})
@@ -48,7 +50,7 @@ func (sd *simpleDownloader) Follow(path []types.Hash) {
 			continue
 		}
 		sd.current[hash] = struct{}{}
-		sd.Complete(hash)
+		sd.Complete(hash, addr)
 	}
 
 	// for each hash on the old path that's not on the new one, we cancel it
@@ -63,7 +65,8 @@ func (sd *simpleDownloader) Follow(path []types.Hash) {
 }
 
 // Complete tries to download all the transactions for a header.
-func (sd *simpleDownloader) Complete(hash types.Hash) {
+func (sd *simpleDownloader) Complete(hash types.Hash, addr string) {
+	sd.handlers.Block(addr, hash)
 }
 
 // Abort cancels all the transaction downloads for a header.

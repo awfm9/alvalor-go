@@ -30,4 +30,5 @@ type Handlers interface {
 	Event(event interface{})
 	Message(address string, message interface{})
 	Entity(entity Entity)
+	Block(address string, hash types.Hash)
 }

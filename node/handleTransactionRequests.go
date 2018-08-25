@@ -69,7 +69,7 @@ Loop:
 			}
 
 			switch requestMsg := msg.(type) {
-			case *internalTransactionRequest:
+			case *blockRequest:
 				{
 					for _, hash := range requestMsg.hashes {
 						if hashAddr, ok := requestMessages[hash]; ok {
