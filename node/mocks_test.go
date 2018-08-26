@@ -154,8 +154,16 @@ func (h *HandlersMock) Message(address string, message interface{}) {
 	h.Called(address, message)
 }
 
-func (h *HandlersMock) Entity(entity Entity) {
-	h.Called(entity)
+func (h *HandlersMock) Header(address string, header *types.Header) {
+	h.Called(address, header)
+}
+
+func (h *HandlersMock) Transaction(transaction *types.Transaction) {
+	h.Called(transaction)
+}
+
+func (h *HandlersMock) DownloadBlock(address string, hash types.Hash) {
+	h.Called(address, hash)
 }
 
 func (h *HandlersMock) Collect(path []types.Hash) {

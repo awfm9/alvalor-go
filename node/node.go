@@ -155,7 +155,7 @@ func (n *simpleNode) Message(address string, message interface{}) {
 
 func (n *simpleNode) Transaction(transaction *types.Transaction) {
 	n.wg.Add(1)
-	go handleTransaction(n.log, n.wg, n.net, n.finder, n.peers, n.pool, n.downloader, transaction, n.events, n)
+	go handleTransaction(n.log, n.wg, n.net, n.finder, n.peers, n.pool, transaction, n.events, n)
 }
 
 func (n *simpleNode) Header(address string, header *types.Header) {

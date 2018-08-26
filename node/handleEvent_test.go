@@ -69,6 +69,8 @@ func (suite *EventSuite) TestEventConnected() {
 	handlers := &HandlersMock{}
 	handlers.On("Message", mock.Anything)
 
+	handlers.On("DownloadBlock", mock.Anything)
+
 	event := network.Connected{Address: address}
 
 	// act

@@ -30,6 +30,6 @@ type Handlers interface {
 	Event(event interface{})
 	Message(address string, message interface{})
 	Transaction(transaction *types.Transaction)
-	Header(address string, transaction *types.Header)
+	Header(address string, header *types.Header)
 	DownloadBlock(address string, hash types.Hash)
 }
