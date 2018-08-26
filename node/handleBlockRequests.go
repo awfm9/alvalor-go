@@ -74,10 +74,9 @@ Loop:
 				{
 					if hashAddr, ok := requestMessages[requestMsg.hash]; ok {
 						requestMessages[requestMsg.hash] = append(hashAddr, requestMsg.addr)
-						continue
+					} else {
+						requestMessages[requestMsg.hash] = []string{requestMsg.addr}
 					}
-
-					requestMessages[requestMsg.hash] = []string{requestMsg.addr}
 				}
 			}
 		case <-time.After(100 * time.Millisecond):
