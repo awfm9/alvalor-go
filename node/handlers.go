@@ -29,6 +29,7 @@ type Handlers interface {
 	Input(input <-chan interface{})
 	Event(event interface{})
 	Message(address string, message interface{})
-	Entity(entity Entity)
-	Block(address string, hash types.Hash)
+	Transaction(transaction *types.Transaction)
+	Header(address string, transaction *types.Header)
+	DownloadBlock(address string, hash types.Hash)
 }

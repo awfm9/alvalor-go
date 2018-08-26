@@ -25,7 +25,7 @@ import (
 	"github.com/alvalor/alvalor-go/types"
 )
 
-func handleEntity(log zerolog.Logger, wg *sync.WaitGroup, net Network, finder pathfinder, peers peerManager, pool poolManager, download downloader, entity Entity, events eventManager, handlers Handlers) {
+func handleHeader(log zerolog.Logger, wg *sync.WaitGroup, net Network, finder pathfinder, peers peerManager, pool poolManager, download downloader, entity *types.Header, address string, events eventManager, handlers Handlers) {
 	defer wg.Done()
 
 	// precompute the entity hash
@@ -36,81 +36,86 @@ func handleEntity(log zerolog.Logger, wg *sync.WaitGroup, net Network, finder pa
 	log.Debug().Msg("entity routine started")
 	defer log.Debug().Msg("entity routine stopped")
 
-	switch e := entity.(type) {
+	entity.Hash = hash
 
-	case *types.Header:
+	log = log.With().Str("entity_type", "header").Logger()
 
-		e.Hash = hash
-
-		log = log.With().Str("entity_type", "header").Logger()
-
-		// if we already know the header, we ignore it
-		ok := finder.Knows(e.Hash)
-		if ok {
-			log.Debug().Msg("header already known")
-			return
-		}
-
-		// check the validity of the header
-		// TODO
-
-		// otherwise, we try to add it to our header manager
-		err := finder.Add(e)
-		if err != nil {
-			log.Error().Err(err).Msg("could not add header")
-			return
-		}
-
-		// we let subscribers know that we received a new header
-		events.Header(e.Hash)
-
-		// finally, we should propagate it to peers who don't know it
-		peers := peers.Tags(e.Hash)
-		err = net.Broadcast(e, peers...)
-		if err != nil {
-			log.Error().Err(err).Msg("could not propagate entity")
-			return
-		}
-
-		// set the new longest path with the downloader
-		path, _ := finder.Longest()
-		download.Follow(path)
-
-		log.Debug().Msg("header processed")
-
-	case *types.Transaction:
-
-		e.Hash = hash
-
-		log = log.With().Str("entity_type", "transaction").Logger()
-
-		// check if we already know the transaction; if so, ignore it
-		ok := pool.Knows(e.Hash)
-		if ok {
-			log.Debug().Msg("transaction already known")
-			return
-		}
-
-		// check the validity of the transaction
-		// TODO
-
-		// add the transaction to the transaction pool
-		err := pool.Add(e)
-		if err != nil {
-			log.Error().Err(err).Msg("could not add transaction")
-			return
-		}
-
-		events.Transaction(e.Hash)
-
-		// create lookup to know who to exclude from broadcast
-		peers := peers.Tags(e.Hash)
-		err = net.Broadcast(e, peers...)
-		if err != nil {
-			log.Error().Err(err).Msg("could not propagate entity")
-			return
-		}
-
-		log.Debug().Msg("transaction processed")
+	// if we already know the header, we ignore it
+	ok := finder.Knows(entity.Hash)
+	if ok {
+		log.Debug().Msg("header already known")
+		return
 	}
+
+	// check the validity of the header
+	// TODO
+
+	// otherwise, we try to add it to our header manager
+	err := finder.Add(entity)
+	if err != nil {
+		log.Error().Err(err).Msg("could not add header")
+		return
+	}
+
+	// we let subscribers know that we received a new header
+	events.Header(entity.Hash)
+
+	// finally, we should propagate it to peers who don't know it
+	peersAddr := peers.Tags(entity.Hash)
+	err = net.Broadcast(entity, peersAddr...)
+	if err != nil {
+		log.Error().Err(err).Msg("could not propagate entity")
+		return
+	}
+
+	// set the new longest path with the downloader
+	path, _ := finder.Longest()
+	download.Follow(path, address)
+
+	log.Debug().Msg("header processed")
+}
+
+func handleTransaction(log zerolog.Logger, wg *sync.WaitGroup, net Network, finder pathfinder, peers peerManager, pool poolManager, download downloader, entity *types.Transaction, events eventManager, handlers Handlers) {
+	defer wg.Done()
+
+	// precompute the entity hash
+	hash := entity.GetHash()
+
+	// configure logger
+	log = log.With().Str("component", "entity").Hex("hash", hash[:]).Logger()
+	log.Debug().Msg("entity routine started")
+	defer log.Debug().Msg("entity routine stopped")
+
+	entity.Hash = hash
+
+	log = log.With().Str("entity_type", "transaction").Logger()
+
+	// check if we already know the transaction; if so, ignore it
+	ok := pool.Knows(entity.Hash)
+	if ok {
+		log.Debug().Msg("transaction already known")
+		return
+	}
+
+	// check the validity of the transaction
+	// TODO
+
+	// add the transaction to the transaction pool
+	err := pool.Add(entity)
+	if err != nil {
+		log.Error().Err(err).Msg("could not add transaction")
+		return
+	}
+
+	events.Transaction(entity.Hash)
+
+	// create lookup to know who to exclude from broadcast
+	peersAddr := peers.Tags(entity.Hash)
+	err = net.Broadcast(entity, peersAddr...)
+	if err != nil {
+		log.Error().Err(err).Msg("could not propagate entity")
+		return
+	}
+
+	log.Debug().Msg("transaction processed")
 }

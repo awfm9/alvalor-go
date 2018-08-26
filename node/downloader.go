@@ -66,7 +66,7 @@ func (sd *simpleDownloader) Follow(path []types.Hash, addr string) {
 
 // Complete tries to download all the transactions for a header.
 func (sd *simpleDownloader) Complete(hash types.Hash, addr string) {
-	sd.handlers.Block(addr, hash)
+	sd.handlers.DownloadBlock(addr, hash)
 }
 
 // Abort cancels all the transaction downloads for a header.

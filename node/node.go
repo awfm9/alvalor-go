@@ -128,7 +128,7 @@ func (n *simpleNode) Subscribe(channel chan<- interface{}, filters ...func(inter
 }
 
 func (n *simpleNode) Submit(tx *types.Transaction) {
-	n.Entity(tx)
+	n.Transaction(tx)
 }
 
 func (n *simpleNode) Stats() {
@@ -153,9 +153,14 @@ func (n *simpleNode) Message(address string, message interface{}) {
 	go handleMessage(n.log, n.wg, n.net, n.finder, nil, n, address, message)
 }
 
-func (n *simpleNode) Entity(entity Entity) {
+func (n *simpleNode) Transaction(transaction *types.Transaction) {
 	n.wg.Add(1)
-	go handleEntity(n.log, n.wg, n.net, n.finder, n.peers, n.pool, n.downloader, entity, n.events, n)
+	go handleTransaction(n.log, n.wg, n.net, n.finder, n.peers, n.pool, n.downloader, transaction, n.events, n)
+}
+
+func (n *simpleNode) Header(address string, header *types.Header) {
+	n.wg.Add(1)
+	go handleHeader(n.log, n.wg, n.net, n.finder, n.peers, n.pool, n.downloader, header, address, n.events, n)
 }
 
 func (n *simpleNode) Stream() {
@@ -168,7 +173,7 @@ func (n *simpleNode) Subscriber(sub subscriber) {
 	go handleSubscriber(n.log, n.wg, sub)
 }
 
-func (n *simpleNode) Block(address string, hash types.Hash) {
+func (n *simpleNode) DownloadBlock(address string, hash types.Hash) {
 	n.blocksRequestsStream <- &blockRequest{hash: hash, addr: address}
 }
 

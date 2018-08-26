@@ -71,14 +71,12 @@ Loop:
 			switch requestMsg := msg.(type) {
 			case *blockRequest:
 				{
-					for _, hash := range requestMsg.hashes {
-						if hashAddr, ok := requestMessages[hash]; ok {
-							requestMessages[hash] = append(hashAddr, requestMsg.addr)
-							continue
-						}
-
-						requestMessages[hash] = []string{requestMsg.addr}
+					if hashAddr, ok := requestMessages[requestMsg.hash]; ok {
+						requestMessages[requestMsg.hash] = append(hashAddr, requestMsg.addr)
+						continue
 					}
+
+					requestMessages[requestMsg.hash] = []string{requestMsg.addr}
 				}
 			}
 		case <-time.After(100 * time.Millisecond):
