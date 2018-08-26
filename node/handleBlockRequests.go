@@ -28,7 +28,7 @@ import (
 func handleBlockRequests(log zerolog.Logger, wg *sync.WaitGroup, net Network, requestsStream <-chan interface{}, stop <-chan struct{}) {
 	defer wg.Done()
 
-	log = log.With().Str("component", "transaction requests").Logger()
+	log = log.With().Str("component", "block requests").Logger()
 
 	ticker := time.NewTicker(time.Millisecond * 100)
 	for {
@@ -47,7 +47,7 @@ func handleBlockRequests(log zerolog.Logger, wg *sync.WaitGroup, net Network, re
 				confirm := &Confirm{Hash: hash}
 				err := net.Send(addr, confirm)
 				if err != nil {
-					log.Error().Err(err).Msg("could not request transactions")
+					log.Error().Err(err).Msg("could not request block")
 					return
 				}
 			}
