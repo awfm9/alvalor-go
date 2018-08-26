@@ -25,7 +25,7 @@ import (
 	"github.com/rs/zerolog"
 )
 
-func handleTransactionRequests(log zerolog.Logger, wg *sync.WaitGroup, net Network, requestsStream <-chan interface{}, stop <-chan struct{}) {
+func handleBlockRequests(log zerolog.Logger, wg *sync.WaitGroup, net Network, requestsStream <-chan interface{}, stop <-chan struct{}) {
 	defer wg.Done()
 
 	log = log.With().Str("component", "transaction requests").Logger()
@@ -40,15 +40,16 @@ func handleTransactionRequests(log zerolog.Logger, wg *sync.WaitGroup, net Netwo
 		}
 
 		requestMessages := getRequestMessages(requestsStream)
-		requestsQueue := newTransactionRequestsQueue(requestMessages)
+		requestsQueue := newBlockRequestsQueue(requestMessages)
 
-		for addr := range requestsQueue.getData() {
-			// TODO: rewrite
-			// request := &Request{Hashes: hashes}
-			err := net.Send(addr, nil)
-			if err != nil {
-				log.Error().Err(err).Msg("could not request transactions")
-				return
+		for addr, hashes := range requestsQueue.getData() {
+			for _, hash := range hashes {
+				confirm := &Confirm{Hash: hash}
+				err := net.Send(addr, confirm)
+				if err != nil {
+					log.Error().Err(err).Msg("could not request transactions")
+					return
+				}
 			}
 		}
 	}

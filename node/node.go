@@ -116,7 +116,7 @@ func New(log zerolog.Logger, net Network, chain blockchain, codec Codec, input <
 	n.Stream()
 
 	// send transaction requests
-	n.TransactionRequests()
+	n.BlockRequests()
 
 	return n
 }
@@ -177,9 +177,9 @@ func (n *simpleNode) DownloadBlock(address string, hash types.Hash) {
 	n.blocksRequestsStream <- &blockRequest{hash: hash, addr: address}
 }
 
-func (n *simpleNode) TransactionRequests() {
-	// n.wg.Add(1)
-	// go handleTransactionRequests(n.log, n.wg, n.net, n.blocksRequestsStream, n.stop)
+func (n *simpleNode) BlockRequests() {
+	n.wg.Add(1)
+	go handleBlockRequests(n.log, n.wg, n.net, n.blocksRequestsStream, n.stop)
 }
 
 func (n *simpleNode) Stop() {

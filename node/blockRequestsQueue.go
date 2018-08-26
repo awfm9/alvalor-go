@@ -21,25 +21,25 @@ import (
 	"github.com/alvalor/alvalor-go/types"
 )
 
-type transactionRequestsQueue interface {
+type blockRequestsQueue interface {
 	getData() map[string][]types.Hash
 }
 
-type simpleTransactionRequestsQueue struct {
+type simpleBlockRequestsQueue struct {
 	requests map[types.Hash][]string
 }
 
-func newTransactionRequestsQueue(requests map[types.Hash][]string) simpleTransactionRequestsQueue {
-	return simpleTransactionRequestsQueue{requests: requests}
+func newBlockRequestsQueue(requests map[types.Hash][]string) simpleBlockRequestsQueue {
+	return simpleBlockRequestsQueue{requests: requests}
 }
 
-func (q *simpleTransactionRequestsQueue) getData() map[string][]types.Hash {
+func (q *simpleBlockRequestsQueue) getData() map[string][]types.Hash {
 	data := q.transformToOutgoingRequests()
 	return data
 }
 
 // tranforms map of [tx hashes -> peers addr which have it] to the map of [peer addr -> tx hashes to request]
-func (q *simpleTransactionRequestsQueue) transformToOutgoingRequests() map[string][]types.Hash {
+func (q *simpleBlockRequestsQueue) transformToOutgoingRequests() map[string][]types.Hash {
 	result := make(map[string][]types.Hash)
 
 	//map where key is an address and value is amount of planned hashes to send
