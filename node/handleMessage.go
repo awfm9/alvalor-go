@@ -88,7 +88,7 @@ func handleMessage(log zerolog.Logger, wg *sync.WaitGroup, net Network, finder p
 
 		log = log.With().Str("msg_type", "sync").Int("num_locators", len(msg.Locators)).Logger()
 
-		// create index of all locator hashes
+		// create lookup table of locator hashes
 		lookup := make(map[types.Hash]struct{})
 		for _, locator := range msg.Locators {
 			lookup[locator] = struct{}{}
@@ -118,7 +118,7 @@ func handleMessage(log zerolog.Logger, wg *sync.WaitGroup, net Network, finder p
 			headers = append(headers, header)
 		}
 
-		// send the partial path to our current distance to the other node
+		// send the partial path to our best distance to the other node
 		p := Path{
 			Headers: headers,
 		}
@@ -175,8 +175,18 @@ func handleMessage(log zerolog.Logger, wg *sync.WaitGroup, net Network, finder p
 
 	case *Inventory:
 
-		log = log.With().Str("msg_type", "batch").Hex("hash", msg.Hash[:]).Int("num_hashes", len(msg.Hashes)).Logger()
+		log = log.With().Str("msg_type", "inventory").Hex("hash", msg.Hash[:]).Int("num_hashes", len(msg.Hashes)).Logger()
+
+		// TODO: give the downloader the mapping for the block
 
 		log.Debug().Msg("processed batch message")
+
+	case *types.Transaction:
+
+		log = log.With().Str("msg_type", "transaction").Hex("hash", msg.Hash[:]).Logger()
+
+		handlers.Entity(msg)
+
+		log.Debug().Msg("processed transaction message")
 	}
 }

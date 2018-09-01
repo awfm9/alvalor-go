@@ -39,10 +39,8 @@ func handleEvent(log zerolog.Logger, wg *sync.WaitGroup, net Network, finder pat
 
 		peers.Active(e.Address)
 
-		// get list of hashes from our best path and the current distance
+		// send our current best distance
 		_, distance := finder.Longest()
-
-		// send our current distance and locator hashes
 		status := &Status{
 			Distance: distance,
 		}

@@ -66,6 +66,10 @@ func (sd *simpleDownloader) Follow(path []types.Hash) {
 func (sd *simpleDownloader) Complete(hash types.Hash) {
 }
 
+// Inventory adds the list of transactions for a header.
+func (sd *simpleDownloader) Inventory(hash types.Hash, hashes []types.Hash) {
+}
+
 // Abort cancels all the transaction downloads for a header.
 func (sd *simpleDownloader) Abort(hash types.Hash) {
 }
