@@ -139,7 +139,7 @@ func handleMessage(log zerolog.Logger, wg *sync.WaitGroup, net Network, finder p
 		log = log.With().Str("msg_type", "path").Int("num_headers", len(msg.Headers)).Logger()
 
 		for _, header := range msg.Headers {
-			handlers.Header(address, header)
+			handlers.Entity(header)
 		}
 
 		log.Debug().Msg("processed path message")

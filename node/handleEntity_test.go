@@ -31,22 +31,22 @@ import (
 )
 
 func TestEntity(t *testing.T) {
-	suite.Run(t, new(TransactionSuite))
+	suite.Run(t, new(EntitySuite))
 }
 
-type TransactionSuite struct {
+type EntitySuite struct {
 	suite.Suite
 	log zerolog.Logger
 	wg  *sync.WaitGroup
 }
 
-func (suite *TransactionSuite) SetupTest() {
+func (suite *EntitySuite) SetupTest() {
 	suite.log = zerolog.New(ioutil.Discard)
 	suite.wg = &sync.WaitGroup{}
 	suite.wg.Add(1)
 }
 
-func (suite *TransactionSuite) TestHandleTransaction() {
+func (suite *EntitySuite) TestEntityTransaction() {
 
 	// arrange
 	address1 := "192.0.2.1:1337"
@@ -76,7 +76,7 @@ func (suite *TransactionSuite) TestHandleTransaction() {
 	handlers := &HandlersMock{}
 
 	// act
-	handleTransaction(suite.log, suite.wg, net, finder, peers, pool, entity, events, handlers)
+	handleEntity(suite.log, suite.wg, net, finder, peers, pool, entity, events, handlers)
 
 	// assert
 	t := suite.T()

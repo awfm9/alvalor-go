@@ -25,7 +25,7 @@ import (
 	"github.com/rs/zerolog"
 )
 
-func handleBlockRequests(log zerolog.Logger, wg *sync.WaitGroup, net Network, requestsStream <-chan interface{}, stop <-chan struct{}) {
+func handleBlockRequests(log zerolog.Logger, wg *sync.WaitGroup, net Network, peers peerManager, requestsStream <-chan interface{}, stop <-chan struct{}) {
 	defer wg.Done()
 
 	log = log.With().Str("component", "block requests").Logger()
@@ -39,7 +39,7 @@ func handleBlockRequests(log zerolog.Logger, wg *sync.WaitGroup, net Network, re
 		case <-ticker.C:
 		}
 
-		requestMessages := getRequestMessages(requestsStream)
+		requestMessages := getRequestMessages(peers, requestsStream)
 		requestsQueue := newBlockRequestsQueue(requestMessages)
 
 		for addr, hashes := range requestsQueue.getData() {
@@ -55,7 +55,7 @@ func handleBlockRequests(log zerolog.Logger, wg *sync.WaitGroup, net Network, re
 	}
 }
 
-func getRequestMessages(requestsStream <-chan interface{}) map[types.Hash][]string {
+func getRequestMessages(peers peerManager, requestsStream <-chan interface{}) map[types.Hash][]string {
 	requestMessages := make(map[types.Hash][]string)
 	ticker := time.NewTicker(time.Second * 1)
 Loop:
@@ -72,11 +72,7 @@ Loop:
 			switch requestMsg := msg.(type) {
 			case *blockRequest:
 				{
-					if hashAddr, ok := requestMessages[requestMsg.hash]; ok {
-						requestMessages[requestMsg.hash] = append(hashAddr, requestMsg.addr)
-					} else {
-						requestMessages[requestMsg.hash] = []string{requestMsg.addr}
-					}
+					requestMessages[requestMsg.hash] = peers.Tags(requestMsg.hash)
 				}
 			}
 		case <-time.After(100 * time.Millisecond):

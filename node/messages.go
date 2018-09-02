@@ -49,5 +49,4 @@ type Inventory struct {
 
 type blockRequest struct {
 	hash types.Hash
-	addr string
 }

@@ -128,7 +128,7 @@ func (n *simpleNode) Subscribe(channel chan<- interface{}, filters ...func(inter
 }
 
 func (n *simpleNode) Submit(tx *types.Transaction) {
-	n.Transaction(tx)
+	n.Entity(tx)
 }
 
 func (n *simpleNode) Stats() {
@@ -153,14 +153,9 @@ func (n *simpleNode) Message(address string, message interface{}) {
 	go handleMessage(n.log, n.wg, n.net, n.finder, nil, n, address, message)
 }
 
-func (n *simpleNode) Transaction(transaction *types.Transaction) {
+func (n *simpleNode) Entity(entity Entity) {
 	n.wg.Add(1)
-	go handleTransaction(n.log, n.wg, n.net, n.finder, n.peers, n.pool, transaction, n.events, n)
-}
-
-func (n *simpleNode) Header(address string, header *types.Header) {
-	n.wg.Add(1)
-	go handleHeader(n.log, n.wg, n.net, n.finder, n.peers, n.pool, n.downloader, header, address, n.events, n)
+	go handleEntity(n.log, n.wg, n.net, n.finder, n.peers, n.pool, n.downloader, entity, n.events, n)
 }
 
 func (n *simpleNode) Stream() {
@@ -173,13 +168,13 @@ func (n *simpleNode) Subscriber(sub subscriber) {
 	go handleSubscriber(n.log, n.wg, sub)
 }
 
-func (n *simpleNode) DownloadBlock(address string, hash types.Hash) {
-	n.blocksRequestsStream <- &blockRequest{hash: hash, addr: address}
+func (n *simpleNode) DownloadBlock(hash types.Hash) {
+	n.blocksRequestsStream <- &blockRequest{hash: hash}
 }
 
 func (n *simpleNode) BlockRequests() {
 	n.wg.Add(1)
-	go handleBlockRequests(n.log, n.wg, n.net, n.blocksRequestsStream, n.stop)
+	go handleBlockRequests(n.log, n.wg, n.net, n.peers, n.blocksRequestsStream, n.stop)
 }
 
 func (n *simpleNode) Stop() {
