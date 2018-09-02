@@ -46,7 +46,3 @@ type Inventory struct {
 	Hash   types.Hash
 	Hashes []types.Hash
 }
-
-type blockRequest struct {
-	hash types.Hash
-}

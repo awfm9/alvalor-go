@@ -98,13 +98,13 @@ func New(log zerolog.Logger, net Network, chain blockchain, codec Codec, input <
 	pool := newPool(codec, store)
 	n.pool = pool
 
-	n.downloader = newSimpleDownloader(n)
-
 	// create the subscriber channel
 	n.stream = make(chan interface{}, 128)
 
 	// create internal requested blocks stream to distribute load evenly between peers we know have those blocks
 	n.blocksRequestsStream = make(chan interface{}, 128)
+
+	n.downloader = newSimpleDownloader(n.blocksRequestsStream)
 
 	// create the channel for shutdown
 	n.stop = make(chan struct{})
@@ -166,10 +166,6 @@ func (n *simpleNode) Stream() {
 func (n *simpleNode) Subscriber(sub subscriber) {
 	n.wg.Add(1)
 	go handleSubscriber(n.log, n.wg, sub)
-}
-
-func (n *simpleNode) DownloadBlock(hash types.Hash) {
-	n.blocksRequestsStream <- &blockRequest{hash: hash}
 }
 
 func (n *simpleNode) BlockRequests() {

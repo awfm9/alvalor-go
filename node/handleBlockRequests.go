@@ -70,9 +70,9 @@ Loop:
 			}
 
 			switch requestMsg := msg.(type) {
-			case *blockRequest:
+			case types.Hash:
 				{
-					requestMessages[requestMsg.hash] = peers.Tags(requestMsg.hash)
+					requestMessages[requestMsg] = peers.Tags(requestMsg)
 				}
 			}
 		case <-time.After(100 * time.Millisecond):

@@ -26,15 +26,15 @@ type downloader interface {
 }
 
 type simpleDownloader struct {
-	current  map[types.Hash]struct{}
-	running  map[types.Hash]<-chan struct{}
-	handlers Handlers
+	current       map[types.Hash]struct{}
+	running       map[types.Hash]<-chan struct{}
+	blockRequests chan<- interface{}
 }
 
-func newSimpleDownloader(handlers Handlers) *simpleDownloader {
+func newSimpleDownloader(blockRequests chan<- interface{}) *simpleDownloader {
 	return &simpleDownloader{
-		running:  make(map[types.Hash]<-chan struct{}),
-		handlers: handlers,
+		running:       make(map[types.Hash]<-chan struct{}),
+		blockRequests: blockRequests,
 	}
 }
 
@@ -66,7 +66,7 @@ func (sd *simpleDownloader) Follow(path []types.Hash) {
 
 // Complete tries to download all the transactions for a header.
 func (sd *simpleDownloader) Complete(hash types.Hash) {
-	sd.handlers.DownloadBlock(hash)
+	sd.blockRequests <- hash
 }
 
 // Abort cancels all the transaction downloads for a header.
