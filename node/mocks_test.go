@@ -162,10 +162,6 @@ func (h *HandlersMock) Transaction(transaction *types.Transaction) {
 	h.Called(transaction)
 }
 
-func (h *HandlersMock) DownloadBlock(address string, hash types.Hash) {
-	h.Called(address, hash)
-}
-
 func (h *HandlersMock) Collect(path []types.Hash) {
 	h.Called(path)
 }
