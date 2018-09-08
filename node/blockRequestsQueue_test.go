@@ -67,12 +67,24 @@ func TestBlockRequestsQueueBalanceWhenAllPeersHaveAllBlocks(t *testing.T) {
 	hash4 := types.Hash{15, 15, 15}
 	hash5 := types.Hash{25, 35, 55}
 	hash6 := types.Hash{97, 62, 33}
+	hash7 := types.Hash{23, 74, 13}
+	hash8 := types.Hash{98, 98, 25}
+	hash9 := types.Hash{25, 99, 98}
+	hash10 := types.Hash{17, 17, 17}
+	hash11 := types.Hash{102, 102, 99}
+	hash12 := types.Hash{55, 75, 75}
 	requests = append(requests, blockRequestMessage{hash: hash1, addresses: []string{"192.168.3.22", "76.33.22.71", "92.25.72.34", "23.29.113.112", "92.92.25.25", "25.25.92.92"}})
 	requests = append(requests, blockRequestMessage{hash: hash2, addresses: []string{"192.168.3.22", "76.33.22.71", "92.25.72.34", "23.29.113.112", "92.92.25.25", "25.25.92.92"}})
 	requests = append(requests, blockRequestMessage{hash: hash3, addresses: []string{"192.168.3.22", "76.33.22.71", "92.25.72.34", "23.29.113.112", "92.92.25.25", "25.25.92.92"}})
 	requests = append(requests, blockRequestMessage{hash: hash4, addresses: []string{"192.168.3.22", "76.33.22.71", "92.25.72.34", "23.29.113.112", "92.92.25.25", "25.25.92.92"}})
 	requests = append(requests, blockRequestMessage{hash: hash5, addresses: []string{"192.168.3.22", "76.33.22.71", "92.25.72.34", "23.29.113.112", "92.92.25.25", "25.25.92.92"}})
 	requests = append(requests, blockRequestMessage{hash: hash6, addresses: []string{"192.168.3.22", "76.33.22.71", "92.25.72.34", "23.29.113.112", "92.92.25.25", "25.25.92.92"}})
+	requests = append(requests, blockRequestMessage{hash: hash7, addresses: []string{"192.168.3.22", "76.33.22.71", "92.25.72.34", "23.29.113.112", "92.92.25.25", "25.25.92.92"}})
+	requests = append(requests, blockRequestMessage{hash: hash8, addresses: []string{"192.168.3.22", "76.33.22.71", "92.25.72.34", "23.29.113.112", "92.92.25.25", "25.25.92.92"}})
+	requests = append(requests, blockRequestMessage{hash: hash9, addresses: []string{"192.168.3.22", "76.33.22.71", "92.25.72.34", "23.29.113.112", "92.92.25.25", "25.25.92.92"}})
+	requests = append(requests, blockRequestMessage{hash: hash10, addresses: []string{"192.168.3.22", "76.33.22.71", "92.25.72.34", "23.29.113.112", "92.92.25.25", "25.25.92.92"}})
+	requests = append(requests, blockRequestMessage{hash: hash11, addresses: []string{"192.168.3.22", "76.33.22.71", "92.25.72.34", "23.29.113.112", "92.92.25.25", "25.25.92.92"}})
+	requests = append(requests, blockRequestMessage{hash: hash12, addresses: []string{"192.168.3.22", "76.33.22.71", "92.25.72.34", "23.29.113.112", "92.92.25.25", "25.25.92.92"}})
 	queue := newBlockRequestsQueue(requests)
 
 	//Act
@@ -86,4 +98,10 @@ func TestBlockRequestsQueueBalanceWhenAllPeersHaveAllBlocks(t *testing.T) {
 	assert.Equal(t, hash4, queueData["23.29.113.112"][0])
 	assert.Equal(t, hash5, queueData["92.92.25.25"][0])
 	assert.Equal(t, hash6, queueData["25.25.92.92"][0])
+	assert.Equal(t, hash7, queueData["192.168.3.22"][1])
+	assert.Equal(t, hash8, queueData["76.33.22.71"][1])
+	assert.Equal(t, hash9, queueData["92.25.72.34"][1])
+	assert.Equal(t, hash10, queueData["23.29.113.112"][1])
+	assert.Equal(t, hash11, queueData["92.92.25.25"][1])
+	assert.Equal(t, hash12, queueData["25.25.92.92"][1])
 }

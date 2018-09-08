@@ -42,17 +42,15 @@ func (q *simpleBlockRequestsQueue) getData() map[string][]types.Hash {
 func (q *simpleBlockRequestsQueue) transformToOutgoingRequests() map[string][]types.Hash {
 	result := make(map[string][]types.Hash)
 
-	//map where key is an address and value is amount of planned hashes to send
-	outgoingTxReqCountMap := make(map[string]int)
 	for _, request := range q.requests {
 		//find address which has least amount of tx hashes to request
 		minAddr := ""
 		minAddrCount := 0
 		for _, addr := range request.addresses {
-			if count, ok := outgoingTxReqCountMap[addr]; ok {
-				if minAddr == "" || count < minAddrCount {
+			if hashes, ok := result[addr]; ok {
+				if minAddr == "" || len(hashes) < minAddrCount {
 					minAddr = addr
-					minAddrCount = count
+					minAddrCount = len(hashes)
 				}
 				continue
 			}
@@ -60,8 +58,6 @@ func (q *simpleBlockRequestsQueue) transformToOutgoingRequests() map[string][]ty
 			minAddr = addr
 			break
 		}
-
-		outgoingTxReqCountMap[minAddr] = minAddrCount + 1
 
 		if outgoing, ok := result[minAddr]; ok {
 			result[minAddr] = append(outgoing, request.hash)
