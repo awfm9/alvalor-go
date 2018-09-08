@@ -25,6 +25,11 @@ import (
 	"github.com/rs/zerolog"
 )
 
+type blockRequestMessage struct {
+	hash      types.Hash
+	addresses []string
+}
+
 func handleBlockRequests(log zerolog.Logger, wg *sync.WaitGroup, net Network, peers peerManager, requestsStream <-chan interface{}, stop <-chan struct{}) {
 	defer wg.Done()
 
@@ -55,8 +60,8 @@ func handleBlockRequests(log zerolog.Logger, wg *sync.WaitGroup, net Network, pe
 	}
 }
 
-func getRequestMessages(peers peerManager, requestsStream <-chan interface{}) map[types.Hash][]string {
-	requestMessages := make(map[types.Hash][]string)
+func getRequestMessages(peers peerManager, requestsStream <-chan interface{}) []blockRequestMessage {
+	requestMessages := []blockRequestMessage{}
 	ticker := time.NewTicker(time.Second * 1)
 Loop:
 	for {
@@ -72,7 +77,7 @@ Loop:
 			switch requestMsg := msg.(type) {
 			case types.Hash:
 				{
-					requestMessages[requestMsg] = peers.Tags(requestMsg)
+					requestMessages = append(requestMessages, blockRequestMessage{hash: requestMsg, addresses: peers.Tags(requestMsg)})
 				}
 			}
 		case <-time.After(100 * time.Millisecond):

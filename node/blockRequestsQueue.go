@@ -26,10 +26,10 @@ type blockRequestsQueue interface {
 }
 
 type simpleBlockRequestsQueue struct {
-	requests map[types.Hash][]string
+	requests []blockRequestMessage
 }
 
-func newBlockRequestsQueue(requests map[types.Hash][]string) simpleBlockRequestsQueue {
+func newBlockRequestsQueue(requests []blockRequestMessage) simpleBlockRequestsQueue {
 	return simpleBlockRequestsQueue{requests: requests}
 }
 
@@ -44,11 +44,11 @@ func (q *simpleBlockRequestsQueue) transformToOutgoingRequests() map[string][]ty
 
 	//map where key is an address and value is amount of planned hashes to send
 	outgoingTxReqCountMap := make(map[string]int)
-	for hash, addresses := range q.requests {
+	for _, request := range q.requests {
 		//find address which has least amount of tx hashes to request
 		minAddr := ""
 		minAddrCount := 0
-		for _, addr := range addresses {
+		for _, addr := range request.addresses {
 			if count, ok := outgoingTxReqCountMap[addr]; ok {
 				if minAddr == "" || count < minAddrCount {
 					minAddr = addr
@@ -64,9 +64,9 @@ func (q *simpleBlockRequestsQueue) transformToOutgoingRequests() map[string][]ty
 		outgoingTxReqCountMap[minAddr] = minAddrCount + 1
 
 		if outgoing, ok := result[minAddr]; ok {
-			result[minAddr] = append(outgoing, hash)
+			result[minAddr] = append(outgoing, request.hash)
 		} else {
-			result[minAddr] = []types.Hash{hash}
+			result[minAddr] = []types.Hash{request.hash}
 		}
 
 	}
