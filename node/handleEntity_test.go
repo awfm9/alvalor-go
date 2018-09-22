@@ -18,7 +18,6 @@
 package node
 
 import (
-	"errors"
 	"io/ioutil"
 	"sync"
 	"testing"
@@ -52,37 +51,35 @@ func (suite *EntitySuite) TestEntityTransaction() {
 	address1 := "192.0.2.1:1337"
 	address2 := "192.0.2.2:1337"
 	address3 := "192.0.2.3:1337"
+	tags := []string{address2}
 
 	entity := &types.Transaction{}
 
 	net := &NetworkMock{}
-	net.On("Send", address1, mock.Anything).Return(errors.New("could not send"))
-	net.On("Send", address2, mock.Anything).Return(nil)
-	net.On("Send", address3, mock.Anything).Return(nil)
+	net.On("Broadcast", entity, tags).Return(nil)
 
 	finder := &PathfinderMock{}
 
 	peers := &PeersMock{}
-	peers.On("Tags", mock.Anything).Return([]string{address2})
+	peers.On("Tags", mock.Anything).Return(tags)
 	peers.On("Actives").Return([]string{address1, address2, address3})
 
 	pool := &PoolMock{}
-	pool.On("Known", mock.Anything).Return(false)
+	pool.On("Knows", mock.Anything).Return(false)
 	pool.On("Add", mock.Anything).Return(nil)
 
 	events := &EventManagerMock{}
-	events.On("Transaction", entity.Hash).Return(nil)
+	events.On("Transaction", entity.GetHash()).Return(nil)
 
 	handlers := &HandlersMock{}
 
+	downloader := &DownloaderMock{}
+
 	// act
-	handleEntity(suite.log, suite.wg, net, finder, peers, pool, entity, events, handlers)
+	handleEntity(suite.log, suite.wg, net, finder, peers, pool, downloader, entity, events, handlers)
 
 	// assert
 	t := suite.T()
 
-	net.AssertCalled(t, "Send", address1, mock.Anything)
-	net.AssertCalled(t, "Send", address3, mock.Anything)
-
-	net.AssertNotCalled(t, "Send", address2, mock.Anything)
+	net.AssertCalled(t, "Broadcast", entity, tags)
 }

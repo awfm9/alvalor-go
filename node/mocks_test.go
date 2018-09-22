@@ -154,20 +154,8 @@ func (h *HandlersMock) Message(address string, message interface{}) {
 	h.Called(address, message)
 }
 
-func (h *HandlersMock) Header(address string, header *types.Header) {
-	h.Called(address, header)
-}
-
-func (h *HandlersMock) Transaction(transaction *types.Transaction) {
-	h.Called(transaction)
-}
-
-func (h *HandlersMock) Collect(path []types.Hash) {
-	h.Called(path)
-}
-
-func (h *HandlersMock) RequestTransactions(hashes []types.Hash, address string) {
-	h.Called(hashes, address)
+func (h *HandlersMock) Entity(entity Entity) {
+	h.Called(entity)
 }
 
 type NetworkMock struct {
@@ -302,4 +290,20 @@ func (em *EventManagerMock) Header(hash types.Hash) error {
 func (em *EventManagerMock) Transaction(hash types.Hash) error {
 	args := em.Called(hash)
 	return args.Error(0)
+}
+
+type DownloaderMock struct {
+	mock.Mock
+}
+
+func (d *DownloaderMock) Follow(path []types.Hash) {
+	d.Called(path)
+}
+
+func (d *DownloaderMock) Complete(hash types.Hash) {
+	d.Called(hash)
+}
+
+func (d *DownloaderMock) Abort(hash types.Hash) {
+	d.Called(hash)
 }
