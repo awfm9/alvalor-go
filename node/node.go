@@ -80,32 +80,27 @@ func New(log zerolog.Logger, net Network, chain blockchain, codec Codec, input <
 	wg := &sync.WaitGroup{}
 	n.wg = wg
 
-	// store dependency references
+	// store references for reused dependencies
 	n.net = net
 	n.chain = chain
 
-	// initialize path finder to identify best valid path
-	n.finder = newSimplePathfinder(chain)
-
-	// initialize peer state manager
-	peers := newPeers()
-	n.peers = peers
-
-	// initialize simple transaction pool
-	store := trie.NewBin()
-	pool := newPool(codec, store)
-	n.pool = pool
-
-	// create a channel for adding subscribers
-	subs := make(chan *subscriber)
-	n.subscribers = subs
-
 	// create the event stream for subscribers
-	stream := make(chan interface{}, 128)
-	n.stream = stream
+	n.stream = make(chan interface{}, 128)
+
+	// create the channel to add subscribers for the event stream
+	n.subscribers = make(chan *subscriber)
+
+	// initialize path finder to identify best valid path
+	n.finder = newSimplePathfinder(n.chain)
 
 	// initialize the event manager to create events
-	n.events = newEventManager(stream)
+	n.events = newEventManager(n.stream)
+
+	// initialize peer state manager
+	n.peers = newPeers()
+
+	// initialize simple transaction pool
+	n.pool = newPool(codec, trie.NewBin())
 
 	// start streaming generated events to subscribers
 	n.Stream()

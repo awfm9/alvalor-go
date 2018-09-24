@@ -24,30 +24,30 @@ import (
 	"github.com/rs/zerolog"
 )
 
-func handleStream(log zerolog.Logger, wg *sync.WaitGroup, stream <-chan interface{}, subscribers <-chan *subscriber) {
+func handleStream(log zerolog.Logger, wg *sync.WaitGroup, stream <-chan interface{}, subs <-chan *subscriber) {
 	defer wg.Done()
 
 	log = log.With().Str("component", "stream").Logger()
 	log.Debug().Msg("subscriber routine started")
 	defer log.Debug().Msg("subscriber routine stopped")
 
-	var subs []*subscriber
+	var subscribers []*subscriber
 
 Loop:
 	for {
 		select {
 
-		case sub, ok := <-subscribers:
+		case sub, ok := <-subs:
 			if !ok {
 				break Loop
 			}
-			subs = append(subs, sub)
+			subscribers = append(subscribers, sub)
 
 		case event, ok := <-stream:
 			if !ok {
 				break Loop
 			}
-			for _, sub := range subs {
+			for _, sub := range subscribers {
 				for _, filter := range sub.filters {
 					if filter(event) {
 						continue Loop
