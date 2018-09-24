@@ -33,6 +33,10 @@ type simpleEventManager struct {
 	stream chan<- interface{}
 }
 
+func newEventManager(stream chan<- interface{}) *simpleEventManager {
+	return &simpleEventManager{stream: stream}
+}
+
 func (mgr *simpleEventManager) Header(hash types.Hash) error {
 	select {
 	case mgr.stream <- Header{hash: hash}:

@@ -19,33 +19,49 @@ package node
 
 import "github.com/alvalor/alvalor-go/types"
 
-//MsgType enum.
-type MsgType uint16
+type msgType uint8
 
 const (
-	transaction MsgType = 1
+	hdrType msgType = iota
+	txType
 )
 
-//MsgFilter filter for Received message type
-func MsgFilter(msgType MsgType, hashes ...types.Hash) func(interface{}) bool {
+func isType(types ...msgType) func(interface{}) bool {
 	return func(msg interface{}) bool {
-		switch message := msg.(type) {
+		switch msg.(type) {
+		case *Header:
+			return containsType(types, hdrType)
 		case *Transaction:
-			return msgType == transaction && len(hashes) == 0 || contains(hashes, message.hash)
-		default:
-			return false
+			return containsType(types, txType)
+		}
+		return false
+	}
+}
+
+func containsType(types []msgType, inputType msgType) bool {
+	for _, curType := range types {
+		if inputType == curType {
+			return true
 		}
 	}
+	return false
 }
 
-//AnyMsgFilter filter for any message type
-func AnyMsgFilter(hashes ...types.Hash) func(interface{}) bool {
+func hasHash(hashes ...types.Hash) func(interface{}) bool {
 	return func(msg interface{}) bool {
-		return MsgFilter(transaction, hashes...)(msg) //Add more once you add new message types
+		tx, ok := msg.(*Transaction)
+		if ok && containsHash(hashes, tx.hash) {
+			return true
+		}
+		hdr, ok := msg.(*Header)
+		if ok && containsHash(hashes, hdr.hash) {
+			return true
+		}
+		return false
 	}
 }
 
-func contains(hashes []types.Hash, hash types.Hash) bool {
+func containsHash(hashes []types.Hash, hash types.Hash) bool {
 	for _, hsh := range hashes {
 		if hsh == hash {
 			return true

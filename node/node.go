@@ -55,7 +55,7 @@ type simpleNode struct {
 	pool                      poolManager
 	events                    eventManager
 	stream                    chan interface{}
-	subscribers               []subscriber
+	subscribers               chan *subscriber
 	requestedTransactions     map[types.Hash][]string
 	stop                      chan struct{}
 	transactionRequestsStream chan interface{}
@@ -63,7 +63,6 @@ type simpleNode struct {
 
 type subscriber struct {
 	channel chan<- interface{}
-	buffer  chan interface{}
 	filters []func(interface{}) bool
 }
 
@@ -85,7 +84,7 @@ func New(log zerolog.Logger, net Network, chain blockchain, codec Codec, input <
 	n.net = net
 	n.chain = chain
 
-	// initialize header path finder
+	// initialize path finder to identify best valid path
 	n.finder = newSimplePathfinder(chain)
 
 	// initialize peer state manager
@@ -97,31 +96,29 @@ func New(log zerolog.Logger, net Network, chain blockchain, codec Codec, input <
 	pool := newPool(codec, store)
 	n.pool = pool
 
-	// create the subscriber channel
-	n.stream = make(chan interface{}, 128)
+	// create a channel for adding subscribers
+	subs := make(chan *subscriber)
+	n.subscribers = subs
 
-	// create requested transactions dictionary to send this message evenly
-	n.transactionRequestsStream = make(chan interface{}, 128)
+	// create the event stream for subscribers
+	stream := make(chan interface{}, 128)
+	n.stream = stream
 
-	// create the channel for shutdown
-	n.stop = make(chan struct{})
+	// initialize the event manager to create events
+	n.events = newEventManager(stream)
 
-	// handle all input messages we get
-	n.Input(input)
-	n.events = &simpleEventManager{stream: n.stream}
-
+	// start streaming generated events to subscribers
 	n.Stream()
 
-	// send transaction requests
-	n.TransactionRequests()
+	// start handling input messages from the network layer
+	n.Input(input)
 
 	return n
 }
 
 func (n *simpleNode) Subscribe(channel chan<- interface{}, filters ...func(interface{}) bool) {
-	sub := subscriber{filters: filters, channel: channel, buffer: make(chan interface{}, 128)}
-	n.subscribers = append(n.subscribers, sub)
-	n.Subscriber(sub)
+	sub := &subscriber{filters: filters, channel: channel}
+	n.subscribers <- sub
 }
 
 func (n *simpleNode) Submit(tx *types.Transaction) {
@@ -161,26 +158,8 @@ func (n *simpleNode) Stream() {
 	go handleStream(n.log, n.wg, n.stream, n.subscribers)
 }
 
-func (n *simpleNode) Subscriber(sub subscriber) {
-	n.wg.Add(1)
-	go handleSubscriber(n.log, n.wg, sub)
-}
-
-func (n *simpleNode) RequestTransactions(hashes []types.Hash, addr string) {
-	n.transactionRequestsStream <- &internalTransactionRequest{hashes: hashes, addr: addr}
-}
-
-func (n *simpleNode) TransactionRequests() {
-	// n.wg.Add(1)
-	// go handleTransactionRequests(n.log, n.wg, n.net, n.transactionRequestsStream, n.stop)
-}
-
 func (n *simpleNode) Stop() {
-	n.wg.Wait()
-	close(n.stop)
+	close(n.subscribers)
 	close(n.stream)
-	for _, sub := range n.subscribers {
-		close(sub.channel)
-		close(sub.buffer)
-	}
+	n.wg.Wait()
 }
