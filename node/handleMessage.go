@@ -25,7 +25,7 @@ import (
 	"github.com/alvalor/alvalor-go/types"
 )
 
-func handleMessage(log zerolog.Logger, wg *sync.WaitGroup, net Network, finder pathfinder, chain blockchain, handlers Handlers, address string, message interface{}) {
+func handleMessage(log zerolog.Logger, wg *sync.WaitGroup, net Network, chain blockchain, finder pathfinder, down downloader, handlers Handlers, address string, message interface{}) {
 	defer wg.Done()
 
 	// configure logger
@@ -146,14 +146,13 @@ func handleMessage(log zerolog.Logger, wg *sync.WaitGroup, net Network, finder p
 
 	// The Confirm message is a request sent by peers who want to reconstruct a
 	// certain block by downloading its transactions. It contains the hash of
-	// the block, as well as a list of hashes of all the transactions. They can
-	// then be queued for parralellized downloading.
+	// the block. The receiving peer should respond with an inventory message
+	// containing all the message hashes corresponding to the header hash.
 	case *Confirm:
 
 		log = log.With().Str("msg_type", "confirm").Hex("hash", msg.Hash[:]).Logger()
 
 		// retrieve the hashes from the block manager
-		var hashes []types.Hash
 		hashes, err := chain.Inventory(msg.Hash)
 		if err != nil {
 			log.Error().Err(err).Msg("could not retrieve block inventory")
@@ -177,9 +176,13 @@ func handleMessage(log zerolog.Logger, wg *sync.WaitGroup, net Network, finder p
 
 		log = log.With().Str("msg_type", "inventory").Hex("hash", msg.Hash[:]).Int("num_hashes", len(msg.Hashes)).Logger()
 
-		// TODO: give the downloader the mapping for the block
+		err := down.Inventory(msg)
+		if err != nil {
+			log.Error().Err(err).Msg("could not process inventory message")
+			return
+		}
 
-		log.Debug().Msg("processed batch message")
+		log.Debug().Msg("processed inventory message")
 
 	case *types.Transaction:
 

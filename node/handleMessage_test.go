@@ -62,7 +62,7 @@ func (suite *MessageSuite) TestMessageTransaction() {
 
 	// act
 	// TODO: introduce new blockchain interface
-	handleMessage(suite.log, suite.wg, net, finder, nil, handlers, address, msg)
+	handleMessage(suite.log, suite.wg, net, nil, finder, nil, handlers, address, msg)
 
 	// assert
 	t := suite.T()

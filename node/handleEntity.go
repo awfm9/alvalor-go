@@ -79,13 +79,13 @@ func handleEntity(log zerolog.Logger, wg *sync.WaitGroup, net Network, finder pa
 
 		// switch the downloader to the new best path
 		path, _ := finder.Longest()
-		download.Follow(path)
+		err = download.Follow(path)
+		if err != nil {
+			log.Error().Err(err).Msg("could not follow changed path")
+			return
+		}
 
 		log.Debug().Msg("header processed")
-
-	case *types.Inventory:
-
-		e.Hash = hash
 
 	case *types.Transaction:
 

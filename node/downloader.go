@@ -17,12 +17,15 @@
 
 package node
 
-import "github.com/alvalor/alvalor-go/types"
+import (
+	"github.com/pkg/errors"
+
+	"github.com/alvalor/alvalor-go/types"
+)
 
 type downloader interface {
-	Follow(hash []types.Hash)
-	Complete(hash types.Hash)
-	Abort(hash types.Hash)
+	Follow(path []types.Hash) error
+	Inventory(inv *Inventory) error
 }
 
 type simpleDownloader struct {
@@ -95,4 +98,35 @@ func (sd *simpleDownloader) Follow(path []types.Hash) {
 			// TODO: start transaction download
 		}
 	}
+}
+
+func (sd *simpleDownloader) Inventory(inv *Inventory) error {
+
+	// check if we already know the inventory
+	// TODO: retrieve inventory for header
+	var ok bool
+	if ok {
+		return errors.New("inventory already known")
+	}
+
+	// store the inventory in our database
+	// TODO: store the inventory
+	var err error
+	if err != nil {
+		return errors.Wrap(err, "could not store inventory")
+	}
+
+	// check if we are trying to download this header transactions
+	_, ok = sd.current[inv.Hash]
+	if !ok {
+		return nil
+	}
+
+	// start the transaction downloads
+	for _, txHash := range inv.Hashes {
+		// TODO: start transaction download
+		_ = txHash
+	}
+
+	return nil
 }

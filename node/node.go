@@ -46,19 +46,18 @@ type Codec interface {
 }
 
 type simpleNode struct {
-	log                       zerolog.Logger
-	wg                        *sync.WaitGroup
-	net                       Network
-	chain                     blockchain
-	finder                    pathfinder
-	peers                     peerManager
-	pool                      poolManager
-	events                    eventManager
-	stream                    chan interface{}
-	subscribers               chan *subscriber
-	requestedTransactions     map[types.Hash][]string
-	stop                      chan struct{}
-	transactionRequestsStream chan interface{}
+	log         zerolog.Logger
+	wg          *sync.WaitGroup
+	net         Network
+	chain       blockchain
+	finder      pathfinder
+	downloader  downloader
+	peers       peerManager
+	pool        poolManager
+	events      eventManager
+	stream      chan interface{}
+	subscribers chan *subscriber
+	stop        chan struct{}
 }
 
 type subscriber struct {
@@ -139,7 +138,7 @@ func (n *simpleNode) Event(event interface{}) {
 func (n *simpleNode) Message(address string, message interface{}) {
 	n.wg.Add(1)
 	// TODO: introduce new blockchain interface
-	go handleMessage(n.log, n.wg, n.net, n.finder, nil, n, address, message)
+	go handleMessage(n.log, n.wg, n.net, n.chain, n.finder, n.downloader, n, address, message)
 }
 
 func (n *simpleNode) Entity(entity Entity) {
