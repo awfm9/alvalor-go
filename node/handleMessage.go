@@ -36,7 +36,7 @@ func handleMessage(log zerolog.Logger, wg *sync.WaitGroup, net Network, finder p
 	// process the message according to type
 	switch msg := message.(type) {
 
-	// The Status message is handshake sent by both peers on a new connection.
+	// The Status message is a handshake sent by both peers on a new connection.
 	// It contains the distance of their best path and helps each peer to
 	// determine whether they should request missing headers from the other. If a
 	// peer is behind, it should send a Sync message with a number of locator
@@ -80,10 +80,10 @@ func handleMessage(log zerolog.Logger, wg *sync.WaitGroup, net Network, finder p
 		log.Debug().Msg("processed status message")
 
 	// The Sync message is a request for block headers. It contains a number
-	// of locator hashes that allows the receiving peer to find the last common
-	// block header with the requesting peer on the best path. The receiving peer
-	// should then send a Path message with the missing headers in chronological
-	// order, from oldest to newest.
+	// of locator hashes that allows the receiving peer to search a common
+	// block header hash on his best path. The receiving peer will then send a
+	// a Path message with the missing headers. Ideally, they are sent in
+	// chronological order, from oldest to newest, to speed up processing.
 	case *Sync:
 
 		log = log.With().Str("msg_type", "sync").Int("num_locators", len(msg.Locators)).Logger()

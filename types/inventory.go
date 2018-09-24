@@ -17,8 +17,8 @@
 
 package types
 
-// Template represents the template for a block.
-type Template struct {
-	Hash   Hash
-	Hashes []Hash
+// Inventory gives the list of transactions included in a block.
+type Inventory struct {
+	hash   Hash
+	hashes []Hash
 }

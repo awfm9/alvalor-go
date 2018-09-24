@@ -39,7 +39,13 @@ func newSimpleDownloader() *simpleDownloader {
 // Follow sets a new path through the header tree to follow and complete.
 func (sd *simpleDownloader) Follow(path []types.Hash) {
 
+	// NOTE: There might be a big overlap of transactions between two competing
+	// paths. Canceling all downloads and restarting them when a majority of them
+	// could be in common is not efficient. We should find the difference
+	// between the inventories, as far as available.
+
 	// for each new hash on the path, we start the download of transactions
+	newTxs := make(map[types.Hash]struct{})
 	lookup := make(map[types.Hash]struct{})
 	for _, hash := range path {
 		lookup[hash] = struct{}{}
@@ -48,28 +54,45 @@ func (sd *simpleDownloader) Follow(path []types.Hash) {
 			continue
 		}
 		sd.current[hash] = struct{}{}
-		sd.Complete(hash)
+		// TODO: retrieve inventory for header
+		var inv []types.Hash
+		if !ok {
+			// TODO: request inventory for header
+			continue
+		}
+		for _, txHash := range inv {
+			newTxs[txHash] = struct{}{}
+		}
 	}
 
 	// for each hash on the old path that's not on the new one, we cancel it
+	oldTxs := make(map[types.Hash]struct{})
 	for hash := range sd.current {
 		_, ok := lookup[hash]
 		if ok {
 			continue
 		}
-		sd.Abort(hash)
 		delete(sd.current, hash)
+		// TODO: retrieve inventory for header
+		var inv []types.Hash
+		for _, txHash := range inv {
+			oldTxs[txHash] = struct{}{}
+		}
 	}
-}
 
-// Complete tries to download all the transactions for a header.
-func (sd *simpleDownloader) Complete(hash types.Hash) {
-}
+	// cancel each old transaction download that is not in the new set
+	for txHash := range oldTxs {
+		_, ok := newTxs[txHash]
+		if !ok {
+			// TODO: cancel transaction download
+		}
+	}
 
-// Inventory adds the list of transactions for a header.
-func (sd *simpleDownloader) Inventory(hash types.Hash, hashes []types.Hash) {
-}
-
-// Abort cancels all the transaction downloads for a header.
-func (sd *simpleDownloader) Abort(hash types.Hash) {
+	// start each new transaction download that is not in the old set
+	for txHash := range newTxs {
+		_, ok := oldTxs[txHash]
+		if !ok {
+			// TODO: start transaction download
+		}
+	}
 }

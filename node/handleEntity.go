@@ -38,6 +38,11 @@ func handleEntity(log zerolog.Logger, wg *sync.WaitGroup, net Network, finder pa
 
 	switch e := entity.(type) {
 
+	// When we receive a new header, we want to add it to our pathfinder to see
+	// whether it creates a better path of total difficulty. If that's the case,
+	// we need to synchronize the blocks on that path. This implies canceling
+	// transaction downloads for all headers that are no longer on the best path,
+	// and starting transaction downloads for all new headers on the best path.
 	case *types.Header:
 
 		e.Hash = hash
@@ -54,7 +59,7 @@ func handleEntity(log zerolog.Logger, wg *sync.WaitGroup, net Network, finder pa
 		// check the validity of the header
 		// TODO
 
-		// otherwise, we try to add it to our header manager
+		// add the header to the pathfinder
 		err := finder.Add(e)
 		if err != nil {
 			log.Error().Err(err).Msg("could not add header")
@@ -64,7 +69,7 @@ func handleEntity(log zerolog.Logger, wg *sync.WaitGroup, net Network, finder pa
 		// we let subscribers know that we received a new header
 		events.Header(e.Hash)
 
-		// finally, we should propagate it to peers who don't know it
+		// we should propagate it to peers who are unaware of the header
 		peers := peers.Tags(e.Hash)
 		err = net.Broadcast(e, peers...)
 		if err != nil {
@@ -72,11 +77,15 @@ func handleEntity(log zerolog.Logger, wg *sync.WaitGroup, net Network, finder pa
 			return
 		}
 
-		// set the new longest path with the downloader
+		// switch the downloader to the new best path
 		path, _ := finder.Longest()
 		download.Follow(path)
 
 		log.Debug().Msg("header processed")
+
+	case *types.Inventory:
+
+		e.Hash = hash
 
 	case *types.Transaction:
 
