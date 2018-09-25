@@ -25,7 +25,7 @@ import (
 	"github.com/alvalor/alvalor-go/network"
 )
 
-func handleEvent(log zerolog.Logger, wg *sync.WaitGroup, net Network, finder pathfinder, peers peerManager, handlers Handlers, event interface{}) {
+func handleEvent(log zerolog.Logger, wg *sync.WaitGroup, net Network, headers headerStore, peers peerManager, handlers Handlers, event interface{}) {
 	defer wg.Done()
 
 	// configure logger
@@ -40,7 +40,7 @@ func handleEvent(log zerolog.Logger, wg *sync.WaitGroup, net Network, finder pat
 		peers.Active(e.Address)
 
 		// send our current best distance
-		_, distance := finder.Longest()
+		_, distance := headers.Longest()
 		status := &Status{
 			Distance: distance,
 		}

@@ -25,7 +25,7 @@ import (
 	"github.com/alvalor/alvalor-go/types"
 )
 
-func handleEntity(log zerolog.Logger, wg *sync.WaitGroup, net Network, finder pathfinder, peers peerManager, pool poolManager, download downloader, entity Entity, events eventManager, handlers Handlers) {
+func handleEntity(log zerolog.Logger, wg *sync.WaitGroup, net Network, headers headerStore, peers peerManager, pool poolManager, track tracker, entity Entity, events eventManager, handlers Handlers) {
 	defer wg.Done()
 
 	// precompute the entity hash
@@ -50,7 +50,7 @@ func handleEntity(log zerolog.Logger, wg *sync.WaitGroup, net Network, finder pa
 		log = log.With().Str("entity_type", "header").Logger()
 
 		// if we already know the header, we ignore it
-		ok := finder.Knows(e.Hash)
+		ok := headers.Knows(e.Hash)
 		if ok {
 			log.Debug().Msg("header already known")
 			return
@@ -60,7 +60,7 @@ func handleEntity(log zerolog.Logger, wg *sync.WaitGroup, net Network, finder pa
 		// TODO
 
 		// add the header to the pathfinder
-		err := finder.Add(e)
+		err := headers.Add(e)
 		if err != nil {
 			log.Error().Err(err).Msg("could not add header")
 			return
@@ -78,8 +78,8 @@ func handleEntity(log zerolog.Logger, wg *sync.WaitGroup, net Network, finder pa
 		}
 
 		// switch the downloader to the new best path
-		path, _ := finder.Longest()
-		err = download.Follow(path)
+		path, _ := headers.Longest()
+		err = track.Follow(path)
 		if err != nil {
 			log.Error().Err(err).Msg("could not follow changed path")
 			return

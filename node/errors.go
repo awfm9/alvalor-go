@@ -17,13 +17,6 @@
 
 package node
 
-import "github.com/alvalor/alvalor-go/types"
+import "github.com/pkg/errors"
 
-// downloader manages downloading of entities by keeping track of pending
-// downloads and load balancing across available peers.
-type downloader interface {
-	StartInventory(hash types.Hash) error
-	CancelInventory(hash types.Hash) error
-	StartTransaction(hash types.Hash) error
-	CancelTransaction(hash types.Hash) error
-}
+var errNotFound = errors.New("entity not found")

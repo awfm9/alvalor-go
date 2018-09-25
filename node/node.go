@@ -49,9 +49,9 @@ type simpleNode struct {
 	log         zerolog.Logger
 	wg          *sync.WaitGroup
 	net         Network
-	chain       blockchain
-	finder      pathfinder
-	downloader  downloader
+	inventories inventoryStore
+	headers     headerStore
+	track       tracker
 	peers       peerManager
 	pool        poolManager
 	events      eventManager
@@ -81,7 +81,8 @@ func New(log zerolog.Logger, net Network, chain blockchain, codec Codec, input <
 
 	// store references for reused dependencies
 	n.net = net
-	n.chain = chain
+
+	// TODO: save inventory store reference
 
 	// create the event stream for subscribers
 	n.stream = make(chan interface{}, 128)
@@ -90,7 +91,7 @@ func New(log zerolog.Logger, net Network, chain blockchain, codec Codec, input <
 	n.subscribers = make(chan *subscriber)
 
 	// initialize path finder to identify best valid path
-	n.finder = newSimplePathfinder(n.chain)
+	n.headers = newHeaderStore(nil)
 
 	// initialize the event manager to create events
 	n.events = newEventManager(n.stream)
@@ -132,19 +133,19 @@ func (n *simpleNode) Input(input <-chan interface{}) {
 
 func (n *simpleNode) Event(event interface{}) {
 	n.wg.Add(1)
-	go handleEvent(n.log, n.wg, n.net, n.finder, n.peers, n, event)
+	go handleEvent(n.log, n.wg, n.net, n.headers, n.peers, n, event)
 }
 
 func (n *simpleNode) Message(address string, message interface{}) {
 	n.wg.Add(1)
 	// TODO: introduce new blockchain interface
-	go handleMessage(n.log, n.wg, n.net, n.chain, n.finder, n.downloader, n, address, message)
+	go handleMessage(n.log, n.wg, n.net, n.inventories, n.headers, n.track, n, address, message)
 }
 
 func (n *simpleNode) Entity(entity Entity) {
 	n.wg.Add(1)
 	// TODO: insert downloader parameter
-	go handleEntity(n.log, n.wg, n.net, n.finder, n.peers, n.pool, nil, entity, n.events, n)
+	go handleEntity(n.log, n.wg, n.net, n.headers, n.peers, n.pool, nil, entity, n.events, n)
 }
 
 func (n *simpleNode) Stream() {

@@ -23,43 +23,45 @@ import (
 	"github.com/alvalor/alvalor-go/types"
 )
 
-type pathfinder interface {
+type headerStore interface {
 	Add(header *types.Header) error
 	Header(hash types.Hash) (*types.Header, error)
 	Knows(hash types.Hash) bool
 	Longest() ([]types.Hash, uint64)
 }
 
-// simplePathfinder is a path manager using topological sort of all added headers to find the longest path to the root.
-type simplePathfinder struct {
+// headerStoreS manages block headers and the best path through the tree of
+// headers by using a topological sort of the headers to identify the path with
+// the longest distance.
+type headerStoreS struct {
 	root     types.Hash
 	headers  map[types.Hash]*types.Header
 	children map[types.Hash][]types.Hash
 	pending  map[types.Hash][]*types.Header
 }
 
-// newSimplePathfinder creates a new simple path manager using the given header as root.
-func newSimplePathfinder(chain blockchain) *simplePathfinder {
+// newHeaderStore creates a new simple header store.
+func newHeaderStore(chain blockchain) *headerStoreS {
 	// TODO: update to use the new blockchain interface
-	sp := &simplePathfinder{
+	sp := &headerStoreS{
 		// root:     root.Hash,
 		headers:  make(map[types.Hash]*types.Header),
 		children: make(map[types.Hash][]types.Hash),
 		pending:  make(map[types.Hash][]*types.Header),
 	}
-	// sp.headers[root.Hash] = root
+	// hs.headers[root.Hash] = root
 	return sp
 }
 
 // Knows checks if the given hash is already known.
-func (sp *simplePathfinder) Knows(hash types.Hash) bool {
-	_, ok := sp.headers[hash]
+func (hs *headerStoreS) Knows(hash types.Hash) bool {
+	_, ok := hs.headers[hash]
 	return ok
 }
 
 // Header returns the given header.
-func (sp *simplePathfinder) Header(hash types.Hash) (*types.Header, error) {
-	header, ok := sp.headers[hash]
+func (hs *headerStoreS) Header(hash types.Hash) (*types.Header, error) {
+	header, ok := hs.headers[hash]
 	if !ok {
 		return nil, errors.New("header not found")
 	}
@@ -67,31 +69,31 @@ func (sp *simplePathfinder) Header(hash types.Hash) (*types.Header, error) {
 }
 
 // Add adds a new header to the graph.
-func (sp *simplePathfinder) Add(header *types.Header) error {
+func (hs *headerStoreS) Add(header *types.Header) error {
 
 	// if we already know the header, fail
-	_, ok := sp.headers[header.Hash]
+	_, ok := hs.headers[header.Hash]
 	if ok {
 		return errors.New("header already in graph")
 	}
 
 	// if we don't know the parent, add to pending headers and skip rest
-	_, ok = sp.headers[header.Parent]
+	_, ok = hs.headers[header.Parent]
 	if !ok {
-		sp.pending[header.Parent] = append(sp.pending[header.Parent], header)
+		hs.pending[header.Parent] = append(hs.pending[header.Parent], header)
 		return nil
 	}
 
 	// if we have the parent, add it to its children and register header
-	sp.children[header.Parent] = append(sp.children[header.Parent], header.Hash)
-	sp.headers[header.Hash] = header
+	hs.children[header.Parent] = append(hs.children[header.Parent], header.Hash)
+	hs.headers[header.Hash] = header
 
 	// then check if any pending headers have this header as parent
-	children, ok := sp.pending[header.Hash]
+	children, ok := hs.pending[header.Hash]
 	if ok {
-		delete(sp.pending, header.Hash)
+		delete(hs.pending, header.Hash)
 		for _, child := range children {
-			_ = sp.Add(child)
+			_ = hs.Add(child)
 		}
 	}
 
@@ -99,17 +101,17 @@ func (sp *simplePathfinder) Add(header *types.Header) error {
 }
 
 // Longest returns the longest path of the graph.
-func (sp *simplePathfinder) Longest() ([]types.Hash, uint64) {
+func (hs *headerStoreS) Longest() ([]types.Hash, uint64) {
 
 	// create a topological sort of all headers starting at the root
 	var hash types.Hash
-	sorted := make([]types.Hash, 0, len(sp.headers))
-	queue := []types.Hash{sp.root}
-	queue = append(queue, sp.root)
+	sorted := make([]types.Hash, 0, len(hs.headers))
+	queue := []types.Hash{hs.root}
+	queue = append(queue, hs.root)
 	for len(queue) > 0 {
 		hash, queue = queue[0], queue[1:]
 		sorted = append(sorted, hash)
-		queue = append(queue, sp.children[hash]...)
+		queue = append(queue, hs.children[hash]...)
 	}
 
 	// find the maximum distance of each header from the root
@@ -118,8 +120,8 @@ func (sp *simplePathfinder) Longest() ([]types.Hash, uint64) {
 	distances := make(map[types.Hash]uint64)
 	for len(sorted) > 0 {
 		hash, sorted = sorted[0], sorted[1:]
-		for _, child := range sp.children[hash] {
-			header := sp.headers[child]
+		for _, child := range hs.children[hash] {
+			header := hs.headers[child]
 			distance := distances[hash] + header.Diff
 			if distances[child] >= distance {
 				continue
@@ -135,17 +137,17 @@ func (sp *simplePathfinder) Longest() ([]types.Hash, uint64) {
 
 	// if we have no distance, we are stuck at the root
 	if max == 0 {
-		return []types.Hash{sp.root}, 0
+		return []types.Hash{hs.root}, 0
 	}
 
 	// otherwise, iterate back to parents from best child
 	var path []types.Hash
-	header := sp.headers[best]
+	header := hs.headers[best]
 	for header.Parent != types.ZeroHash {
 		path = append(path, header.Hash)
-		header = sp.headers[header.Parent]
+		header = hs.headers[header.Parent]
 	}
-	path = append(path, sp.root)
+	path = append(path, hs.root)
 
 	return path, max
 }

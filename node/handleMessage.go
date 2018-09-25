@@ -25,7 +25,7 @@ import (
 	"github.com/alvalor/alvalor-go/types"
 )
 
-func handleMessage(log zerolog.Logger, wg *sync.WaitGroup, net Network, chain blockchain, finder pathfinder, down downloader, handlers Handlers, address string, message interface{}) {
+func handleMessage(log zerolog.Logger, wg *sync.WaitGroup, net Network, inventories inventoryStore, headers headerStore, track tracker, handlers Handlers, address string, message interface{}) {
 	defer wg.Done()
 
 	// configure logger
@@ -47,7 +47,7 @@ func handleMessage(log zerolog.Logger, wg *sync.WaitGroup, net Network, chain bl
 		log = log.With().Str("msg_type", "status").Uint64("distance", msg.Distance).Logger()
 
 		// if we are on a better path, we can ignore the status message
-		path, distance := finder.Longest()
+		path, distance := headers.Longest()
 		if distance >= msg.Distance {
 			log.Debug().Msg("not behind peer")
 			return
@@ -95,7 +95,7 @@ func handleMessage(log zerolog.Logger, wg *sync.WaitGroup, net Network, chain bl
 		}
 
 		// collect all header hashes on our best path until we run into a locator
-		path, _ := finder.Longest()
+		path, _ := headers.Longest()
 		var hashes []types.Hash
 		for _, hash := range path {
 			_, ok := lookup[hash]
@@ -107,20 +107,20 @@ func handleMessage(log zerolog.Logger, wg *sync.WaitGroup, net Network, chain bl
 
 		// collect all the headers from our pathfinder
 		// go in reverse order so we start with the oldest header first
-		var headers []*types.Header
+		var hdrs []*types.Header
 		for i := len(hashes) - 1; i >= 0; i-- {
 			hash := hashes[i]
-			header, err := finder.Header(hash)
+			header, err := headers.Header(hash)
 			if err != nil {
 				log.Error().Err(err).Hex("hash", hash[:]).Msg("could not retrieve header")
 				return
 			}
-			headers = append(headers, header)
+			hdrs = append(hdrs, header)
 		}
 
 		// send the partial path to our best distance to the other node
 		p := Path{
-			Headers: headers,
+			Headers: hdrs,
 		}
 		err := net.Send(address, p)
 		if err != nil {
@@ -153,17 +153,13 @@ func handleMessage(log zerolog.Logger, wg *sync.WaitGroup, net Network, chain bl
 		log = log.With().Str("msg_type", "confirm").Hex("hash", msg.Hash[:]).Logger()
 
 		// retrieve the hashes from the block manager
-		hashes, err := chain.Inventory(msg.Hash)
+		inv, err := inventories.Inventory(msg.Hash)
 		if err != nil {
 			log.Error().Err(err).Msg("could not retrieve block inventory")
 			return
 		}
 
 		// send the inventory message to the peer
-		inv := &Inventory{
-			Hash:   msg.Hash,
-			Hashes: hashes,
-		}
 		err = net.Send(address, inv)
 		if err != nil {
 			log.Error().Err(err).Msg("could not send inventory message")
@@ -176,9 +172,17 @@ func handleMessage(log zerolog.Logger, wg *sync.WaitGroup, net Network, chain bl
 
 		log = log.With().Str("msg_type", "inventory").Hex("hash", msg.Hash[:]).Int("num_hashes", len(msg.Hashes)).Logger()
 
-		err := down.Inventory(msg)
+		// store the new inventory in our database
+		err := inventories.AddInventory(msg.Hash, msg.Hashes)
 		if err != nil {
-			log.Error().Err(err).Msg("could not process inventory message")
+			log.Error().Err(err).Msg("could not store received inventory")
+			return
+		}
+
+		// signal the new inventory to the tracker to start pending tx downloads
+		err = track.Signal(msg.Hash)
+		if err != nil {
+			log.Error().Err(err).Msg("could not signal inventory")
 			return
 		}
 
