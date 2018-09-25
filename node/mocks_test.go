@@ -138,6 +138,11 @@ func (p *PeersMock) Tags(hash types.Hash) []string {
 	return seen
 }
 
+func (p *PeersMock) Pending(address string) (uint, error) {
+	args := p.Called(address)
+	return uint(args.Int(0)), args.Error(1)
+}
+
 type HandlersMock struct {
 	mock.Mock
 }

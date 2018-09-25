@@ -29,6 +29,7 @@ type peerManager interface {
 	Actives() []string
 	Tag(address string, hash types.Hash)
 	Tags(hash types.Hash) []string
+	Pending(address string) (uint, error)
 }
 
 type simplePeers struct {
@@ -82,4 +83,13 @@ func (s *simplePeers) Tags(hash types.Hash) []string {
 	defer s.Unlock()
 
 	return s.tags[hash]
+}
+
+func (s *simplePeers) Pending(address string) (uint, error) {
+	s.Lock()
+	defer s.Unlock()
+
+	// TODO: implement keeping track of pending requests
+
+	return 0, nil
 }

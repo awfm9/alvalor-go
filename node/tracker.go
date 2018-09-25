@@ -167,19 +167,30 @@ func (tr *trackerS) Follow(path []types.Hash) error {
 // Signal notifies the tracker than a new inventory has become available and
 // related transaction downloads should be started, if pending.
 func (tr *trackerS) Signal(hash types.Hash) error {
+
+	// if we are already synching the transactions or not synching this header at
+	// all, simply skip
 	already, ok := tr.current[hash]
 	if !ok || already {
 		return nil
 	}
+
+	// retrieve the inventory for the given header, as it should now be available
 	hashes, err := tr.inventories.Inventory(hash)
 	if err != nil {
 		return errors.Wrap(err, "could not retrieve inventory for signal")
 	}
+
+	// mark the current header transactions as being synchronized
+	tr.current[hash] = true
+
+	// start the download for each transaction hash
 	for _, hash := range hashes {
 		err := tr.downloads.StartTransaction(hash)
 		if err != nil {
 			return errors.Wrap(err, "could not start transaction download on signal")
 		}
 	}
+
 	return nil
 }
