@@ -71,9 +71,9 @@ func (tr *trackerS) Follow(path []types.Hash) error {
 		tr.current[hash] = false
 
 		// if we do not find the inventory, we start the download
-		inv, err := tr.inventories.Inventory(hash)
+		hashes, err := tr.inventories.Inventory(hash)
 		if errors.Cause(err) == errNotFound {
-			inErr := tr.downloads.StartInventory(inv.Hash)
+			inErr := tr.downloads.StartInventory(hash)
 			if inErr != nil {
 				return errors.Wrap(inErr, "could not start inventory download")
 			}
@@ -89,7 +89,7 @@ func (tr *trackerS) Follow(path []types.Hash) error {
 
 		// let's now add the hashes from the inventory of the block header to the
 		// set of transactions we want to download on this path
-		for _, txHash := range inv.Hashes {
+		for _, txHash := range hashes {
 			newTxs[txHash] = struct{}{}
 		}
 	}
@@ -114,7 +114,7 @@ func (tr *trackerS) Follow(path []types.Hash) error {
 
 		// we then retrieve the inventory to cancel any transaction downloads that
 		// might be in progress and not needed for the new headers
-		inv, err := tr.inventories.Inventory(hash)
+		hashes, err := tr.inventories.Inventory(hash)
 		if errors.Cause(err) == errNotFound {
 			// NOTE: no need to cancel related transactions
 			continue
@@ -132,7 +132,7 @@ func (tr *trackerS) Follow(path []types.Hash) error {
 
 		// for those headers where we already have the inventory, we create a set
 		// of old transactions that are already synchronizing
-		for _, txHash := range inv.Hashes {
+		for _, txHash := range hashes {
 			oldTxs[txHash] = struct{}{}
 		}
 	}
@@ -171,11 +171,11 @@ func (tr *trackerS) Signal(hash types.Hash) error {
 	if !ok || already {
 		return nil
 	}
-	inv, err := tr.inventories.Inventory(hash)
+	hashes, err := tr.inventories.Inventory(hash)
 	if err != nil {
 		return errors.Wrap(err, "could not retrieve inventory for signal")
 	}
-	for _, hash := range inv.Hashes {
+	for _, hash := range hashes {
 		err := tr.downloads.StartTransaction(hash)
 		if err != nil {
 			return errors.Wrap(err, "could not start transaction download on signal")

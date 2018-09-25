@@ -25,30 +25,37 @@ import (
 
 // inventoryStore represents an interface to block inventory storage.
 type inventoryStore interface {
-	Inventory(hash types.Hash) (*Inventory, error)
+	Inventory(hash types.Hash) ([]types.Hash, error)
 	AddInventory(hash types.Hash, hashes []types.Hash) error
 }
 
 // inventoryStoreS is a simple implementation of the inventory store.
 type inventoryStoreS struct {
-	inventories map[types.Hash]*Inventory
+	inventories map[types.Hash][]types.Hash
+}
+
+// newInvestoryStore creates a new store for block inventories.
+func newInventoryStore() *inventoryStoreS {
+	return &inventoryStoreS{
+		inventories: make(map[types.Hash][]types.Hash),
+	}
 }
 
 // AddInventory stores a new inventory.
-func (is *inventoryStoreS) AddInvestory(inv *Inventory) error {
-	_, ok := is.inventories[inv.Hash]
+func (is *inventoryStoreS) AddInventory(hash types.Hash, hashes []types.Hash) error {
+	_, ok := is.inventories[hash]
 	if ok {
 		return errors.New("inventory already known")
 	}
-	is.inventories[inv.Hash] = inv
+	is.inventories[hash] = hashes
 	return nil
 }
 
 // Inventory retrieves the inventory with the given block hash.
-func (is *inventoryStoreS) Inventory(hash types.Hash) (*Inventory, error) {
-	inv, ok := is.inventories[hash]
+func (is *inventoryStoreS) Inventory(hash types.Hash) ([]types.Hash, error) {
+	hashes, ok := is.inventories[hash]
 	if !ok {
 		return nil, errors.Wrap(errNotFound, "inventory not found")
 	}
-	return inv, nil
+	return hashes, nil
 }

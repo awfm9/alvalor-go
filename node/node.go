@@ -82,22 +82,18 @@ func New(log zerolog.Logger, net Network, chain blockchain, codec Codec, input <
 	// store references for reused dependencies
 	n.net = net
 
-	// TODO: save inventory store reference
-
-	// create the event stream for subscribers
+	// create the event and ubscriber streams
 	n.stream = make(chan interface{}, 128)
-
-	// create the channel to add subscribers for the event stream
 	n.subscribers = make(chan *subscriber)
 
-	// initialize path finder to identify best valid path
-	n.headers = newHeaderStore(nil)
+	// initialize the various data stores
+	// TODO: inject blockchain and bootstrap store states
+	n.inventories = newInventoryStore()
+	n.headers = newHeaderStore()
+	n.peers = newPeers()
 
 	// initialize the event manager to create events
 	n.events = newEventManager(n.stream)
-
-	// initialize peer state manager
-	n.peers = newPeers()
 
 	// initialize simple transaction pool
 	n.pool = newPool(codec, trie.NewBin())
@@ -138,14 +134,12 @@ func (n *simpleNode) Event(event interface{}) {
 
 func (n *simpleNode) Message(address string, message interface{}) {
 	n.wg.Add(1)
-	// TODO: introduce new blockchain interface
 	go handleMessage(n.log, n.wg, n.net, n.inventories, n.headers, n.track, n, address, message)
 }
 
 func (n *simpleNode) Entity(entity Entity) {
 	n.wg.Add(1)
-	// TODO: insert downloader parameter
-	go handleEntity(n.log, n.wg, n.net, n.headers, n.peers, n.pool, nil, entity, n.events, n)
+	go handleEntity(n.log, n.wg, n.net, n.headers, n.peers, n.pool, n.track, entity, n.events, n)
 }
 
 func (n *simpleNode) Stream() {

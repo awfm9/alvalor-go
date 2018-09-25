@@ -41,15 +41,13 @@ type headerStoreS struct {
 }
 
 // newHeaderStore creates a new simple header store.
-func newHeaderStore(chain blockchain) *headerStoreS {
-	// TODO: update to use the new blockchain interface
+func newHeaderStore() *headerStoreS {
+	// TODO: bootstrap with root
 	sp := &headerStoreS{
-		// root:     root.Hash,
 		headers:  make(map[types.Hash]*types.Header),
 		children: make(map[types.Hash][]types.Hash),
 		pending:  make(map[types.Hash][]*types.Header),
 	}
-	// hs.headers[root.Hash] = root
 	return sp
 }
 
