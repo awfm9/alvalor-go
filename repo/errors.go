@@ -15,8 +15,12 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with Alvalor.  If not, see <http://www.gnu.org/licenses/>.
 
-package node
+package repo
 
-import "github.com/pkg/errors"
+import "errors"
 
-var errNotFound = errors.New("entity not found")
+// ErrNotFound is returned whenever an entity is not found in the repository.
+var ErrNotFound = errors.New("entity not found")
+
+// ErrAlreadyKnown is returned whenever an entity is already known in the repository.
+var ErrAlreadyKnown = errors.New("entity already known")

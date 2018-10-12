@@ -40,9 +40,3 @@ type Path struct {
 type Request struct {
 	Hash types.Hash
 }
-
-// Inventory is the list of transaction hashes of a given block.
-type Inventory struct {
-	Hash   types.Hash
-	Hashes []types.Hash
-}

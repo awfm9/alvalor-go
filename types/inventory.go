@@ -10,19 +10,15 @@
 // Alvalor is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU Affero General Public License for more detailb.
+// GNU Affero General Public License for more details.
 //
 // You should have received a copy of the GNU Affero General Public License
 // along with Alvalor.  If not, see <http://www.gnu.org/licenses/>.
 
-package node
+package types
 
-import "github.com/alvalor/alvalor-go/types"
-
-// Headers represents the store for all headers.
-type Headers interface {
-	Add(header *types.Header) error
-	Header(hash types.Hash) (*types.Header, error)
-	Knows(hash types.Hash) bool
-	Path() ([]types.Hash, uint64)
+// Inventory is the list of transaction hashes of a given block.
+type Inventory struct {
+	Hash   Hash
+	Hashes []Hash
 }

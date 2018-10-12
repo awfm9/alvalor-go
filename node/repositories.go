@@ -15,12 +15,21 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with Alvalor.  If not, see <http://www.gnu.org/licenses/>.
 
-package repo
+package node
 
 import "github.com/alvalor/alvalor-go/types"
 
-// Blockchain represents a low-level interface to retrieve information about
-// the blockchain from the disk.
-type Blockchain interface {
-	Root() (*types.Header, error)
+// Inventories represents an interface to block inventory storage.
+type Inventories interface {
+	Add(inv *types.Inventory) error
+	Has(hash types.Hash) bool
+	Get(hash types.Hash) ([]types.Hash, error)
+}
+
+// Headers represents the store for all headers.
+type Headers interface {
+	Add(header *types.Header) error
+	Has(hash types.Hash) bool
+	Get(hash types.Hash) (*types.Header, error)
+	Path() ([]types.Hash, uint64)
 }

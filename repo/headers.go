@@ -18,7 +18,7 @@
 package repo
 
 import (
-	"errors"
+	"github.com/pkg/errors"
 
 	"github.com/alvalor/alvalor-go/types"
 )
@@ -34,29 +34,19 @@ type HeaderRepo struct {
 }
 
 // NewHeaderRepo creates a new simple header store.
-func NewHeaderRepo(root *types.Header) *HeaderRepo {
+func NewHeaderRepo(blockchain Blockchain) (*HeaderRepo, error) {
+	root, err := blockchain.Root()
+	if err != nil {
+		return nil, errors.Wrap(err, "could not get root header from blockchain")
+	}
 	hr := &HeaderRepo{
 		headers:  make(map[types.Hash]*types.Header),
 		children: make(map[types.Hash][]types.Hash),
 		pending:  make(map[types.Hash][]*types.Header),
 	}
 	hr.headers[root.Hash] = root
-	return hr
-}
-
-// Knows checks if the given hash is already known.
-func (hr *HeaderRepo) Knows(hash types.Hash) bool {
-	_, ok := hr.headers[hash]
-	return ok
-}
-
-// Header returns the given header.
-func (hr *HeaderRepo) Header(hash types.Hash) (*types.Header, error) {
-	header, ok := hr.headers[hash]
-	if !ok {
-		return nil, errors.New("header not found")
-	}
-	return header, nil
+	// TODO: add all headers from blockchain DB to the path
+	return hr, nil
 }
 
 // Add adds a new header to the graph.
@@ -65,7 +55,7 @@ func (hr *HeaderRepo) Add(header *types.Header) error {
 	// if we already know the header, fail
 	_, ok := hr.headers[header.Hash]
 	if ok {
-		return errors.New("header already in graph")
+		return errors.Wrap(ErrAlreadyKnown, "header already known")
 	}
 
 	// if we don't know the parent, add to pending headers and skip rest
@@ -89,6 +79,21 @@ func (hr *HeaderRepo) Add(header *types.Header) error {
 	}
 
 	return nil
+}
+
+// Has checks if the given hash is already known.
+func (hr *HeaderRepo) Has(hash types.Hash) bool {
+	_, ok := hr.headers[hash]
+	return ok
+}
+
+// Get returns the header with the given hash.
+func (hr *HeaderRepo) Get(hash types.Hash) (*types.Header, error) {
+	header, ok := hr.headers[hash]
+	if !ok {
+		return nil, errors.Wrap(ErrNotFound, "header not found")
+	}
+	return header, nil
 }
 
 // Path returns the best path of the graph by total difficulty.
