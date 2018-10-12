@@ -33,7 +33,8 @@ type Store interface {
 	Del(key []byte) error
 }
 
-type poolManager interface {
+// Pool represents the transaction pool of the node package.
+type Pool interface {
 	Add(tx *types.Transaction) error
 	Get(hash types.Hash) (*types.Transaction, error)
 	Remove(hash types.Hash) error

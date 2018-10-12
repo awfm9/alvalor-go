@@ -143,6 +143,15 @@ func (p *PeersMock) Pending(address string) (uint, error) {
 	return uint(args.Int(0)), args.Error(1)
 }
 
+func (p *PeersMock) Find(filters ...filterFunc) []string {
+	args := p.Called(filters)
+	var peers []string
+	if args.Get(0) != nil {
+		peers = args.Get(0).([]string)
+	}
+	return peers
+}
+
 type HandlersMock struct {
 	mock.Mock
 }

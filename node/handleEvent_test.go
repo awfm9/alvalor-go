@@ -17,132 +17,133 @@
 
 package node
 
-import (
-	"io/ioutil"
-	"sync"
-	"testing"
-
-	"github.com/rs/zerolog"
-	"github.com/stretchr/testify/mock"
-	"github.com/stretchr/testify/suite"
-
-	"github.com/alvalor/alvalor-go/network"
-	"github.com/alvalor/alvalor-go/types"
-)
-
-func TestEvent(t *testing.T) {
-	suite.Run(t, new(EventSuite))
-}
-
-type EventSuite struct {
-	suite.Suite
-	log zerolog.Logger
-	wg  *sync.WaitGroup
-}
-
-func (suite *EventSuite) SetupTest() {
-	suite.log = zerolog.New(ioutil.Discard)
-	suite.wg = &sync.WaitGroup{}
-	suite.wg.Add(1)
-}
-
-func (suite *EventSuite) TestEventConnected() {
-
-	// arrange
-	address := "192.0.2.1:1337"
-
-	net := &NetworkMock{}
-	net.On("Send", mock.Anything, mock.Anything).Return(nil)
-
-	finder := &PathfinderMock{}
-	finder.On("Longest").Return([]types.Hash{types.ZeroHash}, 0)
-
-	peers := &PeersMock{}
-	peers.On("Active", mock.Anything)
-	peers.On("Inactive", mock.Anything)
-	peers.On("Tag", mock.Anything, mock.Anything)
-
-	pool := &PoolMock{}
-	pool.On("Count").Return(0)
-	pool.On("Hashes").Return([][]byte{})
-
-	handlers := &HandlersMock{}
-	handlers.On("Message", mock.Anything)
-
-	event := network.Connected{Address: address}
-
-	// act
-	handleEvent(suite.log, suite.wg, net, finder, peers, handlers, event)
-
-	// assert
-	t := suite.T()
-
-	peers.AssertCalled(t, "Active", address)
-}
-
-func (suite *EventSuite) TestEventDisconnected() {
-
-	// arrange
-	address := "192.0.2.1:1337"
-
-	net := &NetworkMock{}
-	net.On("Send", mock.Anything, mock.Anything).Return(nil)
-
-	finder := &PathfinderMock{}
-
-	peers := &PeersMock{}
-	peers.On("Active", mock.Anything)
-	peers.On("Inactive", mock.Anything)
-	peers.On("Tag", mock.Anything, mock.Anything)
-
-	pool := &PoolMock{}
-	pool.On("Count").Return(0)
-	pool.On("IDs").Return([][]byte{})
-
-	handlers := &HandlersMock{}
-	handlers.On("Message", mock.Anything)
-
-	event := network.Disconnected{Address: address}
-
-	// act
-	handleEvent(suite.log, suite.wg, net, finder, peers, handlers, event)
-
-	// assert
-	t := suite.T()
-
-	peers.AssertCalled(t, "Inactive", address)
-}
-
-func (suite *EventSuite) TestEventReceived() {
-
-	// arrange
-	address := "192.0.2.1:1337"
-	message := "message"
-
-	net := &NetworkMock{}
-	net.On("Send", mock.Anything, mock.Anything).Return(nil)
-
-	finder := &PathfinderMock{}
-
-	peers := &PeersMock{}
-	peers.On("Active", mock.Anything)
-	peers.On("Inactive", mock.Anything)
-	peers.On("Tag", mock.Anything, mock.Anything)
-
-	pool := &PoolMock{}
-	pool.On("Count").Return(0)
-	pool.On("IDs").Return([][]byte{})
-
-	handlers := &HandlersMock{}
-	handlers.On("Message", mock.Anything, mock.Anything)
-
-	event := network.Received{Address: address, Message: message}
-
-	// act
-	handleEvent(suite.log, suite.wg, net, finder, peers, handlers, event)
-
-	// assert
-	t := suite.T()
-
-	handlers.AssertCalled(t, "Message", address, message)
-}
+//
+// import (
+// 	"io/ioutil"
+// 	"sync"
+// 	"testing"
+//
+// 	"github.com/rs/zerolog"
+// 	"github.com/stretchr/testify/mock"
+// 	"github.com/stretchr/testify/suite"
+//
+// 	"github.com/alvalor/alvalor-go/network"
+// 	"github.com/alvalor/alvalor-go/types"
+// )
+//
+// func TestEvent(t *testing.T) {
+// 	suite.Run(t, new(EventSuite))
+// }
+//
+// type EventSuite struct {
+// 	suite.Suite
+// 	log zerolog.Logger
+// 	wg  *sync.WaitGroup
+// }
+//
+// func (suite *EventSuite) SetupTest() {
+// 	suite.log = zerolog.New(ioutil.Discard)
+// 	suite.wg = &sync.WaitGroup{}
+// 	suite.wg.Add(1)
+// }
+//
+// func (suite *EventSuite) TestEventConnected() {
+//
+// 	// arrange
+// 	address := "192.0.2.1:1337"
+//
+// 	net := &NetworkMock{}
+// 	net.On("Send", mock.Anything, mock.Anything).Return(nil)
+//
+// 	finder := &PathfinderMock{}
+// 	finder.On("Longest").Return([]types.Hash{types.ZeroHash}, 0)
+//
+// 	peers := &PeersMock{}
+// 	peers.On("Active", mock.Anything)
+// 	peers.On("Inactive", mock.Anything)
+// 	peers.On("Tag", mock.Anything, mock.Anything)
+//
+// 	pool := &PoolMock{}
+// 	pool.On("Count").Return(0)
+// 	pool.On("Hashes").Return([][]byte{})
+//
+// 	handlers := &HandlersMock{}
+// 	handlers.On("Message", mock.Anything)
+//
+// 	event := network.Connected{Address: address}
+//
+// 	// act
+// 	handleEvent(suite.log, suite.wg, net, finder, peers, handlers, event)
+//
+// 	// assert
+// 	t := suite.T()
+//
+// 	peers.AssertCalled(t, "Active", address)
+// }
+//
+// func (suite *EventSuite) TestEventDisconnected() {
+//
+// 	// arrange
+// 	address := "192.0.2.1:1337"
+//
+// 	net := &NetworkMock{}
+// 	net.On("Send", mock.Anything, mock.Anything).Return(nil)
+//
+// 	finder := &PathfinderMock{}
+//
+// 	peers := &PeersMock{}
+// 	peers.On("Active", mock.Anything)
+// 	peers.On("Inactive", mock.Anything)
+// 	peers.On("Tag", mock.Anything, mock.Anything)
+//
+// 	pool := &PoolMock{}
+// 	pool.On("Count").Return(0)
+// 	pool.On("IDs").Return([][]byte{})
+//
+// 	handlers := &HandlersMock{}
+// 	handlers.On("Message", mock.Anything)
+//
+// 	event := network.Disconnected{Address: address}
+//
+// 	// act
+// 	handleEvent(suite.log, suite.wg, net, finder, peers, handlers, event)
+//
+// 	// assert
+// 	t := suite.T()
+//
+// 	peers.AssertCalled(t, "Inactive", address)
+// }
+//
+// func (suite *EventSuite) TestEventReceived() {
+//
+// 	// arrange
+// 	address := "192.0.2.1:1337"
+// 	message := "message"
+//
+// 	net := &NetworkMock{}
+// 	net.On("Send", mock.Anything, mock.Anything).Return(nil)
+//
+// 	finder := &PathfinderMock{}
+//
+// 	peers := &PeersMock{}
+// 	peers.On("Active", mock.Anything)
+// 	peers.On("Inactive", mock.Anything)
+// 	peers.On("Tag", mock.Anything, mock.Anything)
+//
+// 	pool := &PoolMock{}
+// 	pool.On("Count").Return(0)
+// 	pool.On("IDs").Return([][]byte{})
+//
+// 	handlers := &HandlersMock{}
+// 	handlers.On("Message", mock.Anything, mock.Anything)
+//
+// 	event := network.Received{Address: address, Message: message}
+//
+// 	// act
+// 	handleEvent(suite.log, suite.wg, net, finder, peers, handlers, event)
+//
+// 	// assert
+// 	t := suite.T()
+//
+// 	handlers.AssertCalled(t, "Message", address, message)
+// }

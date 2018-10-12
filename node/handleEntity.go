@@ -25,7 +25,7 @@ import (
 	"github.com/alvalor/alvalor-go/types"
 )
 
-func handleEntity(log zerolog.Logger, wg *sync.WaitGroup, net Network, headers headerStore, peers peerManager, pool poolManager, track tracker, entity Entity, events eventManager, handlers Handlers) {
+func handleEntity(log zerolog.Logger, wg *sync.WaitGroup, net Network, headers headerStore, peers Peers, pool Pool, track tracker, entity Entity, events eventManager, handlers Handlers) {
 	defer wg.Done()
 
 	// precompute the entity hash
@@ -70,7 +70,7 @@ func handleEntity(log zerolog.Logger, wg *sync.WaitGroup, net Network, headers h
 		events.Header(e.Hash)
 
 		// we should propagate it to peers who are unaware of the header
-		peers := peers.Tags(e.Hash)
+		peers := peers.Find(peerHasEntity(false, e.Hash))
 		err = net.Broadcast(e, peers...)
 		if err != nil {
 			log.Error().Err(err).Msg("could not propagate entity")
@@ -113,8 +113,8 @@ func handleEntity(log zerolog.Logger, wg *sync.WaitGroup, net Network, headers h
 		events.Transaction(e.Hash)
 
 		// create lookup to know who to exclude from broadcast
-		peers := peers.Tags(e.Hash)
-		err = net.Broadcast(e, peers...)
+		addresses := peers.Find(peerHasEntity(false, e.Hash))
+		err = net.Broadcast(e, addresses...)
 		if err != nil {
 			log.Error().Err(err).Msg("could not propagate entity")
 			return

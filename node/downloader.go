@@ -37,7 +37,7 @@ type downloader interface {
 type downloaderS struct {
 	inventories  map[types.Hash]string
 	transactions map[types.Hash]string
-	peers        peerManager
+	peers        Peers
 	net          Network
 }
 
@@ -56,11 +56,11 @@ func (do *downloaderS) StartInventory(hash types.Hash) error {
 	}
 
 	// get the peer with the lowest amount of pending downloads
-	addresses := do.peers.Actives()
+	addresses := do.peers.Find(peerIsActive(true), peerHasEntity(true, hash))
 	var target string
 	best := uint(math.MaxUint32)
 	for _, address := range addresses {
-		pending, err := do.peers.Pending(address)
+		pending, err := do.peers.NumPending(address)
 		if err != nil {
 			continue
 		}

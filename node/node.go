@@ -52,8 +52,8 @@ type simpleNode struct {
 	inventories inventoryStore
 	headers     headerStore
 	track       tracker
-	peers       peerManager
-	pool        poolManager
+	peers       Peers
+	pool        Pool
 	events      eventManager
 	stream      chan interface{}
 	subscribers chan *subscriber
@@ -117,7 +117,7 @@ func (n *simpleNode) Submit(tx *types.Transaction) {
 }
 
 func (n *simpleNode) Stats() {
-	numActive := uint(len(n.peers.Actives()))
+	numActive := uint(len(n.peers.Find(peerIsActive(true))))
 	numTxs := n.pool.Count()
 	n.log.Info().Uint("num_active", numActive).Uint("num_txs", numTxs).Msg("stats")
 }

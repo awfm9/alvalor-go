@@ -96,7 +96,7 @@ func (bc *Blockchain) AddBlock(block *types.Block) error {
 	block.Hash = block.GetHash()
 	data := make([]byte, 4)
 
-	// mapp the block hash to the block height
+	// map the block hash to the block height
 	binary.LittleEndian.PutUint32(data, height)
 	err = bc.heights.Put(block.Hash[:], data)
 	if err != nil {
