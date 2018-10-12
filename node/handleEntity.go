@@ -78,7 +78,7 @@ func handleEntity(log zerolog.Logger, wg *sync.WaitGroup, net Network, headers H
 		}
 
 		// switch the downloader to the new best path
-		path, _ := headers.Longest()
+		path, _ := headers.Path()
 		err = track.Follow(path)
 		if err != nil {
 			log.Error().Err(err).Msg("could not follow changed path")

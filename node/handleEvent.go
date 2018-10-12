@@ -40,7 +40,7 @@ func handleEvent(log zerolog.Logger, wg *sync.WaitGroup, net Network, headers He
 		peers.Active(e.Address)
 
 		// send our current best distance
-		_, distance := headers.Longest()
+		_, distance := headers.Path()
 		status := &Status{
 			Distance: distance,
 		}

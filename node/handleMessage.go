@@ -48,7 +48,7 @@ func handleMessage(log zerolog.Logger, wg *sync.WaitGroup, net Network, download
 		log = log.With().Str("msg_type", "status").Uint64("distance", msg.Distance).Logger()
 
 		// if we are on a better path, we can ignore the status message
-		path, distance := headers.Longest()
+		path, distance := headers.Path()
 		if distance >= msg.Distance {
 			log.Debug().Msg("not behind peer")
 			return
@@ -96,7 +96,7 @@ func handleMessage(log zerolog.Logger, wg *sync.WaitGroup, net Network, download
 		}
 
 		// collect all header hashes on our best path until we run into a locator
-		path, _ := headers.Longest()
+		path, _ := headers.Path()
 		var hashes []types.Hash
 		for _, hash := range path {
 			_, ok := lookup[hash]

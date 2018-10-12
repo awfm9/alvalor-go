@@ -15,16 +15,8 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with Alvalor.  If not, see <http://www.gnu.org/licenses/>.
 
-package node
+package repo
 
-import "github.com/alvalor/alvalor-go/types"
-
-// Blockchain represents an interface to access all blockchain related data.
-// TODO: add handling of total difficulty / best block
-type Blockchain interface {
-	AddBlock(block *types.Block) error
-	Inventory(hash types.Hash) (*Inventory, error)
-	Transaction(hash types.Hash) (*types.Transaction, error)
-	Header(hash types.Hash) (*types.Header, error)
-	BlockBy(hash types.Hash) (*types.Block, error)
-}
+// Blockchain represents a low-level interface to retrieve information about
+// the blockchain from the disk.
+type Blockchain interface{}

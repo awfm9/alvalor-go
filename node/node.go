@@ -67,7 +67,7 @@ type subscriber struct {
 }
 
 // New creates a new node to manage the Alvalor blockchain.
-func New(log zerolog.Logger, net Network, chain Blockchain, codec Codec, input <-chan interface{}) Node {
+func New(log zerolog.Logger, net Network, headers Headers, codec Codec, input <-chan interface{}) Node {
 
 	// initialize the node
 	n := &simpleNode{}
@@ -88,9 +88,8 @@ func New(log zerolog.Logger, net Network, chain Blockchain, codec Codec, input <
 	n.subscribers = make(chan *subscriber)
 
 	// initialize the various data stores
-	// TODO: inject blockchain and bootstrap store states
 	n.inventories = newInventoryStore()
-	n.headers = newHeaderStore()
+	n.headers = headers
 	n.peers = newPeers()
 
 	// initialize the event manager to create events
