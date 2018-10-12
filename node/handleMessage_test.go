@@ -61,7 +61,6 @@ package node
 // 	handlers.On("Entity", mock.Anything)
 //
 // 	// act
-// 	// TODO: introduce new blockchain interface
 // 	handleMessage(suite.log, suite.wg, net, nil, finder, nil, handlers, address, msg)
 //
 // 	// assert

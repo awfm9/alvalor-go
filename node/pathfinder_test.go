@@ -17,8 +17,6 @@
 
 package node
 
-// TODO: update tests
-
 // import (
 // 	"testing"
 //

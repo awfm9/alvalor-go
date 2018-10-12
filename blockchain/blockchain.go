@@ -18,24 +18,13 @@
 package blockchain
 
 import (
-	"encoding/binary"
-	"math"
-
 	"github.com/pkg/errors"
 
 	"github.com/alvalor/alvalor-go/types"
 )
 
-// Current is the index used to look up the current heighest block.
-const (
-	Current = math.MaxUint32
-)
-
 // Blockchain represents a wrapper around all blockchain data.
 type Blockchain struct {
-	height       uint32
-	block        *types.Block
-	heights      KV
 	indices      KV
 	headers      Store
 	transactions Store
@@ -44,75 +33,20 @@ type Blockchain struct {
 // New creates a new blockchain database.
 func New(heights KV, indices KV, headers Store, transactions Store) (*Blockchain, error) {
 	bc := &Blockchain{
-		heights:      heights,
 		indices:      indices,
 		headers:      headers,
 		transactions: transactions,
 	}
-	buf := make([]byte, 4)
-	binary.LittleEndian.PutUint32(buf, Current)
-	data, err := bc.heights.Get(buf)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not get hash of current block")
-	}
-	var hash types.Hash
-	copy(hash[:], data)
-	data, err = bc.heights.Get(hash[:])
-	if err != nil {
-		return nil, errors.Wrap(err, "could not get height of current block")
-	}
-	block, err := bc.BlockByHash(hash)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not get current block")
-	}
-	bc.height = binary.LittleEndian.Uint32(data)
-	bc.block = block
 	return bc, nil
-}
-
-// Height will return current highest height.
-func (bc *Blockchain) Height() uint32 {
-	return bc.height
-}
-
-// Header will return current highest header.
-func (bc *Blockchain) Header() *types.Header {
-	return bc.block.Header
 }
 
 // AddBlock adds a block to the blockchain.
 func (bc *Blockchain) AddBlock(block *types.Block) error {
 
-	// TODO: handle reorgs & best path block per height
-
-	// check if we know the parent and get the parent height
-	height, err := bc.HeightByHash(block.Parent)
-	if err != nil {
-		return errors.Wrap(err, "could not get parent header")
-	}
-
-	// calculate the hash once and prepare key for height lookups
-	height++
-	block.Hash = block.GetHash()
-	data := make([]byte, 4)
-
-	// map the block hash to the block height
-	binary.LittleEndian.PutUint32(data, height)
-	err = bc.heights.Put(block.Hash[:], data)
-	if err != nil {
-		return errors.Wrap(err, "could not map block hash to height")
-	}
-
-	// map the block height to the block hash
-	err = bc.heights.Put(data, block.Hash[:])
-	if err != nil {
-		return errors.Wrap(err, "could not map block height to hash")
-	}
-
 	// save each transaction & collect their indices
 	indices := make([]byte, 0, len(block.Transactions)*32)
 	for _, tx := range block.Transactions {
-		err = bc.transactions.Save(tx.Hash, tx)
+		err := bc.transactions.Save(tx.Hash, tx)
 		if err != nil {
 			return errors.Wrap(err, "could not store block transaction")
 		}
@@ -120,7 +54,7 @@ func (bc *Blockchain) AddBlock(block *types.Block) error {
 	}
 
 	// map the block hash to the transaction indices
-	err = bc.indices.Put(block.Hash[:], indices)
+	err := bc.indices.Put(block.Hash[:], indices)
 	if err != nil {
 		return errors.Wrap(err, "could not store block transaction IDs")
 	}
@@ -131,46 +65,7 @@ func (bc *Blockchain) AddBlock(block *types.Block) error {
 		return errors.Wrap(err, "could not store block header")
 	}
 
-	// if the block is not a new best block, we are done
-	if height <= bc.height {
-		return nil
-	}
-
-	// map the current height to the block hash
-	binary.LittleEndian.PutUint32(data, Current)
-	err = bc.heights.Put(data, block.Hash[:])
-	if err != nil {
-		return errors.Wrap(err, "could not map current height to hash")
-	}
-
-	// store a reference to the block for fast access
-	bc.height = height
-	bc.block = block
-
 	return nil
-}
-
-// HeightByHash returns the height of a block for the given hash.
-func (bc *Blockchain) HeightByHash(hash types.Hash) (uint32, error) {
-	data, err := bc.heights.Get(hash[:])
-	if err != nil {
-		return 0, errors.Wrap(err, "could not retrieve height by hash")
-	}
-	height := binary.LittleEndian.Uint32(data)
-	return height, nil
-}
-
-// HashByHeight returns the hash of the block at the given height.
-func (bc *Blockchain) HashByHeight(height uint32) (types.Hash, error) {
-	key := make([]byte, 4)
-	binary.LittleEndian.PutUint32(key, height)
-	data, err := bc.heights.Get(key)
-	if err != nil {
-		return types.ZeroHash, errors.Wrap(err, "could not retrieve hash by height")
-	}
-	var hash types.Hash
-	copy(hash[:], data)
-	return hash, nil
 }
 
 // HeaderByHash retrieves a header by its hash.
@@ -185,15 +80,6 @@ func (bc *Blockchain) HeaderByHash(hash types.Hash) (*types.Header, error) {
 	}
 	header.Hash = header.GetHash()
 	return header, nil
-}
-
-// HeaderByHeight retrieves a header by its height.
-func (bc *Blockchain) HeaderByHeight(height uint32) (*types.Header, error) {
-	hash, err := bc.HashByHeight(height)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not retrieve hash for height")
-	}
-	return bc.HeaderByHash(hash)
 }
 
 // TransactionByHash retrieves a transaction by its hash.
@@ -234,13 +120,4 @@ func (bc *Blockchain) BlockByHash(hash types.Hash) (*types.Block, error) {
 		block.Transactions = append(block.Transactions, tx)
 	}
 	return block, nil
-}
-
-// BlockByHeight retrieves a block by its height.
-func (bc *Blockchain) BlockByHeight(height uint32) (*types.Block, error) {
-	hash, err := bc.HashByHeight(height)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not retrieve hash for height")
-	}
-	return bc.BlockByHash(hash)
 }

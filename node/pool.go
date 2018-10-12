@@ -75,7 +75,6 @@ func (p *simplePool) Add(tx *types.Transaction) error {
 		return errors.Wrap(err, "could not put data")
 	}
 
-	// TODO: fix tests to check ids entry
 	p.hashes[tx.Hash] = struct{}{}
 
 	return nil
@@ -108,7 +107,6 @@ func (p *simplePool) Remove(hash types.Hash) error {
 		return errors.Wrap(err, "could not del data")
 	}
 
-	// TODO: fix tests to check ids entry
 	delete(p.hashes, hash)
 
 	return nil
@@ -118,7 +116,6 @@ func (p *simplePool) Count() uint {
 	p.Lock()
 	defer p.Unlock()
 
-	// TODO: check tests to use ids for count
 	return uint(len(p.hashes))
 }
 
@@ -126,7 +123,6 @@ func (p *simplePool) Knows(hash types.Hash) bool {
 	p.Lock()
 	defer p.Unlock()
 
-	// TODO: check tests to use lookup for known
 	_, ok := p.hashes[hash]
 	return ok
 }
