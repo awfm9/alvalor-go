@@ -26,7 +26,7 @@ import (
 	"github.com/alvalor/alvalor-go/types"
 )
 
-func handleMessage(log zerolog.Logger, wg *sync.WaitGroup, net Network, peers Peers, inventories Inventories, pool Pool, headers Headers, track tracker, handlers Handlers, address string, message interface{}) {
+func handleMessage(log zerolog.Logger, wg *sync.WaitGroup, net Network, download downloader, peers Peers, inventories Inventories, pool Pool, headers Headers, track tracker, handlers Handlers, address string, message interface{}) {
 	defer wg.Done()
 
 	// configure logger
@@ -180,6 +180,9 @@ func handleMessage(log zerolog.Logger, wg *sync.WaitGroup, net Network, peers Pe
 
 		log = log.With().Str("msg_type", "inventory").Hex("hash", msg.Hash[:]).Int("num_hashes", len(msg.Hashes)).Logger()
 
+		// cancel any pending download retries for this inventory
+		download.Cancel(msg.Hash)
+
 		// mark the inventory as received for the respective peer
 		peers.Received(address, msg.Hash)
 
@@ -202,6 +205,9 @@ func handleMessage(log zerolog.Logger, wg *sync.WaitGroup, net Network, peers Pe
 	case *types.Transaction:
 
 		log = log.With().Str("msg_type", "transaction").Hex("hash", msg.Hash[:]).Logger()
+
+		// cancel any pending download retries for this transaction
+		download.Cancel(msg.Hash)
 
 		// mark the inventory download as completed for the respective peer
 		peers.Received(address, msg.Hash)

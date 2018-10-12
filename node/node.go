@@ -49,6 +49,7 @@ type simpleNode struct {
 	log         zerolog.Logger
 	wg          *sync.WaitGroup
 	net         Network
+	download    downloader
 	inventories Inventories
 	headers     Headers
 	track       tracker
@@ -134,7 +135,7 @@ func (n *simpleNode) Event(event interface{}) {
 
 func (n *simpleNode) Message(address string, message interface{}) {
 	n.wg.Add(1)
-	go handleMessage(n.log, n.wg, n.net, n.peers, n.inventories, n.pool, n.headers, n.track, n, address, message)
+	go handleMessage(n.log, n.wg, n.net, n.download, n.peers, n.inventories, n.pool, n.headers, n.track, n, address, message)
 }
 
 func (n *simpleNode) Entity(entity Entity) {

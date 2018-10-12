@@ -88,7 +88,7 @@ func (do *downloaderS) Start(hash types.Hash) error {
 	}
 	do.peers.Requested(target, hash)
 
-	// TODO: implement timeout mechanism
+	// start a timeout timer to retry the download and save the cancel signal
 	cancel := timeout(4*time.Second, func() { do.Start(hash) })
 	do.timeouts[hash] = cancel
 
@@ -105,6 +105,7 @@ func (do *downloaderS) Cancel(hash types.Hash) error {
 		return errors.Wrap(errNotFound, "could not find download for hash")
 	}
 	close(cancel)
+
 	return nil
 }
 
