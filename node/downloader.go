@@ -19,6 +19,8 @@ package node
 
 import (
 	"math"
+	"sync"
+	"time"
 
 	"github.com/alvalor/alvalor-go/types"
 	"github.com/pkg/errors"
@@ -33,8 +35,10 @@ type downloader interface {
 
 // downloaderS implement a simple download manager.
 type downloaderS struct {
+	sync.Mutex
 	inventories  map[types.Hash]string
 	transactions map[types.Hash]string
+	timeouts     map[types.Hash]chan<- struct{}
 	peers        Peers
 	net          Network
 }
@@ -46,6 +50,8 @@ func newDownloader() *downloaderS {
 
 // Start starts the download of a block inventory.
 func (do *downloaderS) Start(hash types.Hash) error {
+	do.Lock()
+	defer do.Unlock()
 
 	// if we are already downloading the inventory, skip
 	_, ok := do.inventories[hash]
@@ -83,14 +89,34 @@ func (do *downloaderS) Start(hash types.Hash) error {
 	do.peers.Requested(target, hash)
 
 	// TODO: implement timeout mechanism
+	cancel := timeout(4*time.Second, func() { do.Start(hash) })
+	do.timeouts[hash] = cancel
 
 	return nil
 }
 
 // CancelInventory cancels the download of a block inventory.
 func (do *downloaderS) Cancel(hash types.Hash) error {
+	do.Lock()
+	defer do.Unlock()
 
-	// TODO: disable the timeout mechanism
-
+	cancel, ok := do.timeouts[hash]
+	if !ok {
+		return errors.Wrap(errNotFound, "could not find download for hash")
+	}
+	close(cancel)
 	return nil
+}
+
+func timeout(duration time.Duration, retry func()) chan struct{} {
+	cancel := make(chan struct{})
+	go func() {
+		select {
+		case <-time.After(duration):
+			retry()
+		case <-cancel:
+			// nothing
+		}
+	}()
+	return cancel
 }
