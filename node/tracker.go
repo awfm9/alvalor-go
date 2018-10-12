@@ -29,7 +29,7 @@ type tracker interface {
 }
 
 type trackerS struct {
-	inventories inventoryStore
+	inventories Inventories
 	downloads   downloader
 	current     map[types.Hash]bool
 	running     map[types.Hash]<-chan struct{}

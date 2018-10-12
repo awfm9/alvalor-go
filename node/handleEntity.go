@@ -25,7 +25,7 @@ import (
 	"github.com/alvalor/alvalor-go/types"
 )
 
-func handleEntity(log zerolog.Logger, wg *sync.WaitGroup, net Network, headers headerStore, peers Peers, pool Pool, track tracker, entity Entity, events eventManager, handlers Handlers) {
+func handleEntity(log zerolog.Logger, wg *sync.WaitGroup, net Network, headers Headers, peers Peers, pool Pool, track tracker, entity Entity, events eventManager, handlers Handlers) {
 	defer wg.Done()
 
 	// precompute the entity hash

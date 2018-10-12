@@ -49,8 +49,8 @@ type simpleNode struct {
 	log         zerolog.Logger
 	wg          *sync.WaitGroup
 	net         Network
-	inventories inventoryStore
-	headers     headerStore
+	inventories Inventories
+	headers     Headers
 	track       tracker
 	peers       Peers
 	pool        Pool
@@ -66,7 +66,7 @@ type subscriber struct {
 }
 
 // New creates a new node to manage the Alvalor blockchain.
-func New(log zerolog.Logger, net Network, chain blockchain, codec Codec, input <-chan interface{}) Node {
+func New(log zerolog.Logger, net Network, chain Blockchain, codec Codec, input <-chan interface{}) Node {
 
 	// initialize the node
 	n := &simpleNode{}

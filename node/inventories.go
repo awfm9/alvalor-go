@@ -23,8 +23,8 @@ import (
 	"github.com/alvalor/alvalor-go/types"
 )
 
-// inventoryStore represents an interface to block inventory storage.
-type inventoryStore interface {
+// Inventories represents an interface to block inventory storage.
+type Inventories interface {
 	Inventory(hash types.Hash) ([]types.Hash, error)
 	AddInventory(hash types.Hash, hashes []types.Hash) error
 }

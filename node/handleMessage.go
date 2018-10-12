@@ -26,7 +26,7 @@ import (
 	"github.com/alvalor/alvalor-go/types"
 )
 
-func handleMessage(log zerolog.Logger, wg *sync.WaitGroup, net Network, inventories inventoryStore, pool Pool, headers headerStore, track tracker, handlers Handlers, address string, message interface{}) {
+func handleMessage(log zerolog.Logger, wg *sync.WaitGroup, net Network, inventories Inventories, pool Pool, headers Headers, track tracker, handlers Handlers, address string, message interface{}) {
 	defer wg.Done()
 
 	// configure logger
@@ -206,7 +206,7 @@ func handleMessage(log zerolog.Logger, wg *sync.WaitGroup, net Network, inventor
 	}
 }
 
-func respondInventory(net Network, address string, hash types.Hash, inventories inventoryStore) error {
+func respondInventory(net Network, address string, hash types.Hash, inventories Inventories) error {
 	hashes, err := inventories.Inventory(hash)
 	if errors.Cause(err) == errNotFound {
 		return errors.Wrap(err, "could not find inventory")

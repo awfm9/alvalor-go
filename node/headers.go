@@ -23,7 +23,8 @@ import (
 	"github.com/alvalor/alvalor-go/types"
 )
 
-type headerStore interface {
+// Headers represents the store for all headers.
+type Headers interface {
 	Add(header *types.Header) error
 	Header(hash types.Hash) (*types.Header, error)
 	Knows(hash types.Hash) bool

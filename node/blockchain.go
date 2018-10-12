@@ -19,14 +19,12 @@ package node
 
 import "github.com/alvalor/alvalor-go/types"
 
-type blockchain interface {
-	Inventory(hash types.Hash) ([]types.Hash, error)
-}
-
 // Blockchain represents an interface to access all blockchain related data.
+// TODO: add handling of total difficulty / best block
 type Blockchain interface {
 	AddBlock(block *types.Block) error
-	TransactionByHash(hash types.Hash) (*types.Transaction, error)
-	HeaderByHash(hash types.Hash) (*types.Header, error)
-	BlockByHash(hash types.Hash) (*types.Block, error)
+	Inventory(hash types.Hash) (*Inventory, error)
+	Transaction(hash types.Hash) (*types.Transaction, error)
+	Header(hash types.Hash) (*types.Header, error)
+	BlockBy(hash types.Hash) (*types.Block, error)
 }
