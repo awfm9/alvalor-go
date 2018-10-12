@@ -15,12 +15,10 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with Alvalor.  If not, see <http://www.gnu.org/licenses/>.
 
-package repo
+package helpers
 
-import "errors"
-
-// ErrNotFound is returned whenever an entity is not found in the repository.
-var ErrNotFound = errors.New("entity not found")
-
-// ErrAlreadyKnown is returned whenever an entity is already known in the repository.
-var ErrAlreadyKnown = errors.New("entity already known")
+// Network defines what we need from the network module.
+type Network interface {
+	Send(address string, msg interface{}) error
+	Broadcast(msg interface{}, exclude ...string) error
+}

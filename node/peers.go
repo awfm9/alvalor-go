@@ -39,16 +39,6 @@ func peerIsActive(active bool) func(*peer) bool {
 	}
 }
 
-// Peers represents the peer manager of the node package.
-type Peers interface {
-	Active(address string)
-	Inactive(address string)
-	Requested(address string, hash types.Hash)
-	Received(address string, hash types.Hash)
-	NumPending(address string) (uint, error)
-	Find(filters ...filterFunc) []string
-}
-
 type peer struct {
 	active  bool
 	tags    map[types.Hash]struct{}
