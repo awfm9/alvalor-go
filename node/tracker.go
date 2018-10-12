@@ -73,7 +73,7 @@ func (tr *trackerS) Follow(path []types.Hash) error {
 		// if we do not find the inventory, we start the download
 		hashes, err := tr.inventories.Inventory(hash)
 		if errors.Cause(err) == errNotFound {
-			inErr := tr.downloads.StartInventory(hash)
+			inErr := tr.downloads.Start(hash)
 			if inErr != nil {
 				return errors.Wrap(inErr, "could not start inventory download")
 			}
@@ -125,7 +125,7 @@ func (tr *trackerS) Follow(path []types.Hash) error {
 
 		// we also make sure to cancel the download of the inventory for each of
 		// the headers on this path, as they are no longer needed
-		err = tr.downloads.CancelInventory(hash)
+		err = tr.downloads.Cancel(hash)
 		if err != nil && errors.Cause(err) != errNotFound {
 			return errors.Wrap(err, "could not cancel old inventory download")
 		}
@@ -142,7 +142,7 @@ func (tr *trackerS) Follow(path []types.Hash) error {
 	for txHash := range newTxs {
 		_, ok := oldTxs[txHash]
 		if !ok {
-			err := tr.downloads.StartTransaction(txHash)
+			err := tr.downloads.Start(txHash)
 			if err != nil {
 				return errors.Wrap(err, "could not start new transaction download")
 			}
@@ -154,7 +154,7 @@ func (tr *trackerS) Follow(path []types.Hash) error {
 	for txHash := range oldTxs {
 		_, ok := newTxs[txHash]
 		if !ok {
-			err := tr.downloads.CancelTransaction(txHash)
+			err := tr.downloads.Cancel(txHash)
 			if err != nil {
 				return errors.Wrap(err, "could not cancel old transaction download")
 			}
@@ -186,7 +186,7 @@ func (tr *trackerS) Signal(hash types.Hash) error {
 
 	// start the download for each transaction hash
 	for _, hash := range hashes {
-		err := tr.downloads.StartTransaction(hash)
+		err := tr.downloads.Start(hash)
 		if err != nil {
 			return errors.Wrap(err, "could not start transaction download on signal")
 		}

@@ -27,10 +27,8 @@ import (
 // downloader manages downloading of entities by keeping track of pending
 // downloads and load balancing across available peers.
 type downloader interface {
-	StartInventory(hash types.Hash) error
-	CancelInventory(hash types.Hash) error
-	StartTransaction(hash types.Hash) error
-	CancelTransaction(hash types.Hash) error
+	Start(hash types.Hash) error
+	Cancel(hash types.Hash) error
 }
 
 // downloaderS implement a simple download manager.
@@ -55,8 +53,13 @@ func (do *downloaderS) StartInventory(hash types.Hash) error {
 		return nil
 	}
 
-	// get the peer with the lowest amount of pending downloads
+	// get all active peers that have the desired inventory
 	addresses := do.peers.Find(peerIsActive(true), peerHasEntity(true, hash))
+	if len(addresses) == 0 {
+		return errors.New("no active peers with inventory available")
+	}
+
+	// select the available peer with the least amount of pending downloads
 	var target string
 	best := uint(math.MaxUint32)
 	for _, address := range addresses {
@@ -71,14 +74,13 @@ func (do *downloaderS) StartInventory(hash types.Hash) error {
 		target = address
 	}
 
-	// send the request to the given peer
-	msg := &Confirm{Hash: hash}
+	// send the request to the given peer and mark inventory as requested
+	msg := &Request{Hash: hash}
 	err := do.net.Send(target, msg)
 	if err != nil {
 		return errors.Wrap(err, "could not send inventory request")
 	}
-
-	// TODO: implement peer state for downloads
+	do.peers.Requested(target, hash)
 
 	// TODO: implement timeout mechanism
 
@@ -89,24 +91,6 @@ func (do *downloaderS) StartInventory(hash types.Hash) error {
 func (do *downloaderS) CancelInventory(hash types.Hash) error {
 
 	// TODO: disable the timeout mechanism
-
-	return nil
-}
-
-// StartTransaction starts the download of a transaction.
-func (do *downloaderS) StartTransaction(hash types.Hash) error {
-
-	// if we are already downloading the transaction, skip
-	_, ok := do.transactions[hash]
-	if ok {
-		return nil
-	}
-
-	return nil
-}
-
-// CancelTransaction cancels the download of a transaction.
-func (do *downloaderS) CancelTransaction(hash types.Hash) error {
 
 	return nil
 }

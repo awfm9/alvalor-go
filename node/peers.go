@@ -43,7 +43,8 @@ func peerIsActive(active bool) func(*peer) bool {
 type Peers interface {
 	Active(address string)
 	Inactive(address string)
-	Tag(address string, hash types.Hash)
+	Requested(address string, hash types.Hash)
+	Received(address string, hash types.Hash)
 	NumPending(address string) (uint, error)
 	Find(filters ...filterFunc) []string
 }
@@ -91,7 +92,7 @@ func (s *simplePeers) Inactive(address string) {
 	p.active = false
 }
 
-func (s *simplePeers) Tag(address string, hash types.Hash) {
+func (s *simplePeers) Requested(address string, hash types.Hash) {
 	s.Lock()
 	defer s.Unlock()
 
@@ -99,6 +100,20 @@ func (s *simplePeers) Tag(address string, hash types.Hash) {
 	if !ok {
 		return
 	}
+
+	p.pending[hash] = struct{}{}
+}
+
+func (s *simplePeers) Received(address string, hash types.Hash) {
+	s.Lock()
+	defer s.Unlock()
+
+	p, ok := s.peers[address]
+	if !ok {
+		return
+	}
+
+	delete(p.pending, hash)
 	p.tags[hash] = struct{}{}
 }
 

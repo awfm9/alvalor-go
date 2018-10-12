@@ -36,8 +36,8 @@ type Path struct {
 	Headers []*types.Header
 }
 
-// Confirm is a request to get the transactions list for a given block.
-type Confirm struct {
+// Request is a download request for an inventory/transaction/block.
+type Request struct {
 	Hash types.Hash
 }
 
@@ -45,9 +45,4 @@ type Confirm struct {
 type Inventory struct {
 	Hash   types.Hash
 	Hashes []types.Hash
-}
-
-type internalTransactionRequest struct {
-	hashes []types.Hash
-	addr   string
 }

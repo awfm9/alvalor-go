@@ -20,12 +20,13 @@ package node
 import (
 	"sync"
 
+	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
 
 	"github.com/alvalor/alvalor-go/types"
 )
 
-func handleMessage(log zerolog.Logger, wg *sync.WaitGroup, net Network, inventories inventoryStore, headers headerStore, track tracker, handlers Handlers, address string, message interface{}) {
+func handleMessage(log zerolog.Logger, wg *sync.WaitGroup, net Network, inventories inventoryStore, pool Pool, headers headerStore, track tracker, handlers Handlers, address string, message interface{}) {
 	defer wg.Done()
 
 	// configure logger
@@ -144,29 +145,36 @@ func handleMessage(log zerolog.Logger, wg *sync.WaitGroup, net Network, inventor
 
 		log.Debug().Msg("processed path message")
 
-	// The Confirm message is a request sent by peers who want to reconstruct a
-	// certain block by downloading its transactions. It contains the hash of
-	// the block. The receiving peer should respond with an inventory message
-	// containing all the message hashes corresponding to the header hash.
-	case *Confirm:
+	// The Request message is a request sent by peers who want to download the
+	// entity with the given hash. It can be used for inventories, transactions
+	// or blocks.
+	case *Request:
 
 		log = log.With().Str("msg_type", "confirm").Hex("hash", msg.Hash[:]).Logger()
 
-		// retrieve the hashes from the block manager
-		inv, err := inventories.Inventory(msg.Hash)
-		if err != nil {
-			log.Error().Err(err).Msg("could not retrieve block inventory")
+		// try to respond with an inventory
+		err := respondInventory(net, address, msg.Hash, inventories)
+		if err == nil {
+			log.Debug().Msg("processed request message (inventory)")
+			return
+		}
+		if errors.Cause(err) != errNotFound {
+			log.Error().Err(err).Msg("could not check inventory store")
 			return
 		}
 
-		// send the inventory message to the peer
-		err = net.Send(address, inv)
-		if err != nil {
-			log.Error().Err(err).Msg("could not send inventory message")
+		// try to respond with a transaction
+		err = respondTransaction(net, address, msg.Hash, pool)
+		if err == nil {
+			log.Debug().Msg("processed request message (transaction)")
+			return
+		}
+		if errors.Cause(err) != errNotFound {
+			log.Error().Err(err).Msg("could not check transaction pool")
 			return
 		}
 
-		log.Debug().Msg("processed confirm message")
+		log.Debug().Msg("processed request message (entity not found)")
 
 	case *Inventory:
 
@@ -196,4 +204,32 @@ func handleMessage(log zerolog.Logger, wg *sync.WaitGroup, net Network, inventor
 
 		log.Debug().Msg("processed transaction message")
 	}
+}
+
+func respondInventory(net Network, address string, hash types.Hash, inventories inventoryStore) error {
+	hashes, err := inventories.Inventory(hash)
+	if errors.Cause(err) == errNotFound {
+		return errors.Wrap(err, "could not find inventory")
+	}
+	inv := &Inventory{
+		Hash:   hash,
+		Hashes: hashes,
+	}
+	err = net.Send(address, inv)
+	if err != nil {
+		return errors.Wrap(err, "could not send inventory")
+	}
+	return nil
+}
+
+func respondTransaction(net Network, address string, hash types.Hash, pool Pool) error {
+	tx, err := pool.Get(hash)
+	if errors.Cause(err) == errNotFound {
+		return errors.Wrap(err, "could not find transaction")
+	}
+	err = net.Send(address, tx)
+	if err != nil {
+		return errors.Wrap(err, "could not send transaction")
+	}
+	return nil
 }
