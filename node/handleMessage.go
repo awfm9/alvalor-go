@@ -26,7 +26,7 @@ import (
 	"github.com/alvalor/alvalor-go/types"
 )
 
-func handleMessage(log zerolog.Logger, wg *sync.WaitGroup, net Network, inventories Inventories, pool Pool, headers Headers, track tracker, handlers Handlers, address string, message interface{}) {
+func handleMessage(log zerolog.Logger, wg *sync.WaitGroup, net Network, peers Peers, inventories Inventories, pool Pool, headers Headers, track tracker, handlers Handlers, address string, message interface{}) {
 	defer wg.Done()
 
 	// configure logger
@@ -180,6 +180,9 @@ func handleMessage(log zerolog.Logger, wg *sync.WaitGroup, net Network, inventor
 
 		log = log.With().Str("msg_type", "inventory").Hex("hash", msg.Hash[:]).Int("num_hashes", len(msg.Hashes)).Logger()
 
+		// mark the inventory as received for the respective peer
+		peers.Received(address, msg.Hash)
+
 		// store the new inventory in our database
 		err := inventories.AddInventory(msg.Hash, msg.Hashes)
 		if err != nil {
@@ -200,6 +203,10 @@ func handleMessage(log zerolog.Logger, wg *sync.WaitGroup, net Network, inventor
 
 		log = log.With().Str("msg_type", "transaction").Hex("hash", msg.Hash[:]).Logger()
 
+		// mark the inventory download as completed for the respective peer
+		peers.Received(address, msg.Hash)
+
+		// handle the transaction entity
 		handlers.Entity(msg)
 
 		log.Debug().Msg("processed transaction message")

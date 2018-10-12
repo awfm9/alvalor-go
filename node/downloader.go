@@ -44,8 +44,8 @@ func newDownloader() *downloaderS {
 	return &downloaderS{}
 }
 
-// StartInventory starts the download of a block inventory.
-func (do *downloaderS) StartInventory(hash types.Hash) error {
+// Start starts the download of a block inventory.
+func (do *downloaderS) Start(hash types.Hash) error {
 
 	// if we are already downloading the inventory, skip
 	_, ok := do.inventories[hash]
@@ -88,7 +88,7 @@ func (do *downloaderS) StartInventory(hash types.Hash) error {
 }
 
 // CancelInventory cancels the download of a block inventory.
-func (do *downloaderS) CancelInventory(hash types.Hash) error {
+func (do *downloaderS) Cancel(hash types.Hash) error {
 
 	// TODO: disable the timeout mechanism
 
