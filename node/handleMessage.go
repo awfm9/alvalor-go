@@ -23,11 +23,12 @@ import (
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
 
+	"github.com/alvalor/alvalor-go/node/message"
 	"github.com/alvalor/alvalor-go/node/repo"
 	"github.com/alvalor/alvalor-go/types"
 )
 
-func handleMessage(log zerolog.Logger, wg *sync.WaitGroup, net Network, download downloader, state State, inventories Inventories, transactions Transactions, headers Headers, track tracker, handlers Handlers, address string, message interface{}) {
+func handleMessage(log zerolog.Logger, wg *sync.WaitGroup, net Network, download downloader, state State, inventories Inventories, transactions Transactions, headers Headers, track tracker, handlers Handlers, address string, input interface{}) {
 	defer wg.Done()
 
 	// configure logger
@@ -36,7 +37,7 @@ func handleMessage(log zerolog.Logger, wg *sync.WaitGroup, net Network, download
 	defer log.Debug().Msg("processing routine stopped")
 
 	// process the message according to type
-	switch msg := message.(type) {
+	switch msg := input.(type) {
 
 	// The Status message is a handshake sent by both peers on a new connection.
 	// It contains the distance of their best path and helps each peer to
@@ -44,7 +45,7 @@ func handleMessage(log zerolog.Logger, wg *sync.WaitGroup, net Network, download
 	// peer is behind, it should send a Sync message with a number of locator
 	// hashes of block headers, to request the missing headers from the peer who
 	// is ahead.
-	case *Status:
+	case *message.Status:
 
 		log = log.With().Str("msg_type", "status").Uint64("distance", msg.Distance).Logger()
 
@@ -70,7 +71,7 @@ func handleMessage(log zerolog.Logger, wg *sync.WaitGroup, net Network, download
 		locators = append(locators, path[len(path)-1])
 
 		// send synchronization message
-		sync := &Sync{
+		sync := &message.Sync{
 			Locators: locators,
 		}
 		err := net.Send(address, sync)
@@ -86,7 +87,7 @@ func handleMessage(log zerolog.Logger, wg *sync.WaitGroup, net Network, download
 	// block header hash on his best path. The receiving peer will then send a
 	// a Path message with the missing headers. Ideally, they are sent in
 	// chronological order, from oldest to newest, to speed up processing.
-	case *Sync:
+	case *message.Sync:
 
 		log = log.With().Str("msg_type", "sync").Int("num_locators", len(msg.Locators)).Logger()
 
@@ -121,7 +122,7 @@ func handleMessage(log zerolog.Logger, wg *sync.WaitGroup, net Network, download
 		}
 
 		// send the partial path to our best distance to the other node
-		p := Path{
+		p := &message.Path{
 			Headers: hdrs,
 		}
 		err := net.Send(address, p)
@@ -136,7 +137,7 @@ func handleMessage(log zerolog.Logger, wg *sync.WaitGroup, net Network, download
 	// block headers on the best path, as identified by the locator hashes. They
 	// should be ordered by chronological order, from oldest to newest, in order
 	// to allow the most efficient construction of the best path.
-	case *Path:
+	case *message.Path:
 
 		log = log.With().Str("msg_type", "path").Int("num_headers", len(msg.Headers)).Logger()
 
@@ -149,7 +150,7 @@ func handleMessage(log zerolog.Logger, wg *sync.WaitGroup, net Network, download
 	// The Request message is a request sent by peers who want to download the
 	// entity with the given hash. It can be used for inventories, transactions
 	// or blocks.
-	case *Request:
+	case *message.Request:
 
 		log = log.With().Str("msg_type", "confirm").Hex("hash", msg.Hash[:]).Logger()
 

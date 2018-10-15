@@ -23,6 +23,7 @@ import (
 	"github.com/rs/zerolog"
 
 	"github.com/alvalor/alvalor-go/network"
+	"github.com/alvalor/alvalor-go/node/message"
 )
 
 func handleEvent(log zerolog.Logger, wg *sync.WaitGroup, net Network, headers Headers, state State, handlers Handlers, event interface{}) {
@@ -41,7 +42,7 @@ func handleEvent(log zerolog.Logger, wg *sync.WaitGroup, net Network, headers He
 
 		// send our current best distance
 		_, distance := headers.Path()
-		status := &Status{
+		status := &message.Status{
 			Distance: distance,
 		}
 		err := net.Send(e.Address, status)

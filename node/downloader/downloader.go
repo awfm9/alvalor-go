@@ -22,18 +22,21 @@ import (
 	"sync"
 	"time"
 
-	"github.com/alvalor/alvalor-go/types"
 	"github.com/pkg/errors"
+
+	"github.com/alvalor/alvalor-go/node/message"
+	"github.com/alvalor/alvalor-go/node/peer"
+	"github.com/alvalor/alvalor-go/types"
 )
 
 // Downloader implement a simple download manager.
 type Downloader struct {
 	sync.Mutex
+	peers        peer.State
+	net          Network
 	inventories  map[types.Hash]string
 	transactions map[types.Hash]string
 	timeouts     map[types.Hash]chan<- struct{}
-	peers        Peers
-	net          Network
 }
 
 // New creates a new simple download manager.
@@ -53,7 +56,7 @@ func (do *Downloader) Start(hash types.Hash) error {
 	}
 
 	// get all active peers that have the desired inventory
-	addresses := do.peers.Find(peerIsActive(true), peerHasEntity(true, hash))
+	addresses := do.peers.Addresses(peer.IsActive(true), peer.HasEntity(true, hash))
 	if len(addresses) == 0 {
 		return errors.New("no active peers with inventory available")
 	}
@@ -62,19 +65,19 @@ func (do *Downloader) Start(hash types.Hash) error {
 	var target string
 	best := uint(math.MaxUint32)
 	for _, address := range addresses {
-		pending, err := do.peers.NumPending(address)
+		pending, err := do.peers.Pending(address)
 		if err != nil {
 			continue
 		}
-		if pending >= best {
+		if uint(len(pending)) <= best {
 			continue
 		}
-		best = pending
+		best = uint(len(pending))
 		target = address
 	}
 
 	// send the request to the given peer and mark inventory as requested
-	msg := &Request{Hash: hash}
+	msg := &message.Request{Hash: hash}
 	err := do.net.Send(target, msg)
 	if err != nil {
 		return errors.Wrap(err, "could not send inventory request")
@@ -88,14 +91,14 @@ func (do *Downloader) Start(hash types.Hash) error {
 	return nil
 }
 
-// CancelInventory cancels the download of a block inventory.
+// Cancel cancels the download of a block inventory.
 func (do *Downloader) Cancel(hash types.Hash) error {
 	do.Lock()
 	defer do.Unlock()
 
 	cancel, ok := do.timeouts[hash]
 	if !ok {
-		return errors.Wrap(errNotFound, "could not find download for hash")
+		return errors.New("could not find download for hash")
 	}
 	close(cancel)
 
