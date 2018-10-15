@@ -26,7 +26,7 @@ import (
 	"github.com/alvalor/alvalor-go/types"
 )
 
-func handleEntity(log zerolog.Logger, wg *sync.WaitGroup, net Network, headers Headers, state Peers, pool Pool, track tracker, entity Entity, events eventManager, handlers Handlers) {
+func handleEntity(log zerolog.Logger, wg *sync.WaitGroup, net Network, headers Headers, state State, transactions Transactions, track tracker, entity Entity, events eventManager, handlers Handlers) {
 	defer wg.Done()
 
 	// precompute the entity hash
@@ -95,7 +95,7 @@ func handleEntity(log zerolog.Logger, wg *sync.WaitGroup, net Network, headers H
 		log = log.With().Str("entity_type", "transaction").Logger()
 
 		// check if we already know the transaction; if so, ignore it
-		ok := pool.Knows(e.Hash)
+		ok := transactions.Has(e.Hash)
 		if ok {
 			log.Debug().Msg("transaction already known")
 			return
@@ -105,7 +105,7 @@ func handleEntity(log zerolog.Logger, wg *sync.WaitGroup, net Network, headers H
 		// TODO
 
 		// add the transaction to the transaction pool
-		err := pool.Add(e)
+		err := transactions.Add(e)
 		if err != nil {
 			log.Error().Err(err).Msg("could not add transaction")
 			return

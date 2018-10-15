@@ -15,21 +15,12 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with Alvalor.  If not, see <http://www.gnu.org/licenses/>.
 
-package node
+package repo
 
-import (
-	"github.com/alvalor/alvalor-go/node/peer"
-	"github.com/alvalor/alvalor-go/types"
-)
+import "io"
 
-// Peers represents an interface for the state of peers.
-type Peers interface {
-	Active(address string)
-	Inactive(address string)
-	Requested(address string, hash types.Hash)
-	Received(address string, hash types.Hash)
-	Pending(address string) ([]types.Hash, error)
-	Seen(address string) ([]types.Hash, error)
-	Addresses(filters ...peer.FilterFunc) []string
-	Count(filters ...peer.FilterFunc) uint
+// Codec is an encoder & decoder for entities.
+type Codec interface {
+	Encode(w io.Writer, i interface{}) error
+	Decode(r io.Reader) (interface{}, error)
 }

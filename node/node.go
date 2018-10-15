@@ -53,19 +53,19 @@ type subscriber struct {
 }
 
 type simpleNode struct {
-	log         zerolog.Logger
-	wg          *sync.WaitGroup
-	net         Network
-	download    downloader
-	inventories Inventories
-	headers     Headers
-	track       tracker
-	state       Peers
-	pool        Pool
-	events      eventManager
-	stream      chan interface{}
-	subscribers chan *subscriber
-	stop        chan struct{}
+	log          zerolog.Logger
+	wg           *sync.WaitGroup
+	net          Network
+	download     downloader
+	inventories  Inventories
+	headers      Headers
+	transactions Transactions
+	track        tracker
+	state        State
+	events       eventManager
+	stream       chan interface{}
+	subscribers  chan *subscriber
+	stop         chan struct{}
 }
 
 // New creates a new node to manage the Alvalor blockchain.
@@ -98,7 +98,7 @@ func New(log zerolog.Logger, net Network, headers Headers, inventories Inventori
 	n.events = newEventManager(n.stream)
 
 	// initialize simple transaction pool
-	n.pool = newPool(codec, trie.NewBin())
+	n.transactions = repo.NewTransactions(codec, trie.NewBin())
 
 	// start streaming generated events to subscribers
 	n.Stream()
@@ -120,8 +120,8 @@ func (n *simpleNode) Submit(tx *types.Transaction) {
 
 func (n *simpleNode) Stats() {
 	numActive := n.state.Count(peer.IsActive(true))
-	numTxs := n.pool.Count()
-	n.log.Info().Uint("num_active", numActive).Uint("num_txs", numTxs).Msg("stats")
+	numPool := uint(len(n.transactions.Pending()))
+	n.log.Info().Uint("num_active", numActive).Uint("num_pool", numPool).Msg("stats")
 }
 
 func (n *simpleNode) Input(input <-chan interface{}) {
@@ -136,12 +136,12 @@ func (n *simpleNode) Event(event interface{}) {
 
 func (n *simpleNode) Message(address string, message interface{}) {
 	n.wg.Add(1)
-	go handleMessage(n.log, n.wg, n.net, n.download, n.state, n.inventories, n.pool, n.headers, n.track, n, address, message)
+	go handleMessage(n.log, n.wg, n.net, n.download, n.state, n.inventories, n.transactions, n.headers, n.track, n, address, message)
 }
 
 func (n *simpleNode) Entity(entity Entity) {
 	n.wg.Add(1)
-	go handleEntity(n.log, n.wg, n.net, n.headers, n.state, n.pool, n.track, entity, n.events, n)
+	go handleEntity(n.log, n.wg, n.net, n.headers, n.state, n.transactions, n.track, entity, n.events, n)
 }
 
 func (n *simpleNode) Stream() {

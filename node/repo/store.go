@@ -15,29 +15,11 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with Alvalor.  If not, see <http://www.gnu.org/licenses/>.
 
-package node
+package repo
 
-import "github.com/alvalor/alvalor-go/types"
-
-// Inventories represents an interface to block inventory storage.
-type Inventories interface {
-	Add(inv *types.Inventory) error
-	Has(hash types.Hash) bool
-	Get(hash types.Hash) (*types.Inventory, error)
-}
-
-// Headers represents the store for all headers.
-type Headers interface {
-	Add(header *types.Header) error
-	Has(hash types.Hash) bool
-	Get(hash types.Hash) (*types.Header, error)
-	Path() ([]types.Hash, uint64)
-}
-
-// Transactions represents the store for all transactions.
-type Transactions interface {
-	Add(header *types.Transaction) error
-	Has(hash types.Hash) bool
-	Get(hash types.Hash) (*types.Transaction, error)
-	Pending() []types.Hash
+// Store represents an interface to a key value store for bytes.
+type Store interface {
+	Put(key []byte, data []byte) error
+	Get(key []byte) ([]byte, error)
+	Del(key []byte) error
 }

@@ -27,7 +27,7 @@ import (
 	"github.com/alvalor/alvalor-go/types"
 )
 
-func handleMessage(log zerolog.Logger, wg *sync.WaitGroup, net Network, download downloader, peers Peers, inventories Inventories, pool Pool, headers Headers, track tracker, handlers Handlers, address string, message interface{}) {
+func handleMessage(log zerolog.Logger, wg *sync.WaitGroup, net Network, download downloader, state State, inventories Inventories, transactions Transactions, headers Headers, track tracker, handlers Handlers, address string, message interface{}) {
 	defer wg.Done()
 
 	// configure logger
@@ -165,7 +165,7 @@ func handleMessage(log zerolog.Logger, wg *sync.WaitGroup, net Network, download
 		}
 
 		// try to respond with a transaction
-		err = respondTransaction(net, address, msg.Hash, pool)
+		err = respondTransaction(net, address, msg.Hash, transactions)
 		if err == nil {
 			log.Debug().Msg("processed request message (transaction)")
 			return
@@ -185,7 +185,7 @@ func handleMessage(log zerolog.Logger, wg *sync.WaitGroup, net Network, download
 		download.Cancel(msg.Hash)
 
 		// mark the inventory as received for the respective peer
-		peers.Received(address, msg.Hash)
+		state.Received(address, msg.Hash)
 
 		// store the new inventory in our database
 		err := inventories.Add(msg)
@@ -211,7 +211,7 @@ func handleMessage(log zerolog.Logger, wg *sync.WaitGroup, net Network, download
 		download.Cancel(msg.Hash)
 
 		// mark the inventory download as completed for the respective peer
-		peers.Received(address, msg.Hash)
+		state.Received(address, msg.Hash)
 
 		// handle the transaction entity
 		handlers.Entity(msg)
@@ -232,8 +232,8 @@ func respondInventory(net Network, address string, hash types.Hash, inventories 
 	return nil
 }
 
-func respondTransaction(net Network, address string, hash types.Hash, pool Pool) error {
-	tx, err := pool.Get(hash)
+func respondTransaction(net Network, address string, hash types.Hash, transactions Transactions) error {
+	tx, err := transactions.Get(hash)
 	if errors.Cause(err) == repo.ErrNotFound {
 		return errors.Wrap(err, "could not find transaction")
 	}

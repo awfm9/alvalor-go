@@ -17,27 +17,19 @@
 
 package node
 
-import "github.com/alvalor/alvalor-go/types"
+import (
+	"github.com/alvalor/alvalor-go/node/peer"
+	"github.com/alvalor/alvalor-go/types"
+)
 
-// Inventories represents an interface to block inventory storage.
-type Inventories interface {
-	Add(inv *types.Inventory) error
-	Has(hash types.Hash) bool
-	Get(hash types.Hash) (*types.Inventory, error)
-}
-
-// Headers represents the store for all headers.
-type Headers interface {
-	Add(header *types.Header) error
-	Has(hash types.Hash) bool
-	Get(hash types.Hash) (*types.Header, error)
-	Path() ([]types.Hash, uint64)
-}
-
-// Transactions represents the store for all transactions.
-type Transactions interface {
-	Add(header *types.Transaction) error
-	Has(hash types.Hash) bool
-	Get(hash types.Hash) (*types.Transaction, error)
-	Pending() []types.Hash
+// State represents an interface for the state of peers.
+type State interface {
+	Active(address string)
+	Inactive(address string)
+	Requested(address string, hash types.Hash)
+	Received(address string, hash types.Hash)
+	Pending(address string) ([]types.Hash, error)
+	Seen(address string) ([]types.Hash, error)
+	Addresses(filters ...peer.FilterFunc) []string
+	Count(filters ...peer.FilterFunc) uint
 }
