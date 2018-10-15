@@ -15,7 +15,7 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with Alvalor.  If not, see <http://www.gnu.org/licenses/>.
 
-package node
+package event
 
 import (
 	"errors"
@@ -24,20 +24,18 @@ import (
 	"github.com/alvalor/alvalor-go/types"
 )
 
-type eventManager interface {
-	Header(hash types.Hash) error
-	Transaction(hash types.Hash) error
-}
-
-type simpleEventManager struct {
+// Manager represents a manager for event notifications.
+type Manager struct {
 	stream chan<- interface{}
 }
 
-func newEventManager(stream chan<- interface{}) *simpleEventManager {
-	return &simpleEventManager{stream: stream}
+// NewManager creates a new event manager.
+func NewManager(stream chan<- interface{}) *Manager {
+	return &Manager{stream: stream}
 }
 
-func (mgr *simpleEventManager) Header(hash types.Hash) error {
+// Header triggers a new header event.
+func (mgr *Manager) Header(hash types.Hash) error {
 	select {
 	case mgr.stream <- Header{hash: hash}:
 	case <-time.After(10 * time.Millisecond):
@@ -46,7 +44,8 @@ func (mgr *simpleEventManager) Header(hash types.Hash) error {
 	return nil
 }
 
-func (mgr *simpleEventManager) Transaction(hash types.Hash) error {
+// Transaction creates a new transaction event.
+func (mgr *Manager) Transaction(hash types.Hash) error {
 	select {
 	case mgr.stream <- Transaction{hash: hash}:
 	case <-time.After(10 * time.Millisecond):

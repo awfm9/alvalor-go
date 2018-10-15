@@ -10,7 +10,7 @@
 // Alvalor is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU Affero General Public License for more detailb.
+// GNU Affero General Public License for more details.
 //
 // You should have received a copy of the GNU Affero General Public License
 // along with Alvalor.  If not, see <http://www.gnu.org/licenses/>.
@@ -21,12 +21,8 @@ import (
 	"github.com/alvalor/alvalor-go/types"
 )
 
-// Header event
-type Header struct {
-	hash types.Hash
-}
-
-// Transaction event
-type Transaction struct {
-	hash types.Hash
+// Events represents a manager for events for external subscribers.
+type Events interface {
+	Header(hash types.Hash) error
+	Transaction(hash types.Hash) error
 }

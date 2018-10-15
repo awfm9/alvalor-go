@@ -23,6 +23,7 @@ import (
 
 	"github.com/rs/zerolog"
 
+	"github.com/alvalor/alvalor-go/node/event"
 	"github.com/alvalor/alvalor-go/node/peer"
 	"github.com/alvalor/alvalor-go/node/repo"
 	"github.com/alvalor/alvalor-go/trie"
@@ -62,7 +63,7 @@ type simpleNode struct {
 	transactions Transactions
 	track        tracker
 	state        State
-	events       eventManager
+	events       Events
 	stream       chan interface{}
 	subscribers  chan *subscriber
 	stop         chan struct{}
@@ -95,7 +96,7 @@ func New(log zerolog.Logger, net Network, headers Headers, inventories Inventori
 	n.state = peer.NewState()
 
 	// initialize the event manager to create events
-	n.events = newEventManager(n.stream)
+	n.events = event.NewManager(n.stream)
 
 	// initialize simple transaction pool
 	n.transactions = repo.NewTransactions(codec, trie.NewBin())
