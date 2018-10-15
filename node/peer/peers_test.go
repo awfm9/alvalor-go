@@ -15,7 +15,60 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with Alvalor.  If not, see <http://www.gnu.org/licenses/>.
 
-package node
+package peer
+
+import (
+	"github.com/alvalor/alvalor-go/types"
+	"github.com/stretchr/testify/mock"
+)
+
+type PeersMock struct {
+	mock.Mock
+}
+
+func (p *PeersMock) Active(address string) {
+	p.Called(address)
+}
+
+func (p *PeersMock) Inactive(address string) {
+	p.Called(address)
+}
+
+func (p *PeersMock) Actives() []string {
+	args := p.Called()
+	var active []string
+	if args.Get(0) != nil {
+		active = args.Get(0).([]string)
+	}
+	return active
+}
+
+func (p *PeersMock) Tag(address string, hash types.Hash) {
+	p.Called(address, hash)
+}
+
+func (p *PeersMock) Tags(hash types.Hash) []string {
+	args := p.Called(hash)
+	var seen []string
+	if args.Get(0) != nil {
+		seen = args.Get(0).([]string)
+	}
+	return seen
+}
+
+func (p *PeersMock) Pending(address string) (uint, error) {
+	args := p.Called(address)
+	return uint(args.Int(0)), args.Error(1)
+}
+
+func (p *PeersMock) Find(filters ...FilterFunc) []string {
+	args := p.Called(filters)
+	var peers []string
+	if args.Get(0) != nil {
+		peers = args.Get(0).([]string)
+	}
+	return peers
+}
 
 // func TestNewPeers(t *testing.T) {
 // 	peers := newPeers()

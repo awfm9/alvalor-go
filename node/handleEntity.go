@@ -22,10 +22,11 @@ import (
 
 	"github.com/rs/zerolog"
 
+	"github.com/alvalor/alvalor-go/node/peer"
 	"github.com/alvalor/alvalor-go/types"
 )
 
-func handleEntity(log zerolog.Logger, wg *sync.WaitGroup, net Network, headers Headers, peers Peers, pool Pool, track tracker, entity Entity, events eventManager, handlers Handlers) {
+func handleEntity(log zerolog.Logger, wg *sync.WaitGroup, net Network, headers Headers, state Peers, pool Pool, track tracker, entity Entity, events eventManager, handlers Handlers) {
 	defer wg.Done()
 
 	// precompute the entity hash
@@ -50,7 +51,7 @@ func handleEntity(log zerolog.Logger, wg *sync.WaitGroup, net Network, headers H
 		log = log.With().Str("entity_type", "header").Logger()
 
 		// if we already know the header, we ignore it
-		ok := headers.Knows(e.Hash)
+		ok := headers.Has(e.Hash)
 		if ok {
 			log.Debug().Msg("header already known")
 			return
@@ -70,7 +71,7 @@ func handleEntity(log zerolog.Logger, wg *sync.WaitGroup, net Network, headers H
 		events.Header(e.Hash)
 
 		// we should propagate it to peers who are unaware of the header
-		peers := peers.Find(peerHasEntity(false, e.Hash))
+		peers := state.Addresses(peer.HasEntity(false, e.Hash))
 		err = net.Broadcast(e, peers...)
 		if err != nil {
 			log.Error().Err(err).Msg("could not propagate entity")
@@ -113,7 +114,7 @@ func handleEntity(log zerolog.Logger, wg *sync.WaitGroup, net Network, headers H
 		events.Transaction(e.Hash)
 
 		// create lookup to know who to exclude from broadcast
-		addresses := peers.Find(peerHasEntity(false, e.Hash))
+		addresses := state.Addresses(peer.HasEntity(false, e.Hash))
 		err = net.Broadcast(e, addresses...)
 		if err != nil {
 			log.Error().Err(err).Msg("could not propagate entity")

@@ -20,6 +20,7 @@ package node
 import (
 	"github.com/pkg/errors"
 
+	"github.com/alvalor/alvalor-go/node/repo"
 	"github.com/alvalor/alvalor-go/types"
 )
 
@@ -71,8 +72,8 @@ func (tr *trackerS) Follow(path []types.Hash) error {
 		tr.current[hash] = false
 
 		// if we do not find the inventory, we start the download
-		hashes, err := tr.inventories.Inventory(hash)
-		if errors.Cause(err) == errNotFound {
+		inv, err := tr.inventories.Get(hash)
+		if errors.Cause(err) == repo.ErrNotFound {
 			inErr := tr.downloads.Start(hash)
 			if inErr != nil {
 				return errors.Wrap(inErr, "could not start inventory download")
@@ -89,7 +90,7 @@ func (tr *trackerS) Follow(path []types.Hash) error {
 
 		// let's now add the hashes from the inventory of the block header to the
 		// set of transactions we want to download on this path
-		for _, txHash := range hashes {
+		for _, txHash := range inv.Hashes {
 			newTxs[txHash] = struct{}{}
 		}
 	}
@@ -114,8 +115,8 @@ func (tr *trackerS) Follow(path []types.Hash) error {
 
 		// we then retrieve the inventory to cancel any transaction downloads that
 		// might be in progress and not needed for the new headers
-		hashes, err := tr.inventories.Inventory(hash)
-		if errors.Cause(err) == errNotFound {
+		inv, err := tr.inventories.Get(hash)
+		if errors.Cause(err) == repo.ErrNotFound {
 			// NOTE: no need to cancel related transactions
 			continue
 		}
@@ -126,13 +127,13 @@ func (tr *trackerS) Follow(path []types.Hash) error {
 		// we also make sure to cancel the download of the inventory for each of
 		// the headers on this path, as they are no longer needed
 		err = tr.downloads.Cancel(hash)
-		if err != nil && errors.Cause(err) != errNotFound {
+		if err != nil && errors.Cause(err) != repo.ErrNotFound {
 			return errors.Wrap(err, "could not cancel old inventory download")
 		}
 
 		// for those headers where we already have the inventory, we create a set
 		// of old transactions that are already synchronizing
-		for _, txHash := range hashes {
+		for _, txHash := range inv.Hashes {
 			oldTxs[txHash] = struct{}{}
 		}
 	}
@@ -176,7 +177,7 @@ func (tr *trackerS) Signal(hash types.Hash) error {
 	}
 
 	// retrieve the inventory for the given header, as it should now be available
-	hashes, err := tr.inventories.Inventory(hash)
+	inv, err := tr.inventories.Get(hash)
 	if err != nil {
 		return errors.Wrap(err, "could not retrieve inventory for signal")
 	}
@@ -185,7 +186,7 @@ func (tr *trackerS) Signal(hash types.Hash) error {
 	tr.current[hash] = true
 
 	// start the download for each transaction hash
-	for _, hash := range hashes {
+	for _, hash := range inv.Hashes {
 		err := tr.downloads.Start(hash)
 		if err != nil {
 			return errors.Wrap(err, "could not start transaction download on signal")

@@ -15,7 +15,7 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with Alvalor.  If not, see <http://www.gnu.org/licenses/>.
 
-package repos
+package repo
 
 import (
 	"github.com/pkg/errors"
@@ -23,23 +23,23 @@ import (
 	"github.com/alvalor/alvalor-go/types"
 )
 
-// HeaderRepo manages block headers and the best path through the tree of
+// Headers manages block headers and the best path through the tree of
 // headers by using a topological sort of the headers to identify the path with
 // the longest distance.
-type HeaderRepo struct {
+type Headers struct {
 	root     types.Hash
 	headers  map[types.Hash]*types.Header
 	children map[types.Hash][]types.Hash
 	pending  map[types.Hash][]*types.Header
 }
 
-// NewHeaderRepo creates a new simple header store.
-func NewHeaderRepo(blockchain Blockchain) (*HeaderRepo, error) {
+// NewHeaders creates a new simple header store.
+func NewHeaders(blockchain Blockchain) (*Headers, error) {
 	root, err := blockchain.Root()
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get root header from blockchain")
 	}
-	hr := &HeaderRepo{
+	hr := &Headers{
 		headers:  make(map[types.Hash]*types.Header),
 		children: make(map[types.Hash][]types.Hash),
 		pending:  make(map[types.Hash][]*types.Header),
@@ -50,12 +50,12 @@ func NewHeaderRepo(blockchain Blockchain) (*HeaderRepo, error) {
 }
 
 // Add adds a new header to the graph.
-func (hr *HeaderRepo) Add(header *types.Header) error {
+func (hr *Headers) Add(header *types.Header) error {
 
 	// if we already know the header, fail
 	_, ok := hr.headers[header.Hash]
 	if ok {
-		return errors.Wrap(ErrAlreadyKnown, "header already known")
+		return errors.Wrap(ErrAlreadyExists, "header already known")
 	}
 
 	// if we don't know the parent, add to pending headers and skip rest
@@ -82,13 +82,13 @@ func (hr *HeaderRepo) Add(header *types.Header) error {
 }
 
 // Has checks if the given hash is already known.
-func (hr *HeaderRepo) Has(hash types.Hash) bool {
+func (hr *Headers) Has(hash types.Hash) bool {
 	_, ok := hr.headers[hash]
 	return ok
 }
 
 // Get returns the header with the given hash.
-func (hr *HeaderRepo) Get(hash types.Hash) (*types.Header, error) {
+func (hr *Headers) Get(hash types.Hash) (*types.Header, error) {
 	header, ok := hr.headers[hash]
 	if !ok {
 		return nil, errors.Wrap(ErrNotFound, "header not found")
@@ -97,7 +97,7 @@ func (hr *HeaderRepo) Get(hash types.Hash) (*types.Header, error) {
 }
 
 // Path returns the best path of the graph by total difficulty.
-func (hr *HeaderRepo) Path() ([]types.Hash, uint64) {
+func (hr *Headers) Path() ([]types.Hash, uint64) {
 
 	// create a topological sort of all headers starting at the root
 	var hash types.Hash

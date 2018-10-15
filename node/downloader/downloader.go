@@ -15,7 +15,7 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with Alvalor.  If not, see <http://www.gnu.org/licenses/>.
 
-package helpers
+package downloader
 
 import (
 	"math"
@@ -36,8 +36,8 @@ type Downloader struct {
 	net          Network
 }
 
-// NewDownloader creates a new simple download manager.
-func NewDownloader() *Downloader {
+// New creates a new simple download manager.
+func New() *Downloader {
 	return &Downloader{}
 }
 

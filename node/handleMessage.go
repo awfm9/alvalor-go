@@ -23,6 +23,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
 
+	"github.com/alvalor/alvalor-go/node/repo"
 	"github.com/alvalor/alvalor-go/types"
 )
 
@@ -111,7 +112,7 @@ func handleMessage(log zerolog.Logger, wg *sync.WaitGroup, net Network, download
 		var hdrs []*types.Header
 		for i := len(hashes) - 1; i >= 0; i-- {
 			hash := hashes[i]
-			header, err := headers.Header(hash)
+			header, err := headers.Get(hash)
 			if err != nil {
 				log.Error().Err(err).Hex("hash", hash[:]).Msg("could not retrieve header")
 				return
@@ -158,7 +159,7 @@ func handleMessage(log zerolog.Logger, wg *sync.WaitGroup, net Network, download
 			log.Debug().Msg("processed request message (inventory)")
 			return
 		}
-		if errors.Cause(err) != errNotFound {
+		if errors.Cause(err) != repo.ErrNotFound {
 			log.Error().Err(err).Msg("could not check inventory store")
 			return
 		}
@@ -169,14 +170,14 @@ func handleMessage(log zerolog.Logger, wg *sync.WaitGroup, net Network, download
 			log.Debug().Msg("processed request message (transaction)")
 			return
 		}
-		if errors.Cause(err) != errNotFound {
+		if errors.Cause(err) != repo.ErrNotFound {
 			log.Error().Err(err).Msg("could not check transaction pool")
 			return
 		}
 
 		log.Debug().Msg("processed request message (entity not found)")
 
-	case *Inventory:
+	case *types.Inventory:
 
 		log = log.With().Str("msg_type", "inventory").Hex("hash", msg.Hash[:]).Int("num_hashes", len(msg.Hashes)).Logger()
 
@@ -187,7 +188,7 @@ func handleMessage(log zerolog.Logger, wg *sync.WaitGroup, net Network, download
 		peers.Received(address, msg.Hash)
 
 		// store the new inventory in our database
-		err := inventories.AddInventory(msg.Hash, msg.Hashes)
+		err := inventories.Add(msg)
 		if err != nil {
 			log.Error().Err(err).Msg("could not store received inventory")
 			return
@@ -220,13 +221,9 @@ func handleMessage(log zerolog.Logger, wg *sync.WaitGroup, net Network, download
 }
 
 func respondInventory(net Network, address string, hash types.Hash, inventories Inventories) error {
-	hashes, err := inventories.Inventory(hash)
-	if errors.Cause(err) == errNotFound {
+	inv, err := inventories.Get(hash)
+	if errors.Cause(err) == repo.ErrNotFound {
 		return errors.Wrap(err, "could not find inventory")
-	}
-	inv := &Inventory{
-		Hash:   hash,
-		Hashes: hashes,
 	}
 	err = net.Send(address, inv)
 	if err != nil {
@@ -237,7 +234,7 @@ func respondInventory(net Network, address string, hash types.Hash, inventories 
 
 func respondTransaction(net Network, address string, hash types.Hash, pool Pool) error {
 	tx, err := pool.Get(hash)
-	if errors.Cause(err) == errNotFound {
+	if errors.Cause(err) == repo.ErrNotFound {
 		return errors.Wrap(err, "could not find transaction")
 	}
 	err = net.Send(address, tx)

@@ -15,12 +15,12 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with Alvalor.  If not, see <http://www.gnu.org/licenses/>.
 
-package repos
+package repo
 
 import "errors"
 
 // ErrNotFound is returned whenever an entity is not found in the repository.
 var ErrNotFound = errors.New("entity not found")
 
-// ErrAlreadyKnown is returned whenever an entity is already known in the repository.
-var ErrAlreadyKnown = errors.New("entity already known")
+// ErrAlreadyExists is returned whenever an entity is already known in the repository.
+var ErrAlreadyExists = errors.New("entity already exists")

@@ -15,21 +15,13 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with Alvalor.  If not, see <http://www.gnu.org/licenses/>.
 
-package node
+package peer
 
-import (
-	"github.com/alvalor/alvalor-go/node/peer"
-	"github.com/alvalor/alvalor-go/types"
-)
+import "github.com/alvalor/alvalor-go/types"
 
-// Peers represents an interface for the state of peers.
-type Peers interface {
-	Active(address string)
-	Inactive(address string)
-	Requested(address string, hash types.Hash)
-	Received(address string, hash types.Hash)
-	Pending(address string) ([]types.Hash, error)
-	Seen(address string) ([]types.Hash, error)
-	Addresses(filters ...peer.FilterFunc) []string
-	Count(filters ...peer.FilterFunc) uint
+// Peer represents the state of a peer.
+type Peer struct {
+	active  bool
+	pending map[types.Hash]struct{}
+	seen    map[types.Hash]struct{}
 }

@@ -23,7 +23,7 @@ import "github.com/alvalor/alvalor-go/types"
 type Inventories interface {
 	Add(inv *types.Inventory) error
 	Has(hash types.Hash) bool
-	Get(hash types.Hash) ([]types.Hash, error)
+	Get(hash types.Hash) (*types.Inventory, error)
 }
 
 // Headers represents the store for all headers.
