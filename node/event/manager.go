@@ -26,30 +26,49 @@ import (
 
 // Manager represents a manager for event notifications.
 type Manager struct {
-	stream chan<- interface{}
+	stream  chan interface{}
+	timeout time.Duration
+	subs    map[chan<- interface{}][]func(interface{}) bool
 }
 
 // NewManager creates a new event manager.
-func NewManager(stream chan<- interface{}) *Manager {
-	return &Manager{stream: stream}
+func NewManager(buffer uint, timeout time.Duration) *Manager {
+	mgr := &Manager{
+		stream:  make(chan interface{}, buffer),
+		timeout: timeout,
+		subs:    make(map[chan<- interface{}][]func(interface{}) bool),
+	}
+	return mgr
+}
+
+// Subscribe adds a subscriber to the event output.
+func (mgr *Manager) Subscribe(sub chan<- interface{}, filters ...func(interface{}) bool) {
+	mgr.subs[sub] = filters
+}
+
+// Unsubscribe removes a subscriber from the event output.
+func (mgr *Manager) Unsubscribe(sub chan<- interface{}) {
+	delete(mgr.subs, sub)
 }
 
 // Header triggers a new header event.
 func (mgr *Manager) Header(hash types.Hash) error {
+	return mgr.event(Header{hash: hash})
+}
+
+// Transaction creates a new transaction event.
+func (mgr *Manager) Transaction(hash types.Hash) error {
+	return mgr.event(Transaction{hash: hash})
+}
+
+// event submits the event to the channel.
+func (mgr *Manager) event(event interface{}) error {
 	select {
-	case mgr.stream <- Header{hash: hash}:
-	case <-time.After(10 * time.Millisecond):
+	case mgr.stream <- event:
+	case <-time.After(mgr.timeout):
 		return errors.New("subscriber stalling")
 	}
 	return nil
 }
 
-// Transaction creates a new transaction event.
-func (mgr *Manager) Transaction(hash types.Hash) error {
-	select {
-	case mgr.stream <- Transaction{hash: hash}:
-	case <-time.After(10 * time.Millisecond):
-		return errors.New("subscriber stalling")
-	}
-	return nil
-}
+// TODO: add processing for each subscriber (see stream.go)

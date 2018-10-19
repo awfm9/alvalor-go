@@ -23,11 +23,9 @@ import (
 
 	"github.com/rs/zerolog"
 
-	"github.com/alvalor/alvalor-go/node/event"
-	"github.com/alvalor/alvalor-go/node/peer"
-	"github.com/alvalor/alvalor-go/node/repo"
-	"github.com/alvalor/alvalor-go/trie"
 	"github.com/alvalor/alvalor-go/types"
+
+	"github.com/alvalor/alvalor-go/node/peer"
 )
 
 // Node defines the exposed API of the Alvalor node package.
@@ -56,6 +54,7 @@ type subscriber struct {
 type simpleNode struct {
 	log          zerolog.Logger
 	wg           *sync.WaitGroup
+	codec        Codec
 	net          Network
 	download     downloader
 	inventories  Inventories
@@ -64,13 +63,11 @@ type simpleNode struct {
 	track        tracker
 	state        State
 	events       Events
-	stream       chan interface{}
-	subscribers  chan *subscriber
 	stop         chan struct{}
 }
 
 // New creates a new node to manage the Alvalor blockchain.
-func New(log zerolog.Logger, net Network, headers Headers, inventories Inventories, codec Codec, input <-chan interface{}) Node {
+func New(log zerolog.Logger, codec Codec, net Network, events Events, headers Headers, inventories Inventories, transactions Transactions, state State, input <-chan interface{}) Node {
 
 	// initialize the node
 	n := &simpleNode{}
@@ -83,26 +80,18 @@ func New(log zerolog.Logger, net Network, headers Headers, inventories Inventori
 	wg := &sync.WaitGroup{}
 	n.wg = wg
 
-	// store references for reused dependencies
+	// store references for component dependencies
+	n.codec = codec
 	n.net = net
+	n.events = events
 
-	// create the event and ubscriber streams
-	n.stream = make(chan interface{}, 128)
-	n.subscribers = make(chan *subscriber)
-
-	// initialize the various data stores
-	n.inventories = repo.NewInventories()
+	// store references for repository dependencies
+	n.inventories = inventories
 	n.headers = headers
-	n.state = peer.NewState()
+	n.transactions = transactions
 
-	// initialize the event manager to create events
-	n.events = event.NewManager(n.stream)
-
-	// initialize simple transaction pool
-	n.transactions = repo.NewTransactions(codec, trie.NewBin())
-
-	// start streaming generated events to subscribers
-	n.Stream()
+	// store references for state dependencies
+	n.state = state
 
 	// start handling input messages from the network layer
 	n.Input(input)
@@ -110,9 +99,12 @@ func New(log zerolog.Logger, net Network, headers Headers, inventories Inventori
 	return n
 }
 
-func (n *simpleNode) Subscribe(channel chan<- interface{}, filters ...func(interface{}) bool) {
-	sub := &subscriber{filters: filters, channel: channel}
-	n.subscribers <- sub
+func (n *simpleNode) Subscribe(sub chan<- interface{}, filters ...func(interface{}) bool) {
+	n.events.Subscribe(sub, filters...)
+}
+
+func (n *simpleNode) Unsubscribe(sub chan<- interface{}) {
+	n.events.Unsubscribe(sub)
 }
 
 func (n *simpleNode) Submit(tx *types.Transaction) {
@@ -145,13 +137,6 @@ func (n *simpleNode) Entity(entity Entity) {
 	go handleEntity(n.log, n.wg, n.net, n.headers, n.state, n.transactions, n.track, entity, n.events, n)
 }
 
-func (n *simpleNode) Stream() {
-	n.wg.Add(1)
-	go handleStream(n.log, n.wg, n.stream, n.subscribers)
-}
-
 func (n *simpleNode) Stop() {
-	close(n.subscribers)
-	close(n.stream)
 	n.wg.Wait()
 }

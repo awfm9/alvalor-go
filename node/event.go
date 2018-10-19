@@ -23,6 +23,8 @@ import (
 
 // Events represents a manager for events for external subscribers.
 type Events interface {
+	Subscribe(sub chan<- interface{}, filters ...func(interface{}) bool)
+	Unsubscribe(sub chan<- interface{})
 	Header(hash types.Hash) error
 	Transaction(hash types.Hash) error
 }
