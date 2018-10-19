@@ -15,7 +15,7 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with Alvalor.  If not, see <http://www.gnu.org/licenses/>.
 
-package downloader
+package download
 
 import (
 	"math"
@@ -29,8 +29,8 @@ import (
 	"github.com/alvalor/alvalor-go/types"
 )
 
-// Downloader implement a simple download manager.
-type Downloader struct {
+// Downloads implement a simple download manager.
+type Downloads struct {
 	sync.Mutex
 	peers        peer.State
 	net          Network
@@ -40,12 +40,12 @@ type Downloader struct {
 }
 
 // New creates a new simple download manager.
-func New() *Downloader {
-	return &Downloader{}
+func New() *Downloads {
+	return &Downloads{}
 }
 
 // Start starts the download of a block inventory.
-func (do *Downloader) Start(hash types.Hash) error {
+func (do *Downloads) Start(hash types.Hash) error {
 	do.Lock()
 	defer do.Unlock()
 
@@ -92,7 +92,7 @@ func (do *Downloader) Start(hash types.Hash) error {
 }
 
 // Cancel cancels the download of a block inventory.
-func (do *Downloader) Cancel(hash types.Hash) error {
+func (do *Downloads) Cancel(hash types.Hash) error {
 	do.Lock()
 	defer do.Unlock()
 

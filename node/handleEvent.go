@@ -26,7 +26,7 @@ import (
 	"github.com/alvalor/alvalor-go/node/message"
 )
 
-func handleEvent(log zerolog.Logger, wg *sync.WaitGroup, net Network, headers Headers, state State, handlers Handlers, event interface{}) {
+func handleEvent(log zerolog.Logger, wg *sync.WaitGroup, net Network, headers Headers, peers Peers, handlers Handlers, event interface{}) {
 	defer wg.Done()
 
 	// configure logger
@@ -38,7 +38,7 @@ func handleEvent(log zerolog.Logger, wg *sync.WaitGroup, net Network, headers He
 
 	case network.Connected:
 
-		state.Active(e.Address)
+		peers.Active(e.Address)
 
 		// send our current best distance
 		_, distance := headers.Path()
@@ -52,9 +52,9 @@ func handleEvent(log zerolog.Logger, wg *sync.WaitGroup, net Network, headers He
 		}
 
 	case network.Disconnected:
-		state.Inactive(e.Address)
+		peers.Inactive(e.Address)
 
 	case network.Received:
-		handlers.Message(e.Address, e.Message)
+		handlers.message(e.Address, e.Message)
 	}
 }

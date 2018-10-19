@@ -23,12 +23,13 @@ import (
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
 
+	"github.com/alvalor/alvalor-go/types"
+
 	"github.com/alvalor/alvalor-go/node/message"
 	"github.com/alvalor/alvalor-go/node/repo"
-	"github.com/alvalor/alvalor-go/types"
 )
 
-func handleMessage(log zerolog.Logger, wg *sync.WaitGroup, net Network, download downloader, state State, inventories Inventories, transactions Transactions, headers Headers, track tracker, handlers Handlers, address string, input interface{}) {
+func handleMessage(log zerolog.Logger, wg *sync.WaitGroup, net Network, paths Paths, downloads Downloads, headers Headers, inventories Inventories, transactions Transactions, peers Peers, handlers Handlers, address string, input interface{}) {
 	defer wg.Done()
 
 	// configure logger
@@ -142,7 +143,7 @@ func handleMessage(log zerolog.Logger, wg *sync.WaitGroup, net Network, download
 		log = log.With().Str("msg_type", "path").Int("num_headers", len(msg.Headers)).Logger()
 
 		for _, header := range msg.Headers {
-			handlers.Entity(header)
+			handlers.entity(header)
 		}
 
 		log.Debug().Msg("processed path message")
@@ -183,10 +184,10 @@ func handleMessage(log zerolog.Logger, wg *sync.WaitGroup, net Network, download
 		log = log.With().Str("msg_type", "inventory").Hex("hash", msg.Hash[:]).Int("num_hashes", len(msg.Hashes)).Logger()
 
 		// cancel any pending download retries for this inventory
-		download.Cancel(msg.Hash)
+		downloads.Cancel(msg.Hash)
 
 		// mark the inventory as received for the respective peer
-		state.Received(address, msg.Hash)
+		peers.Received(address, msg.Hash)
 
 		// store the new inventory in our database
 		err := inventories.Add(msg)
@@ -196,7 +197,7 @@ func handleMessage(log zerolog.Logger, wg *sync.WaitGroup, net Network, download
 		}
 
 		// signal the new inventory to the tracker to start pending tx downloads
-		err = track.Signal(msg.Hash)
+		err = paths.Signal(msg.Hash)
 		if err != nil {
 			log.Error().Err(err).Msg("could not signal inventory")
 			return
@@ -209,13 +210,13 @@ func handleMessage(log zerolog.Logger, wg *sync.WaitGroup, net Network, download
 		log = log.With().Str("msg_type", "transaction").Hex("hash", msg.Hash[:]).Logger()
 
 		// cancel any pending download retries for this transaction
-		download.Cancel(msg.Hash)
+		downloads.Cancel(msg.Hash)
 
 		// mark the inventory download as completed for the respective peer
-		state.Received(address, msg.Hash)
+		peers.Received(address, msg.Hash)
 
 		// handle the transaction entity
-		handlers.Entity(msg)
+		handlers.entity(msg)
 
 		log.Debug().Msg("processed transaction message")
 	}

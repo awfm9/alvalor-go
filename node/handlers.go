@@ -19,15 +19,10 @@ package node
 
 import "github.com/alvalor/alvalor-go/types"
 
-// Entity is any data structure that returns a unique ID.
-type Entity interface {
-	GetHash() types.Hash
-}
-
-// Handlers describes the handlers we need to process everything.
+// Handlers describes the handlers we need to process incoming messages.
 type Handlers interface {
-	Input(input <-chan interface{})
-	Event(event interface{})
-	Message(address string, message interface{})
-	Entity(entity Entity)
+	input(input <-chan interface{})
+	event(event interface{})
+	message(address string, message interface{})
+	entity(entity types.Entity)
 }

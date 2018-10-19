@@ -32,6 +32,6 @@ func handleInput(log zerolog.Logger, wg *sync.WaitGroup, handlers Handlers, subs
 	defer log.Debug().Msg("input routine stopped")
 
 	for event := range subscription {
-		handlers.Event(event)
+		handlers.event(event)
 	}
 }

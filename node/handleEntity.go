@@ -26,7 +26,7 @@ import (
 	"github.com/alvalor/alvalor-go/types"
 )
 
-func handleEntity(log zerolog.Logger, wg *sync.WaitGroup, net Network, headers Headers, state State, transactions Transactions, track tracker, entity Entity, events Events, handlers Handlers) {
+func handleEntity(log zerolog.Logger, wg *sync.WaitGroup, net Network, paths Paths, events Events, headers Headers, transactions Transactions, peers Peers, handlers Handlers, entity types.Entity) {
 	defer wg.Done()
 
 	// precompute the entity hash
@@ -71,8 +71,9 @@ func handleEntity(log zerolog.Logger, wg *sync.WaitGroup, net Network, headers H
 		events.Header(e.Hash)
 
 		// we should propagate it to peers who are unaware of the header
-		peers := state.Addresses(peer.HasEntity(false, e.Hash))
-		err = net.Broadcast(e, peers...)
+		// TODO: change broadcast to have target addresses and not exclusion
+		addresses := peers.Addresses(peer.HasEntity(false, e.Hash))
+		err = net.Broadcast(e, addresses...)
 		if err != nil {
 			log.Error().Err(err).Msg("could not propagate entity")
 			return
@@ -80,7 +81,7 @@ func handleEntity(log zerolog.Logger, wg *sync.WaitGroup, net Network, headers H
 
 		// switch the downloader to the new best path
 		path, _ := headers.Path()
-		err = track.Follow(path)
+		err = paths.Follow(path)
 		if err != nil {
 			log.Error().Err(err).Msg("could not follow changed path")
 			return
@@ -114,7 +115,7 @@ func handleEntity(log zerolog.Logger, wg *sync.WaitGroup, net Network, headers H
 		events.Transaction(e.Hash)
 
 		// create lookup to know who to exclude from broadcast
-		addresses := state.Addresses(peer.HasEntity(false, e.Hash))
+		addresses := peers.Addresses(peer.HasEntity(false, e.Hash))
 		err = net.Broadcast(e, addresses...)
 		if err != nil {
 			log.Error().Err(err).Msg("could not propagate entity")

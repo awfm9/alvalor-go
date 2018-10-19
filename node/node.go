@@ -24,15 +24,7 @@ import (
 	"github.com/rs/zerolog"
 
 	"github.com/alvalor/alvalor-go/types"
-
-	"github.com/alvalor/alvalor-go/node/peer"
 )
-
-// Node defines the exposed API of the Alvalor node package.
-type Node interface {
-	Submit(tx *types.Transaction)
-	Stats()
-}
 
 // Network defines what we need from the network module.
 type Network interface {
@@ -51,26 +43,29 @@ type subscriber struct {
 	filters []func(interface{}) bool
 }
 
-type simpleNode struct {
+// Node represents the second layer of the network stack, which understands the
+// semantics of entities in the blockchain database and manages synchronization
+// of the consensus state.
+type Node struct {
 	log          zerolog.Logger
 	wg           *sync.WaitGroup
 	codec        Codec
 	net          Network
-	download     downloader
-	inventories  Inventories
-	headers      Headers
-	transactions Transactions
-	track        tracker
-	state        State
+	paths        Paths
+	downloads    Downloads
 	events       Events
+	headers      Headers
+	inventories  Inventories
+	transactions Transactions
+	peers        Peers
 	stop         chan struct{}
 }
 
 // New creates a new node to manage the Alvalor blockchain.
-func New(log zerolog.Logger, codec Codec, net Network, events Events, headers Headers, inventories Inventories, transactions Transactions, state State, input <-chan interface{}) Node {
+func New(log zerolog.Logger, codec Codec, net Network, paths Paths, downloads Downloads, events Events, headers Headers, inventories Inventories, transactions Transactions, peers Peers, input <-chan interface{}) *Node {
 
 	// initialize the node
-	n := &simpleNode{}
+	n := &Node{}
 
 	// configure the logger
 	log = log.With().Str("package", "node").Logger()
@@ -83,6 +78,10 @@ func New(log zerolog.Logger, codec Codec, net Network, events Events, headers He
 	// store references for component dependencies
 	n.codec = codec
 	n.net = net
+
+	// store references for helper dependencies
+	n.paths = paths
+	n.downloads = downloads
 	n.events = events
 
 	// store references for repository dependencies
@@ -91,52 +90,53 @@ func New(log zerolog.Logger, codec Codec, net Network, events Events, headers He
 	n.transactions = transactions
 
 	// store references for state dependencies
-	n.state = state
+	n.peers = peers
 
 	// start handling input messages from the network layer
-	n.Input(input)
+	n.input(input)
 
 	return n
 }
 
-func (n *simpleNode) Subscribe(sub chan<- interface{}, filters ...func(interface{}) bool) {
+// Subscribe adds a subscriber to the node, sending events that pass the given
+// filters to the provided subscription channel. If the subscriber already
+// exists, it will change the filters.
+func (n *Node) Subscribe(sub chan<- interface{}, filters ...func(interface{}) bool) {
 	n.events.Subscribe(sub, filters...)
 }
 
-func (n *simpleNode) Unsubscribe(sub chan<- interface{}) {
+// Unsubscribe removes the subscriber with the given subscription channel from
+// the node.
+func (n *Node) Unsubscribe(sub chan<- interface{}) {
 	n.events.Unsubscribe(sub)
 }
 
-func (n *simpleNode) Submit(tx *types.Transaction) {
-	n.Entity(tx)
+// Submit will submit a transaction to the node for processing.
+func (n *Node) Submit(tx *types.Transaction) {
+	n.entity(tx)
 }
 
-func (n *simpleNode) Stats() {
-	numActive := n.state.Count(peer.IsActive(true))
-	numPool := uint(len(n.transactions.Pending()))
-	n.log.Info().Uint("num_active", numActive).Uint("num_pool", numPool).Msg("stats")
+// Stop will wait for all pending handlers to finish.
+func (n *Node) Stop() {
+	n.wg.Wait()
 }
 
-func (n *simpleNode) Input(input <-chan interface{}) {
+func (n *Node) input(input <-chan interface{}) {
 	n.wg.Add(1)
 	go handleInput(n.log, n.wg, n, input)
 }
 
-func (n *simpleNode) Event(event interface{}) {
+func (n *Node) event(event interface{}) {
 	n.wg.Add(1)
-	go handleEvent(n.log, n.wg, n.net, n.headers, n.state, n, event)
+	go handleEvent(n.log, n.wg, n.net, n.headers, n.peers, n, event)
 }
 
-func (n *simpleNode) Message(address string, message interface{}) {
+func (n *Node) message(address string, message interface{}) {
 	n.wg.Add(1)
-	go handleMessage(n.log, n.wg, n.net, n.download, n.state, n.inventories, n.transactions, n.headers, n.track, n, address, message)
+	go handleMessage(n.log, n.wg, n.net, n.paths, n.downloads, n.headers, n.inventories, n.transactions, n.peers, n, address, message)
 }
 
-func (n *simpleNode) Entity(entity Entity) {
+func (n *Node) entity(entity types.Entity) {
 	n.wg.Add(1)
-	go handleEntity(n.log, n.wg, n.net, n.headers, n.state, n.transactions, n.track, entity, n.events, n)
-}
-
-func (n *simpleNode) Stop() {
-	n.wg.Wait()
+	go handleEntity(n.log, n.wg, n.net, n.paths, n.events, n.headers, n.transactions, n.peers, n, entity)
 }

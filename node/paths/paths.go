@@ -15,35 +15,34 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with Alvalor.  If not, see <http://www.gnu.org/licenses/>.
 
-package node
+package paths
 
 import (
 	"github.com/pkg/errors"
 
-	"github.com/alvalor/alvalor-go/node/repo"
 	"github.com/alvalor/alvalor-go/types"
+
+	"github.com/alvalor/alvalor-go/node/repo"
 )
 
-type tracker interface {
-	Follow(path []types.Hash) error
-	Signal(hash types.Hash) error
-}
-
-type trackerS struct {
+// Paths is responsible for tracking a certain path by downloading the entities
+// required to complete it.
+type Paths struct {
 	inventories Inventories
-	downloads   downloader
+	downloads   Downloads
 	current     map[types.Hash]bool
 	running     map[types.Hash]<-chan struct{}
 }
 
-func newTracker() *trackerS {
-	return &trackerS{
+// New creates a new tracker for paths.
+func New() *Paths {
+	return &Paths{
 		running: make(map[types.Hash]<-chan struct{}),
 	}
 }
 
 // Follow sets a new path through the header tree to follow and complete.
-func (tr *trackerS) Follow(path []types.Hash) error {
+func (tr *Paths) Follow(path []types.Hash) error {
 
 	// NOTE: There might be a big overlap of transactions between two competing
 	// paths. Canceling all downloads and restarting them when a majority of them
@@ -167,7 +166,7 @@ func (tr *trackerS) Follow(path []types.Hash) error {
 
 // Signal notifies the tracker than a new inventory has become available and
 // related transaction downloads should be started, if pending.
-func (tr *trackerS) Signal(hash types.Hash) error {
+func (tr *Paths) Signal(hash types.Hash) error {
 
 	// if we are already synching the transactions or not synching this header at
 	// all, simply skip

@@ -15,16 +15,9 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with Alvalor.  If not, see <http://www.gnu.org/licenses/>.
 
-package node
+package types
 
-import (
-	"github.com/alvalor/alvalor-go/types"
-)
-
-// Events represents a manager for events for external subscribers.
-type Events interface {
-	Subscribe(sub chan<- interface{}, filters ...func(interface{}) bool)
-	Unsubscribe(sub chan<- interface{})
-	Header(hash types.Hash) error
-	Transaction(hash types.Hash) error
+// Entity is any data structure that returns a unique ID.
+type Entity interface {
+	GetHash() Hash
 }

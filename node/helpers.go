@@ -21,9 +21,24 @@ import (
 	"github.com/alvalor/alvalor-go/types"
 )
 
-// downloader manages downloading of entities by keeping track of pending
+// Paths is responsible for tracking the paths in our tree of headers and
+// downloading the entities required for the best one.
+type Paths interface {
+	Follow(path []types.Hash) error
+	Signal(hash types.Hash) error
+}
+
+// Downloads manages downloading of entities by keeping track of pending
 // downloads and load balancing across available peers.
-type downloader interface {
+type Downloads interface {
 	Start(hash types.Hash) error
 	Cancel(hash types.Hash) error
+}
+
+// Events represents a manager for events for external subscribers.
+type Events interface {
+	Subscribe(sub chan<- interface{}, filters ...func(interface{}) bool)
+	Unsubscribe(sub chan<- interface{})
+	Header(hash types.Hash) error
+	Transaction(hash types.Hash) error
 }

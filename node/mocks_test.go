@@ -120,7 +120,7 @@ func (h *HandlersMock) Message(address string, message interface{}) {
 	h.Called(address, message)
 }
 
-func (h *HandlersMock) Entity(entity Entity) {
+func (h *HandlersMock) Entity(entity types.Entity) {
 	h.Called(entity)
 }
 
