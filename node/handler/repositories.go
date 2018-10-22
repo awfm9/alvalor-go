@@ -15,14 +15,29 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with Alvalor.  If not, see <http://www.gnu.org/licenses/>.
 
-package node
+package handler
 
 import "github.com/alvalor/alvalor-go/types"
 
-// Handlers describes the handlers we need to process incoming messages.
-type Handlers interface {
-	input(input <-chan interface{})
-	event(event interface{})
-	message(address string, message interface{})
-	entity(entity types.Entity)
+// Inventories represents an interface to block inventory storage.
+type Inventories interface {
+	Add(inv *types.Inventory) error
+	Has(hash types.Hash) bool
+	Get(hash types.Hash) (*types.Inventory, error)
+}
+
+// Headers represents the store for all headers.
+type Headers interface {
+	Add(header *types.Header) error
+	Has(hash types.Hash) bool
+	Get(hash types.Hash) (*types.Header, error)
+	Path() ([]types.Hash, uint64)
+}
+
+// Transactions represents the store for all transactions.
+type Transactions interface {
+	Add(header *types.Transaction) error
+	Has(hash types.Hash) bool
+	Get(hash types.Hash) (*types.Transaction, error)
+	Pending() []types.Hash
 }

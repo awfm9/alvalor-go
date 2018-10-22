@@ -18,25 +18,13 @@
 package node
 
 import (
-	"io"
 	"sync"
 
 	"github.com/rs/zerolog"
 
+	"github.com/alvalor/alvalor-go/node/handler"
 	"github.com/alvalor/alvalor-go/types"
 )
-
-// Network defines what we need from the network module.
-type Network interface {
-	Send(address string, msg interface{}) error
-	Broadcast(msg interface{}, exclude ...string) error
-}
-
-// Codec is responsible for serializing and deserializing data for disk storage.
-type Codec interface {
-	Encode(w io.Writer, i interface{}) error
-	Decode(r io.Reader) (interface{}, error)
-}
 
 type subscriber struct {
 	channel chan<- interface{}
@@ -47,18 +35,13 @@ type subscriber struct {
 // semantics of entities in the blockchain database and manages synchronization
 // of the consensus state.
 type Node struct {
-	log          zerolog.Logger
-	wg           *sync.WaitGroup
-	codec        Codec
-	net          Network
-	paths        Paths
-	downloads    Downloads
-	events       Events
-	headers      Headers
-	inventories  Inventories
-	transactions Transactions
-	peers        Peers
-	stop         chan struct{}
+	log     zerolog.Logger
+	wg      *sync.WaitGroup
+	events  Events
+	event   func(interface{})
+	message func(string, interface{})
+	entity  func(types.Entity)
+	stop    chan struct{}
 }
 
 // New creates a new node to manage the Alvalor blockchain.
@@ -75,25 +58,16 @@ func New(log zerolog.Logger, codec Codec, net Network, paths Paths, downloads Do
 	wg := &sync.WaitGroup{}
 	n.wg = wg
 
-	// store references for component dependencies
-	n.codec = codec
-	n.net = net
-
 	// store references for helper dependencies
-	n.paths = paths
-	n.downloads = downloads
 	n.events = events
 
-	// store references for repository dependencies
-	n.inventories = inventories
-	n.headers = headers
-	n.transactions = transactions
-
-	// store references for state dependencies
-	n.peers = peers
+	// bind the handlers
+	n.entity = handler.Entity(log, wg, net, paths, events, headers, transactions, peers)
+	n.message = handler.Message(log, wg, net, paths, downloads, headers, inventories, transactions, peers, n.entity)
+	n.event = handler.Event(log, wg, net, headers, peers, n.message)
 
 	// start handling input messages from the network layer
-	n.input(input)
+	n.process(input)
 
 	return n
 }
@@ -111,32 +85,22 @@ func (n *Node) Unsubscribe(sub chan<- interface{}) {
 	n.events.Unsubscribe(sub)
 }
 
+// process will start processing the input queue.
+func (n *Node) process(input <-chan interface{}) {
+	n.wg.Add(1)
+	defer n.wg.Done()
+	for event := range input {
+		n.event(event)
+	}
+}
+
 // Submit will submit a transaction to the node for processing.
 func (n *Node) Submit(tx *types.Transaction) {
+	n.wg.Add(1)
 	n.entity(tx)
 }
 
 // Stop will wait for all pending handlers to finish.
 func (n *Node) Stop() {
 	n.wg.Wait()
-}
-
-func (n *Node) input(input <-chan interface{}) {
-	n.wg.Add(1)
-	go handleInput(n.log, n.wg, n, input)
-}
-
-func (n *Node) event(event interface{}) {
-	n.wg.Add(1)
-	go handleEvent(n.log, n.wg, n.net, n.headers, n.peers, n, event)
-}
-
-func (n *Node) message(address string, message interface{}) {
-	n.wg.Add(1)
-	go handleMessage(n.log, n.wg, n.net, n.paths, n.downloads, n.headers, n.inventories, n.transactions, n.peers, n, address, message)
-}
-
-func (n *Node) entity(entity types.Entity) {
-	n.wg.Add(1)
-	go handleEntity(n.log, n.wg, n.net, n.paths, n.events, n.headers, n.transactions, n.peers, n, entity)
 }

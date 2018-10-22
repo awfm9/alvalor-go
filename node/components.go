@@ -17,21 +17,16 @@
 
 package node
 
-import (
-	"sync"
+import "io"
 
-	"github.com/rs/zerolog"
-)
+// Network defines what we need from the network module.
+type Network interface {
+	Send(address string, msg interface{}) error
+	Broadcast(msg interface{}, exclude ...string) error
+}
 
-func handleInput(log zerolog.Logger, wg *sync.WaitGroup, handlers Handlers, subscription <-chan interface{}) {
-	defer wg.Done()
-
-	// configure logger
-	log = log.With().Str("component", "input").Logger()
-	log.Debug().Msg("input routine started")
-	defer log.Debug().Msg("input routine stopped")
-
-	for event := range subscription {
-		handlers.event(event)
-	}
+// Codec is responsible for serializing and deserializing data for disk storage.
+type Codec interface {
+	Encode(w io.Writer, i interface{}) error
+	Decode(r io.Reader) (interface{}, error)
 }

@@ -15,10 +15,9 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with Alvalor.  If not, see <http://www.gnu.org/licenses/>.
 
-package node
+package handler
 
 // import (
-// 	"errors"
 // 	"io/ioutil"
 // 	"sync"
 // 	"testing"
@@ -30,57 +29,42 @@ package node
 // 	"github.com/alvalor/alvalor-go/types"
 // )
 //
-// func TestEntity(t *testing.T) {
-// 	suite.Run(t, new(EntitySuite))
+// func TestMessage(t *testing.T) {
+// 	suite.Run(t, new(MessageSuite))
 // }
 //
-// type EntitySuite struct {
+// type MessageSuite struct {
 // 	suite.Suite
 // 	log zerolog.Logger
 // 	wg  *sync.WaitGroup
 // }
 //
-// func (suite *EntitySuite) SetupTest() {
+// func (suite *MessageSuite) SetupTest() {
 // 	suite.log = zerolog.New(ioutil.Discard)
 // 	suite.wg = &sync.WaitGroup{}
 // 	suite.wg.Add(1)
 // }
 //
-// func (suite *EntitySuite) TestEntityTransaction() {
+// func (suite *MessageSuite) TestMessageTransaction() {
 //
 // 	// arrange
-// 	address1 := "192.0.2.1:1337"
-// 	address2 := "192.0.2.2:1337"
-// 	address3 := "192.0.2.3:1337"
+// 	address := "192.0.2.100:1337"
 //
-// 	entity := &types.Transaction{}
+// 	msg := &types.Transaction{}
+// 	msg.Hash = msg.GetHash()
 //
 // 	net := &NetworkMock{}
-// 	net.On("Send", address1, mock.Anything).Return(errors.New("could not send"))
-// 	net.On("Send", address2, mock.Anything).Return(nil)
-// 	net.On("Send", address3, mock.Anything).Return(nil)
 //
 // 	finder := &PathfinderMock{}
 //
-// 	peers := &PeersMock{}
-// 	peers.On("Tags", mock.Anything).Return([]string{address2})
-// 	peers.On("Actives").Return([]string{address1, address2, address3})
-//
-// 	pool := &PoolMock{}
-// 	pool.On("Known", mock.Anything).Return(false)
-// 	pool.On("Add", mock.Anything).Return(nil)
-//
-// 	events := &EventManagerMock{}
-// 	events.On("Transaction", entity.Hash).Return(nil)
+// 	handlers := &HandlersMock{}
+// 	handlers.On("Entity", mock.Anything)
 //
 // 	// act
-// 	handleEntity(suite.log, suite.wg, net, finder, peers, pool, entity, events)
+// 	handleMessage(suite.log, suite.wg, net, nil, finder, nil, handlers, address, msg)
 //
 // 	// assert
 // 	t := suite.T()
 //
-// 	net.AssertCalled(t, "Send", address1, mock.Anything)
-// 	net.AssertCalled(t, "Send", address3, mock.Anything)
-//
-// 	net.AssertNotCalled(t, "Send", address2, mock.Anything)
+// 	handlers.AssertCalled(t, "Entity", msg)
 // }
