@@ -21,83 +21,37 @@ import (
 	"sync"
 
 	"github.com/rs/zerolog"
-
-	"github.com/alvalor/alvalor-go/node/handler"
-	"github.com/alvalor/alvalor-go/types"
 )
-
-type subscriber struct {
-	channel chan<- interface{}
-	filters []func(interface{}) bool
-}
 
 // Node represents the second layer of the network stack, which understands the
 // semantics of entities in the blockchain database and manages synchronization
 // of the consensus state.
 type Node struct {
-	log     zerolog.Logger
-	wg      *sync.WaitGroup
-	events  Events
-	event   func(interface{})
-	message func(string, interface{})
-	entity  func(types.Entity)
-	stop    chan struct{}
+	log   zerolog.Logger
+	wg    *sync.WaitGroup
+	event func(interface{})
 }
 
 // New creates a new node to manage the Alvalor blockchain.
-func New(log zerolog.Logger, codec Codec, net Network, paths Paths, downloads Downloads, events Events, headers Headers, inventories Inventories, transactions Transactions, peers Peers, input <-chan interface{}) *Node {
+func New(log zerolog.Logger, event func(interface{})) *Node {
 
 	// initialize the node
-	n := &Node{}
-
-	// configure the logger
-	log = log.With().Str("package", "node").Logger()
-	n.log = log
-
-	// initialize the wait group
-	wg := &sync.WaitGroup{}
-	n.wg = wg
-
-	// store references for helper dependencies
-	n.events = events
-
-	// bind the handlers
-	n.entity = handler.Entity(log, wg, net, paths, events, headers, transactions, peers)
-	n.message = handler.Message(log, wg, net, paths, downloads, headers, inventories, transactions, peers, n.entity)
-	n.event = handler.Event(log, wg, net, headers, peers, n.message)
-
-	// start handling input messages from the network layer
-	n.process(input)
+	n := &Node{
+		log:   log.With().Str("package", "node").Logger(),
+		wg:    &sync.WaitGroup{},
+		event: event,
+	}
 
 	return n
 }
 
-// Subscribe adds a subscriber to the node, sending events that pass the given
-// filters to the provided subscription channel. If the subscriber already
-// exists, it will change the filters.
-func (n *Node) Subscribe(sub chan<- interface{}, filters ...func(interface{}) bool) {
-	n.events.Subscribe(sub, filters...)
-}
-
-// Unsubscribe removes the subscriber with the given subscription channel from
-// the node.
-func (n *Node) Unsubscribe(sub chan<- interface{}) {
-	n.events.Unsubscribe(sub)
-}
-
-// process will start processing the input queue.
-func (n *Node) process(input <-chan interface{}) {
+// Start will start processing an input queue.
+func (n *Node) Start(input <-chan interface{}) {
 	n.wg.Add(1)
 	defer n.wg.Done()
 	for event := range input {
 		n.event(event)
 	}
-}
-
-// Submit will submit a transaction to the node for processing.
-func (n *Node) Submit(tx *types.Transaction) {
-	n.wg.Add(1)
-	n.entity(tx)
 }
 
 // Stop will wait for all pending handlers to finish.
