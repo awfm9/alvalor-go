@@ -17,7 +17,10 @@
 
 package message
 
-// Status message shares our current best distance and locator hashes for our best path.
-type Status struct {
-	Distance uint64
+import "github.com/alvalor/alvalor-go/types"
+
+// Transactions represents the transaction repository interface, as needed by
+// the message handler.
+type Transactions interface {
+	Get(hash types.Hash) (*types.Transaction, error)
 }

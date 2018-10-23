@@ -17,9 +17,28 @@
 
 package message
 
-import "github.com/alvalor/alvalor-go/types"
+import (
+	"github.com/alvalor/alvalor-go/types"
+	"github.com/stretchr/testify/mock"
+)
 
-// Sync message shares locator hashes from our current best path.
-type Sync struct {
-	Locators []types.Hash
+// InventoriesMock mocks the inventory repository interface.
+type InventoriesMock struct {
+	mock.Mock
+}
+
+// Add mocks the add function of the inventory repository interface.
+func (im *InventoriesMock) Add(inv *types.Inventory) error {
+	args := im.Called(inv)
+	return args.Error(0)
+}
+
+// Get mocks the get function of the inventory repository interface.
+func (im *InventoriesMock) Get(hash types.Hash) (*types.Inventory, error) {
+	args := im.Called(hash)
+	var inv *types.Inventory
+	if args.Get(0) != nil {
+		inv = args.Get(0).(*types.Inventory)
+	}
+	return inv, args.Error(1)
 }

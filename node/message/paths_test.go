@@ -17,9 +17,17 @@
 
 package message
 
-import "github.com/alvalor/alvalor-go/types"
+import (
+	"github.com/alvalor/alvalor-go/types"
+	"github.com/stretchr/testify/mock"
+)
 
-// Request is a download request for an inventory/transaction/block.
-type Request struct {
-	Hash types.Hash
+// PathsMock mocks the pathfinder helper interface.
+type PathsMock struct {
+	mock.Mock
+}
+
+// Signal mocks the signal function of the pathfinder helper interface.
+func (pm *PathsMock) Signal(hash types.Hash) {
+	pm.Called(hash)
 }

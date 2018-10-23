@@ -35,19 +35,6 @@ type Handler struct {
 	message Message
 }
 
-// NewHandler creates a new handler for events.
-func NewHandler(wg *sync.WaitGroup, log zerolog.Logger, net Network, headers Headers, peers Peers, message Message) *Handler {
-	handler := &Handler{
-		wg:      wg,
-		log:     log,
-		net:     net,
-		headers: headers,
-		peers:   peers,
-		message: message,
-	}
-	return handler
-}
-
 // Process makes the event handler process an event.
 func (handler *Handler) Process(event interface{}) {
 	handler.wg.Add(1)

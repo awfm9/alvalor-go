@@ -38,21 +38,6 @@ type Handler struct {
 	peers        Peers
 }
 
-// NewHandler creates a new handler for entities.
-func NewHandler(wg *sync.WaitGroup, log zerolog.Logger, net Network, paths Paths, events Events, headers Headers, transactions Transactions, peers Peers) *Handler {
-	handler := &Handler{
-		wg:           wg,
-		log:          log,
-		net:          net,
-		paths:        paths,
-		events:       events,
-		headers:      headers,
-		transactions: transactions,
-		peers:        peers,
-	}
-	return handler
-}
-
 // Process is the entity handler's function for processing a new entity.
 func (handler *Handler) Process(entity types.Entity) {
 	handler.wg.Add(1)

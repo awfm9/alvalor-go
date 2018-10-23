@@ -15,22 +15,26 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with Alvalor.  If not, see <http://www.gnu.org/licenses/>.
 
-package handler
+package message
 
-import (
-	"github.com/alvalor/alvalor-go/types"
+import "github.com/alvalor/alvalor-go/types"
 
-	"github.com/alvalor/alvalor-go/node/peer"
-)
+// Status message shares our current best distance and locator hashes for our best path.
+type Status struct {
+	Distance uint64
+}
 
-// Peers represents an interface for the state of peers.
-type Peers interface {
-	Active(address string)
-	Inactive(address string)
-	Requested(address string, hash types.Hash)
-	Received(address string, hash types.Hash)
-	Pending(address string) ([]types.Hash, error)
-	Seen(address string) ([]types.Hash, error)
-	Addresses(filters ...peer.FilterFunc) []string
-	Count(filters ...peer.FilterFunc) uint
+// Sync message shares locator hashes from our current best path.
+type Sync struct {
+	Locators []types.Hash
+}
+
+// Request is a download request for an inventory/transaction/block.
+type Request struct {
+	Hash types.Hash
+}
+
+// Path message shares a partial path from to our best header.
+type Path struct {
+	Headers []*types.Header
 }

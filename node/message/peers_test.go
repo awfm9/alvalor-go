@@ -15,29 +15,16 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with Alvalor.  If not, see <http://www.gnu.org/licenses/>.
 
-package handler
+package message
 
-import "github.com/alvalor/alvalor-go/types"
+import "github.com/stretchr/testify/mock"
 
-// Inventories represents an interface to block inventory storage.
-type Inventories interface {
-	Add(inv *types.Inventory) error
-	Has(hash types.Hash) bool
-	Get(hash types.Hash) (*types.Inventory, error)
+// PeersMock mocks the peer state interface.
+type PeersMock struct {
+	mock.Mock
 }
 
-// Headers represents the store for all headers.
-type Headers interface {
-	Add(header *types.Header) error
-	Has(hash types.Hash) bool
-	Get(hash types.Hash) (*types.Header, error)
-	Path() ([]types.Hash, uint64)
-}
-
-// Transactions represents the store for all transactions.
-type Transactions interface {
-	Add(header *types.Transaction) error
-	Has(hash types.Hash) bool
-	Get(hash types.Hash) (*types.Transaction, error)
-	Pending() []types.Hash
+// Active mocks the received function of the peer state interface.
+func (pm *PeersMock) Received(address string) {
+	pm.Called(address)
 }

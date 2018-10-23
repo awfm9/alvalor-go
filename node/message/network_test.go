@@ -17,9 +17,15 @@
 
 package message
 
-import "github.com/alvalor/alvalor-go/types"
+import "github.com/stretchr/testify/mock"
 
-// Path message shares a partial path from to our best header.
-type Path struct {
-	Headers []*types.Header
+// NetworkMock mocks the network interface.
+type NetworkMock struct {
+	mock.Mock
+}
+
+// Send mocks the broadcast functionality.
+func (nm *NetworkMock) Send(address string, msg interface{}) error {
+	args := nm.Called(address, msg)
+	return args.Error(0)
 }

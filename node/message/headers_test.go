@@ -15,30 +15,34 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with Alvalor.  If not, see <http://www.gnu.org/licenses/>.
 
-package handler
+package message
 
 import (
 	"github.com/alvalor/alvalor-go/types"
+	"github.com/stretchr/testify/mock"
 )
 
-// Paths is responsible for tracking the paths in our tree of headers and
-// downloading the entities required for the best one.
-type Paths interface {
-	Follow(path []types.Hash) error
-	Signal(hash types.Hash) error
+// HeadersMock mocks the header repository interface.
+type HeadersMock struct {
+	mock.Mock
 }
 
-// Downloads manages downloading of entities by keeping track of pending
-// downloads and load balancing across available peers.
-type Downloads interface {
-	Start(hash types.Hash) error
-	Cancel(hash types.Hash) error
+// Get mocks the get function of the header repository interface.
+func (hm *HeadersMock) Get(hash types.Hash) (*types.Header, error) {
+	args := hm.Called(hash)
+	var header *types.Header
+	if args.Get(0) != nil {
+		header = args.Get(0).(*types.Header)
+	}
+	return header, args.Error(1)
 }
 
-// Events represents a manager for events for external subscribers.
-type Events interface {
-	Subscribe(sub chan<- interface{}, filters ...func(interface{}) bool)
-	Unsubscribe(sub chan<- interface{})
-	Header(hash types.Hash) error
-	Transaction(hash types.Hash) error
+// Path mocks the path function of the header repository interface.
+func (hm *HeadersMock) Path() ([]types.Hash, uint64) {
+	args := hm.Called()
+	var path []types.Hash
+	if args.Get(0) != nil {
+		path = args.Get(0).([]types.Hash)
+	}
+	return path, uint64(args.Int(1))
 }
