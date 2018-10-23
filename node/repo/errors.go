@@ -15,24 +15,12 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with Alvalor.  If not, see <http://www.gnu.org/licenses/>.
 
-package node
+package repo
 
-import (
-	"sync"
-)
+import "errors"
 
-// EventHandler represents a handler to process events. We could use a function, but
-// using an interface makes mocking for tests easier.
-type EventHandler interface {
-	Process(interface{})
-}
+// ErrNotFound is returned whenever an entity is not found in the repository.
+var ErrNotFound = errors.New("entity not found")
 
-// Run will run the node package with the given event handler on the stream of
-// input events.
-func Run(wg *sync.WaitGroup, events <-chan interface{}, handler EventHandler) {
-	wg.Add(1)
-	defer wg.Done()
-	for event := range events {
-		go handler.Process(event)
-	}
-}
+// ErrAlreadyExists is returned whenever an entity is already known in the repository.
+var ErrAlreadyExists = errors.New("entity already exists")

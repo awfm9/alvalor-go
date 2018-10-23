@@ -15,24 +15,19 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with Alvalor.  If not, see <http://www.gnu.org/licenses/>.
 
-package node
+package message
 
 import (
-	"sync"
+	"github.com/alvalor/alvalor-go/types"
+	"github.com/stretchr/testify/mock"
 )
 
-// EventHandler represents a handler to process events. We could use a function, but
-// using an interface makes mocking for tests easier.
-type EventHandler interface {
-	Process(interface{})
+// DownloadsMock mocks the download helper interface.
+type DownloadsMock struct {
+	mock.Mock
 }
 
-// Run will run the node package with the given event handler on the stream of
-// input events.
-func Run(wg *sync.WaitGroup, events <-chan interface{}, handler EventHandler) {
-	wg.Add(1)
-	defer wg.Done()
-	for event := range events {
-		go handler.Process(event)
-	}
+// Cancel mocks the cancel function of the download helper interface.
+func (dm *DownloadsMock) Cancel(hash types.Hash) {
+	dm.Called(hash)
 }

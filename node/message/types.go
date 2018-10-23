@@ -15,24 +15,26 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with Alvalor.  If not, see <http://www.gnu.org/licenses/>.
 
-package node
+package message
 
-import (
-	"sync"
-)
+import "github.com/alvalor/alvalor-go/types"
 
-// EventHandler represents a handler to process events. We could use a function, but
-// using an interface makes mocking for tests easier.
-type EventHandler interface {
-	Process(interface{})
+// Status message shares our current best distance and locator hashes for our best path.
+type Status struct {
+	Distance uint64
 }
 
-// Run will run the node package with the given event handler on the stream of
-// input events.
-func Run(wg *sync.WaitGroup, events <-chan interface{}, handler EventHandler) {
-	wg.Add(1)
-	defer wg.Done()
-	for event := range events {
-		go handler.Process(event)
-	}
+// Sync message shares locator hashes from our current best path.
+type Sync struct {
+	Locators []types.Hash
+}
+
+// Request is a download request for an inventory/transaction/block.
+type Request struct {
+	Hash types.Hash
+}
+
+// Path message shares a partial path from to our best header.
+type Path struct {
+	Headers []*types.Header
 }
