@@ -19,42 +19,20 @@ package node
 
 import (
 	"sync"
-
-	"github.com/rs/zerolog"
 )
 
-// Node represents the second layer of the network stack, which understands the
-// semantics of entities in the blockchain database and manages synchronization
-// of the consensus state.
-type Node struct {
-	log   zerolog.Logger
-	wg    *sync.WaitGroup
-	event func(interface{})
+// Handler represents a handler to process events. We could use a function, but
+// using an interface makes mocking for tests easier.
+type Handler interface {
+	Process(interface{})
 }
 
-// New creates a new node to manage the Alvalor blockchain.
-func New(log zerolog.Logger, event func(interface{})) *Node {
-
-	// initialize the node
-	n := &Node{
-		log:   log.With().Str("package", "node").Logger(),
-		wg:    &sync.WaitGroup{},
-		event: event,
+// Run will run the node package with the given event handler on the stream of
+// input events.
+func Run(wg *sync.WaitGroup, events <-chan interface{}, handler Handler) {
+	wg.Add(1)
+	defer wg.Done()
+	for event := range events {
+		handler.Process(event)
 	}
-
-	return n
-}
-
-// Start will start processing an input queue.
-func (n *Node) Start(input <-chan interface{}) {
-	n.wg.Add(1)
-	defer n.wg.Done()
-	for event := range input {
-		n.event(event)
-	}
-}
-
-// Stop will wait for all pending handlers to finish.
-func (n *Node) Stop() {
-	n.wg.Wait()
 }
