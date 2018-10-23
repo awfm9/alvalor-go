@@ -15,10 +15,12 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with Alvalor.  If not, see <http://www.gnu.org/licenses/>.
 
-package handler
+package entity
 
-// Network defines what we need from the network module.
-type Network interface {
-	Send(address string, msg interface{}) error
-	Broadcast(msg interface{}, exclude ...string) error
+import "github.com/alvalor/alvalor-go/types"
+
+// Paths is responsible for tracking the paths in our tree of headers and
+// downloading the entities required for the best one.
+type Paths interface {
+	Follow(path []types.Hash) error
 }
