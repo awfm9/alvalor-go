@@ -15,7 +15,7 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with Alvalor.  If not, see <http://www.gnu.org/licenses/>.
 
-package event
+package subscribe
 
 //
 // func handleStream(log zerolog.Logger, wg *sync.WaitGroup, stream <-chan interface{}, subscribers <-chan *subscriber) {

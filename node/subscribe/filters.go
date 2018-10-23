@@ -15,7 +15,7 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with Alvalor.  If not, see <http://www.gnu.org/licenses/>.
 
-package event
+package subscribe
 
 import "github.com/alvalor/alvalor-go/types"
 
