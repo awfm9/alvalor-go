@@ -99,51 +99,36 @@ func (hr *Headers) Get(hash types.Hash) (*types.Header, error) {
 // Path returns the best path of the graph by total difficulty.
 func (hr *Headers) Path() ([]types.Hash, uint64) {
 
-	// create a topological sort of all headers starting at the root
+	// create a topological sort and get distances for each header
 	var hash types.Hash
 	sorted := make([]types.Hash, 0, len(hr.headers))
 	queue := []types.Hash{hr.root}
-	queue = append(queue, hr.root)
+	distances := make(map[types.Hash]uint64)
 	for len(queue) > 0 {
 		hash, queue = queue[0], queue[1:]
 		sorted = append(sorted, hash)
 		queue = append(queue, hr.children[hash]...)
+		header := hr.headers[hash]
+		distances[hash] = distances[header.Parent] + header.Diff
 	}
 
-	// find the maximum distance of each header from the root
+	// identify the hash with the best distance
 	var max uint64
 	var best types.Hash
-	distances := make(map[types.Hash]uint64)
-	for len(sorted) > 0 {
-		hash, sorted = sorted[0], sorted[1:]
-		for _, child := range hr.children[hash] {
-			header := hr.headers[child]
-			distance := distances[hash] + header.Diff
-			if distances[child] >= distance {
-				continue
-			}
-			distances[child] = distance
-			if distance <= max {
-				continue
-			}
+	for hash, distance := range distances {
+		if distance > max {
 			max = distance
-			best = child
+			best = hash
 		}
 	}
 
-	// if we have no distance, we are stuck at the root
-	if max == 0 {
-		return []types.Hash{hr.root}, 0
-	}
-
 	// otherwise, iterate back to parents from best child
-	var path []types.Hash
 	header := hr.headers[best]
+	path := []types.Hash{header.Hash}
 	for header.Parent != types.ZeroHash {
-		path = append(path, header.Hash)
 		header = hr.headers[header.Parent]
+		path = append(path, header.Hash)
 	}
-	path = append(path, hr.root)
 
 	return path, max
 }

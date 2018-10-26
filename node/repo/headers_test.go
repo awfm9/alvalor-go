@@ -210,5 +210,96 @@ func TestHeadersGetMissing(t *testing.T) {
 	assert.NotNil(t, err)
 }
 
-func TestHeadersPath(t *testing.T) {
+func TestHeadersPathRoot(t *testing.T) {
+
+	// root
+	hash0 := types.Hash{0x6}
+
+	// first level
+	hash1 := types.Hash{0x1}
+
+	// second level
+	hash11 := types.Hash{0x11}
+	// hash12 := types.Hash{0x12}
+	// hash13 := types.Hash{0x13}
+
+	// third level
+	hash111 := types.Hash{0x11, 0x1}
+	// hash121 := types.Hash{0x12, 0x1}
+	// hash122 := types.Hash{0x12, 0x2}
+	// hash131 := types.Hash{0x13, 0x1}
+	// hash132 := types.Hash{0x13, 0x2}
+	// hash133 := types.Hash{0x13, 0x3}
+
+	// fourth level
+	hash1111 := types.Hash{0x11, 0x11}
+	// hash1211 := types.Hash{0x12, 0x11}
+	// hash1212 := types.Hash{0x12, 0x12}
+
+	// fifth level
+	hash11111 := types.Hash{0x11, 0x11, 0x1}
+
+	// initialize the various headers
+	header0 := &types.Header{Hash: hash0, Diff: 1}
+	header1 := &types.Header{Hash: hash1, Parent: hash0, Diff: 10}
+	header11 := &types.Header{Hash: hash11, Parent: hash1, Diff: 100}
+	header111 := &types.Header{Hash: hash111, Parent: hash11, Diff: 1000}
+	header1111 := &types.Header{Hash: hash1111, Parent: hash111, Diff: 10000}
+	header11111 := &types.Header{Hash: hash11111, Parent: hash1111, Diff: 100000}
+
+	vectors := map[string]struct {
+		headers  []*types.Header
+		path     []types.Hash
+		distance uint64
+	}{
+		// no headers, path should be just root and root distance
+		"empty": {
+			headers:  []*types.Header{},
+			path:     []types.Hash{},
+			distance: 1,
+		},
+		"five_straight": {
+			headers: []*types.Header{
+				header1,
+				header11,
+				header111,
+				header1111,
+				header11111,
+			},
+			path: []types.Hash{
+				hash11111,
+				hash1111,
+				hash111,
+				hash11,
+				hash1,
+			},
+			distance: 111111,
+		},
+	}
+
+	// loop through the test vectors
+	for name, vector := range vectors {
+
+		// initialize the repository with required maps
+		hr := &Headers{
+			root:     hash0,
+			headers:  make(map[types.Hash]*types.Header),
+			pending:  make(map[types.Hash][]*types.Header),
+			children: make(map[types.Hash][]types.Hash),
+		}
+
+		// add the root header to the system
+		hr.headers[hash0] = header0
+
+		// add the rest of the headers
+		for _, header := range vector.headers {
+			_ = hr.Add(header)
+		}
+
+		// get the distance/path and compare
+		path, distance := hr.Path()
+		assert.Equal(t, append(vector.path, hash0), path, name)
+		assert.Equal(t, vector.distance, distance, name)
+	}
+
 }
