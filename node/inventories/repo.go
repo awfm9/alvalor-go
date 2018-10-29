@@ -15,7 +15,7 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with Alvalor.  If not, see <http://www.gnu.org/licenses/>.
 
-package repo
+package inventories
 
 import (
 	"github.com/pkg/errors"
@@ -23,14 +23,14 @@ import (
 	"github.com/alvalor/alvalor-go/types"
 )
 
-// Inventories is a simple implementation of the inventory store.
-type Inventories struct {
+// Repo is a simple implementation of the inventory store.
+type Repo struct {
 	inventories map[types.Hash]*types.Inventory
 }
 
-// NewInventories creates a new store for block inventories.
-func NewInventories() *Inventories {
-	ir := &Inventories{
+// NewRepo creates a new store for block inventories.
+func NewRepo() *Repo {
+	ir := &Repo{
 		inventories: make(map[types.Hash]*types.Inventory),
 	}
 	// TODO: load all known inventories from disk
@@ -38,26 +38,26 @@ func NewInventories() *Inventories {
 }
 
 // Add stores a new inventory.
-func (ir *Inventories) Add(inv *types.Inventory) error {
+func (ir *Repo) Add(inv *types.Inventory) error {
 	_, ok := ir.inventories[inv.Hash]
 	if ok {
-		return errors.Wrap(ErrAlreadyExists, "header already known")
+		return errors.Wrap(ErrExist, "inventory already exists")
 	}
 	ir.inventories[inv.Hash] = inv
 	return nil
 }
 
 // Has checks if a given inventory is known.
-func (ir *Inventories) Has(hash types.Hash) bool {
+func (ir *Repo) Has(hash types.Hash) bool {
 	_, ok := ir.inventories[hash]
 	return ok
 }
 
 // Get retrieves the inventory with the given block hash.
-func (ir *Inventories) Get(hash types.Hash) (*types.Inventory, error) {
+func (ir *Repo) Get(hash types.Hash) (*types.Inventory, error) {
 	inv, ok := ir.inventories[hash]
 	if !ok {
-		return nil, errors.Wrap(ErrNotFound, "inventory not found")
+		return nil, errors.Wrap(ErrNotExist, "inventory does not exist")
 	}
 	return inv, nil
 }

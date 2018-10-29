@@ -25,17 +25,17 @@ import (
 	"github.com/pkg/errors"
 )
 
-// Transactions represents the repository for transactions.
-type Transactions struct {
+// Repo represents the repository for transactions.
+type Repo struct {
 	sync.Mutex
 	codec  Codec
 	store  Store
 	hashes map[types.Hash]struct{}
 }
 
-// NewTransactions creates a new repository for transactions.
-func NewTransactions(codec Codec, store Store) *Transactions {
-	p := &Transactions{
+// NewRepo creates a new repository for transactions.
+func NewRepo(codec Codec, store Store) *Repo {
+	p := &Repo{
 		codec:  codec,
 		store:  store,
 		hashes: make(map[types.Hash]struct{}),
@@ -44,48 +44,48 @@ func NewTransactions(codec Codec, store Store) *Transactions {
 }
 
 // Add adds a transaction to the transaction pool.
-func (p *Transactions) Add(tx *types.Transaction) error {
-	p.Lock()
-	defer p.Unlock()
+func (tr *Repo) Add(tx *types.Transaction) error {
+	tr.Lock()
+	defer tr.Unlock()
 
 	buf := &bytes.Buffer{}
-	err := p.codec.Encode(buf, tx)
+	err := tr.codec.Encode(buf, tx)
 	if err != nil {
 		return errors.Wrap(err, "could not encode transaction")
 	}
 
 	data := buf.Bytes()
-	err = p.store.Put(tx.Hash[:], data)
+	err = tr.store.Put(tx.Hash[:], data)
 	if err != nil {
 		return errors.Wrap(err, "could not put data")
 	}
 
-	p.hashes[tx.Hash] = struct{}{}
+	tr.hashes[tx.Hash] = struct{}{}
 
 	return nil
 }
 
 // Has checks whether a transaction exists in the transaction pool.
-func (p *Transactions) Has(hash types.Hash) bool {
-	p.Lock()
-	defer p.Unlock()
+func (tr *Repo) Has(hash types.Hash) bool {
+	tr.Lock()
+	defer tr.Unlock()
 
-	_, ok := p.hashes[hash]
+	_, ok := tr.hashes[hash]
 	return ok
 }
 
 // Get retrieves a transaction from the transaction pool.
-func (p *Transactions) Get(hash types.Hash) (*types.Transaction, error) {
-	p.Lock()
-	defer p.Unlock()
+func (tr *Repo) Get(hash types.Hash) (*types.Transaction, error) {
+	tr.Lock()
+	defer tr.Unlock()
 
-	data, err := p.store.Get(hash[:])
+	data, err := tr.store.Get(hash[:])
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get data")
 	}
 
 	buf := bytes.NewBuffer(data)
-	tx, err := p.codec.Decode(buf)
+	tx, err := tr.codec.Decode(buf)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not decode transaction")
 	}
@@ -94,12 +94,12 @@ func (p *Transactions) Get(hash types.Hash) (*types.Transaction, error) {
 }
 
 // Pending returns a list of transaction hashes from the memory pool.
-func (p *Transactions) Pending() []types.Hash {
-	p.Lock()
-	defer p.Unlock()
+func (tr *Repo) Pending() []types.Hash {
+	tr.Lock()
+	defer tr.Unlock()
 
-	hashes := make([]types.Hash, 0, len(p.hashes))
-	for hash := range p.hashes {
+	hashes := make([]types.Hash, 0, len(tr.hashes))
+	for hash := range tr.hashes {
 		hashes = append(hashes, hash)
 	}
 

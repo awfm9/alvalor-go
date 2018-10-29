@@ -52,7 +52,7 @@ func (hr *Repo) Add(header *types.Header) error {
 	// if we already know the header, fail
 	_, ok := hr.headers[header.Hash]
 	if ok {
-		return errors.Wrap(ErrExist, "header already known")
+		return errors.Wrap(ErrExist, "header already exists")
 	}
 
 	// if we don't know the parent, add to pending headers and skip rest
@@ -88,7 +88,7 @@ func (hr *Repo) Has(hash types.Hash) bool {
 func (hr *Repo) Get(hash types.Hash) (*types.Header, error) {
 	header, ok := hr.headers[hash]
 	if !ok {
-		return nil, errors.Wrap(ErrNotExist, "header not found")
+		return nil, errors.Wrap(ErrNotExist, "header does not exist")
 	}
 	return header, nil
 }
