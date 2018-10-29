@@ -210,7 +210,9 @@ func TestRepoGetMissing(t *testing.T) {
 
 	// try adding header already known and check outcome
 	_, err := hr.Get(hash1)
-	assert.NotNil(t, err)
+	if assert.NotNil(t, err) {
+		assert.Equal(t, ErrNotExist, errors.Cause(err))
+	}
 }
 
 func TestRepoPathRoot(t *testing.T) {
@@ -224,15 +226,11 @@ func TestRepoPathRoot(t *testing.T) {
 	// second level
 	hash11 := types.Hash{0x11}
 	hash12 := types.Hash{0x12}
-	// hash13 := types.Hash{0x13}
 
 	// third level
 	hash111 := types.Hash{0x11, 0x1}
 	hash121 := types.Hash{0x12, 0x1}
 	hash122 := types.Hash{0x12, 0x2}
-	// hash131 := types.Hash{0x13, 0x1}
-	// hash132 := types.Hash{0x13, 0x2}
-	// hash133 := types.Hash{0x13, 0x3}
 
 	// fourth level
 	hash1111 := types.Hash{0x11, 0x11}
@@ -270,23 +268,29 @@ func TestRepoPathRoot(t *testing.T) {
 		path     []types.Hash
 		distance uint64
 	}{
-		// no headers, path should be just root and root distance
 		"empty": {
-			headers:  []*types.Header{},
-			path:     []types.Hash{},
+			headers: []*types.Header{
+				header0,
+			},
+			path: []types.Hash{
+				hash0,
+			},
 			distance: 1,
 		},
 		"level_one": {
 			headers: []*types.Header{
+				header0,
 				header1,
 			},
 			path: []types.Hash{
 				hash1,
+				hash0,
 			},
 			distance: 11,
 		},
 		"level_two": {
 			headers: []*types.Header{
+				header0,
 				header1,
 				header11,
 				header12,
@@ -294,15 +298,17 @@ func TestRepoPathRoot(t *testing.T) {
 			path: []types.Hash{
 				hash12,
 				hash1,
+				hash0,
 			},
 			distance: 31,
 		},
 		"level_three": {
 			headers: []*types.Header{
+				header0,
 				header1,
 				header11,
-				header111,
 				header12,
+				header111,
 				header121,
 				header122,
 			},
@@ -310,18 +316,20 @@ func TestRepoPathRoot(t *testing.T) {
 				hash122,
 				hash12,
 				hash1,
+				hash0,
 			},
 			distance: 51,
 		},
 		"level_four": {
 			headers: []*types.Header{
+				header0,
 				header1,
 				header11,
-				header111,
-				header1111,
 				header12,
+				header111,
 				header121,
 				header122,
+				header1111,
 				header1211,
 				header1212,
 			},
@@ -330,21 +338,23 @@ func TestRepoPathRoot(t *testing.T) {
 				hash121,
 				hash12,
 				hash1,
+				hash0,
 			},
 			distance: 61,
 		},
 		"level_five": {
 			headers: []*types.Header{
+				header0,
 				header1,
 				header11,
-				header111,
-				header1111,
-				header11111,
 				header12,
+				header111,
 				header121,
 				header122,
+				header1111,
 				header1211,
 				header1212,
+				header11111,
 			},
 			path: []types.Hash{
 				hash11111,
@@ -352,6 +362,7 @@ func TestRepoPathRoot(t *testing.T) {
 				hash111,
 				hash11,
 				hash1,
+				hash0,
 			},
 			distance: 91,
 		},
@@ -368,17 +379,17 @@ func TestRepoPathRoot(t *testing.T) {
 			children: make(map[types.Hash][]types.Hash),
 		}
 
-		// add the root header to the system
-		hr.headers[hash0] = header0
+		// add the first header as root
+		hr.headers[vector.headers[0].Hash] = vector.headers[0]
 
 		// add the rest of the headers
-		for _, header := range vector.headers {
-			_ = hr.Add(header)
+		for i := 1; i < len(vector.headers); i++ {
+			_ = hr.Add(vector.headers[i])
 		}
 
 		// get the distance/path and compare
 		path, distance := hr.Path()
-		assert.Equal(t, append(vector.path, hash0), path, name)
+		assert.Equal(t, vector.path, path, name)
 		assert.Equal(t, vector.distance, distance, name)
 	}
 

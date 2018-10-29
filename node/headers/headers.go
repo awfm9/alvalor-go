@@ -96,7 +96,7 @@ func (hr *Repo) Get(hash types.Hash) (*types.Header, error) {
 // Path returns the best path of the graph by total difficulty.
 func (hr *Repo) Path() ([]types.Hash, uint64) {
 
-	// create a topological sort and get distances for each header
+	// create a topological sort and get distance for each header
 	var hash types.Hash
 	var max uint64
 	var best types.Hash
@@ -116,7 +116,7 @@ func (hr *Repo) Path() ([]types.Hash, uint64) {
 		distances[hash] = distance
 	}
 
-	// otherwise, iterate back to parents from best child
+	// iterate back to parents from best child
 	header := hr.headers[best]
 	path := []types.Hash{header.Hash}
 	for header.Parent != types.ZeroHash {
