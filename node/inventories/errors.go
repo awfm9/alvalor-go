@@ -15,12 +15,12 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with Alvalor.  If not, see <http://www.gnu.org/licenses/>.
 
-package repo
+package inventories
 
-import "github.com/alvalor/alvalor-go/types"
+import "errors"
 
-// Blockchain represents a low-level interface to retrieve information about
-// the blockchain from the disk.
-type Blockchain interface {
-	Root() (*types.Header, error)
-}
+// Errors exported by the package.
+var (
+	ErrExist    = errors.New("header already exists")
+	ErrNotExist = errors.New("header does not exist")
+)
