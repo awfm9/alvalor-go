@@ -33,7 +33,6 @@ func NewRepo() *Repo {
 	ir := &Repo{
 		inventories: make(map[types.Hash]*types.Inventory),
 	}
-	// TODO: load all known inventories from disk
 	return ir
 }
 

@@ -34,7 +34,6 @@ type Repo struct {
 }
 
 // NewRepo creates a new simple header store.
-// TODO: load the headers from disk on startup
 func NewRepo(root *types.Header) *Repo {
 	hr := &Repo{
 		root:     root.Hash,
@@ -91,38 +90,4 @@ func (hr *Repo) Get(hash types.Hash) (*types.Header, error) {
 		return nil, errors.Wrap(ErrNotExist, "header does not exist")
 	}
 	return header, nil
-}
-
-// Path returns the best path of the graph by total difficulty.
-func (hr *Repo) Path() ([]types.Hash, uint64) {
-
-	// create a topological sort and get distance for each header
-	var hash types.Hash
-	var max uint64
-	var best types.Hash
-	sorted := make([]types.Hash, 0, len(hr.headers))
-	queue := []types.Hash{hr.root}
-	distances := make(map[types.Hash]uint64)
-	for len(queue) > 0 {
-		hash, queue = queue[0], queue[1:]
-		sorted = append(sorted, hash)
-		queue = append(queue, hr.children[hash]...)
-		header := hr.headers[hash]
-		distance := distances[header.Parent] + header.Diff
-		if distance > max {
-			max = distance
-			best = hash
-		}
-		distances[hash] = distance
-	}
-
-	// iterate back to parents from best child
-	header := hr.headers[best]
-	path := []types.Hash{header.Hash}
-	for header.Parent != types.ZeroHash {
-		header = hr.headers[header.Parent]
-		path = append(path, header.Hash)
-	}
-
-	return path, max
 }
