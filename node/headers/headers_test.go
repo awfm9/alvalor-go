@@ -15,19 +15,20 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with Alvalor.  If not, see <http://www.gnu.org/licenses/>.
 
-package repo
+package headers
 
 import (
 	"testing"
 
 	"github.com/alvalor/alvalor-go/types"
+	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 )
 
-func TestHeadersAddExisting(t *testing.T) {
+func TestRepoAddExisting(t *testing.T) {
 
 	// initialize the repository with required maps
-	hr := &Headers{
+	hr := &Repo{
 		headers: make(map[types.Hash]*types.Header),
 	}
 
@@ -41,16 +42,18 @@ func TestHeadersAddExisting(t *testing.T) {
 
 	// try adding header already known and check outcome
 	err := hr.Add(header)
-	assert.NotNil(t, err)
+	if assert.NotNil(t, err) {
+		assert.Equal(t, ErrExist, errors.Cause(err))
+	}
 	if assert.Len(t, hr.headers, 1) {
 		assert.Equal(t, hr.headers[header.Hash], header)
 	}
 }
 
-func TestHeadersAddPending(t *testing.T) {
+func TestRepoAddPending(t *testing.T) {
 
 	// initialize the repository with required maps
-	hr := &Headers{
+	hr := &Repo{
 		headers: make(map[types.Hash]*types.Header),
 		pending: make(map[types.Hash][]*types.Header),
 	}
@@ -70,10 +73,10 @@ func TestHeadersAddPending(t *testing.T) {
 	}
 }
 
-func TestHeadersAddValid(t *testing.T) {
+func TestRepoAddValid(t *testing.T) {
 
 	// initialize the repository with required maps
-	hr := &Headers{
+	hr := &Repo{
 		headers:  make(map[types.Hash]*types.Header),
 		pending:  make(map[types.Hash][]*types.Header),
 		children: make(map[types.Hash][]types.Hash),
@@ -100,10 +103,10 @@ func TestHeadersAddValid(t *testing.T) {
 	assert.Empty(t, hr.pending)
 }
 
-func TestHeadersAddValidWithPending(t *testing.T) {
+func TestRepoAddValidWithPending(t *testing.T) {
 
 	// initialize the repository with required maps
-	hr := &Headers{
+	hr := &Repo{
 		headers:  make(map[types.Hash]*types.Header),
 		pending:  make(map[types.Hash][]*types.Header),
 		children: make(map[types.Hash][]types.Hash),
@@ -138,10 +141,10 @@ func TestHeadersAddValidWithPending(t *testing.T) {
 	assert.Empty(t, hr.pending)
 }
 
-func TestHeadersHasExisting(t *testing.T) {
+func TestRepoHasExisting(t *testing.T) {
 
 	// initialize the repository with required maps
-	hr := &Headers{
+	hr := &Repo{
 		headers: make(map[types.Hash]*types.Header),
 	}
 
@@ -158,10 +161,10 @@ func TestHeadersHasExisting(t *testing.T) {
 	assert.True(t, ok)
 }
 
-func TestHeadersHasMissing(t *testing.T) {
+func TestRepoHasMissing(t *testing.T) {
 
 	// initialize the repository with required maps
-	hr := &Headers{
+	hr := &Repo{
 		headers: make(map[types.Hash]*types.Header),
 	}
 
@@ -173,10 +176,10 @@ func TestHeadersHasMissing(t *testing.T) {
 	assert.False(t, ok)
 }
 
-func TestHeadersGetExisting(t *testing.T) {
+func TestRepoGetExisting(t *testing.T) {
 
 	// initialize the repository with required maps
-	hr := &Headers{
+	hr := &Repo{
 		headers: make(map[types.Hash]*types.Header),
 	}
 
@@ -195,10 +198,10 @@ func TestHeadersGetExisting(t *testing.T) {
 	}
 }
 
-func TestHeadersGetMissing(t *testing.T) {
+func TestRepoGetMissing(t *testing.T) {
 
 	// initialize the repository with required maps
-	hr := &Headers{
+	hr := &Repo{
 		headers: make(map[types.Hash]*types.Header),
 	}
 
@@ -210,7 +213,7 @@ func TestHeadersGetMissing(t *testing.T) {
 	assert.NotNil(t, err)
 }
 
-func TestHeadersPathRoot(t *testing.T) {
+func TestRepoPathRoot(t *testing.T) {
 
 	// root
 	hash0 := types.Hash{0x6}
@@ -220,32 +223,47 @@ func TestHeadersPathRoot(t *testing.T) {
 
 	// second level
 	hash11 := types.Hash{0x11}
-	// hash12 := types.Hash{0x12}
+	hash12 := types.Hash{0x12}
 	// hash13 := types.Hash{0x13}
 
 	// third level
 	hash111 := types.Hash{0x11, 0x1}
-	// hash121 := types.Hash{0x12, 0x1}
-	// hash122 := types.Hash{0x12, 0x2}
+	hash121 := types.Hash{0x12, 0x1}
+	hash122 := types.Hash{0x12, 0x2}
 	// hash131 := types.Hash{0x13, 0x1}
 	// hash132 := types.Hash{0x13, 0x2}
 	// hash133 := types.Hash{0x13, 0x3}
 
 	// fourth level
 	hash1111 := types.Hash{0x11, 0x11}
-	// hash1211 := types.Hash{0x12, 0x11}
-	// hash1212 := types.Hash{0x12, 0x12}
+	hash1211 := types.Hash{0x12, 0x11}
+	hash1212 := types.Hash{0x12, 0x12}
 
 	// fifth level
 	hash11111 := types.Hash{0x11, 0x11, 0x1}
 
-	// initialize the various headers
-	header0 := &types.Header{Hash: hash0, Diff: 1}
-	header1 := &types.Header{Hash: hash1, Parent: hash0, Diff: 10}
-	header11 := &types.Header{Hash: hash11, Parent: hash1, Diff: 100}
-	header111 := &types.Header{Hash: hash111, Parent: hash11, Diff: 1000}
-	header1111 := &types.Header{Hash: hash1111, Parent: hash111, Diff: 10000}
-	header11111 := &types.Header{Hash: hash11111, Parent: hash1111, Diff: 100000}
+	// initialize root
+	header0 := &types.Header{Hash: hash0, Diff: 1} // 1
+
+	// initialize level one
+	header1 := &types.Header{Hash: hash1, Parent: hash0, Diff: 10} // 11
+
+	// initialize level two
+	header11 := &types.Header{Hash: hash11, Parent: hash1, Diff: 10} // 31
+	header12 := &types.Header{Hash: hash12, Parent: hash1, Diff: 20} // 41
+
+	// initialize level three
+	header111 := &types.Header{Hash: hash111, Parent: hash11, Diff: 10} // 41
+	header121 := &types.Header{Hash: hash121, Parent: hash12, Diff: 10} // 51
+	header122 := &types.Header{Hash: hash122, Parent: hash12, Diff: 20} // 61
+
+	// initialize level four
+	header1111 := &types.Header{Hash: hash1111, Parent: hash111, Diff: 10} // 51
+	header1211 := &types.Header{Hash: hash1211, Parent: hash121, Diff: 10} // 61
+	header1212 := &types.Header{Hash: hash1212, Parent: hash121, Diff: 20} // 71
+
+	// initialize level five
+	header11111 := &types.Header{Hash: hash11111, Parent: hash1111, Diff: 50} // 91
 
 	vectors := map[string]struct {
 		headers  []*types.Header
@@ -258,13 +276,75 @@ func TestHeadersPathRoot(t *testing.T) {
 			path:     []types.Hash{},
 			distance: 1,
 		},
-		"five_straight": {
+		"level_one": {
+			headers: []*types.Header{
+				header1,
+			},
+			path: []types.Hash{
+				hash1,
+			},
+			distance: 11,
+		},
+		"level_two": {
+			headers: []*types.Header{
+				header1,
+				header11,
+				header12,
+			},
+			path: []types.Hash{
+				hash12,
+				hash1,
+			},
+			distance: 31,
+		},
+		"level_three": {
+			headers: []*types.Header{
+				header1,
+				header11,
+				header111,
+				header12,
+				header121,
+				header122,
+			},
+			path: []types.Hash{
+				hash122,
+				hash12,
+				hash1,
+			},
+			distance: 51,
+		},
+		"level_four": {
+			headers: []*types.Header{
+				header1,
+				header11,
+				header111,
+				header1111,
+				header12,
+				header121,
+				header122,
+				header1211,
+				header1212,
+			},
+			path: []types.Hash{
+				hash1212,
+				hash121,
+				hash12,
+				hash1,
+			},
+			distance: 61,
+		},
+		"level_five": {
 			headers: []*types.Header{
 				header1,
 				header11,
 				header111,
 				header1111,
 				header11111,
+				header12,
+				header121,
+				header122,
+				header1211,
+				header1212,
 			},
 			path: []types.Hash{
 				hash11111,
@@ -273,7 +353,7 @@ func TestHeadersPathRoot(t *testing.T) {
 				hash11,
 				hash1,
 			},
-			distance: 111111,
+			distance: 91,
 		},
 	}
 
@@ -281,7 +361,7 @@ func TestHeadersPathRoot(t *testing.T) {
 	for name, vector := range vectors {
 
 		// initialize the repository with required maps
-		hr := &Headers{
+		hr := &Repo{
 			root:     hash0,
 			headers:  make(map[types.Hash]*types.Header),
 			pending:  make(map[types.Hash][]*types.Header),
