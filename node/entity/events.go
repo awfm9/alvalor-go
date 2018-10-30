@@ -21,6 +21,6 @@ import "github.com/alvalor/alvalor-go/types"
 
 // Events represents a manager for events for external subscribers.
 type Events interface {
-	Header(hash types.Hash) error
-	Transaction(hash types.Hash) error
+	Header(hash types.Hash)
+	Transaction(hash types.Hash)
 }

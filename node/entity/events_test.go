@@ -22,17 +22,17 @@ import (
 	"github.com/stretchr/testify/mock"
 )
 
-// EventMock mocks the events required by the entity package.
-type EventMock struct {
+// EventsMock mocks the events required by the entity package.
+type EventsMock struct {
 	mock.Mock
 }
 
 // Header signals the reception of a new valid header.
-func (em *EventMock) Header(header types.Hash) {
+func (em *EventsMock) Header(header types.Hash) {
 	em.Called(header)
 }
 
 // Transaction signals the reception of a new valid transaction.
-func (em *EventMock) Transaction(transaction types.Hash) {
+func (em *EventsMock) Transaction(transaction types.Hash) {
 	em.Called(transaction)
 }
