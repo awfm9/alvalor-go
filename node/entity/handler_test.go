@@ -31,10 +31,10 @@ import (
 func TestHeaderKnown(t *testing.T) {
 
 	// initialize entities
-	entity := &types.Header{Parent: types.Hash{0x1}}
+	entity := &types.Header{Nonce: 1}
 	hash := entity.GetHash()
 	addresses := []string{"192.0.2.1", "192.0.2.2", "192.0.2.3"}
-	path := []types.Hash{{0x2}, {0x3}, {0x4}}
+	path := []types.Hash{{0x1}, {0x2}, {0x3}}
 
 	// initialize mocks
 	headers := &HeadersMock{}
@@ -268,37 +268,43 @@ func TestHeaderSuccess(t *testing.T) {
 	paths.AssertCalled(t, "Follow", path)
 }
 
-func TestEntityTransaction(t *testing.T) {
+func TestTransactionSuccess(t *testing.T) {
 
-	// arrange
-	// handler := &Handler{}
-	//
-	// entity := &types.Transaction{}
+	// initialize entities
+	entity := &types.Transaction{Nonce: 1}
+	hash := entity.GetHash()
+	addresses := []string{"192.0.2.1", "192.0.2.2", "192.0.2.3"}
 
-	// address1 := "192.0.2.1:1337"
-	// address2 := "192.0.2.2:1337"
-	// address3 := "192.0.2.3:1337"
-	//
-	// net := &NetworkMock{}
-	// net.On("Send", address1, mock.Anything).Return(errors.New("could not send"))
-	// net.On("Send", address2, mock.Anything).Return(nil)
-	// net.On("Send", address3, mock.Anything).Return(nil)
-	//
-	// finder := &PathfinderMock{}
-	//
-	// peers := &PeersMock{}
-	// peers.On("Tags", mock.Anything).Return([]string{address2})
-	// peers.On("Actives").Return([]string{address1, address2, address3})
-	//
-	// pool := &PoolMock{}
-	// pool.On("Known", mock.Anything).Return(false)
-	// pool.On("Add", mock.Anything).Return(nil)
-	//
-	// events := &EventManagerMock{}
-	// events.On("Transaction", entity.Hash).Return(nil)
+	// initialize mocks
+	transactions := &TransactionsMock{}
+	events := &EventsMock{}
+	peers := &PeersMock{}
+	net := &NetworkMock{}
 
-	// net.AssertCalled(t, "Send", address1, mock.Anything)
-	// net.AssertCalled(t, "Send", address3, mock.Anything)
-	//
-	// net.AssertNotCalled(t, "Send", address2, mock.Anything)
+	// program mocks
+	transactions.On("Has", mock.Anything).Return(false)
+	transactions.On("Add", mock.Anything).Return(nil)
+	events.On("Transaction", mock.Anything)
+	peers.On("Addresses", mock.Anything).Return(addresses)
+	net.On("Broadcast", mock.Anything, mock.Anything).Return(nil)
+
+	// initialize handler
+	handler := &Handler{
+		log:          zerolog.New(ioutil.Discard),
+		wg:           &sync.WaitGroup{},
+		transactions: transactions,
+		events:       events,
+		peers:        peers,
+		net:          net,
+	}
+
+	// process entity
+	handler.Process(entity)
+
+	// assert conditions
+	transactions.AssertCalled(t, "Has", hash)
+	transactions.AssertCalled(t, "Add", entity)
+	events.AssertCalled(t, "Transaction", hash)
+	peers.AssertCalled(t, "Addresses", mock.Anything)
+	net.AssertCalled(t, "Broadcast", entity, addresses)
 }
