@@ -268,6 +268,129 @@ func TestHeaderSuccess(t *testing.T) {
 	paths.AssertCalled(t, "Follow", path)
 }
 
+func TestTransactionKnown(t *testing.T) {
+
+	// initialize entities
+	entity := &types.Transaction{Nonce: 1}
+	hash := entity.GetHash()
+	addresses := []string{"192.0.2.1", "192.0.2.2", "192.0.2.3"}
+
+	// initialize mocks
+	transactions := &TransactionsMock{}
+	events := &EventsMock{}
+	peers := &PeersMock{}
+	net := &NetworkMock{}
+
+	// program mocks
+	transactions.On("Has", mock.Anything).Return(true)
+	transactions.On("Add", mock.Anything).Return(nil)
+	events.On("Transaction", mock.Anything)
+	peers.On("Addresses", mock.Anything).Return(addresses)
+	net.On("Broadcast", mock.Anything, mock.Anything).Return(nil)
+
+	// initialize handler
+	handler := &Handler{
+		log:          zerolog.New(ioutil.Discard),
+		wg:           &sync.WaitGroup{},
+		transactions: transactions,
+		events:       events,
+		peers:        peers,
+		net:          net,
+	}
+
+	// process entity
+	handler.Process(entity)
+
+	// assert conditions
+	transactions.AssertCalled(t, "Has", hash)
+	transactions.AssertNotCalled(t, "Add", mock.Anything)
+	events.AssertNotCalled(t, "Transaction", mock.Anything)
+	peers.AssertNotCalled(t, "Addresses", mock.Anything)
+	net.AssertNotCalled(t, "Broadcast", mock.Anything, mock.Anything)
+}
+
+func TestTransactionAddFails(t *testing.T) {
+
+	// initialize entities
+	entity := &types.Transaction{Nonce: 1}
+	hash := entity.GetHash()
+	addresses := []string{"192.0.2.1", "192.0.2.2", "192.0.2.3"}
+
+	// initialize mocks
+	transactions := &TransactionsMock{}
+	events := &EventsMock{}
+	peers := &PeersMock{}
+	net := &NetworkMock{}
+
+	// program mocks
+	transactions.On("Has", mock.Anything).Return(false)
+	transactions.On("Add", mock.Anything).Return(errors.New(""))
+	events.On("Transaction", mock.Anything)
+	peers.On("Addresses", mock.Anything).Return(addresses)
+	net.On("Broadcast", mock.Anything, mock.Anything).Return(nil)
+
+	// initialize handler
+	handler := &Handler{
+		log:          zerolog.New(ioutil.Discard),
+		wg:           &sync.WaitGroup{},
+		transactions: transactions,
+		events:       events,
+		peers:        peers,
+		net:          net,
+	}
+
+	// process entity
+	handler.Process(entity)
+
+	// assert conditions
+	transactions.AssertCalled(t, "Has", hash)
+	transactions.AssertCalled(t, "Add", entity)
+	events.AssertNotCalled(t, "Transaction", mock.Anything)
+	peers.AssertNotCalled(t, "Addresses", mock.Anything)
+	net.AssertNotCalled(t, "Broadcast", mock.Anything, mock.Anything)
+}
+
+func TestTransactionBroadcastFails(t *testing.T) {
+
+	// initialize entities
+	entity := &types.Transaction{Nonce: 1}
+	hash := entity.GetHash()
+	addresses := []string{"192.0.2.1", "192.0.2.2", "192.0.2.3"}
+
+	// initialize mocks
+	transactions := &TransactionsMock{}
+	events := &EventsMock{}
+	peers := &PeersMock{}
+	net := &NetworkMock{}
+
+	// program mocks
+	transactions.On("Has", mock.Anything).Return(false)
+	transactions.On("Add", mock.Anything).Return(nil)
+	events.On("Transaction", mock.Anything)
+	peers.On("Addresses", mock.Anything).Return(addresses)
+	net.On("Broadcast", mock.Anything, mock.Anything).Return(errors.New(""))
+
+	// initialize handler
+	handler := &Handler{
+		log:          zerolog.New(ioutil.Discard),
+		wg:           &sync.WaitGroup{},
+		transactions: transactions,
+		events:       events,
+		peers:        peers,
+		net:          net,
+	}
+
+	// process entity
+	handler.Process(entity)
+
+	// assert conditions
+	transactions.AssertCalled(t, "Has", hash)
+	transactions.AssertCalled(t, "Add", entity)
+	events.AssertCalled(t, "Transaction", hash)
+	peers.AssertCalled(t, "Addresses", mock.Anything)
+	net.AssertCalled(t, "Broadcast", entity, addresses)
+}
+
 func TestTransactionSuccess(t *testing.T) {
 
 	// initialize entities
