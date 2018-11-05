@@ -39,11 +39,6 @@ type Downloads struct {
 	timeouts     map[types.Hash]chan<- struct{}
 }
 
-// New creates a new simple download manager.
-func New() *Downloads {
-	return &Downloads{}
-}
-
 // Start starts the download of a block inventory.
 func (do *Downloads) Start(hash types.Hash) error {
 	do.Lock()

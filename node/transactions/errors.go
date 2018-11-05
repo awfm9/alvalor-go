@@ -17,10 +17,10 @@
 
 package transactions
 
-import "io"
+import "errors"
 
-// Codec is an encoder & decoder for entities.
-type Codec interface {
-	Encode(w io.Writer, i interface{}) error
-	Decode(r io.Reader) (interface{}, error)
-}
+// Errors exported by the package.
+var (
+	ErrExist    = errors.New("header already exists")
+	ErrNotExist = errors.New("header does not exist")
+)

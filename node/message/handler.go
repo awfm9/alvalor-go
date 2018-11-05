@@ -20,7 +20,8 @@ package message
 import (
 	"sync"
 
-	"github.com/alvalor/alvalor-go/node/repo"
+	"github.com/alvalor/alvalor-go/node/inventories"
+	"github.com/alvalor/alvalor-go/node/transactions"
 	"github.com/alvalor/alvalor-go/types"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
@@ -174,7 +175,7 @@ func (handler *Handler) Process(address string, message interface{}) {
 			log.Debug().Msg("processed request message (inventory)")
 			return
 		}
-		if errors.Cause(err) != repo.ErrNotFound {
+		if errors.Cause(err) != inventories.ErrNotExist {
 			log.Error().Err(err).Msg("could not check inventory store")
 			return
 		}
@@ -185,7 +186,7 @@ func (handler *Handler) Process(address string, message interface{}) {
 			log.Debug().Msg("processed request message (transaction)")
 			return
 		}
-		if errors.Cause(err) != repo.ErrNotFound {
+		if errors.Cause(err) != transactions.ErrNotExist {
 			log.Error().Err(err).Msg("could not check transaction pool")
 			return
 		}
@@ -237,7 +238,7 @@ func (handler *Handler) Process(address string, message interface{}) {
 
 func (handler *Handler) inventory(address string, hash types.Hash) error {
 	inv, err := handler.inventories.Get(hash)
-	if errors.Cause(err) == repo.ErrNotFound {
+	if errors.Cause(err) == inventories.ErrNotExist {
 		return errors.Wrap(err, "could not find inventory")
 	}
 	err = handler.net.Send(address, inv)
@@ -249,7 +250,7 @@ func (handler *Handler) inventory(address string, hash types.Hash) error {
 
 func (handler *Handler) transaction(address string, hash types.Hash) error {
 	tx, err := handler.transactions.Get(hash)
-	if errors.Cause(err) == repo.ErrNotFound {
+	if errors.Cause(err) == transactions.ErrNotExist {
 		return errors.Wrap(err, "could not find transaction")
 	}
 	err = handler.net.Send(address, tx)

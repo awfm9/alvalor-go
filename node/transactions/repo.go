@@ -15,7 +15,7 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with Alvalor.  If not, see <http://www.gnu.org/licenses/>.
 
-package repo
+package transactions
 
 import (
 	"bytes"
@@ -48,6 +48,11 @@ func (tr *Repo) Add(tx *types.Transaction) error {
 	tr.Lock()
 	defer tr.Unlock()
 
+	_, ok := tr.hashes[tx.Hash]
+	if ok {
+		return errors.Wrap(ErrExist, "transaction already known")
+	}
+
 	buf := &bytes.Buffer{}
 	err := tr.codec.Encode(buf, tx)
 	if err != nil {
@@ -78,6 +83,11 @@ func (tr *Repo) Has(hash types.Hash) bool {
 func (tr *Repo) Get(hash types.Hash) (*types.Transaction, error) {
 	tr.Lock()
 	defer tr.Unlock()
+
+	_, ok := tr.hashes[hash]
+	if !ok {
+		return nil, errors.Wrap(ErrNotExist, "could not find transaction")
+	}
 
 	data, err := tr.store.Get(hash[:])
 	if err != nil {
