@@ -18,28 +18,188 @@
 package download
 
 import (
+	"errors"
 	"testing"
 
+	"github.com/alvalor/alvalor-go/node/message"
+	"github.com/alvalor/alvalor-go/types"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 )
 
 func TestNewManager(t *testing.T) {
 
-	// initialize the mocks
+	// initialize mocks
 	net := &NetworkMock{}
 	peers := &PeersMock{}
 
-	// initialize the manager
+	// initialize manager
 	mgr := NewManager(net, peers)
 
-	// check if references are correct
+	// check conditions
 	assert.Equal(t, net, mgr.net)
 	assert.Equal(t, peers, mgr.peers)
 	assert.NotNil(t, mgr.pending)
 }
 
-func TestManagerStartPending(t *testing.T) {
+func TestManagerStartValid(t *testing.T) {
 
+	// initialize parameters
+	hash1 := types.Hash{0x1}
+	hash2 := types.Hash{0x2}
+	hash3 := types.Hash{0x3}
+	address1 := "192.0.2.1"
+	address2 := "192.0.2.2"
+	address3 := "192.0.2.3"
+	addresses := []string{address1, address2, address3}
+	request := &message.Request{Hash: hash1}
+
+	// initialize mocks
+	net := &NetworkMock{}
+	peers := &PeersMock{}
+
+	// initialize manager
+	mgr := Manager{
+		net:     net,
+		peers:   peers,
+		pending: make(map[types.Hash]string),
+	}
+
+	// initialize state
+	mgr.pending[hash2] = address2
+	mgr.pending[hash3] = address3
+
+	// program mocks
+	peers.On("Addresses", mock.Anything, mock.Anything).Return(addresses)
+	net.On("Send", mock.Anything, mock.Anything).Return(nil)
+
+	// execute start
+	err := mgr.Start(hash1)
+
+	// assert conditions
+	assert.Nil(t, err)
+	net.AssertCalled(t, "Send", address1, request)
+	if assert.Contains(t, mgr.pending, hash1) {
+		assert.Equal(t, address1, mgr.pending[hash1])
+	}
+}
+
+func TestManagerStartExisting(t *testing.T) {
+
+	// initialize parameters
+	hash1 := types.Hash{0x1}
+	hash2 := types.Hash{0x2}
+	hash3 := types.Hash{0x3}
+	address1 := "192.0.2.1"
+	address2 := "192.0.2.2"
+	address3 := "192.0.2.3"
+	addresses := []string{address1, address2, address3}
+
+	// initialize mocks
+	net := &NetworkMock{}
+	peers := &PeersMock{}
+
+	// initialize manager
+	mgr := Manager{
+		net:     net,
+		peers:   peers,
+		pending: make(map[types.Hash]string),
+	}
+
+	// initialize state
+	mgr.pending[hash1] = address1
+	mgr.pending[hash2] = address2
+	mgr.pending[hash3] = address3
+
+	// program mocks
+	peers.On("Addresses", mock.Anything, mock.Anything).Return(addresses)
+	net.On("Send", mock.Anything, mock.Anything).Return(nil)
+
+	// execute start
+	err := mgr.Start(hash1)
+
+	// assert conditions
+	assert.NotNil(t, err)
+	net.AssertNotCalled(t, "Send", mock.Anything, mock.Anything)
+}
+
+func TestManagerStartNoPeers(t *testing.T) {
+
+	// initialize parameters
+	hash1 := types.Hash{0x1}
+	hash2 := types.Hash{0x2}
+	hash3 := types.Hash{0x3}
+	address1 := "192.0.2.1"
+	address2 := "192.0.2.2"
+	address3 := "192.0.2.3"
+	request := &message.Request{Hash: hash1}
+
+	// initialize mocks
+	net := &NetworkMock{}
+	peers := &PeersMock{}
+
+	// initialize manager
+	mgr := Manager{
+		net:     net,
+		peers:   peers,
+		pending: make(map[types.Hash]string),
+	}
+
+	// initialize state
+	mgr.pending[hash2] = address2
+	mgr.pending[hash3] = address3
+
+	// program mocks
+	peers.On("Addresses", mock.Anything, mock.Anything).Return(nil)
+	net.On("Send", mock.Anything, mock.Anything).Return(nil)
+
+	// execute start
+	err := mgr.Start(hash1)
+
+	// assert conditions
+	assert.NotNil(t, err)
+	net.AssertNotCalled(t, "Send", address1, request)
+	assert.NotContains(t, mgr.pending, hash1)
+}
+
+func TestManagerStartSendFails(t *testing.T) {
+
+	// initialize parameters
+	hash1 := types.Hash{0x1}
+	hash2 := types.Hash{0x2}
+	hash3 := types.Hash{0x3}
+	address1 := "192.0.2.1"
+	address2 := "192.0.2.2"
+	address3 := "192.0.2.3"
+	addresses := []string{address1, address2, address3}
+	request := &message.Request{Hash: hash1}
+
+	// initialize mocks
+	net := &NetworkMock{}
+	peers := &PeersMock{}
+
+	// initialize manager
+	mgr := Manager{
+		net:     net,
+		peers:   peers,
+		pending: make(map[types.Hash]string),
+	}
+
+	// initialize state
+	mgr.pending[hash2] = address2
+	mgr.pending[hash3] = address3
+
+	// program mocks
+	peers.On("Addresses", mock.Anything, mock.Anything).Return(addresses)
+	net.On("Send", mock.Anything, mock.Anything).Return(errors.New(""))
+
+	// execute start
+	err := mgr.Start(hash1)
+
+	// assert conditions
+	assert.NotNil(t, err)
+	net.AssertCalled(t, "Send", address1, request)
+	assert.NotContains(t, mgr.pending, hash1)
 }
 
 func TestDownloadCancel(t *testing.T) {

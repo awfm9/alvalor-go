@@ -54,7 +54,7 @@ func (mgr *Manager) Start(hash types.Hash) error {
 	// if we are already downloading the entity, skip
 	_, ok := mgr.pending[hash]
 	if ok {
-		return nil
+		return errors.New("download already requested")
 	}
 
 	// get all active peers that have the desired entity
@@ -83,7 +83,7 @@ func (mgr *Manager) Start(hash types.Hash) error {
 	var address string
 	best := uint(math.MaxUint32)
 	for _, candidate := range addresses {
-		if count[candidate] <= best {
+		if count[candidate] >= best {
 			continue
 		}
 		best = count[candidate]
