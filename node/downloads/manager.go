@@ -118,5 +118,8 @@ func (mgr *Manager) Cancel(hash types.Hash) error {
 
 	// TODO: cancel timeout and abort download
 
+	// remove the pending entry
+	delete(mgr.pending, hash)
+
 	return nil
 }

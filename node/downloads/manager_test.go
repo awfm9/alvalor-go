@@ -202,5 +202,53 @@ func TestManagerStartSendFails(t *testing.T) {
 	assert.NotContains(t, mgr.pending, hash1)
 }
 
-func TestDownloadCancel(t *testing.T) {
+func TestDownloadCancelValid(t *testing.T) {
+
+	// initialize parameters
+	hash := types.Hash{0x1}
+	address := "192.0.2.1"
+
+	// initialize mocks
+	net := &NetworkMock{}
+	peers := &PeersMock{}
+
+	// initialize manager
+	mgr := Manager{
+		net:     net,
+		peers:   peers,
+		pending: make(map[types.Hash]string),
+	}
+
+	// initialize state
+	mgr.pending[hash] = address
+
+	// execute cancel
+	err := mgr.Cancel(hash)
+
+	// check conditions
+	assert.Nil(t, err)
+	assert.NotContains(t, mgr.pending, hash)
+}
+
+func TestDownloadCancelMissing(t *testing.T) {
+
+	// initialize parameters
+	hash := types.Hash{0x1}
+
+	// initialize mocks
+	net := &NetworkMock{}
+	peers := &PeersMock{}
+
+	// initialize manager
+	mgr := Manager{
+		net:     net,
+		peers:   peers,
+		pending: make(map[types.Hash]string),
+	}
+
+	// execute cancel
+	err := mgr.Cancel(hash)
+
+	// check conditions
+	assert.NotNil(t, err)
 }
