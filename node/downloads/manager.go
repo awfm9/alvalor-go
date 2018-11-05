@@ -29,8 +29,8 @@ import (
 	"github.com/alvalor/alvalor-go/types"
 )
 
-// Downloads implement a simple download manager.
-type Downloads struct {
+// Manager implement a simple download manager.
+type Manager struct {
 	sync.Mutex
 	peers        peer.State
 	net          Network
@@ -40,18 +40,18 @@ type Downloads struct {
 }
 
 // Start starts the download of a block inventory.
-func (do *Downloads) Start(hash types.Hash) error {
-	do.Lock()
-	defer do.Unlock()
+func (mgr *Manager) Start(hash types.Hash) error {
+	mgr.Lock()
+	defer mgr.Unlock()
 
 	// if we are already downloading the inventory, skip
-	_, ok := do.inventories[hash]
+	_, ok := mgr.inventories[hash]
 	if ok {
 		return nil
 	}
 
 	// get all active peers that have the desired inventory
-	addresses := do.peers.Addresses(peer.IsActive(true), peer.HasEntity(true, hash))
+	addresses := mgr.peers.Addresses(peer.IsActive(true), peer.HasEntity(true, hash))
 	if len(addresses) == 0 {
 		return errors.New("no active peers with inventory available")
 	}
@@ -60,7 +60,7 @@ func (do *Downloads) Start(hash types.Hash) error {
 	var target string
 	best := uint(math.MaxUint32)
 	for _, address := range addresses {
-		pending, err := do.peers.Pending(address)
+		pending, err := mgr.peers.Pending(address)
 		if err != nil {
 			continue
 		}
@@ -73,25 +73,25 @@ func (do *Downloads) Start(hash types.Hash) error {
 
 	// send the request to the given peer and mark inventory as requested
 	msg := &message.Request{Hash: hash}
-	err := do.net.Send(target, msg)
+	err := mgr.net.Send(target, msg)
 	if err != nil {
 		return errors.Wrap(err, "could not send inventory request")
 	}
-	do.peers.Requested(target, hash)
+	mgr.peers.Requested(target, hash)
 
 	// start a timeout timer to retry the download and save the cancel signal
-	cancel := timeout(4*time.Second, func() { do.Start(hash) })
-	do.timeouts[hash] = cancel
+	cancel := timeout(4*time.Second, func() { mgr.Start(hash) })
+	mgr.timeouts[hash] = cancel
 
 	return nil
 }
 
 // Cancel cancels the download of a block inventory.
-func (do *Downloads) Cancel(hash types.Hash) error {
-	do.Lock()
-	defer do.Unlock()
+func (mgr *Manager) Cancel(hash types.Hash) error {
+	mgr.Lock()
+	defer mgr.Unlock()
 
-	cancel, ok := do.timeouts[hash]
+	cancel, ok := mgr.timeouts[hash]
 	if !ok {
 		return errors.New("could not find download for hash")
 	}
