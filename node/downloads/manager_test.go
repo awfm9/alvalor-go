@@ -51,6 +51,8 @@ func TestManagerStartValid(t *testing.T) {
 	address1 := "192.0.2.1"
 	address2 := "192.0.2.2"
 	address3 := "192.0.2.3"
+
+	// initialize entities
 	addresses := []string{address1, address2}
 	request := &message.Request{Hash: hash1}
 
@@ -93,6 +95,8 @@ func TestManagerStartExisting(t *testing.T) {
 	address1 := "192.0.2.1"
 	address2 := "192.0.2.2"
 	address3 := "192.0.2.3"
+
+	// initialize entities
 	addresses := []string{address1, address2, address3}
 
 	// initialize mocks
@@ -132,6 +136,8 @@ func TestManagerStartNoPeers(t *testing.T) {
 	address1 := "192.0.2.1"
 	address2 := "192.0.2.2"
 	address3 := "192.0.2.3"
+
+	// initialize entities
 	request := &message.Request{Hash: hash1}
 
 	// initialize mocks
@@ -171,6 +177,8 @@ func TestManagerStartSendFails(t *testing.T) {
 	address1 := "192.0.2.1"
 	address2 := "192.0.2.2"
 	address3 := "192.0.2.3"
+
+	// initialize entities
 	addresses := []string{address1, address2, address3}
 	request := &message.Request{Hash: hash1}
 
