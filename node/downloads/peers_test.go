@@ -15,12 +15,24 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with Alvalor.  If not, see <http://www.gnu.org/licenses/>.
 
-package transactions
+package download
 
-import "io"
+import (
+	"github.com/alvalor/alvalor-go/node/peer"
+	"github.com/stretchr/testify/mock"
+)
 
-// Codec is an encoder & decoder for entities.
-type Codec interface {
-	Encode(w io.Writer, i interface{}) error
-	Decode(r io.Reader) (interface{}, error)
+// PeersMock mocks the peers state interface.
+type PeersMock struct {
+	mock.Mock
+}
+
+// Addresses returns known addresses, filtered by the given filters.
+func (pm *PeersMock) Addresses(filters ...peer.FilterFunc) []string {
+	args := pm.Called(filters)
+	var addresses []string
+	if args.Get(0) != nil {
+		addresses = args.Get(0).([]string)
+	}
+	return addresses
 }

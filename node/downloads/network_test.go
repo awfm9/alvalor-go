@@ -15,12 +15,17 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with Alvalor.  If not, see <http://www.gnu.org/licenses/>.
 
-package transactions
+package download
 
-import "io"
+import "github.com/stretchr/testify/mock"
 
-// Codec is an encoder & decoder for entities.
-type Codec interface {
-	Encode(w io.Writer, i interface{}) error
-	Decode(r io.Reader) (interface{}, error)
+// NetworkMock mocks the network interface.
+type NetworkMock struct {
+	mock.Mock
+}
+
+// Send mocks the broadcast functionality.
+func (nm *NetworkMock) Send(address string, msg interface{}) error {
+	args := nm.Called(address, msg)
+	return args.Error(0)
 }

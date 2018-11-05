@@ -21,7 +21,6 @@ import "github.com/alvalor/alvalor-go/types"
 
 // Peer represents the state of a peer.
 type Peer struct {
-	active  bool
-	pending map[types.Hash]struct{}
-	seen    map[types.Hash]struct{}
+	active bool
+	seen   map[types.Hash]struct{}
 }

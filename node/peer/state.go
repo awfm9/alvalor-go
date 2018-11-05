@@ -66,8 +66,7 @@ func (s *State) Active(address string) {
 	p, ok := s.peers[address]
 	if !ok {
 		p = &Peer{
-			seen:    make(map[types.Hash]struct{}),
-			pending: make(map[types.Hash]struct{}),
+			seen: make(map[types.Hash]struct{}),
 		}
 		s.peers[address] = p
 	}
@@ -86,19 +85,6 @@ func (s *State) Inactive(address string) {
 	p.active = false
 }
 
-// Requested marks a download as requested for a given peer.
-func (s *State) Requested(address string, hash types.Hash) {
-	s.Lock()
-	defer s.Unlock()
-
-	p, ok := s.peers[address]
-	if !ok {
-		return
-	}
-
-	p.pending[hash] = struct{}{}
-}
-
 // Received marks a download as received for a given peer.
 func (s *State) Received(address string, hash types.Hash) {
 	s.Lock()
@@ -109,26 +95,7 @@ func (s *State) Received(address string, hash types.Hash) {
 		return
 	}
 
-	delete(p.pending, hash)
 	p.seen[hash] = struct{}{}
-}
-
-// Pending returns a list of pending downloads for a peer.
-func (s *State) Pending(address string) ([]types.Hash, error) {
-	s.Lock()
-	defer s.Unlock()
-
-	p, ok := s.peers[address]
-	if !ok {
-		return nil, errors.New("peer not found")
-	}
-
-	pending := make([]types.Hash, 0, len(p.pending))
-	for hash := range p.pending {
-		pending = append(pending, hash)
-	}
-
-	return pending, nil
 }
 
 // Seen returns a list of entities a peer is aware of.

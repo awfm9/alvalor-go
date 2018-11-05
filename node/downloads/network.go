@@ -20,5 +20,4 @@ package download
 // Network defines what we need from the network module.
 type Network interface {
 	Send(address string, msg interface{}) error
-	Broadcast(msg interface{}, exclude ...string) error
 }

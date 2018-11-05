@@ -15,12 +15,12 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with Alvalor.  If not, see <http://www.gnu.org/licenses/>.
 
-package transactions
+package download
 
-import "io"
+import "github.com/alvalor/alvalor-go/node/peer"
 
-// Codec is an encoder & decoder for entities.
-type Codec interface {
-	Encode(w io.Writer, i interface{}) error
-	Decode(r io.Reader) (interface{}, error)
+// Peers represents an interface to get access to the state of currently
+// connected peers.
+type Peers interface {
+	Addresses(filters ...peer.FilterFunc) []string
 }
