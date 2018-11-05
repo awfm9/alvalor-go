@@ -51,7 +51,7 @@ func TestManagerStartValid(t *testing.T) {
 	address1 := "192.0.2.1"
 	address2 := "192.0.2.2"
 	address3 := "192.0.2.3"
-	addresses := []string{address1, address2, address3}
+	addresses := []string{address1, address2}
 	request := &message.Request{Hash: hash1}
 
 	// initialize mocks
