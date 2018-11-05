@@ -36,6 +36,16 @@ type Manager struct {
 	pending map[types.Hash]string
 }
 
+// NewManager creates a new download manager with initialized maps and injected
+// dependencies.
+func NewManager(net Network, peers Peers) *Manager {
+	return &Manager{
+		net:     net,
+		peers:   peers,
+		pending: make(map[types.Hash]string),
+	}
+}
+
 // Start starts the download of a block inventory.
 func (mgr *Manager) Start(hash types.Hash) error {
 	mgr.Lock()

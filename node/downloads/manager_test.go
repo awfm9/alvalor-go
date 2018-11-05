@@ -17,9 +17,29 @@
 
 package download
 
-import "testing"
+import (
+	"testing"
 
-func TestDownloadStart(t *testing.T) {
+	"github.com/stretchr/testify/assert"
+)
+
+func TestNewManager(t *testing.T) {
+
+	// initialize the mocks
+	net := &NetworkMock{}
+	peers := &PeersMock{}
+
+	// initialize the manager
+	mgr := NewManager(net, peers)
+
+	// check if references are correct
+	assert.Equal(t, net, mgr.net)
+	assert.Equal(t, peers, mgr.peers)
+	assert.NotNil(t, mgr.pending)
+}
+
+func TestManagerStartPending(t *testing.T) {
+
 }
 
 func TestDownloadCancel(t *testing.T) {
