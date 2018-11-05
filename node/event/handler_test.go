@@ -25,6 +25,7 @@ import (
 
 	"github.com/alvalor/alvalor-go/network"
 	"github.com/alvalor/alvalor-go/node/message"
+	"github.com/alvalor/alvalor-go/types"
 	"github.com/rs/zerolog"
 	"github.com/stretchr/testify/mock"
 )
@@ -107,4 +108,74 @@ func TestProcessConnectedSendFails(t *testing.T) {
 	peers.AssertCalled(t, "Active", address)
 	headers.AssertCalled(t, "Path")
 	net.AssertCalled(t, "Send", address, status)
+}
+
+func TestProcessDisconnectedSuccess(t *testing.T) {
+
+	// initialize parameters
+	address := "192.0.2.1"
+
+	// initialize entities
+	event := network.Disconnected{Address: address}
+
+	// initialize mocks
+	net := &NetworkMock{}
+	headers := &HeadersMock{}
+	peers := &PeersMock{}
+	message := &MessageMock{}
+
+	// initialize handler
+	handler := &Handler{
+		wg:      &sync.WaitGroup{},
+		log:     zerolog.New(ioutil.Discard),
+		net:     net,
+		headers: headers,
+		peers:   peers,
+		message: message,
+	}
+
+	// program mocks
+	peers.On("Inactive", mock.Anything)
+
+	// execute process
+	handler.Process(event)
+
+	// assert conditions
+	peers.AssertCalled(t, "Inactive", address)
+}
+
+func TestProcessReceivedSuccess(t *testing.T) {
+
+	// initialize parameters
+	hash := types.Hash{0x1}
+	address := "192.0.2.1"
+
+	// initialize entities
+	msg := &message.Request{Hash: hash}
+	event := network.Received{Address: address, Message: msg}
+
+	// initialize mocks
+	net := &NetworkMock{}
+	headers := &HeadersMock{}
+	peers := &PeersMock{}
+	message := &MessageMock{}
+
+	// initialize handler
+	handler := &Handler{
+		wg:      &sync.WaitGroup{},
+		log:     zerolog.New(ioutil.Discard),
+		net:     net,
+		headers: headers,
+		peers:   peers,
+		message: message,
+	}
+
+	// program mocks
+	message.On("Process", mock.Anything, mock.Anything)
+
+	// execute process
+	handler.Process(event)
+
+	// assert conditions
+	message.AssertCalled(t, "Process", address, msg)
 }
