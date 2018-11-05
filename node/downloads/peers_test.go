@@ -17,7 +17,22 @@
 
 package download
 
-// Network defines what we need from the network module.
-type Network interface {
-	Send(address string, msg interface{}) error
+import (
+	"github.com/alvalor/alvalor-go/node/peer"
+	"github.com/stretchr/testify/mock"
+)
+
+// PeersMock mocks the peers state interface.
+type PeersMock struct {
+	mock.Mock
+}
+
+// Addresses returns known addresses, filtered by the given filters.
+func (pm *PeersMock) Addresses(filters ...peer.FilterFunc) []string {
+	args := pm.Called(filters)
+	var addresses []string
+	if args.Get(0) != nil {
+		addresses = args.Get(0).([]string)
+	}
+	return addresses
 }

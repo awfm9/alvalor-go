@@ -17,7 +17,15 @@
 
 package download
 
-// Network defines what we need from the network module.
-type Network interface {
-	Send(address string, msg interface{}) error
+import "github.com/stretchr/testify/mock"
+
+// NetworkMock mocks the network interface.
+type NetworkMock struct {
+	mock.Mock
+}
+
+// Send mocks the broadcast functionality.
+func (nm *NetworkMock) Send(address string, msg interface{}) error {
+	args := nm.Called(address, msg)
+	return args.Error(0)
 }

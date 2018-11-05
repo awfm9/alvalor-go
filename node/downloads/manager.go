@@ -20,7 +20,6 @@ package download
 import (
 	"math"
 	"sync"
-	"time"
 
 	"github.com/pkg/errors"
 
@@ -32,10 +31,9 @@ import (
 // Manager implement a simple download manager.
 type Manager struct {
 	sync.Mutex
-	peers    peer.State
-	net      Network
-	pending  map[types.Hash]string
-	timeouts map[types.Hash]chan<- struct{}
+	net     Network
+	peers   Peers
+	pending map[types.Hash]string
 }
 
 // Start starts the download of a block inventory.
@@ -72,31 +70,27 @@ func (mgr *Manager) Start(hash types.Hash) error {
 	}
 
 	// select the available peer with the least amount of pending download
-	var target string
+	var address string
 	best := uint(math.MaxUint32)
-	for _, address := range addresses {
-		pending, err := mgr.peers.Pending(address)
-		if err != nil {
+	for _, candidate := range addresses {
+		if count[candidate] <= best {
 			continue
 		}
-		if uint(len(pending)) <= best {
-			continue
-		}
-		best = uint(len(pending))
-		target = address
+		best = count[candidate]
+		address = candidate
 	}
 
-	// send the request to the given peer and mark inventory as requested
+	// send the request to the given peer
 	msg := &message.Request{Hash: hash}
-	err := mgr.net.Send(target, msg)
+	err := mgr.net.Send(address, msg)
 	if err != nil {
 		return errors.Wrap(err, "could not send inventory request")
 	}
-	mgr.peers.Requested(target, hash)
 
-	// start a timeout timer to retry the download and save the cancel signal
-	cancel := timeout(4*time.Second, func() { mgr.Start(hash) })
-	mgr.timeouts[hash] = cancel
+	// mark the request as pending for this peer
+	mgr.pending[hash] = address
+
+	// TODO: add timeout & retry functionality
 
 	return nil
 }
@@ -106,24 +100,13 @@ func (mgr *Manager) Cancel(hash types.Hash) error {
 	mgr.Lock()
 	defer mgr.Unlock()
 
-	cancel, ok := mgr.timeouts[hash]
+	// find which peer is currently pending for this download
+	_, ok := mgr.pending[hash]
 	if !ok {
 		return errors.New("could not find download for hash")
 	}
-	close(cancel)
+
+	// TODO: cancel timeout and abort download
 
 	return nil
-}
-
-func timeout(duration time.Duration, retry func()) chan struct{} {
-	cancel := make(chan struct{})
-	go func() {
-		select {
-		case <-time.After(duration):
-			retry()
-		case <-cancel:
-			// nothing
-		}
-	}()
-	return cancel
 }

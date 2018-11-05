@@ -17,7 +17,10 @@
 
 package download
 
-// Network defines what we need from the network module.
-type Network interface {
-	Send(address string, msg interface{}) error
+import "github.com/alvalor/alvalor-go/node/peer"
+
+// Peers represents an interface to get access to the state of currently
+// connected peers.
+type Peers interface {
+	Addresses(filters ...peer.FilterFunc) []string
 }
