@@ -16,3 +16,11 @@
 // along with Alvalor.  If not, see <http://www.gnu.org/licenses/>.
 
 package download
+
+import "testing"
+
+func TestDownloadStart(t *testing.T) {
+}
+
+func TestDownloadCancel(t *testing.T) {
+}

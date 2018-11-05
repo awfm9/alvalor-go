@@ -32,11 +32,10 @@ import (
 // Manager implement a simple download manager.
 type Manager struct {
 	sync.Mutex
-	peers        peer.State
-	net          Network
-	inventories  map[types.Hash]string
-	transactions map[types.Hash]string
-	timeouts     map[types.Hash]chan<- struct{}
+	peers    peer.State
+	net      Network
+	pending  map[types.Hash]string
+	timeouts map[types.Hash]chan<- struct{}
 }
 
 // Start starts the download of a block inventory.
@@ -44,19 +43,35 @@ func (mgr *Manager) Start(hash types.Hash) error {
 	mgr.Lock()
 	defer mgr.Unlock()
 
-	// if we are already downloading the inventory, skip
-	_, ok := mgr.inventories[hash]
+	// if we are already downloading the entity, skip
+	_, ok := mgr.pending[hash]
 	if ok {
 		return nil
 	}
 
-	// get all active peers that have the desired inventory
+	// get all active peers that have the desired entity
+	// TODO: we should make the distinction between: has, might, doesn't
 	addresses := mgr.peers.Addresses(peer.IsActive(true), peer.HasEntity(true, hash))
 	if len(addresses) == 0 {
-		return errors.New("no active peers with inventory available")
+		return errors.New("no active peers with entity available")
 	}
 
-	// select the available peer with the least amount of pending downloads
+	// create a lookup map of all peers who have the entity
+	count := make(map[string]uint)
+	for _, address := range addresses {
+		count[address] = 0
+	}
+
+	// check how many downloads are pending for each fitting peer
+	for _, address := range mgr.pending {
+		_, ok := count[address]
+		if !ok {
+			continue
+		}
+		count[address]++
+	}
+
+	// select the available peer with the least amount of pending download
 	var target string
 	best := uint(math.MaxUint32)
 	for _, address := range addresses {
