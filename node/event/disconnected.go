@@ -20,15 +20,22 @@ package event
 import (
 	"sync"
 
-	"github.com/stretchr/testify/mock"
+	"github.com/alvalor/alvalor-go/network"
 )
 
-// MessageMock mocks the message handler interface.
-type MessageMock struct {
-	mock.Mock
-}
+func (handler *Handler) processDisconnected(wg *sync.WaitGroup, disconnected network.Disconnected) {
+	defer wg.Done()
 
-// Process mocks the process function of the message handler interface.
-func (mm *MessageMock) Process(wg *sync.WaitGroup, address string, message interface{}) {
-	mm.Called(wg, address, message)
+	// configure logger
+	with := handler.log.With()
+	with.Str("component", "event")
+	with.Str("event_type", "disconnected")
+	with.Str("address", disconnected.Address)
+	log := with.Logger()
+
+	// wrap routine in start and stop messages
+	log.Debug().Msg("routine started")
+	defer log.Debug().Msg("routine stopped")
+
+	handler.peers.Inactive(disconnected.Address)
 }

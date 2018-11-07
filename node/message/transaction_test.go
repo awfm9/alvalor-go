@@ -15,20 +15,9 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with Alvalor.  If not, see <http://www.gnu.org/licenses/>.
 
-package event
+package message
 
-import (
-	"sync"
+import "testing"
 
-	"github.com/stretchr/testify/mock"
-)
-
-// MessageMock mocks the message handler interface.
-type MessageMock struct {
-	mock.Mock
-}
-
-// Process mocks the process function of the message handler interface.
-func (mm *MessageMock) Process(wg *sync.WaitGroup, address string, message interface{}) {
-	mm.Called(wg, address, message)
+func TestProcessTransactionSuccess(t *testing.T) {
 }

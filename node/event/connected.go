@@ -21,27 +21,33 @@ import (
 	"sync"
 
 	"github.com/alvalor/alvalor-go/network"
-	"github.com/rs/zerolog"
+	"github.com/alvalor/alvalor-go/node/message"
 )
 
-// Handler represents the handler for events received from the network layer.
-type Handler struct {
-	log     zerolog.Logger
-	net     Network
-	headers Headers
-	peers   Peers
-	message Message
-}
+func (handler *Handler) processConnected(wg *sync.WaitGroup, connected network.Connected) {
+	defer wg.Done()
 
-// Process makes the event handler process an event.
-func (handler *Handler) Process(wg *sync.WaitGroup, event interface{}) {
-	wg.Add(1)
-	switch e := event.(type) {
-	case network.Connected:
-		go handler.processConnected(wg, e)
-	case network.Disconnected:
-		go handler.processDisconnected(wg, e)
-	case network.Received:
-		go handler.processReceived(wg, e)
+	// configure logger
+	with := handler.log.With()
+	with.Str("component", "event")
+	with.Str("event_type", "connected")
+	with.Str("address", connected.Address)
+	log := with.Logger()
+
+	// wrap routine in start and stop messages
+	log.Debug().Msg("routine started")
+	defer log.Debug().Msg("routine stopped")
+
+	handler.peers.Active(connected.Address)
+
+	// send our current best distance
+	_, distance := handler.headers.Path()
+	status := &message.Status{
+		Distance: distance,
+	}
+	err := handler.net.Send(connected.Address, status)
+	if err != nil {
+		log.Error().Err(err).Msg("could not send status message")
+		return
 	}
 }

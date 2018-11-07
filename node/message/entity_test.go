@@ -18,6 +18,8 @@
 package message
 
 import (
+	"sync"
+
 	"github.com/alvalor/alvalor-go/types"
 	"github.com/stretchr/testify/mock"
 )
@@ -28,6 +30,6 @@ type EntityMock struct {
 }
 
 // Process mocks the process function of the message handler interface.
-func (em *EntityMock) Process(entity types.Entity) {
+func (em *EntityMock) Process(wg *sync.WaitGroup, entity types.Entity) {
 	em.Called(entity)
 }

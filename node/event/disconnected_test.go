@@ -18,17 +18,46 @@
 package event
 
 import (
+	"io/ioutil"
 	"sync"
+	"testing"
 
+	"github.com/alvalor/alvalor-go/network"
+	"github.com/rs/zerolog"
 	"github.com/stretchr/testify/mock"
 )
 
-// MessageMock mocks the message handler interface.
-type MessageMock struct {
-	mock.Mock
-}
+func TestProcessDisconnectedSuccess(t *testing.T) {
 
-// Process mocks the process function of the message handler interface.
-func (mm *MessageMock) Process(wg *sync.WaitGroup, address string, message interface{}) {
-	mm.Called(wg, address, message)
+	// initialize parameters
+	address := "192.0.2.1"
+
+	// initialize entities
+	wg := &sync.WaitGroup{}
+	event := network.Disconnected{Address: address}
+
+	// initialize mocks
+	net := &NetworkMock{}
+	headers := &HeadersMock{}
+	peers := &PeersMock{}
+	message := &MessageMock{}
+
+	// initialize handler
+	handler := &Handler{
+		log:     zerolog.New(ioutil.Discard),
+		net:     net,
+		headers: headers,
+		peers:   peers,
+		message: message,
+	}
+
+	// program mocks
+	peers.On("Inactive", mock.Anything)
+
+	// execute process
+	handler.Process(wg, event)
+	wg.Wait()
+
+	// assert conditions
+	peers.AssertCalled(t, "Inactive", address)
 }

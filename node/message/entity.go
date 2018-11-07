@@ -17,9 +17,13 @@
 
 package message
 
-import "github.com/alvalor/alvalor-go/types"
+import (
+	"sync"
+
+	"github.com/alvalor/alvalor-go/types"
+)
 
 // Entity represents a handler for network messages.
 type Entity interface {
-	Process(entity types.Entity)
+	Process(wg *sync.WaitGroup, entity types.Entity)
 }

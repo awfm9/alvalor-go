@@ -17,7 +17,9 @@
 
 package event
 
+import "sync"
+
 // Message represents a handler for network messages.
 type Message interface {
-	Process(address string, message interface{})
+	Process(wg *sync.WaitGroup, address string, message interface{})
 }
