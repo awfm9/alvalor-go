@@ -29,8 +29,9 @@ type HandlerMock struct {
 	mock.Mock
 }
 
-func (hm *HandlerMock) Process(event interface{}) {
-	hm.Called(event)
+func (hm *HandlerMock) Process(wg *sync.WaitGroup, event interface{}) {
+	hm.Called(wg, event)
+	wg.Done()
 }
 
 func TestRun(t *testing.T) {
@@ -52,15 +53,17 @@ func TestRun(t *testing.T) {
 
 	// create the mock handler instance
 	handler := &HandlerMock{}
-	handler.On("Process", mock.Anything)
+	handler.On("Process", mock.Anything, mock.Anything)
 
 	// run the node on the input channel
+	wg.Add(1)
 	Run(wg, events, handler)
+	wg.Wait()
 
 	// assert the handler was called with all three events
 	if handler.AssertNumberOfCalls(t, "Process", 3) {
-		handler.AssertCalled(t, "Process", e1)
-		handler.AssertCalled(t, "Process", e2)
-		handler.AssertCalled(t, "Process", e3)
+		handler.AssertCalled(t, "Process", wg, e1)
+		handler.AssertCalled(t, "Process", wg, e2)
+		handler.AssertCalled(t, "Process", wg, e3)
 	}
 }

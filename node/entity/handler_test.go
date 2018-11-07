@@ -72,6 +72,7 @@ func TestHeaderKnown(t *testing.T) {
 	}
 
 	// execute process
+	wg.Add(1)
 	handler.Process(wg, entity)
 	wg.Wait()
 
@@ -129,6 +130,7 @@ func TestHeaderAddFails(t *testing.T) {
 	}
 
 	// execute process
+	wg.Add(1)
 	handler.Process(wg, entity)
 	wg.Wait()
 
@@ -186,6 +188,7 @@ func TestHeaderBroadcastFails(t *testing.T) {
 	}
 
 	// execute process
+	wg.Add(1)
 	handler.Process(wg, entity)
 	wg.Wait()
 
@@ -243,6 +246,7 @@ func TestHeaderFollowFails(t *testing.T) {
 	}
 
 	// execute process
+	wg.Add(1)
 	handler.Process(wg, entity)
 	wg.Wait()
 
@@ -300,6 +304,7 @@ func TestHeaderSuccess(t *testing.T) {
 	}
 
 	// execute process
+	wg.Add(1)
 	handler.Process(wg, entity)
 	wg.Wait()
 
@@ -349,6 +354,7 @@ func TestTransactionKnown(t *testing.T) {
 	}
 
 	// execute process
+	wg.Add(1)
 	handler.Process(wg, entity)
 	wg.Wait()
 
@@ -396,6 +402,7 @@ func TestTransactionAddFails(t *testing.T) {
 	}
 
 	// execute process
+	wg.Add(1)
 	handler.Process(wg, entity)
 	wg.Wait()
 
@@ -443,6 +450,7 @@ func TestTransactionBroadcastFails(t *testing.T) {
 	}
 
 	// execute process
+	wg.Add(1)
 	handler.Process(wg, entity)
 	wg.Wait()
 
@@ -490,6 +498,7 @@ func TestTransactionSuccess(t *testing.T) {
 	}
 
 	// execute process
+	wg.Add(1)
 	handler.Process(wg, entity)
 	wg.Wait()
 

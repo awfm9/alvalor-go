@@ -17,7 +17,11 @@
 
 package event
 
-import "github.com/stretchr/testify/mock"
+import (
+	"sync"
+
+	"github.com/stretchr/testify/mock"
+)
 
 // MessageMock mocks the message handler interface.
 type MessageMock struct {
@@ -25,6 +29,7 @@ type MessageMock struct {
 }
 
 // Process mocks the process function of the message handler interface.
-func (mm *MessageMock) Process(address string, message interface{}) {
-	mm.Called(address, message)
+func (mm *MessageMock) Process(wg *sync.WaitGroup, address string, message interface{}) {
+	mm.Called(wg, address, message)
+	wg.Done()
 }

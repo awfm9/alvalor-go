@@ -42,7 +42,6 @@ type Handler struct {
 
 // Process processes a message from the network.
 func (handler *Handler) Process(wg *sync.WaitGroup, address string, message interface{}) {
-	wg.Add(1)
 	go handler.process(wg, address, message)
 }
 
@@ -160,7 +159,8 @@ func (handler *Handler) process(wg *sync.WaitGroup, address string, message inte
 		log = log.With().Str("msg_type", "path").Int("num_headers", len(msg.Headers)).Logger()
 
 		for _, header := range msg.Headers {
-			handler.entity.Process(header)
+			wg.Add(1)
+			handler.entity.Process(wg, header)
 		}
 
 		log.Debug().Msg("processed path message")
@@ -233,7 +233,8 @@ func (handler *Handler) process(wg *sync.WaitGroup, address string, message inte
 		handler.peers.Received(address, msg.Hash)
 
 		// handle the transaction entity
-		handler.entity.Process(msg)
+		wg.Add(1)
+		handler.entity.Process(wg, msg)
 
 		log.Debug().Msg("processed transaction message")
 	}
