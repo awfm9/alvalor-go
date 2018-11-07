@@ -36,6 +36,7 @@ type Handler struct {
 
 // Process makes the event handler process an event.
 func (handler *Handler) Process(wg *sync.WaitGroup, event interface{}) {
+	wg.Add(1)
 	go handler.process(wg, event)
 }
 
@@ -68,7 +69,6 @@ func (handler *Handler) process(wg *sync.WaitGroup, event interface{}) {
 		handler.peers.Inactive(e.Address)
 
 	case network.Received:
-		wg.Add(1)
 		handler.message.Process(wg, e.Address, e.Message)
 	}
 }

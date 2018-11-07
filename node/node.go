@@ -30,9 +30,9 @@ type EventHandler interface {
 // Run will run the node package with the given event handler on the stream of
 // input events.
 func Run(wg *sync.WaitGroup, events <-chan interface{}, handler EventHandler) {
+	wg.Add(1)
 	defer wg.Done()
 	for event := range events {
-		wg.Add(1)
 		handler.Process(wg, event)
 	}
 }

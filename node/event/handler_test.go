@@ -62,7 +62,6 @@ func TestProcessConnectedSuccess(t *testing.T) {
 	net.On("Send", mock.Anything, mock.Anything).Return(nil)
 
 	// execute process
-	wg.Add(1)
 	handler.Process(wg, event)
 	wg.Wait()
 
@@ -104,7 +103,6 @@ func TestProcessConnectedSendFails(t *testing.T) {
 	net.On("Send", mock.Anything, mock.Anything).Return(errors.New(""))
 
 	// execute process
-	wg.Add(1)
 	handler.Process(wg, event)
 	wg.Wait()
 
@@ -142,7 +140,6 @@ func TestProcessDisconnectedSuccess(t *testing.T) {
 	peers.On("Inactive", mock.Anything)
 
 	// execute process
-	wg.Add(1)
 	handler.Process(wg, event)
 	wg.Wait()
 
@@ -180,7 +177,6 @@ func TestProcessReceivedSuccess(t *testing.T) {
 	message.On("Process", mock.Anything, mock.Anything, mock.Anything)
 
 	// execute process
-	wg.Add(1)
 	handler.Process(wg, event)
 	wg.Wait()
 

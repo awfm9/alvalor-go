@@ -31,5 +31,4 @@ type MessageMock struct {
 // Process mocks the process function of the message handler interface.
 func (mm *MessageMock) Process(wg *sync.WaitGroup, address string, message interface{}) {
 	mm.Called(wg, address, message)
-	wg.Done()
 }

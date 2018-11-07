@@ -39,6 +39,7 @@ type Handler struct {
 
 // Process is the entity handler's function for processing a new entity.
 func (handler *Handler) Process(wg *sync.WaitGroup, entity types.Entity) {
+	wg.Add(1)
 	go handler.process(wg, entity)
 }
 

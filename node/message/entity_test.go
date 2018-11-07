@@ -32,5 +32,4 @@ type EntityMock struct {
 // Process mocks the process function of the message handler interface.
 func (em *EntityMock) Process(wg *sync.WaitGroup, entity types.Entity) {
 	em.Called(entity)
-	wg.Done()
 }

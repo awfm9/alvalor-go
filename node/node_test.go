@@ -31,7 +31,6 @@ type HandlerMock struct {
 
 func (hm *HandlerMock) Process(wg *sync.WaitGroup, event interface{}) {
 	hm.Called(wg, event)
-	wg.Done()
 }
 
 func TestRun(t *testing.T) {
@@ -56,7 +55,6 @@ func TestRun(t *testing.T) {
 	handler.On("Process", mock.Anything, mock.Anything)
 
 	// run the node on the input channel
-	wg.Add(1)
 	Run(wg, events, handler)
 	wg.Wait()
 
