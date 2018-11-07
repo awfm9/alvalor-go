@@ -16,3 +16,20 @@
 // along with Alvalor.  If not, see <http://www.gnu.org/licenses/>.
 
 package event
+
+import (
+	"sync"
+
+	"github.com/alvalor/alvalor-go/network"
+)
+
+func (handler *Handler) processReceived(wg *sync.WaitGroup, received network.Received) {
+	defer wg.Done()
+
+	// configure logger
+	log := handler.log.With().Str("component", "event_received").Logger()
+	log.Debug().Msg("event_received routine started")
+	defer log.Debug().Msg("event_received routine stopped")
+
+	handler.message.Process(wg, received.Address, received.Message)
+}

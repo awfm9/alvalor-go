@@ -18,30 +18,46 @@
 package event
 
 import (
+	"io/ioutil"
 	"sync"
+	"testing"
 
 	"github.com/alvalor/alvalor-go/network"
 	"github.com/rs/zerolog"
+	"github.com/stretchr/testify/mock"
 )
 
-// Handler represents the handler for events received from the network layer.
-type Handler struct {
-	log     zerolog.Logger
-	net     Network
-	headers Headers
-	peers   Peers
-	message Message
-}
+func TestProcessDisconnectedSuccess(t *testing.T) {
 
-// Process makes the event handler process an event.
-func (handler *Handler) Process(wg *sync.WaitGroup, event interface{}) {
-	wg.Add(1)
-	switch e := event.(type) {
-	case network.Connected:
-		go handler.processConnected(wg, e)
-	case network.Disconnected:
-		go handler.processDisconnected(wg, e)
-	case network.Received:
-		go handler.processReceived(wg, e)
+	// initialize parameters
+	address := "192.0.2.1"
+
+	// initialize entities
+	wg := &sync.WaitGroup{}
+	event := network.Disconnected{Address: address}
+
+	// initialize mocks
+	net := &NetworkMock{}
+	headers := &HeadersMock{}
+	peers := &PeersMock{}
+	message := &MessageMock{}
+
+	// initialize handler
+	handler := &Handler{
+		log:     zerolog.New(ioutil.Discard),
+		net:     net,
+		headers: headers,
+		peers:   peers,
+		message: message,
 	}
+
+	// program mocks
+	peers.On("Inactive", mock.Anything)
+
+	// execute process
+	handler.Process(wg, event)
+	wg.Wait()
+
+	// assert conditions
+	peers.AssertCalled(t, "Inactive", address)
 }

@@ -16,3 +16,20 @@
 // along with Alvalor.  If not, see <http://www.gnu.org/licenses/>.
 
 package event
+
+import (
+	"sync"
+
+	"github.com/alvalor/alvalor-go/network"
+)
+
+func (handler *Handler) processDisconnected(wg *sync.WaitGroup, disconnected network.Disconnected) {
+	defer wg.Done()
+
+	// configure logger
+	log := handler.log.With().Str("component", "event_disconnected").Logger()
+	log.Debug().Msg("event_disconnected routine started")
+	defer log.Debug().Msg("event_disconnected routine stopped")
+
+	handler.peers.Inactive(disconnected.Address)
+}

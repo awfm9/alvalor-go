@@ -16,3 +16,32 @@
 // along with Alvalor.  If not, see <http://www.gnu.org/licenses/>.
 
 package event
+
+import (
+	"sync"
+
+	"github.com/alvalor/alvalor-go/network"
+	"github.com/alvalor/alvalor-go/node/message"
+)
+
+func (handler *Handler) processConnected(wg *sync.WaitGroup, connected network.Connected) {
+	defer wg.Done()
+
+	// configure logger
+	log := handler.log.With().Str("component", "event_connected").Logger()
+	log.Debug().Msg("event_connected routine started")
+	defer log.Debug().Msg("event_connected routine stopped")
+
+	handler.peers.Active(connected.Address)
+
+	// send our current best distance
+	_, distance := handler.headers.Path()
+	status := &message.Status{
+		Distance: distance,
+	}
+	err := handler.net.Send(connected.Address, status)
+	if err != nil {
+		log.Error().Err(err).Msg("could not send status message")
+		return
+	}
+}

@@ -32,8 +32,8 @@ func (handler *Handler) processHeader(wg *sync.WaitGroup, header *types.Header) 
 
 	// configure logger
 	log := handler.log.With().Str("component", "entity_header").Hex("hash", header.Hash[:]).Logger()
-	log.Debug().Msg("entity routine started")
-	defer log.Debug().Msg("entity routine stopped")
+	log.Debug().Msg("entity_header routine started")
+	defer log.Debug().Msg("entity_header routine stopped")
 
 	// if we already know the header, we ignore it
 	ok := handler.headers.Has(header.Hash)

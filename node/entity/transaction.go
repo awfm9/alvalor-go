@@ -32,8 +32,8 @@ func (handler *Handler) processTransaction(wg *sync.WaitGroup, tx *types.Transac
 
 	// configure logger
 	log := handler.log.With().Str("component", "entity_transaction").Hex("hash", tx.Hash[:]).Logger()
-	log.Debug().Msg("entity routine started")
-	defer log.Debug().Msg("entity routine stopped")
+	log.Debug().Msg("entity_transaction routine started")
+	defer log.Debug().Msg("entity_transaction routine stopped")
 
 	// check if we already know the transaction; if so, ignore it
 	ok := handler.transactions.Has(tx.Hash)
