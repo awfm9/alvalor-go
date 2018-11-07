@@ -25,10 +25,16 @@ func (handler *Handler) processPath(wg *sync.WaitGroup, address string, path *Pa
 	defer wg.Done()
 
 	// configure logger
-	log := handler.log.With().Str("component", "message").Str("address", address).Logger()
-	log = log.With().Str("msg_type", "path").Int("num_headers", len(path.Headers)).Logger()
-	log.Debug().Msg("message routine started")
-	defer log.Debug().Msg("message routine stopped")
+	with := handler.log.With()
+	with.Str("component", "message")
+	with.Str("message_type", "path")
+	with.Str("address", address)
+	with.Int("num_headers", len(path.Headers))
+	log := with.Logger()
+
+	// wrap routine in start and stop messages
+	log.Debug().Msg("routine started")
+	defer log.Debug().Msg("routine stopped")
 
 	for _, header := range path.Headers {
 		handler.entity.Process(wg, header)

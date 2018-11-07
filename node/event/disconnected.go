@@ -27,9 +27,15 @@ func (handler *Handler) processDisconnected(wg *sync.WaitGroup, disconnected net
 	defer wg.Done()
 
 	// configure logger
-	log := handler.log.With().Str("component", "event_disconnected").Logger()
-	log.Debug().Msg("event_disconnected routine started")
-	defer log.Debug().Msg("event_disconnected routine stopped")
+	with := handler.log.With()
+	with.Str("component", "event")
+	with.Str("event_type", "disconnected")
+	with.Str("address", disconnected.Address)
+	log := with.Logger()
+
+	// wrap routine in start and stop messages
+	log.Debug().Msg("routine started")
+	defer log.Debug().Msg("routine stopped")
 
 	handler.peers.Inactive(disconnected.Address)
 }

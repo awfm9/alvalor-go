@@ -27,10 +27,16 @@ func (handler *Handler) processStatus(wg *sync.WaitGroup, address string, status
 	defer wg.Done()
 
 	// configure logger
-	log := handler.log.With().Str("component", "message_status").Str("address", address).Logger()
-	log = log.With().Str("msg_type", "status").Uint64("distance", status.Distance).Logger()
-	log.Debug().Msg("message_status routine started")
-	defer log.Debug().Msg("message_status routine stopped")
+	with := handler.log.With()
+	with.Str("component", "message")
+	with.Str("message_type", "status")
+	with.Str("address", address)
+	with.Uint64("distance", status.Distance)
+	log := with.Logger()
+
+	// wrap routine in start and stop messages
+	log.Debug().Msg("routine started")
+	defer log.Debug().Msg("routine stopped")
 
 	// The Status message is a handshake sent by both peers on a new connection.
 	// It contains the distance of their best path and helps each peer to

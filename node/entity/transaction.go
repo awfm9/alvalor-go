@@ -27,13 +27,19 @@ import (
 func (handler *Handler) processTransaction(wg *sync.WaitGroup, tx *types.Transaction) {
 	defer wg.Done()
 
-	// precompute the transaction hash
+	// precompute transaction hash
 	tx.Hash = tx.GetHash()
 
 	// configure logger
-	log := handler.log.With().Str("component", "entity_transaction").Hex("hash", tx.Hash[:]).Logger()
-	log.Debug().Msg("entity_transaction routine started")
-	defer log.Debug().Msg("entity_transaction routine stopped")
+	with := handler.log.With()
+	with.Str("component", "entity")
+	with.Str("entity_type", "transaction")
+	with.Hex("hash", tx.Hash[:])
+	log := with.Logger()
+
+	// wrap routine in start and stop message
+	log.Debug().Msg("routine started")
+	defer log.Debug().Msg("routine stopped")
 
 	// check if we already know the transaction; if so, ignore it
 	ok := handler.transactions.Has(tx.Hash)

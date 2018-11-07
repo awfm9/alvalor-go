@@ -27,13 +27,19 @@ import (
 func (handler *Handler) processHeader(wg *sync.WaitGroup, header *types.Header) {
 	defer wg.Done()
 
-	// precompute the header hash
+	// precompute header hash
 	header.Hash = header.GetHash()
 
 	// configure logger
-	log := handler.log.With().Str("component", "entity_header").Hex("hash", header.Hash[:]).Logger()
-	log.Debug().Msg("entity_header routine started")
-	defer log.Debug().Msg("entity_header routine stopped")
+	with := handler.log.With()
+	with.Str("component", "entity")
+	with.Str("entity_type", "header")
+	with.Hex("hash", header.Hash[:])
+	log := with.Logger()
+
+	// wrap routine in start and stop message
+	log.Debug().Msg("routine started")
+	defer log.Debug().Msg("routine stopped")
 
 	// if we already know the header, we ignore it
 	ok := handler.headers.Has(header.Hash)

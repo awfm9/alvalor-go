@@ -27,11 +27,16 @@ func (handler *Handler) processGetInv(wg *sync.WaitGroup, address string, getInv
 	defer wg.Done()
 
 	// configure logger
-	log := handler.log.With().Str("component", "message").Str("address", address).Logger()
-	log.Debug().Msg("message routine started")
-	defer log.Debug().Msg("message routine stopped")
+	with := handler.log.With()
+	with.Str("component", "message")
+	with.Str("message_type", "get_inv")
+	with.Str("address", address)
+	with.Hex("hash", getInv.Hash[:])
+	log := with.Logger()
 
-	log = log.With().Str("msg_type", "get_inv").Hex("hash", getInv.Hash[:]).Logger()
+	// wrap routine in start and stop messages
+	log.Debug().Msg("routine started")
+	defer log.Debug().Msg("routine stopped")
 
 	// try to get the inventory
 	inv, err := handler.inventories.Get(getInv.Hash)
@@ -54,10 +59,17 @@ func (handler *Handler) processInventory(wg *sync.WaitGroup, address string, inv
 	defer wg.Done()
 
 	// configure logger
-	log := handler.log.With().Str("component", "message").Str("address", address).Logger()
-	log = log.With().Str("msg_type", "inventory").Hex("hash", inv.Hash[:]).Int("num_hashes", len(inv.Hashes)).Logger()
-	log.Debug().Msg("message routine started")
-	defer log.Debug().Msg("message routine stopped")
+	with := handler.log.With()
+	with.Str("component", "message")
+	with.Str("message_type", "inventory")
+	with.Str("address", address)
+	with.Hex("hash", inv.Hash[:])
+	with.Int("num_hashes", len(inv.Hashes))
+	log := with.Logger()
+
+	// wrap routine in start and stop messages
+	log.Debug().Msg("routine started")
+	defer log.Debug().Msg("routine stopped")
 
 	// cancel any pending download retries for this inventory
 	handler.downloads.Cancel(inv.Hash)

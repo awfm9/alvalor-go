@@ -27,10 +27,16 @@ func (handler *Handler) processSync(wg *sync.WaitGroup, address string, sync *Sy
 	defer wg.Done()
 
 	// configure logger
-	log := handler.log.With().Str("component", "message").Str("address", address).Logger()
-	log = log.With().Str("msg_type", "sync").Int("num_locators", len(sync.Locators)).Logger()
-	log.Debug().Msg("message routine started")
-	defer log.Debug().Msg("message routine stopped")
+	with := handler.log.With()
+	with.Str("component", "message")
+	with.Str("message_type", "sync")
+	with.Str("address", address)
+	with.Int("num_locators", len(sync.Locators))
+	log := with.Logger()
+
+	// wrap routine in start and stop messages
+	log.Debug().Msg("routine started")
+	defer log.Debug().Msg("routine stopped")
 
 	// create lookup table of locator hashes
 	lookup := make(map[types.Hash]struct{})

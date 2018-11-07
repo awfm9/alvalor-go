@@ -27,10 +27,16 @@ func (handler *Handler) processGetTx(wg *sync.WaitGroup, address string, getTx *
 	defer wg.Done()
 
 	// configure logger
-	log := handler.log.With().Str("component", "message").Str("address", address).Logger()
-	log = log.With().Str("msg_type", "get_tx").Hex("hash", getTx.Hash[:]).Logger()
-	log.Debug().Msg("message routine started")
-	defer log.Debug().Msg("message routine stopped")
+	with := handler.log.With()
+	with.Str("component", "message")
+	with.Str("message_type", "get_tx")
+	with.Str("address", address)
+	with.Hex("hash", getTx.Hash[:])
+	log := with.Logger()
+
+	// wrap routine in start and stop messages
+	log.Debug().Msg("routine started")
+	defer log.Debug().Msg("routine stopped")
 
 	// try to get the inventory
 	tx, err := handler.transactions.Get(getTx.Hash)
@@ -53,10 +59,16 @@ func (handler *Handler) processTransaction(wg *sync.WaitGroup, address string, t
 	defer wg.Done()
 
 	// configure logger
-	log := handler.log.With().Str("component", "message").Str("address", address).Logger()
-	log = log.With().Str("msg_type", "transaction").Hex("hash", tx.Hash[:]).Logger()
-	log.Debug().Msg("message routine started")
-	defer log.Debug().Msg("message routine stopped")
+	with := handler.log.With()
+	with.Str("component", "message")
+	with.Str("message_type", "transaction")
+	with.Str("address", address)
+	with.Hex("hash", tx.Hash[:])
+	log := with.Logger()
+
+	// wrap routine in start and stop messages
+	log.Debug().Msg("routine started")
+	defer log.Debug().Msg("routine stopped")
 
 	// cancel any pending download retries for this transaction
 	handler.downloads.Cancel(tx.Hash)
