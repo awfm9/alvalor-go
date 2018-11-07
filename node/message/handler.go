@@ -40,7 +40,22 @@ type Handler struct {
 // Process processes a message from the network.
 func (handler *Handler) Process(wg *sync.WaitGroup, address string, message interface{}) {
 	wg.Add(1)
-	go handler.process(wg, address, message)
+	switch msg := message.(type) {
+	case *Status:
+		go handler.processStatus(wg, address, msg)
+	case *Sync:
+		go handler.processSync(wg, address, msg)
+	case *Path:
+		go handler.processPath(wg, address, msg)
+	case *GetInv:
+		go handler.processGetInv(wg, address, msg)
+	case *GetTx:
+		go handler.processGetTx(wg, address, msg)
+	case *types.Inventory:
+		go handler.processInventory(wg, address, msg)
+	case *types.Transaction:
+		go handler.processTransaction(wg, address, msg)
+	}
 }
 
 func (handler *Handler) process(wg *sync.WaitGroup, address string, message interface{}) {
@@ -53,49 +68,6 @@ func (handler *Handler) process(wg *sync.WaitGroup, address string, message inte
 
 	// process the message according to type
 	switch msg := message.(type) {
-
-	// The Status message is a handshake sent by both peers on a new connection.
-	// It contains the distance of their best path and helps each peer to
-	// determine whether they should request missing headers from the other. If a
-	// peer is behind, it should send a Sync message with a number of locator
-	// hashes of block headers, to request the missing headers from the peer who
-	// is ahead.
-	case *Status:
-
-		log = log.With().Str("msg_type", "status").Uint64("distance", msg.Distance).Logger()
-
-		// if we are on a better path, we can ignore the status message
-		path, distance := handler.headers.Path()
-		if distance >= msg.Distance {
-			log.Debug().Msg("not behind peer")
-			return
-		}
-
-		// collect headers from the top of our longest path backwards
-		// use increasing distance after first 8, finish with root (genesis)
-		var locators []types.Hash
-		index := 0
-		step := 1
-		for index < len(path)-1 {
-			locators = append(locators, path[index])
-			if len(locators) >= 8 {
-				step *= 2
-			}
-			index += step
-		}
-		locators = append(locators, path[len(path)-1])
-
-		// send synchronization message
-		sync := &Sync{
-			Locators: locators,
-		}
-		err := handler.net.Send(address, sync)
-		if err != nil {
-			log.Error().Err(err).Msg("could not send sync message")
-			return
-		}
-
-		log.Debug().Msg("processed status message")
 
 	// The Sync message is a request for block headers. It contains a number
 	// of locator hashes that allows the receiving peer to search a common
