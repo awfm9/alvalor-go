@@ -23,38 +23,7 @@ import (
 	"github.com/alvalor/alvalor-go/types"
 )
 
-func (handler *Handler) processGetTx(wg *sync.WaitGroup, address string, getTx *GetTx) {
-	defer wg.Done()
-
-	// configure logger
-	with := handler.log.With()
-	with.Str("component", "message")
-	with.Str("message_type", "get_tx")
-	with.Str("address", address)
-	with.Hex("hash", getTx.Hash[:])
-	log := with.Logger()
-
-	// wrap routine in start and stop messages
-	log.Debug().Msg("routine started")
-	defer log.Debug().Msg("routine stopped")
-
-	// try to get the inventory
-	tx, err := handler.transactions.Get(getTx.Hash)
-	if err != nil {
-		log.Error().Err(err).Msg("could not get transaction")
-		return
-	}
-
-	// try to send the inventory
-	err = handler.net.Send(address, tx)
-	if err != nil {
-		log.Error().Err(err).Msg("could not send transaction")
-		return
-	}
-
-	log.Debug().Msg("processed get_tx message")
-}
-
+// The transaction message is a message containing a transaction.
 func (handler *Handler) processTransaction(wg *sync.WaitGroup, address string, tx *types.Transaction) {
 	defer wg.Done()
 

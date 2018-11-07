@@ -16,3 +16,8 @@
 // along with Alvalor.  If not, see <http://www.gnu.org/licenses/>.
 
 package message
+
+import "testing"
+
+func TestProcessTransactionSuccess(t *testing.T) {
+}

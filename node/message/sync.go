@@ -23,6 +23,11 @@ import (
 	"github.com/alvalor/alvalor-go/types"
 )
 
+// The Sync message is a request for block headers. It contains a number
+// of locator hashes that allows the receiving peer to search a common
+// block header hash on his best path. The receiving peer will then send a
+// a Path message with the missing headers. Ideally, they are sent in
+// chronological order, from oldest to newest, to speed up processing.
 func (handler *Handler) processSync(wg *sync.WaitGroup, address string, sync *Sync) {
 	defer wg.Done()
 

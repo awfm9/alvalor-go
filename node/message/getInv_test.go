@@ -16,3 +16,14 @@
 // along with Alvalor.  If not, see <http://www.gnu.org/licenses/>.
 
 package message
+
+import "testing"
+
+func TestProcessGetInvSuccess(t *testing.T) {
+}
+
+func TestProcessGetInvGetFails(t *testing.T) {
+}
+
+func TestProcessGetInvSendFails(t *testing.T) {
+}

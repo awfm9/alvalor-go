@@ -23,38 +23,8 @@ import (
 	"github.com/alvalor/alvalor-go/types"
 )
 
-func (handler *Handler) processGetInv(wg *sync.WaitGroup, address string, getInv *GetInv) {
-	defer wg.Done()
-
-	// configure logger
-	with := handler.log.With()
-	with.Str("component", "message")
-	with.Str("message_type", "get_inv")
-	with.Str("address", address)
-	with.Hex("hash", getInv.Hash[:])
-	log := with.Logger()
-
-	// wrap routine in start and stop messages
-	log.Debug().Msg("routine started")
-	defer log.Debug().Msg("routine stopped")
-
-	// try to get the inventory
-	inv, err := handler.inventories.Get(getInv.Hash)
-	if err != nil {
-		log.Error().Err(err).Msg("could not get inventory")
-		return
-	}
-
-	// try to send the inventory
-	err = handler.net.Send(address, inv)
-	if err != nil {
-		log.Error().Err(err).Msg("could not send inventory")
-		return
-	}
-
-	log.Debug().Msg("processed get_inv message")
-}
-
+// The inventory is a the template of how to reconstruct a block from messages
+// and is used to download all necessary messages to fully validate a block.
 func (handler *Handler) processInventory(wg *sync.WaitGroup, address string, inv *types.Inventory) {
 	defer wg.Done()
 
