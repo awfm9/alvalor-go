@@ -37,6 +37,7 @@ func TestProcessConnectedSuccess(t *testing.T) {
 	distance := 1337
 
 	// initialize entities
+	wg := &sync.WaitGroup{}
 	event := network.Connected{Address: address}
 	status := &message.Status{Distance: uint64(distance)}
 
@@ -48,7 +49,6 @@ func TestProcessConnectedSuccess(t *testing.T) {
 
 	// initialize handler
 	handler := &Handler{
-		wg:      &sync.WaitGroup{},
 		log:     zerolog.New(ioutil.Discard),
 		net:     net,
 		headers: headers,
@@ -62,7 +62,8 @@ func TestProcessConnectedSuccess(t *testing.T) {
 	net.On("Send", mock.Anything, mock.Anything).Return(nil)
 
 	// execute process
-	handler.Process(event)
+	handler.Process(wg, event)
+	wg.Wait()
 
 	// assert conditions
 	peers.AssertCalled(t, "Active", address)
@@ -77,6 +78,7 @@ func TestProcessConnectedSendFails(t *testing.T) {
 	distance := 1337
 
 	// initialize entities
+	wg := &sync.WaitGroup{}
 	event := network.Connected{Address: address}
 	status := &message.Status{Distance: uint64(distance)}
 
@@ -88,7 +90,6 @@ func TestProcessConnectedSendFails(t *testing.T) {
 
 	// initialize handler
 	handler := &Handler{
-		wg:      &sync.WaitGroup{},
 		log:     zerolog.New(ioutil.Discard),
 		net:     net,
 		headers: headers,
@@ -102,7 +103,8 @@ func TestProcessConnectedSendFails(t *testing.T) {
 	net.On("Send", mock.Anything, mock.Anything).Return(errors.New(""))
 
 	// execute process
-	handler.Process(event)
+	handler.Process(wg, event)
+	wg.Wait()
 
 	// assert conditions
 	peers.AssertCalled(t, "Active", address)
@@ -116,6 +118,7 @@ func TestProcessDisconnectedSuccess(t *testing.T) {
 	address := "192.0.2.1"
 
 	// initialize entities
+	wg := &sync.WaitGroup{}
 	event := network.Disconnected{Address: address}
 
 	// initialize mocks
@@ -126,7 +129,6 @@ func TestProcessDisconnectedSuccess(t *testing.T) {
 
 	// initialize handler
 	handler := &Handler{
-		wg:      &sync.WaitGroup{},
 		log:     zerolog.New(ioutil.Discard),
 		net:     net,
 		headers: headers,
@@ -138,7 +140,8 @@ func TestProcessDisconnectedSuccess(t *testing.T) {
 	peers.On("Inactive", mock.Anything)
 
 	// execute process
-	handler.Process(event)
+	handler.Process(wg, event)
+	wg.Wait()
 
 	// assert conditions
 	peers.AssertCalled(t, "Inactive", address)
@@ -151,6 +154,7 @@ func TestProcessReceivedSuccess(t *testing.T) {
 	address := "192.0.2.1"
 
 	// initialize entities
+	wg := &sync.WaitGroup{}
 	msg := &message.Request{Hash: hash}
 	event := network.Received{Address: address, Message: msg}
 
@@ -162,7 +166,6 @@ func TestProcessReceivedSuccess(t *testing.T) {
 
 	// initialize handler
 	handler := &Handler{
-		wg:      &sync.WaitGroup{},
 		log:     zerolog.New(ioutil.Discard),
 		net:     net,
 		headers: headers,
@@ -174,7 +177,8 @@ func TestProcessReceivedSuccess(t *testing.T) {
 	message.On("Process", mock.Anything, mock.Anything)
 
 	// execute process
-	handler.Process(event)
+	handler.Process(wg, event)
+	wg.Wait()
 
 	// assert conditions
 	message.AssertCalled(t, "Process", address, msg)

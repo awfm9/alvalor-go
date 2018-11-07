@@ -30,11 +30,20 @@ import (
 
 func TestHeaderKnown(t *testing.T) {
 
+	// initialize parameters
+	address1 := "192.0.2.1"
+	address2 := "192.0.2.2"
+	address3 := "192.0.2.3"
+	hash1 := types.Hash{0x1}
+	hash2 := types.Hash{0x2}
+	hash3 := types.Hash{0x3}
+
 	// initialize entities
+	wg := &sync.WaitGroup{}
 	entity := &types.Header{Nonce: 1}
 	hash := entity.GetHash()
-	addresses := []string{"192.0.2.1", "192.0.2.2", "192.0.2.3"}
-	path := []types.Hash{{0x1}, {0x2}, {0x3}}
+	addresses := []string{address1, address2, address3}
+	path := []types.Hash{hash1, hash2, hash3}
 
 	// initialize mocks
 	headers := &HeadersMock{}
@@ -55,7 +64,6 @@ func TestHeaderKnown(t *testing.T) {
 	// initialize handler
 	handler := &Handler{
 		log:     zerolog.New(ioutil.Discard),
-		wg:      &sync.WaitGroup{},
 		headers: headers,
 		events:  events,
 		peers:   peers,
@@ -63,10 +71,11 @@ func TestHeaderKnown(t *testing.T) {
 		paths:   paths,
 	}
 
-	// process entity
-	handler.Process(entity)
+	// execute process
+	handler.Process(wg, entity)
+	wg.Wait()
 
-	// assert conditions
+	// check conditions
 	headers.AssertCalled(t, "Has", hash)
 	headers.AssertNotCalled(t, "Add", mock.Anything)
 	events.AssertNotCalled(t, "Header", mock.Anything)
@@ -78,11 +87,20 @@ func TestHeaderKnown(t *testing.T) {
 
 func TestHeaderAddFails(t *testing.T) {
 
+	// initialize parameters
+	address1 := "192.0.2.1"
+	address2 := "192.0.2.2"
+	address3 := "192.0.2.3"
+	hash1 := types.Hash{0x1}
+	hash2 := types.Hash{0x2}
+	hash3 := types.Hash{0x3}
+
 	// initialize entities
-	entity := &types.Header{Parent: types.Hash{0x1}}
+	wg := &sync.WaitGroup{}
+	entity := &types.Header{Nonce: 1}
 	hash := entity.GetHash()
-	addresses := []string{"192.0.2.1", "192.0.2.2", "192.0.2.3"}
-	path := []types.Hash{{0x2}, {0x3}, {0x4}}
+	addresses := []string{address1, address2, address3}
+	path := []types.Hash{hash1, hash2, hash3}
 
 	// initialize mocks
 	headers := &HeadersMock{}
@@ -103,7 +121,6 @@ func TestHeaderAddFails(t *testing.T) {
 	// initialize handler
 	handler := &Handler{
 		log:     zerolog.New(ioutil.Discard),
-		wg:      &sync.WaitGroup{},
 		headers: headers,
 		events:  events,
 		peers:   peers,
@@ -111,10 +128,11 @@ func TestHeaderAddFails(t *testing.T) {
 		paths:   paths,
 	}
 
-	// process entity
-	handler.Process(entity)
+	// execute process
+	handler.Process(wg, entity)
+	wg.Wait()
 
-	// assert conditions
+	// check conditions
 	headers.AssertCalled(t, "Has", hash)
 	headers.AssertCalled(t, "Add", entity)
 	events.AssertNotCalled(t, "Header", mock.Anything)
@@ -126,11 +144,20 @@ func TestHeaderAddFails(t *testing.T) {
 
 func TestHeaderBroadcastFails(t *testing.T) {
 
+	// initialize parameters
+	address1 := "192.0.2.1"
+	address2 := "192.0.2.2"
+	address3 := "192.0.2.3"
+	hash1 := types.Hash{0x1}
+	hash2 := types.Hash{0x2}
+	hash3 := types.Hash{0x3}
+
 	// initialize entities
-	entity := &types.Header{Parent: types.Hash{0x1}}
+	wg := &sync.WaitGroup{}
+	entity := &types.Header{Nonce: 1}
 	hash := entity.GetHash()
-	addresses := []string{"192.0.2.1", "192.0.2.2", "192.0.2.3"}
-	path := []types.Hash{{0x2}, {0x3}, {0x4}}
+	addresses := []string{address1, address2, address3}
+	path := []types.Hash{hash1, hash2, hash3}
 
 	// initialize mocks
 	headers := &HeadersMock{}
@@ -151,7 +178,6 @@ func TestHeaderBroadcastFails(t *testing.T) {
 	// initialize handler
 	handler := &Handler{
 		log:     zerolog.New(ioutil.Discard),
-		wg:      &sync.WaitGroup{},
 		headers: headers,
 		events:  events,
 		peers:   peers,
@@ -159,10 +185,11 @@ func TestHeaderBroadcastFails(t *testing.T) {
 		paths:   paths,
 	}
 
-	// process entity
-	handler.Process(entity)
+	// execute process
+	handler.Process(wg, entity)
+	wg.Wait()
 
-	// assert conditions
+	// check conditions
 	headers.AssertCalled(t, "Has", hash)
 	headers.AssertCalled(t, "Add", entity)
 	events.AssertCalled(t, "Header", hash)
@@ -174,11 +201,20 @@ func TestHeaderBroadcastFails(t *testing.T) {
 
 func TestHeaderFollowFails(t *testing.T) {
 
+	// initialize parameters
+	address1 := "192.0.2.1"
+	address2 := "192.0.2.2"
+	address3 := "192.0.2.3"
+	hash1 := types.Hash{0x1}
+	hash2 := types.Hash{0x2}
+	hash3 := types.Hash{0x3}
+
 	// initialize entities
-	entity := &types.Header{Parent: types.Hash{0x1}}
+	wg := &sync.WaitGroup{}
+	entity := &types.Header{Nonce: 1}
 	hash := entity.GetHash()
-	addresses := []string{"192.0.2.1", "192.0.2.2", "192.0.2.3"}
-	path := []types.Hash{{0x2}, {0x3}, {0x4}}
+	addresses := []string{address1, address2, address3}
+	path := []types.Hash{hash1, hash2, hash3}
 
 	// initialize mocks
 	headers := &HeadersMock{}
@@ -199,7 +235,6 @@ func TestHeaderFollowFails(t *testing.T) {
 	// initialize handler
 	handler := &Handler{
 		log:     zerolog.New(ioutil.Discard),
-		wg:      &sync.WaitGroup{},
 		headers: headers,
 		events:  events,
 		peers:   peers,
@@ -207,10 +242,11 @@ func TestHeaderFollowFails(t *testing.T) {
 		paths:   paths,
 	}
 
-	// process entity
-	handler.Process(entity)
+	// execute process
+	handler.Process(wg, entity)
+	wg.Wait()
 
-	// assert conditions
+	// check conditions
 	headers.AssertCalled(t, "Has", hash)
 	headers.AssertCalled(t, "Add", entity)
 	events.AssertCalled(t, "Header", hash)
@@ -222,11 +258,20 @@ func TestHeaderFollowFails(t *testing.T) {
 
 func TestHeaderSuccess(t *testing.T) {
 
+	// initialize parameters
+	address1 := "192.0.2.1"
+	address2 := "192.0.2.2"
+	address3 := "192.0.2.3"
+	hash1 := types.Hash{0x1}
+	hash2 := types.Hash{0x2}
+	hash3 := types.Hash{0x3}
+
 	// initialize entities
-	entity := &types.Header{Parent: types.Hash{0x1}}
+	wg := &sync.WaitGroup{}
+	entity := &types.Header{Nonce: 1}
 	hash := entity.GetHash()
-	addresses := []string{"192.0.2.1", "192.0.2.2", "192.0.2.3"}
-	path := []types.Hash{{0x2}, {0x3}, {0x4}}
+	addresses := []string{address1, address2, address3}
+	path := []types.Hash{hash1, hash2, hash3}
 
 	// initialize mocks
 	headers := &HeadersMock{}
@@ -247,7 +292,6 @@ func TestHeaderSuccess(t *testing.T) {
 	// initialize handler
 	handler := &Handler{
 		log:     zerolog.New(ioutil.Discard),
-		wg:      &sync.WaitGroup{},
 		headers: headers,
 		events:  events,
 		peers:   peers,
@@ -255,10 +299,11 @@ func TestHeaderSuccess(t *testing.T) {
 		paths:   paths,
 	}
 
-	// process entity
-	handler.Process(entity)
+	// execute process
+	handler.Process(wg, entity)
+	wg.Wait()
 
-	// assert conditions
+	// check conditions
 	headers.AssertCalled(t, "Has", hash)
 	headers.AssertCalled(t, "Add", entity)
 	events.AssertCalled(t, "Header", hash)
@@ -270,10 +315,16 @@ func TestHeaderSuccess(t *testing.T) {
 
 func TestTransactionKnown(t *testing.T) {
 
+	// initialize parameters
+	address1 := "192.0.2.1"
+	address2 := "192.0.2.2"
+	address3 := "192.0.2.3"
+
 	// initialize entities
+	wg := &sync.WaitGroup{}
 	entity := &types.Transaction{Nonce: 1}
 	hash := entity.GetHash()
-	addresses := []string{"192.0.2.1", "192.0.2.2", "192.0.2.3"}
+	addresses := []string{address1, address2, address3}
 
 	// initialize mocks
 	transactions := &TransactionsMock{}
@@ -291,17 +342,17 @@ func TestTransactionKnown(t *testing.T) {
 	// initialize handler
 	handler := &Handler{
 		log:          zerolog.New(ioutil.Discard),
-		wg:           &sync.WaitGroup{},
 		transactions: transactions,
 		events:       events,
 		peers:        peers,
 		net:          net,
 	}
 
-	// process entity
-	handler.Process(entity)
+	// execute process
+	handler.Process(wg, entity)
+	wg.Wait()
 
-	// assert conditions
+	// check conditions
 	transactions.AssertCalled(t, "Has", hash)
 	transactions.AssertNotCalled(t, "Add", mock.Anything)
 	events.AssertNotCalled(t, "Transaction", mock.Anything)
@@ -311,10 +362,16 @@ func TestTransactionKnown(t *testing.T) {
 
 func TestTransactionAddFails(t *testing.T) {
 
+	// initialize parameters
+	address1 := "192.0.2.1"
+	address2 := "192.0.2.2"
+	address3 := "192.0.2.3"
+
 	// initialize entities
+	wg := &sync.WaitGroup{}
 	entity := &types.Transaction{Nonce: 1}
 	hash := entity.GetHash()
-	addresses := []string{"192.0.2.1", "192.0.2.2", "192.0.2.3"}
+	addresses := []string{address1, address2, address3}
 
 	// initialize mocks
 	transactions := &TransactionsMock{}
@@ -332,17 +389,17 @@ func TestTransactionAddFails(t *testing.T) {
 	// initialize handler
 	handler := &Handler{
 		log:          zerolog.New(ioutil.Discard),
-		wg:           &sync.WaitGroup{},
 		transactions: transactions,
 		events:       events,
 		peers:        peers,
 		net:          net,
 	}
 
-	// process entity
-	handler.Process(entity)
+	// execute process
+	handler.Process(wg, entity)
+	wg.Wait()
 
-	// assert conditions
+	// check conditions
 	transactions.AssertCalled(t, "Has", hash)
 	transactions.AssertCalled(t, "Add", entity)
 	events.AssertNotCalled(t, "Transaction", mock.Anything)
@@ -352,10 +409,16 @@ func TestTransactionAddFails(t *testing.T) {
 
 func TestTransactionBroadcastFails(t *testing.T) {
 
+	// initialize parameters
+	address1 := "192.0.2.1"
+	address2 := "192.0.2.2"
+	address3 := "192.0.2.3"
+
 	// initialize entities
+	wg := &sync.WaitGroup{}
 	entity := &types.Transaction{Nonce: 1}
 	hash := entity.GetHash()
-	addresses := []string{"192.0.2.1", "192.0.2.2", "192.0.2.3"}
+	addresses := []string{address1, address2, address3}
 
 	// initialize mocks
 	transactions := &TransactionsMock{}
@@ -373,17 +436,17 @@ func TestTransactionBroadcastFails(t *testing.T) {
 	// initialize handler
 	handler := &Handler{
 		log:          zerolog.New(ioutil.Discard),
-		wg:           &sync.WaitGroup{},
 		transactions: transactions,
 		events:       events,
 		peers:        peers,
 		net:          net,
 	}
 
-	// process entity
-	handler.Process(entity)
+	// execute process
+	handler.Process(wg, entity)
+	wg.Wait()
 
-	// assert conditions
+	// check conditions
 	transactions.AssertCalled(t, "Has", hash)
 	transactions.AssertCalled(t, "Add", entity)
 	events.AssertCalled(t, "Transaction", hash)
@@ -393,10 +456,16 @@ func TestTransactionBroadcastFails(t *testing.T) {
 
 func TestTransactionSuccess(t *testing.T) {
 
+	// initialize parameters
+	address1 := "192.0.2.1"
+	address2 := "192.0.2.2"
+	address3 := "192.0.2.3"
+
 	// initialize entities
+	wg := &sync.WaitGroup{}
 	entity := &types.Transaction{Nonce: 1}
 	hash := entity.GetHash()
-	addresses := []string{"192.0.2.1", "192.0.2.2", "192.0.2.3"}
+	addresses := []string{address1, address2, address3}
 
 	// initialize mocks
 	transactions := &TransactionsMock{}
@@ -414,17 +483,17 @@ func TestTransactionSuccess(t *testing.T) {
 	// initialize handler
 	handler := &Handler{
 		log:          zerolog.New(ioutil.Discard),
-		wg:           &sync.WaitGroup{},
 		transactions: transactions,
 		events:       events,
 		peers:        peers,
 		net:          net,
 	}
 
-	// process entity
-	handler.Process(entity)
+	// execute process
+	handler.Process(wg, entity)
+	wg.Wait()
 
-	// assert conditions
+	// check conditions
 	transactions.AssertCalled(t, "Has", hash)
 	transactions.AssertCalled(t, "Add", entity)
 	events.AssertCalled(t, "Transaction", hash)

@@ -33,6 +33,6 @@ func Run(wg *sync.WaitGroup, events <-chan interface{}, handler EventHandler) {
 	wg.Add(1)
 	defer wg.Done()
 	for event := range events {
-		go handler.Process(event)
+		handler.Process(event)
 	}
 }

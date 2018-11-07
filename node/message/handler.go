@@ -29,7 +29,6 @@ import (
 
 // Handler represents the handler for messages from the network stack.
 type Handler struct {
-	wg           *sync.WaitGroup
 	log          zerolog.Logger
 	net          Network
 	paths        Paths
@@ -42,9 +41,13 @@ type Handler struct {
 }
 
 // Process processes a message from the network.
-func (handler *Handler) Process(address string, message interface{}) {
-	handler.wg.Add(1)
-	defer handler.wg.Done()
+func (handler *Handler) Process(wg *sync.WaitGroup, address string, message interface{}) {
+	wg.Add(1)
+	go handler.process(wg, address, message)
+}
+
+func (handler *Handler) process(wg *sync.WaitGroup, address string, message interface{}) {
+	defer wg.Done()
 
 	// configure logger
 	log := handler.log.With().Str("component", "message").Str("address", address).Logger()

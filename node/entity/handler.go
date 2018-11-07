@@ -28,7 +28,6 @@ import (
 // Handler is the handler for entities. We use a struct rather than a
 // function so we can mock it easier for testing.
 type Handler struct {
-	wg           *sync.WaitGroup
 	log          zerolog.Logger
 	net          Network
 	paths        Paths
@@ -39,9 +38,13 @@ type Handler struct {
 }
 
 // Process is the entity handler's function for processing a new entity.
-func (handler *Handler) Process(entity types.Entity) {
-	handler.wg.Add(1)
-	defer handler.wg.Done()
+func (handler *Handler) Process(wg *sync.WaitGroup, entity types.Entity) {
+	wg.Add(1)
+	go handler.process(wg, entity)
+}
+
+func (handler *Handler) process(wg *sync.WaitGroup, entity types.Entity) {
+	defer wg.Done()
 
 	// precompute the entity hash
 	hash := entity.GetHash()

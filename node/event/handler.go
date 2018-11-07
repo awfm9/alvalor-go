@@ -27,7 +27,6 @@ import (
 
 // Handler represents the handler for events received from the network layer.
 type Handler struct {
-	wg      *sync.WaitGroup
 	log     zerolog.Logger
 	net     Network
 	headers Headers
@@ -36,9 +35,13 @@ type Handler struct {
 }
 
 // Process makes the event handler process an event.
-func (handler *Handler) Process(event interface{}) {
-	handler.wg.Add(1)
-	defer handler.wg.Done()
+func (handler *Handler) Process(wg *sync.WaitGroup, event interface{}) {
+	wg.Add(1)
+	go handler.process(wg, event)
+}
+
+func (handler *Handler) process(wg *sync.WaitGroup, event interface{}) {
+	defer wg.Done()
 
 	// configure logger
 	log := handler.log.With().Str("component", "event").Logger()
