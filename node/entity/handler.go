@@ -20,7 +20,6 @@ package entity
 import (
 	"sync"
 
-	"github.com/alvalor/alvalor-go/node/peer"
 	"github.com/alvalor/alvalor-go/types"
 	"github.com/rs/zerolog"
 )
@@ -40,105 +39,10 @@ type Handler struct {
 // Process is the entity handler's function for processing a new entity.
 func (handler *Handler) Process(wg *sync.WaitGroup, entity types.Entity) {
 	wg.Add(1)
-	go handler.process(wg, entity)
-}
-
-func (handler *Handler) process(wg *sync.WaitGroup, entity types.Entity) {
-	defer wg.Done()
-
-	// precompute the entity hash
-	hash := entity.GetHash()
-
-	// configure logger
-	log := handler.log.With().Str("component", "entity").Hex("hash", hash[:]).Logger()
-	log.Debug().Msg("entity routine started")
-	defer log.Debug().Msg("entity routine stopped")
-
 	switch e := entity.(type) {
-
-	// When we receive a new header, we want to add it to our pathfinder to see
-	// whether it creates a better path of total difficulty. If that's the case,
-	// we need to synchronize the blocks on that path. This implies canceling
-	// transaction downloads for all headers that are no longer on the best path,
-	// and starting transaction downloads for all new headers on the best path.
 	case *types.Header:
-
-		e.Hash = hash
-
-		log = log.With().Str("entity_type", "header").Logger()
-
-		// if we already know the header, we ignore it
-		ok := handler.headers.Has(e.Hash)
-		if ok {
-			log.Debug().Msg("header already known")
-			return
-		}
-
-		// check the validity of the header
-		// TODO
-
-		// add the header to the pathfinder
-		err := handler.headers.Add(e)
-		if err != nil {
-			log.Error().Err(err).Msg("could not add header")
-			return
-		}
-
-		// we let subscribers know that we received a new header
-		handler.events.Header(e.Hash)
-
-		// we should propagate it to peers who are unaware of the header
-		// TODO: change broadcast to have target addresses and not exclusion
-		addresses := handler.peers.Addresses(peer.HasEntity(false, e.Hash))
-		err = handler.net.Broadcast(e, addresses...)
-		if err != nil {
-			log.Error().Err(err).Msg("could not propagate entity")
-			return
-		}
-
-		// switch the downloader to the new best path
-		path, _ := handler.headers.Path()
-		err = handler.paths.Follow(path)
-		if err != nil {
-			log.Error().Err(err).Msg("could not follow changed path")
-			return
-		}
-
-		log.Debug().Msg("header processed")
-
+		go handler.processHeader(wg, e)
 	case *types.Transaction:
-
-		e.Hash = hash
-
-		log = log.With().Str("entity_type", "transaction").Logger()
-
-		// check if we already know the transaction; if so, ignore it
-		ok := handler.transactions.Has(e.Hash)
-		if ok {
-			log.Debug().Msg("transaction already known")
-			return
-		}
-
-		// check the validity of the transaction
-		// TODO
-
-		// add the transaction to the transaction pool
-		err := handler.transactions.Add(e)
-		if err != nil {
-			log.Error().Err(err).Msg("could not add transaction")
-			return
-		}
-
-		handler.events.Transaction(e.Hash)
-
-		// create lookup to know who to exclude from broadcast
-		addresses := handler.peers.Addresses(peer.HasEntity(false, e.Hash))
-		err = handler.net.Broadcast(e, addresses...)
-		if err != nil {
-			log.Error().Err(err).Msg("could not propagate entity")
-			return
-		}
-
-		log.Debug().Msg("transaction processed")
+		go handler.processTransaction(wg, e)
 	}
 }
