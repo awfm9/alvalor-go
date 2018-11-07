@@ -29,12 +29,17 @@ type Sync struct {
 	Locators []types.Hash
 }
 
-// Request is a download request for an inventory/transaction/block.
-type Request struct {
-	Hash types.Hash
-}
-
 // Path message shares a partial path from to our best header.
 type Path struct {
 	Headers []*types.Header
+}
+
+// GetInv is a download request for an investory.
+type GetInv struct {
+	Hash types.Hash
+}
+
+// GetTx is a download request for a transaction.
+type GetTx struct {
+	Hash types.Hash
 }

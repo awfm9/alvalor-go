@@ -16,3 +16,56 @@
 // along with Alvalor.  If not, see <http://www.gnu.org/licenses/>.
 
 package message
+
+import "testing"
+
+func TestProcessStatusSuccess(t *testing.T) {
+}
+
+func TestProcessStatusBehind(t *testing.T) {
+}
+
+func TestProcessStatusSendFails(t *testing.T) {
+}
+
+func TestProcessSyncSuccess(t *testing.T) {
+}
+
+func TestProcessSyncGetFails(t *testing.T) {
+}
+
+func TestProcessSyncSendFails(t *testing.T) {
+}
+
+func TestProcessPathSuccess(t *testing.T) {
+}
+
+func TestProcessGetTxSuccess(t *testing.T) {
+}
+
+func TestProcessGetTxGetFails(t *testing.T) {
+}
+
+func TestProcessGetTxSendFails(t *testing.T) {
+}
+
+func TestProcessGetInvSuccess(t *testing.T) {
+}
+
+func TestProcessGetInvGetFails(t *testing.T) {
+}
+
+func TestProcessGetInvSendFails(t *testing.T) {
+}
+
+func TestProcessInventorySuccess(t *testing.T) {
+}
+
+func TestProcessInventoryAddFails(t *testing.T) {
+}
+
+func TestProcessInventorySignalFails(t *testing.T) {
+}
+
+func TestProcessTransactionSuccess(t *testing.T) {
+}

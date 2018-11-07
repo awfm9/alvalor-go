@@ -20,10 +20,7 @@ package message
 import (
 	"sync"
 
-	"github.com/alvalor/alvalor-go/node/inventories"
-	"github.com/alvalor/alvalor-go/node/transactions"
 	"github.com/alvalor/alvalor-go/types"
-	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
 )
 
@@ -165,37 +162,54 @@ func (handler *Handler) process(wg *sync.WaitGroup, address string, message inte
 
 		log.Debug().Msg("processed path message")
 
-	// The Request message is a request sent by peers who want to download the
-	// entity with the given hash. It can be used for inventories, transactions
-	// or blocks.
-	case *Request:
+	// The GetInv is a message sent by peers who want to download the given
+	// block inventory from us. If we have it, we send it to them.
+	// TODO: reply with not available if we don't have it
+	case *GetInv:
 
-		log = log.With().Str("msg_type", "confirm").Hex("hash", msg.Hash[:]).Logger()
+		log = log.With().Str("msg_type", "get_inv").Hex("hash", msg.Hash[:]).Logger()
 
-		// try to respond with an inventory
-		err := handler.inventory(address, msg.Hash)
-		if err == nil {
-			log.Debug().Msg("processed request message (inventory)")
-			return
-		}
-		if errors.Cause(err) != inventories.ErrNotExist {
-			log.Error().Err(err).Msg("could not check inventory store")
+		// try to get the inventory
+		inv, err := handler.inventories.Get(msg.Hash)
+		if err != nil {
+			log.Error().Err(err).Msg("could not get inventory")
 			return
 		}
 
-		// try to respond with a transaction
-		err = handler.transaction(address, msg.Hash)
-		if err == nil {
-			log.Debug().Msg("processed request message (transaction)")
-			return
-		}
-		if errors.Cause(err) != transactions.ErrNotExist {
-			log.Error().Err(err).Msg("could not check transaction pool")
+		// try to send the inventory
+		err = handler.net.Send(address, inv)
+		if err != nil {
+			log.Error().Err(err).Msg("could not send inventory")
 			return
 		}
 
-		log.Debug().Msg("processed request message (entity not found)")
+		log.Debug().Msg("processed get_inv message")
 
+	// The GetTx is a message sent by peers who want to download the given
+	// transaction from us. If we have it, we send it to them.
+	// TODO: reply with not available if we don't have it
+	case *GetTx:
+
+		log = log.With().Str("msg_type", "get_tx").Hex("hash", msg.Hash[:]).Logger()
+
+		// try to get the inventory
+		tx, err := handler.transactions.Get(msg.Hash)
+		if err != nil {
+			log.Error().Err(err).Msg("could not get transaction")
+			return
+		}
+
+		// try to send the inventory
+		err = handler.net.Send(address, tx)
+		if err != nil {
+			log.Error().Err(err).Msg("could not send transaction")
+			return
+		}
+
+		log.Debug().Msg("processed get_tx message")
+
+	// The inventory is a the template of how to reconstruct a block from messages
+	// and is used to download all necessary messages to fully validate a block.
 	case *types.Inventory:
 
 		log = log.With().Str("msg_type", "inventory").Hex("hash", msg.Hash[:]).Int("num_hashes", len(msg.Hashes)).Logger()
@@ -222,6 +236,7 @@ func (handler *Handler) process(wg *sync.WaitGroup, address string, message inte
 
 		log.Debug().Msg("processed inventory message")
 
+	// The transaction message is a message containing a transaction.
 	case *types.Transaction:
 
 		log = log.With().Str("msg_type", "transaction").Hex("hash", msg.Hash[:]).Logger()
@@ -237,28 +252,4 @@ func (handler *Handler) process(wg *sync.WaitGroup, address string, message inte
 
 		log.Debug().Msg("processed transaction message")
 	}
-}
-
-func (handler *Handler) inventory(address string, hash types.Hash) error {
-	inv, err := handler.inventories.Get(hash)
-	if errors.Cause(err) == inventories.ErrNotExist {
-		return errors.Wrap(err, "could not find inventory")
-	}
-	err = handler.net.Send(address, inv)
-	if err != nil {
-		return errors.Wrap(err, "could not send inventory")
-	}
-	return nil
-}
-
-func (handler *Handler) transaction(address string, hash types.Hash) error {
-	tx, err := handler.transactions.Get(hash)
-	if errors.Cause(err) == transactions.ErrNotExist {
-		return errors.Wrap(err, "could not find transaction")
-	}
-	err = handler.net.Send(address, tx)
-	if err != nil {
-		return errors.Wrap(err, "could not send transaction")
-	}
-	return nil
 }
