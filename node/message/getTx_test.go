@@ -17,13 +17,118 @@
 
 package message
 
-import "testing"
+import (
+	"errors"
+	"io/ioutil"
+	"sync"
+	"testing"
+
+	"github.com/alvalor/alvalor-go/types"
+	"github.com/rs/zerolog"
+	"github.com/stretchr/testify/mock"
+)
 
 func TestProcessGetTxSuccess(t *testing.T) {
+
+	// initialize parameters
+	address := "192.0.2.1"
+	hash := types.Hash{0x1}
+
+	// initialize entities
+	wg := &sync.WaitGroup{}
+	msg := &GetTx{Hash: hash}
+	tx := &types.Transaction{Nonce: 1}
+
+	// initialize mocks
+	transactions := &TransactionsMock{}
+	net := &NetworkMock{}
+
+	// initialize handler
+	handler := &Handler{
+		log:          zerolog.New(ioutil.Discard),
+		transactions: transactions,
+		net:          net,
+	}
+
+	// program mocks
+	transactions.On("Get", mock.Anything).Return(tx, nil)
+	net.On("Send", mock.Anything, mock.Anything).Return(nil)
+
+	// execute process
+	handler.Process(wg, address, msg)
+	wg.Wait()
+
+	// check conditions
+	transactions.AssertCalled(t, "Get", hash)
+	net.AssertCalled(t, "Send", address, tx)
 }
 
 func TestProcessGetTxGetFails(t *testing.T) {
+
+	// initialize parameters
+	address := "192.0.2.1"
+	hash := types.Hash{0x1}
+
+	// initialize entities
+	wg := &sync.WaitGroup{}
+	msg := &GetTx{Hash: hash}
+	tx := &types.Transaction{Nonce: 1}
+
+	// initialize mocks
+	transactions := &TransactionsMock{}
+	net := &NetworkMock{}
+
+	// initialize handler
+	handler := &Handler{
+		log:          zerolog.New(ioutil.Discard),
+		transactions: transactions,
+		net:          net,
+	}
+
+	// program mocks
+	transactions.On("Get", mock.Anything).Return(tx, errors.New(""))
+	net.On("Send", mock.Anything, mock.Anything).Return(nil)
+
+	// execute process
+	handler.Process(wg, address, msg)
+	wg.Wait()
+
+	// check conditions
+	transactions.AssertCalled(t, "Get", hash)
+	net.AssertNotCalled(t, "Send")
 }
 
 func TestProcessGetTxSendFails(t *testing.T) {
+
+	// initialize parameters
+	address := "192.0.2.1"
+	hash := types.Hash{0x1}
+
+	// initialize entities
+	wg := &sync.WaitGroup{}
+	msg := &GetTx{Hash: hash}
+	tx := &types.Transaction{Nonce: 1}
+
+	// initialize mocks
+	transactions := &TransactionsMock{}
+	net := &NetworkMock{}
+
+	// initialize handler
+	handler := &Handler{
+		log:          zerolog.New(ioutil.Discard),
+		transactions: transactions,
+		net:          net,
+	}
+
+	// program mocks
+	transactions.On("Get", mock.Anything).Return(tx, nil)
+	net.On("Send", mock.Anything, mock.Anything).Return(errors.New(""))
+
+	// execute process
+	handler.Process(wg, address, msg)
+	wg.Wait()
+
+	// check conditions
+	transactions.AssertCalled(t, "Get", hash)
+	net.AssertCalled(t, "Send", address, tx)
 }

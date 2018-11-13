@@ -72,6 +72,7 @@ func TestProcessGetInvGetFails(t *testing.T) {
 	// initialize entities
 	wg := &sync.WaitGroup{}
 	msg := &GetInv{Hash: hash}
+	inv := &types.Inventory{Hash: hash}
 
 	// initialize mocks
 	inventories := &InventoriesMock{}
@@ -85,7 +86,7 @@ func TestProcessGetInvGetFails(t *testing.T) {
 	}
 
 	// program mocks
-	inventories.On("Get", mock.Anything).Return(nil, errors.New(""))
+	inventories.On("Get", mock.Anything).Return(inv, errors.New(""))
 	net.On("Send", mock.Anything, mock.Anything).Return(nil)
 
 	// execute process
