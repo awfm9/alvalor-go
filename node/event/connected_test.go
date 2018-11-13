@@ -64,10 +64,18 @@ func TestProcessConnectedSuccess(t *testing.T) {
 	handler.Process(wg, event)
 	wg.Wait()
 
-	// assert conditions
-	peers.AssertCalled(t, "Active", address)
-	headers.AssertCalled(t, "Path")
-	net.AssertCalled(t, "Send", address, status)
+	// check conditions
+	if peers.AssertNumberOfCalls(t, "Active", 1) {
+		peers.AssertCalled(t, "Active", address)
+	}
+
+	if headers.AssertNumberOfCalls(t, "Path", 1) {
+		headers.AssertCalled(t, "Path")
+	}
+
+	if net.AssertNumberOfCalls(t, "Send", 1) {
+		net.AssertCalled(t, "Send", address, status)
+	}
 }
 
 func TestProcessConnectedSendFails(t *testing.T) {
@@ -105,8 +113,16 @@ func TestProcessConnectedSendFails(t *testing.T) {
 	handler.Process(wg, event)
 	wg.Wait()
 
-	// assert conditions
-	peers.AssertCalled(t, "Active", address)
-	headers.AssertCalled(t, "Path")
-	net.AssertCalled(t, "Send", address, status)
+	// check conditions
+	if peers.AssertNumberOfCalls(t, "Active", 1) {
+		peers.AssertCalled(t, "Active", address)
+	}
+
+	if headers.AssertNumberOfCalls(t, "Path", 1) {
+		headers.AssertCalled(t, "Path")
+	}
+
+	if net.AssertNumberOfCalls(t, "Send", 1) {
+		net.AssertCalled(t, "Send", address, status)
+	}
 }

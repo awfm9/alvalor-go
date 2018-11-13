@@ -59,5 +59,7 @@ func TestProcessDisconnectedSuccess(t *testing.T) {
 	wg.Wait()
 
 	// assert conditions
-	peers.AssertCalled(t, "Inactive", address)
+	if peers.AssertNumberOfCalls(t, "Inactive", 1) {
+		peers.AssertCalled(t, "Inactive", address)
+	}
 }
