@@ -17,7 +17,43 @@
 
 package message
 
-import "testing"
+import (
+	"sync"
+	"testing"
+
+	"github.com/alvalor/alvalor-go/types"
+	"github.com/stretchr/testify/mock"
+)
 
 func TestProcessPathSuccess(t *testing.T) {
+
+	// initialize parameters
+	address := "192.0.2.1"
+
+	// initialize entities
+	wg := &sync.WaitGroup{}
+	header1 := &types.Header{Nonce: 1}
+	header2 := &types.Header{Nonce: 2}
+	msg := &Path{Headers: []*types.Header{header1, header2}}
+
+	// initialize mocks
+	entity := &EntityMock{}
+
+	// initialize handler
+	handler := &Handler{
+		entity: entity,
+	}
+
+	// program mocks
+	entity.On("Process", mock.Anything, mock.Anything)
+
+	// execute process
+	handler.Process(wg, address, msg)
+	wg.Wait()
+
+	// check conditions
+	if entity.AssertNumberOfCalls(t, "Process", 2) {
+		entity.AssertCalled(t, "Process", wg, header1)
+		entity.AssertCalled(t, "Process", wg, header2)
+	}
 }
