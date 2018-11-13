@@ -76,13 +76,21 @@ func TestHeaderKnown(t *testing.T) {
 	wg.Wait()
 
 	// check conditions
-	headers.AssertCalled(t, "Has", hash)
-	headers.AssertNotCalled(t, "Add", mock.Anything)
-	events.AssertNotCalled(t, "Header", mock.Anything)
-	peers.AssertNotCalled(t, "Addresses", mock.Anything)
-	net.AssertNotCalled(t, "Broadcast", mock.Anything, mock.Anything)
-	headers.AssertNotCalled(t, "Path")
-	paths.AssertNotCalled(t, "Follow", mock.Anything)
+	if headers.AssertNumberOfCalls(t, "Has", 1) {
+		headers.AssertCalled(t, "Has", hash)
+	}
+
+	headers.AssertNumberOfCalls(t, "Add", 0)
+
+	events.AssertNumberOfCalls(t, "Header", 0)
+
+	peers.AssertNumberOfCalls(t, "Addresses", 0)
+
+	net.AssertNumberOfCalls(t, "Broadcast", 0)
+
+	headers.AssertNumberOfCalls(t, "Path", 0)
+
+	paths.AssertNumberOfCalls(t, "Follow", 0)
 }
 
 func TestHeaderAddFails(t *testing.T) {
@@ -133,13 +141,23 @@ func TestHeaderAddFails(t *testing.T) {
 	wg.Wait()
 
 	// check conditions
-	headers.AssertCalled(t, "Has", hash)
-	headers.AssertCalled(t, "Add", entity)
-	events.AssertNotCalled(t, "Header", mock.Anything)
-	peers.AssertNotCalled(t, "Addresses", mock.Anything)
-	net.AssertNotCalled(t, "Broadcast", mock.Anything, mock.Anything)
-	headers.AssertNotCalled(t, "Path")
-	paths.AssertNotCalled(t, "Follow", mock.Anything)
+	if headers.AssertNumberOfCalls(t, "Has", 1) {
+		headers.AssertCalled(t, "Has", hash)
+	}
+
+	if headers.AssertNumberOfCalls(t, "Add", 1) {
+		headers.AssertCalled(t, "Add", entity)
+	}
+
+	events.AssertNumberOfCalls(t, "Header", 0)
+
+	peers.AssertNumberOfCalls(t, "Addresses", 0)
+
+	net.AssertNumberOfCalls(t, "Broadcast", 0)
+
+	headers.AssertNumberOfCalls(t, "Path", 0)
+
+	paths.AssertNumberOfCalls(t, "Follow", 0)
 }
 
 func TestHeaderBroadcastFails(t *testing.T) {
@@ -190,13 +208,29 @@ func TestHeaderBroadcastFails(t *testing.T) {
 	wg.Wait()
 
 	// check conditions
-	headers.AssertCalled(t, "Has", hash)
-	headers.AssertCalled(t, "Add", entity)
-	events.AssertCalled(t, "Header", hash)
-	peers.AssertCalled(t, "Addresses", mock.Anything)
-	net.AssertCalled(t, "Broadcast", entity, addresses)
-	headers.AssertNotCalled(t, "Path")
-	paths.AssertNotCalled(t, "Follow", mock.Anything)
+	if headers.AssertNumberOfCalls(t, "Has", 1) {
+		headers.AssertCalled(t, "Has", hash)
+	}
+
+	if headers.AssertNumberOfCalls(t, "Add", 1) {
+		headers.AssertCalled(t, "Add", entity)
+	}
+
+	if events.AssertNumberOfCalls(t, "Header", 1) {
+		events.AssertCalled(t, "Header", hash)
+	}
+
+	if peers.AssertNumberOfCalls(t, "Addresses", 1) {
+		peers.AssertCalled(t, "Addresses", mock.Anything)
+	}
+
+	if net.AssertNumberOfCalls(t, "Broadcast", 1) {
+		net.AssertCalled(t, "Broadcast", entity, addresses)
+	}
+
+	headers.AssertNumberOfCalls(t, "Path", 0)
+
+	paths.AssertNumberOfCalls(t, "Follow", 0)
 }
 
 func TestHeaderFollowFails(t *testing.T) {
@@ -247,13 +281,33 @@ func TestHeaderFollowFails(t *testing.T) {
 	wg.Wait()
 
 	// check conditions
-	headers.AssertCalled(t, "Has", hash)
-	headers.AssertCalled(t, "Add", entity)
-	events.AssertCalled(t, "Header", hash)
-	peers.AssertCalled(t, "Addresses", mock.Anything)
-	net.AssertCalled(t, "Broadcast", entity, addresses)
-	headers.AssertCalled(t, "Path")
-	paths.AssertCalled(t, "Follow", path)
+	if headers.AssertNumberOfCalls(t, "Has", 1) {
+		headers.AssertCalled(t, "Has", hash)
+	}
+
+	if headers.AssertNumberOfCalls(t, "Add", 1) {
+		headers.AssertCalled(t, "Add", entity)
+	}
+
+	if events.AssertNumberOfCalls(t, "Header", 1) {
+		events.AssertCalled(t, "Header", hash)
+	}
+
+	if peers.AssertNumberOfCalls(t, "Addresses", 1) {
+		peers.AssertCalled(t, "Addresses", mock.Anything)
+	}
+
+	if net.AssertNumberOfCalls(t, "Broadcast", 1) {
+		net.AssertCalled(t, "Broadcast", entity, addresses)
+	}
+
+	if headers.AssertNumberOfCalls(t, "Path", 1) {
+		headers.AssertCalled(t, "Path")
+	}
+
+	if paths.AssertNumberOfCalls(t, "Follow", 1) {
+		paths.AssertCalled(t, "Follow", path)
+	}
 }
 
 func TestHeaderSuccess(t *testing.T) {
@@ -304,11 +358,31 @@ func TestHeaderSuccess(t *testing.T) {
 	wg.Wait()
 
 	// check conditions
-	headers.AssertCalled(t, "Has", hash)
-	headers.AssertCalled(t, "Add", entity)
-	events.AssertCalled(t, "Header", hash)
-	peers.AssertCalled(t, "Addresses", mock.Anything)
-	net.AssertCalled(t, "Broadcast", entity, addresses)
-	headers.AssertCalled(t, "Path")
-	paths.AssertCalled(t, "Follow", path)
+	if headers.AssertNumberOfCalls(t, "Has", 1) {
+		headers.AssertCalled(t, "Has", hash)
+	}
+
+	if headers.AssertNumberOfCalls(t, "Add", 1) {
+		headers.AssertCalled(t, "Add", entity)
+	}
+
+	if events.AssertNumberOfCalls(t, "Header", 1) {
+		events.AssertCalled(t, "Header", hash)
+	}
+
+	if peers.AssertNumberOfCalls(t, "Addresses", 1) {
+		peers.AssertCalled(t, "Addresses", mock.Anything)
+	}
+
+	if net.AssertNumberOfCalls(t, "Broadcast", 1) {
+		net.AssertCalled(t, "Broadcast", entity, addresses)
+	}
+
+	if headers.AssertNumberOfCalls(t, "Path", 1) {
+		headers.AssertCalled(t, "Path")
+	}
+
+	if paths.AssertNumberOfCalls(t, "Follow", 1) {
+		paths.AssertCalled(t, "Follow", path)
+	}
 }
