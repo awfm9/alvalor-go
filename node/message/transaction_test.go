@@ -29,11 +29,11 @@ func TestProcessTransactionSuccess(t *testing.T) {
 
 	// initialize parameters
 	address := "192.0.2.1"
+	hash := types.Hash{0x1}
 
 	// initialize entities
 	wg := &sync.WaitGroup{}
-	msg := &types.Transaction{Nonce: 1}
-	msg.GetHash()
+	msg := &types.Transaction{Hash: hash}
 
 	// initialize mocks
 	downloads := &DownloadsMock{}
@@ -58,12 +58,14 @@ func TestProcessTransactionSuccess(t *testing.T) {
 
 	// check conditions
 	if downloads.AssertNumberOfCalls(t, "Cancel", 1) {
-		downloads.AssertCalled(t, "Cancel", msg.Hash)
+		downloads.AssertCalled(t, "Cancel", hash)
 	}
 
 	if peers.AssertNumberOfCalls(t, "Received", 1) {
+		peers.AssertCalled(t, "Received", address, hash)
 	}
 
 	if entity.AssertNumberOfCalls(t, "Process", 1) {
+		entity.AssertCalled(t, "Process", wg, msg)
 	}
 }
