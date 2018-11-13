@@ -17,13 +17,134 @@
 
 package message
 
-import "testing"
+import (
+	"errors"
+	"sync"
+	"testing"
+
+	"github.com/alvalor/alvalor-go/types"
+	"github.com/stretchr/testify/mock"
+)
 
 func TestProcessStatusSuccess(t *testing.T) {
+
+	// initialize parameters
+	address := "192.0.2.1"
+	distance1 := 10
+	distance2 := 20
+	hash1 := types.Hash{0x1}
+	hash2 := types.Hash{0x2}
+	hash3 := types.Hash{0x3}
+
+	// initialize entities
+	wg := &sync.WaitGroup{}
+	msg := &Status{Distance: uint64(distance2)}
+	path := []types.Hash{hash1, hash2, hash3}
+	sync := &Sync{Locators: []types.Hash{hash1, hash2, hash3}}
+
+	// initialize mocks
+	headers := &HeadersMock{}
+	net := &NetworkMock{}
+
+	// initialize handler
+	handler := &Handler{
+		headers: headers,
+		net:     net,
+	}
+
+	// program mocks
+	headers.On("Path").Return(path, distance1)
+	net.On("Send", mock.Anything, mock.Anything).Return(nil)
+
+	// execute process
+	handler.Process(wg, address, msg)
+	wg.Wait()
+
+	// check conditions
+	headers.AssertNumberOfCalls(t, "Path", 1)
+
+	if net.AssertNumberOfCalls(t, "Send", 1) {
+		net.AssertCalled(t, "Send", address, sync)
+	}
 }
 
 func TestProcessStatusBehind(t *testing.T) {
+
+	// initialize parameters
+	address := "192.0.2.1"
+	distance1 := 10
+	distance2 := 00
+	hash1 := types.Hash{0x1}
+	hash2 := types.Hash{0x2}
+	hash3 := types.Hash{0x3}
+
+	// initialize entities
+	wg := &sync.WaitGroup{}
+	msg := &Status{Distance: uint64(distance2)}
+	path := []types.Hash{hash1, hash2, hash3}
+
+	// initialize mocks
+	headers := &HeadersMock{}
+	net := &NetworkMock{}
+
+	// initialize handler
+	handler := &Handler{
+		headers: headers,
+		net:     net,
+	}
+
+	// program mocks
+	headers.On("Path").Return(path, distance1)
+	net.On("Send", mock.Anything, mock.Anything).Return(nil)
+
+	// execute process
+	handler.Process(wg, address, msg)
+	wg.Wait()
+
+	// check conditions
+	headers.AssertNumberOfCalls(t, "Path", 1)
+
+	net.AssertNumberOfCalls(t, "Send", 0)
 }
 
 func TestProcessStatusSendFails(t *testing.T) {
+
+	// initialize parameters
+	address := "192.0.2.1"
+	distance1 := 10
+	distance2 := 20
+	hash1 := types.Hash{0x1}
+	hash2 := types.Hash{0x2}
+	hash3 := types.Hash{0x3}
+
+	// initialize entities
+	wg := &sync.WaitGroup{}
+	msg := &Status{Distance: uint64(distance2)}
+	path := []types.Hash{hash1, hash2, hash3}
+	sync := &Sync{Locators: []types.Hash{hash1, hash2, hash3}}
+
+	// initialize mocks
+	headers := &HeadersMock{}
+	net := &NetworkMock{}
+
+	// initialize handler
+	handler := &Handler{
+		headers: headers,
+		net:     net,
+	}
+
+	// program mocks
+	headers.On("Path").Return(path, distance1)
+	net.On("Send", mock.Anything, mock.Anything).Return(errors.New(""))
+
+	// execute process
+	handler.Process(wg, address, msg)
+	wg.Wait()
+
+	// check conditions
+	headers.AssertNumberOfCalls(t, "Path", 1)
+
+	if net.AssertNumberOfCalls(t, "Send", 1) {
+		net.AssertCalled(t, "Send", address, sync)
+	}
 }
