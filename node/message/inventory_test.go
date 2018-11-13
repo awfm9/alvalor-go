@@ -64,10 +64,21 @@ func TestProcessInventorySuccess(t *testing.T) {
 	wg.Wait()
 
 	// check conditions
-	downloads.AssertCalled(t, "Cancel", hash)
-	peers.AssertCalled(t, "Received", address, hash)
-	inventories.AssertCalled(t, "Add", msg)
-	paths.AssertCalled(t, "Signal", hash)
+	if downloads.AssertNumberOfCalls(t, "Cancel", 1) {
+		downloads.AssertCalled(t, "Cancel", hash)
+	}
+
+	if peers.AssertNumberOfCalls(t, "Received", 1) {
+		peers.AssertCalled(t, "Received", address, hash)
+	}
+
+	if inventories.AssertNumberOfCalls(t, "Add", 1) {
+		inventories.AssertCalled(t, "Add", msg)
+	}
+
+	if paths.AssertNumberOfCalls(t, "Signal", 1) {
+		paths.AssertCalled(t, "Signal", hash)
+	}
 }
 
 func TestProcessInventoryAddFails(t *testing.T) {
@@ -106,10 +117,19 @@ func TestProcessInventoryAddFails(t *testing.T) {
 	wg.Wait()
 
 	// check conditions
-	downloads.AssertCalled(t, "Cancel", hash)
-	peers.AssertCalled(t, "Received", address, hash)
-	inventories.AssertCalled(t, "Add", msg)
-	paths.AssertNotCalled(t, "Signal")
+	if downloads.AssertNumberOfCalls(t, "Cancel", 1) {
+		downloads.AssertCalled(t, "Cancel", hash)
+	}
+
+	if peers.AssertNumberOfCalls(t, "Received", 1) {
+		peers.AssertCalled(t, "Received", address, hash)
+	}
+
+	if inventories.AssertNumberOfCalls(t, "Add", 1) {
+		inventories.AssertCalled(t, "Add", msg)
+	}
+
+	paths.AssertNumberOfCalls(t, "Signal", 0)
 }
 
 func TestProcessInventorySignalFails(t *testing.T) {
@@ -148,8 +168,19 @@ func TestProcessInventorySignalFails(t *testing.T) {
 	wg.Wait()
 
 	// check conditions
-	downloads.AssertCalled(t, "Cancel", hash)
-	peers.AssertCalled(t, "Received", address, hash)
-	inventories.AssertCalled(t, "Add", msg)
-	paths.AssertCalled(t, "Signal", hash)
+	if downloads.AssertNumberOfCalls(t, "Cancel", 1) {
+		downloads.AssertCalled(t, "Cancel", hash)
+	}
+
+	if peers.AssertNumberOfCalls(t, "Received", 1) {
+		peers.AssertCalled(t, "Received", address, hash)
+	}
+
+	if inventories.AssertNumberOfCalls(t, "Add", 1) {
+		inventories.AssertCalled(t, "Add", msg)
+	}
+
+	if paths.AssertNumberOfCalls(t, "Signal", 1) {
+		paths.AssertCalled(t, "Signal", hash)
+	}
 }

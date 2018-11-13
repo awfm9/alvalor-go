@@ -59,8 +59,13 @@ func TestProcessGetTxSuccess(t *testing.T) {
 	wg.Wait()
 
 	// check conditions
-	transactions.AssertCalled(t, "Get", hash)
-	net.AssertCalled(t, "Send", address, tx)
+	if transactions.AssertNumberOfCalls(t, "Get", 1) {
+		transactions.AssertCalled(t, "Get", hash)
+	}
+
+	if net.AssertNumberOfCalls(t, "Send", 1) {
+		net.AssertCalled(t, "Send", address, tx)
+	}
 }
 
 func TestProcessGetTxGetFails(t *testing.T) {
@@ -94,8 +99,11 @@ func TestProcessGetTxGetFails(t *testing.T) {
 	wg.Wait()
 
 	// check conditions
-	transactions.AssertCalled(t, "Get", hash)
-	net.AssertNotCalled(t, "Send")
+	if transactions.AssertNumberOfCalls(t, "Get", 1) {
+		transactions.AssertCalled(t, "Get", hash)
+	}
+
+	net.AssertNumberOfCalls(t, "Send", 0)
 }
 
 func TestProcessGetTxSendFails(t *testing.T) {
@@ -129,6 +137,11 @@ func TestProcessGetTxSendFails(t *testing.T) {
 	wg.Wait()
 
 	// check conditions
-	transactions.AssertCalled(t, "Get", hash)
-	net.AssertCalled(t, "Send", address, tx)
+	if transactions.AssertNumberOfCalls(t, "Get", 1) {
+		transactions.AssertCalled(t, "Get", hash)
+	}
+
+	if net.AssertNumberOfCalls(t, "Send", 1) {
+		net.AssertCalled(t, "Send", address, tx)
+	}
 }

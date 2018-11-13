@@ -59,8 +59,13 @@ func TestProcessGetInvSuccess(t *testing.T) {
 	wg.Wait()
 
 	// check conditions
-	inventories.AssertCalled(t, "Get", hash)
-	net.AssertCalled(t, "Send", address, inv)
+	if inventories.AssertNumberOfCalls(t, "Get", 1) {
+		inventories.AssertCalled(t, "Get", hash)
+	}
+
+	if net.AssertNumberOfCalls(t, "Send", 1) {
+		net.AssertCalled(t, "Send", address, inv)
+	}
 }
 
 func TestProcessGetInvGetFails(t *testing.T) {
@@ -94,8 +99,11 @@ func TestProcessGetInvGetFails(t *testing.T) {
 	wg.Wait()
 
 	// check conditions
-	inventories.AssertCalled(t, "Get", hash)
-	net.AssertNotCalled(t, "Send")
+	if inventories.AssertNumberOfCalls(t, "Get", 1) {
+		inventories.AssertCalled(t, "Get", hash)
+	}
+
+	net.AssertNumberOfCalls(t, "Send", 0)
 }
 
 func TestProcessGetInvSendFails(t *testing.T) {
@@ -129,6 +137,11 @@ func TestProcessGetInvSendFails(t *testing.T) {
 	wg.Wait()
 
 	// check conditions
-	inventories.AssertCalled(t, "Get", hash)
-	net.AssertCalled(t, "Send", address, inv)
+	if inventories.AssertNumberOfCalls(t, "Get", 1) {
+		inventories.AssertCalled(t, "Get", hash)
+	}
+
+	if net.AssertNumberOfCalls(t, "Send", 1) {
+		net.AssertCalled(t, "Send", address, inv)
+	}
 }
