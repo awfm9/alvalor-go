@@ -34,13 +34,12 @@ func TestProcessStatusSuccess(t *testing.T) {
 	distance2 := 20
 	hash1 := types.Hash{0x1}
 	hash2 := types.Hash{0x2}
-	hash3 := types.Hash{0x3}
 
 	// initialize entities
 	wg := &sync.WaitGroup{}
 	msg := &Status{Distance: uint64(distance2)}
-	path := []types.Hash{hash1, hash2, hash3}
-	sync := &Sync{Locators: []types.Hash{hash1, hash2, hash3}}
+	path := []types.Hash{hash1, hash2}
+	sync := &Sync{Locators: []types.Hash{hash1, hash2}}
 
 	// initialize mocks
 	headers := &HeadersMock{}
@@ -76,12 +75,11 @@ func TestProcessStatusBehind(t *testing.T) {
 	distance2 := 00
 	hash1 := types.Hash{0x1}
 	hash2 := types.Hash{0x2}
-	hash3 := types.Hash{0x3}
 
 	// initialize entities
 	wg := &sync.WaitGroup{}
 	msg := &Status{Distance: uint64(distance2)}
-	path := []types.Hash{hash1, hash2, hash3}
+	path := []types.Hash{hash1, hash2}
 
 	// initialize mocks
 	headers := &HeadersMock{}
@@ -115,13 +113,12 @@ func TestProcessStatusSendFails(t *testing.T) {
 	distance2 := 20
 	hash1 := types.Hash{0x1}
 	hash2 := types.Hash{0x2}
-	hash3 := types.Hash{0x3}
 
 	// initialize entities
 	wg := &sync.WaitGroup{}
 	msg := &Status{Distance: uint64(distance2)}
-	path := []types.Hash{hash1, hash2, hash3}
-	sync := &Sync{Locators: []types.Hash{hash1, hash2, hash3}}
+	path := []types.Hash{hash1, hash2}
+	sync := &Sync{Locators: []types.Hash{hash1, hash2}}
 
 	// initialize mocks
 	headers := &HeadersMock{}
