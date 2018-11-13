@@ -17,7 +17,10 @@
 
 package message
 
-import "github.com/stretchr/testify/mock"
+import (
+	"github.com/alvalor/alvalor-go/types"
+	"github.com/stretchr/testify/mock"
+)
 
 // PeersMock mocks the peer state interface.
 type PeersMock struct {
@@ -25,6 +28,6 @@ type PeersMock struct {
 }
 
 // Active mocks the received function of the peer state interface.
-func (pm *PeersMock) Received(address string) {
-	pm.Called(address)
+func (pm *PeersMock) Received(address string, hash types.Hash) {
+	pm.Called(address, hash)
 }

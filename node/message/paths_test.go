@@ -28,6 +28,7 @@ type PathsMock struct {
 }
 
 // Signal mocks the signal function of the pathfinder helper interface.
-func (pm *PathsMock) Signal(hash types.Hash) {
-	pm.Called(hash)
+func (pm *PathsMock) Signal(hash types.Hash) error {
+	args := pm.Called(hash)
+	return args.Error(0)
 }
