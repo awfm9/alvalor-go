@@ -91,7 +91,7 @@ func (mgr *Manager) Start(hash types.Hash) error {
 	}
 
 	// send the request to the given peer
-	msg := &message.Request{Hash: hash}
+	msg := &message.GetInv{Hash: hash}
 	err := mgr.net.Send(address, msg)
 	if err != nil {
 		return errors.Wrap(err, "could not send inventory request")

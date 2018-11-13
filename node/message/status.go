@@ -54,6 +54,7 @@ func (handler *Handler) processStatus(wg *sync.WaitGroup, address string, status
 
 	// collect headers from the top of our longest path backwards
 	// use increasing distance after first 8, finish with root (genesis)
+	// TODO: move out and do separate testing for this algorithm
 	var locators []types.Hash
 	index := 0
 	step := 1

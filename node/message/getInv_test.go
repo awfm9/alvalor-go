@@ -17,13 +17,131 @@
 
 package message
 
-import "testing"
+import (
+	"errors"
+	"io/ioutil"
+	"sync"
+	"testing"
+
+	"github.com/alvalor/alvalor-go/types"
+	"github.com/rs/zerolog"
+	"github.com/stretchr/testify/mock"
+)
 
 func TestProcessGetInvSuccess(t *testing.T) {
+
+	// initialize parameters
+	address := "192.0.2.1"
+	hash := types.Hash{0x1}
+
+	// initialize entities
+	wg := &sync.WaitGroup{}
+	msg := &GetInv{Hash: hash}
+	inv := &types.Inventory{Hash: hash}
+
+	// initialize mocks
+	inventories := &InventoriesMock{}
+	net := &NetworkMock{}
+
+	// initialize handler
+	handler := &Handler{
+		log:         zerolog.New(ioutil.Discard),
+		inventories: inventories,
+		net:         net,
+	}
+
+	// program mocks
+	inventories.On("Get", mock.Anything).Return(inv, nil)
+	net.On("Send", mock.Anything, mock.Anything).Return(nil)
+
+	// execute process
+	handler.Process(wg, address, msg)
+	wg.Wait()
+
+	// check conditions
+	if inventories.AssertNumberOfCalls(t, "Get", 1) {
+		inventories.AssertCalled(t, "Get", hash)
+	}
+
+	if net.AssertNumberOfCalls(t, "Send", 1) {
+		net.AssertCalled(t, "Send", address, inv)
+	}
 }
 
 func TestProcessGetInvGetFails(t *testing.T) {
+
+	// initialize parameters
+	address := "192.0.2.1"
+	hash := types.Hash{0x1}
+
+	// initialize entities
+	wg := &sync.WaitGroup{}
+	msg := &GetInv{Hash: hash}
+	inv := &types.Inventory{Hash: hash}
+
+	// initialize mocks
+	inventories := &InventoriesMock{}
+	net := &NetworkMock{}
+
+	// initialize handler
+	handler := &Handler{
+		log:         zerolog.New(ioutil.Discard),
+		inventories: inventories,
+		net:         net,
+	}
+
+	// program mocks
+	inventories.On("Get", mock.Anything).Return(inv, errors.New(""))
+	net.On("Send", mock.Anything, mock.Anything).Return(nil)
+
+	// execute process
+	handler.Process(wg, address, msg)
+	wg.Wait()
+
+	// check conditions
+	if inventories.AssertNumberOfCalls(t, "Get", 1) {
+		inventories.AssertCalled(t, "Get", hash)
+	}
+
+	net.AssertNumberOfCalls(t, "Send", 0)
 }
 
 func TestProcessGetInvSendFails(t *testing.T) {
+
+	// initialize parameters
+	address := "192.0.2.1"
+	hash := types.Hash{0x1}
+
+	// initialize entities
+	wg := &sync.WaitGroup{}
+	msg := &GetInv{Hash: hash}
+	inv := &types.Inventory{Hash: hash}
+
+	// initialize mocks
+	inventories := &InventoriesMock{}
+	net := &NetworkMock{}
+
+	// initialize handler
+	handler := &Handler{
+		log:         zerolog.New(ioutil.Discard),
+		inventories: inventories,
+		net:         net,
+	}
+
+	// program mocks
+	inventories.On("Get", mock.Anything).Return(inv, nil)
+	net.On("Send", mock.Anything, mock.Anything).Return(errors.New(""))
+
+	// execute process
+	handler.Process(wg, address, msg)
+	wg.Wait()
+
+	// check conditions
+	if inventories.AssertNumberOfCalls(t, "Get", 1) {
+		inventories.AssertCalled(t, "Get", hash)
+	}
+
+	if net.AssertNumberOfCalls(t, "Send", 1) {
+		net.AssertCalled(t, "Send", address, inv)
+	}
 }

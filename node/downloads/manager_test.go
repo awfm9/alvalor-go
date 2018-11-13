@@ -54,7 +54,7 @@ func TestManagerStartValid(t *testing.T) {
 
 	// initialize entities
 	addresses := []string{address1, address2}
-	request := &message.Request{Hash: hash1}
+	request := &message.GetInv{Hash: hash1}
 
 	// initialize mocks
 	net := &NetworkMock{}
@@ -80,7 +80,11 @@ func TestManagerStartValid(t *testing.T) {
 
 	// assert conditions
 	assert.Nil(t, err)
-	net.AssertCalled(t, "Send", address1, request)
+
+	if net.AssertNumberOfCalls(t, "Send", 1) {
+		net.AssertCalled(t, "Send", address1, request)
+	}
+
 	if assert.Contains(t, mgr.pending, hash1) {
 		assert.Equal(t, address1, mgr.pending[hash1])
 	}
@@ -124,7 +128,8 @@ func TestManagerStartExisting(t *testing.T) {
 
 	// assert conditions
 	assert.NotNil(t, err)
-	net.AssertNotCalled(t, "Send", mock.Anything, mock.Anything)
+
+	net.AssertNumberOfCalls(t, "Send", 0)
 }
 
 func TestManagerStartNoPeers(t *testing.T) {
@@ -133,12 +138,10 @@ func TestManagerStartNoPeers(t *testing.T) {
 	hash1 := types.Hash{0x1}
 	hash2 := types.Hash{0x2}
 	hash3 := types.Hash{0x3}
-	address1 := "192.0.2.1"
 	address2 := "192.0.2.2"
 	address3 := "192.0.2.3"
 
 	// initialize entities
-	request := &message.Request{Hash: hash1}
 
 	// initialize mocks
 	net := &NetworkMock{}
@@ -164,7 +167,9 @@ func TestManagerStartNoPeers(t *testing.T) {
 
 	// assert conditions
 	assert.NotNil(t, err)
-	net.AssertNotCalled(t, "Send", address1, request)
+
+	net.AssertNumberOfCalls(t, "Send", 0)
+
 	assert.NotContains(t, mgr.pending, hash1)
 }
 
@@ -180,7 +185,7 @@ func TestManagerStartSendFails(t *testing.T) {
 
 	// initialize entities
 	addresses := []string{address1, address2, address3}
-	request := &message.Request{Hash: hash1}
+	request := &message.GetInv{Hash: hash1}
 
 	// initialize mocks
 	net := &NetworkMock{}
@@ -206,7 +211,11 @@ func TestManagerStartSendFails(t *testing.T) {
 
 	// assert conditions
 	assert.NotNil(t, err)
-	net.AssertCalled(t, "Send", address1, request)
+
+	if net.AssertNumberOfCalls(t, "Send", 1) {
+		net.AssertCalled(t, "Send", address1, request)
+	}
+
 	assert.NotContains(t, mgr.pending, hash1)
 }
 
@@ -235,6 +244,7 @@ func TestDownloadCancelValid(t *testing.T) {
 
 	// check conditions
 	assert.Nil(t, err)
+
 	assert.NotContains(t, mgr.pending, hash)
 }
 

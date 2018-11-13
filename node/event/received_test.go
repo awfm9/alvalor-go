@@ -63,5 +63,7 @@ func TestProcessReceivedSuccess(t *testing.T) {
 	wg.Wait()
 
 	// assert conditions
-	message.AssertCalled(t, "Process", wg, address, msg)
+	if message.AssertNumberOfCalls(t, "Process", 1) {
+		message.AssertCalled(t, "Process", wg, address, msg)
+	}
 }

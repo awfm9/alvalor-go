@@ -73,6 +73,12 @@ func (handler *Handler) processSync(wg *sync.WaitGroup, address string, sync *Sy
 		hdrs = append(hdrs, header)
 	}
 
+	// if we have no headers, don't send a message
+	if len(hdrs) == 0 {
+		log.Debug().Msg("no headers to send")
+		return
+	}
+
 	// send the partial path to our best distance to the other node
 	p := &Path{
 		Headers: hdrs,

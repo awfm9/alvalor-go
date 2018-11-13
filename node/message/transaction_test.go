@@ -17,7 +17,53 @@
 
 package message
 
-import "testing"
+import (
+	"sync"
+	"testing"
+
+	"github.com/alvalor/alvalor-go/types"
+	"github.com/stretchr/testify/mock"
+)
 
 func TestProcessTransactionSuccess(t *testing.T) {
+
+	// initialize parameters
+	address := "192.0.2.1"
+
+	// initialize entities
+	wg := &sync.WaitGroup{}
+	msg := &types.Transaction{Nonce: 1}
+	msg.GetHash()
+
+	// initialize mocks
+	downloads := &DownloadsMock{}
+	peers := &PeersMock{}
+	entity := &EntityMock{}
+
+	// initialize handler
+	handler := &Handler{
+		downloads: downloads,
+		peers:     peers,
+		entity:    entity,
+	}
+
+	// program mocks
+	downloads.On("Cancel", mock.Anything)
+	peers.On("Received", mock.Anything, mock.Anything)
+	entity.On("Process", mock.Anything, mock.Anything)
+
+	// execute process
+	handler.Process(wg, address, msg)
+	wg.Wait()
+
+	// check conditions
+	if downloads.AssertNumberOfCalls(t, "Cancel", 1) {
+		downloads.AssertCalled(t, "Cancel", msg.Hash)
+	}
+
+	if peers.AssertNumberOfCalls(t, "Received", 1) {
+	}
+
+	if entity.AssertNumberOfCalls(t, "Process", 1) {
+	}
 }

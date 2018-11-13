@@ -68,11 +68,17 @@ func TestTransactionKnown(t *testing.T) {
 	wg.Wait()
 
 	// check conditions
-	transactions.AssertCalled(t, "Has", hash)
-	transactions.AssertNotCalled(t, "Add", mock.Anything)
-	events.AssertNotCalled(t, "Transaction", mock.Anything)
-	peers.AssertNotCalled(t, "Addresses", mock.Anything)
-	net.AssertNotCalled(t, "Broadcast", mock.Anything, mock.Anything)
+	if transactions.AssertNumberOfCalls(t, "Has", 1) {
+		transactions.AssertCalled(t, "Has", hash)
+	}
+
+	transactions.AssertNumberOfCalls(t, "Add", 0)
+
+	events.AssertNumberOfCalls(t, "Transaction", 0)
+
+	peers.AssertNumberOfCalls(t, "Addresses", 0)
+
+	net.AssertNumberOfCalls(t, "Broadcast", 0)
 }
 
 func TestTransactionAddFails(t *testing.T) {
@@ -115,11 +121,19 @@ func TestTransactionAddFails(t *testing.T) {
 	wg.Wait()
 
 	// check conditions
-	transactions.AssertCalled(t, "Has", hash)
-	transactions.AssertCalled(t, "Add", entity)
-	events.AssertNotCalled(t, "Transaction", mock.Anything)
-	peers.AssertNotCalled(t, "Addresses", mock.Anything)
-	net.AssertNotCalled(t, "Broadcast", mock.Anything, mock.Anything)
+	if transactions.AssertNumberOfCalls(t, "Has", 1) {
+		transactions.AssertCalled(t, "Has", hash)
+	}
+
+	if transactions.AssertNumberOfCalls(t, "Add", 1) {
+		transactions.AssertCalled(t, "Add", entity)
+	}
+
+	events.AssertNumberOfCalls(t, "Transaction", 0)
+
+	peers.AssertNumberOfCalls(t, "Addresses", 0)
+
+	net.AssertNumberOfCalls(t, "Broadcast", 0)
 }
 
 func TestTransactionBroadcastFails(t *testing.T) {
@@ -162,11 +176,25 @@ func TestTransactionBroadcastFails(t *testing.T) {
 	wg.Wait()
 
 	// check conditions
-	transactions.AssertCalled(t, "Has", hash)
-	transactions.AssertCalled(t, "Add", entity)
-	events.AssertCalled(t, "Transaction", hash)
-	peers.AssertCalled(t, "Addresses", mock.Anything)
-	net.AssertCalled(t, "Broadcast", entity, addresses)
+	if transactions.AssertNumberOfCalls(t, "Has", 1) {
+		transactions.AssertCalled(t, "Has", hash)
+	}
+
+	if transactions.AssertNumberOfCalls(t, "Add", 1) {
+		transactions.AssertCalled(t, "Add", entity)
+	}
+
+	if events.AssertNumberOfCalls(t, "Transaction", 1) {
+		events.AssertCalled(t, "Transaction", hash)
+	}
+
+	if peers.AssertNumberOfCalls(t, "Addresses", 1) {
+		peers.AssertCalled(t, "Addresses", mock.Anything)
+	}
+
+	if net.AssertNumberOfCalls(t, "Broadcast", 1) {
+		net.AssertCalled(t, "Broadcast", entity, addresses)
+	}
 }
 
 func TestTransactionSuccess(t *testing.T) {
@@ -209,9 +237,23 @@ func TestTransactionSuccess(t *testing.T) {
 	wg.Wait()
 
 	// check conditions
-	transactions.AssertCalled(t, "Has", hash)
-	transactions.AssertCalled(t, "Add", entity)
-	events.AssertCalled(t, "Transaction", hash)
-	peers.AssertCalled(t, "Addresses", mock.Anything)
-	net.AssertCalled(t, "Broadcast", entity, addresses)
+	if transactions.AssertNumberOfCalls(t, "Has", 1) {
+		transactions.AssertCalled(t, "Has", hash)
+	}
+
+	if transactions.AssertNumberOfCalls(t, "Add", 1) {
+		transactions.AssertCalled(t, "Add", entity)
+	}
+
+	if events.AssertNumberOfCalls(t, "Transaction", 1) {
+		events.AssertCalled(t, "Transaction", hash)
+	}
+
+	if peers.AssertNumberOfCalls(t, "Addresses", 1) {
+		peers.AssertCalled(t, "Addresses", mock.Anything)
+	}
+
+	if net.AssertNumberOfCalls(t, "Broadcast", 1) {
+		net.AssertCalled(t, "Broadcast", entity, addresses)
+	}
 }
