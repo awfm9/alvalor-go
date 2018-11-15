@@ -20,7 +20,7 @@ package entity
 import (
 	"sync"
 
-	peer "github.com/alvalor/alvalor-go/node/state/peers"
+	"github.com/alvalor/alvalor-go/node/state/peers"
 	"github.com/alvalor/alvalor-go/types"
 )
 
@@ -63,7 +63,7 @@ func (handler *Handler) processHeader(wg *sync.WaitGroup, header *types.Header) 
 
 	// we should propagate it to peers who are unaware of the header
 	// TODO: change broadcast to have target addresses and not exclusion
-	addresses := handler.peers.Addresses(peer.HasEntity(false, header.Hash))
+	addresses := handler.peers.Addresses(peers.HasEntity(false, header.Hash))
 	err = handler.net.Broadcast(header, addresses...)
 	if err != nil {
 		log.Error().Err(err).Msg("could not propagate entity")

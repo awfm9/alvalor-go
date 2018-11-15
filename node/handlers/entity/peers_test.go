@@ -18,7 +18,7 @@
 package entity
 
 import (
-	"github.com/alvalor/alvalor-go/node/peer"
+	"github.com/alvalor/alvalor-go/node/state/peers"
 	"github.com/stretchr/testify/mock"
 )
 
@@ -28,7 +28,7 @@ type PeersMock struct {
 }
 
 // Addresses returns known addresses, filtered by the given filters.
-func (pm *PeersMock) Addresses(filters ...peer.FilterFunc) []string {
+func (pm *PeersMock) Addresses(filters ...peers.FilterFunc) []string {
 	args := pm.Called(filters)
 	var addresses []string
 	if args.Get(0) != nil {

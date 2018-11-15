@@ -17,9 +17,9 @@
 
 package entity
 
-import peer "github.com/alvalor/alvalor-go/node/state/peers"
+import "github.com/alvalor/alvalor-go/node/state/peers"
 
 // Peers represents an interface for the state of peers.
 type Peers interface {
-	Addresses(filters ...peer.FilterFunc) []string
+	Addresses(filters ...peers.FilterFunc) []string
 }

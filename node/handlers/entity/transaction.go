@@ -20,7 +20,7 @@ package entity
 import (
 	"sync"
 
-	peer "github.com/alvalor/alvalor-go/node/state/peers"
+	"github.com/alvalor/alvalor-go/node/state/peers"
 	"github.com/alvalor/alvalor-go/types"
 )
 
@@ -61,7 +61,7 @@ func (handler *Handler) processTransaction(wg *sync.WaitGroup, tx *types.Transac
 	handler.events.Transaction(tx.Hash)
 
 	// create lookup to know who to exclude from broadcast
-	addresses := handler.peers.Addresses(peer.HasEntity(false, tx.Hash))
+	addresses := handler.peers.Addresses(peers.HasEntity(false, tx.Hash))
 	err = handler.net.Broadcast(tx, addresses...)
 	if err != nil {
 		log.Error().Err(err).Msg("could not propagate entity")
