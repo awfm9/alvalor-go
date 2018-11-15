@@ -17,27 +17,11 @@
 
 package paths
 
-import (
-	"github.com/alvalor/alvalor-go/types"
-)
+import "github.com/alvalor/alvalor-go/types"
 
-// Paths is responsible for tracking a certain path by downloading the entities
-// required to complete it.
-type Paths struct {
-	current      []types.Hash
-	inventories  Inventories
-	transactions Transactions
-	downloads    Downloads
-}
-
-// Follow sets a new path through the header tree to follow and complete.
-func (tr *Paths) Follow(path []types.Hash) error {
-	return nil
-}
-
-// Signal notifies the tracker than a new inventory has become available and
-// related transaction downloads should be started, if pending.
-func (tr *Paths) Signal(hash types.Hash) error {
-
-	return nil
+// Transactions represents an interface to transaction storage.
+type Transactions interface {
+	Add(tx *types.Transaction) error
+	Has(hash types.Hash) bool
+	Get(hash types.Hash) (*types.Transaction, error)
 }
