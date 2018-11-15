@@ -21,7 +21,7 @@ import (
 	"sync"
 
 	"github.com/alvalor/alvalor-go/network"
-	"github.com/alvalor/alvalor-go/node/message"
+	"github.com/alvalor/alvalor-go/node/handlers/message"
 )
 
 func (handler *Handler) processConnected(wg *sync.WaitGroup, connected network.Connected) {

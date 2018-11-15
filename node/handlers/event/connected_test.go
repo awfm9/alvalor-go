@@ -24,7 +24,7 @@ import (
 	"testing"
 
 	"github.com/alvalor/alvalor-go/network"
-	"github.com/alvalor/alvalor-go/node/message"
+	"github.com/alvalor/alvalor-go/node/handlers/message"
 	"github.com/rs/zerolog"
 	"github.com/stretchr/testify/mock"
 )
