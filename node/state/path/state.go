@@ -15,12 +15,23 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with Alvalor.  If not, see <http://www.gnu.org/licenses/>.
 
-package peers
+package path
 
 import "github.com/alvalor/alvalor-go/types"
 
-// Peer represents the state of a peer.
-type Peer struct {
-	active bool
-	seen   map[types.Hash]struct{}
+// State represents the state of the currently followed path.
+type State struct {
+	current []types.Hash
+}
+
+// Current returns the current path.
+func (st *State) Current() []types.Hash {
+	return st.current
+}
+
+// Set sets the path to be followed and returns the deltas between old and new.
+func (st *State) Set(path []types.Hash) ([]types.Hash, []types.Hash) {
+	cancel, start := Diff(st.current, path)
+	st.current = path
+	return cancel, start
 }

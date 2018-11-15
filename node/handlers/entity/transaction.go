@@ -20,7 +20,7 @@ package entity
 import (
 	"sync"
 
-	"github.com/alvalor/alvalor-go/node/peer"
+	peer "github.com/alvalor/alvalor-go/node/state/peers"
 	"github.com/alvalor/alvalor-go/types"
 )
 

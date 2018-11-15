@@ -15,12 +15,4 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with Alvalor.  If not, see <http://www.gnu.org/licenses/>.
 
-package peers
-
-import "github.com/alvalor/alvalor-go/types"
-
-// Peer represents the state of a peer.
-type Peer struct {
-	active bool
-	seen   map[types.Hash]struct{}
-}
+package path
