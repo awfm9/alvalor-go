@@ -35,24 +35,24 @@ func Diff(old []types.Hash, new []types.Hash) ([]types.Hash, []types.Hash) {
 	}
 
 	// find the hashes on the old path that are not on the new one (cancel)
-	var cancelHeaders []types.Hash
+	var cancel []types.Hash
 	for _, hash := range old {
 		_, ok := lookupNew[hash]
 		if ok {
 			continue
 		}
-		cancelHeaders = append(cancelHeaders, hash)
+		cancel = append(cancel, hash)
 	}
 
 	// find the hashes on the new path that are not on the old one (start)
-	var startHeaders []types.Hash
+	var start []types.Hash
 	for _, hash := range new {
 		_, ok := lookupOld[hash]
 		if ok {
 			continue
 		}
-		startHeaders = append(startHeaders, hash)
+		start = append(start, hash)
 	}
 
-	return cancelHeaders, startHeaders
+	return cancel, start
 }

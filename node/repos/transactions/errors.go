@@ -15,13 +15,12 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with Alvalor.  If not, see <http://www.gnu.org/licenses/>.
 
-package paths
+package transactions
 
-import "github.com/alvalor/alvalor-go/types"
+import "errors"
 
-// Inventories represents an interface to block inventory storage.
-type Inventories interface {
-	Add(inv *types.Inventory) error
-	Has(hash types.Hash) bool
-	Get(hash types.Hash) (*types.Inventory, error)
-}
+// Errors exported by the package.
+var (
+	ErrExist    = errors.New("transaction already exists")
+	ErrNotExist = errors.New("transaction does not exist")
+)

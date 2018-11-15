@@ -15,13 +15,7 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with Alvalor.  If not, see <http://www.gnu.org/licenses/>.
 
-package paths
+package blocks
 
-import "github.com/alvalor/alvalor-go/types"
-
-// Downloads manages downloading of entities by keeping track of pending
-// downloads and load balancing across available peers.
-type Downloads interface {
-	Start(hash types.Hash) error
-	Cancel(hash types.Hash) error
+type Downloader struct {
 }

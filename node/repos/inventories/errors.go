@@ -21,6 +21,6 @@ import "errors"
 
 // Errors exported by the package.
 var (
-	ErrExist    = errors.New("header already exists")
-	ErrNotExist = errors.New("header does not exist")
+	ErrExist    = errors.New("inventory already exists")
+	ErrNotExist = errors.New("inventory does not exist")
 )
