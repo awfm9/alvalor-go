@@ -15,9 +15,12 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with Alvalor.  If not, see <http://www.gnu.org/licenses/>.
 
-package download
+package blocks
 
-// Network defines what we need from the network module.
-type Network interface {
-	Send(address string, msg interface{}) error
-}
+import "errors"
+
+// Errors exported by the package.
+var (
+	ErrExist    = errors.New("block download already exists")
+	ErrNotExist = errors.New("block download does not exist")
+)

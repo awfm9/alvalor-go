@@ -15,12 +15,17 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with Alvalor.  If not, see <http://www.gnu.org/licenses/>.
 
-package download
+package parts
 
-import "github.com/alvalor/alvalor-go/node/peer"
+import "github.com/stretchr/testify/mock"
 
-// Peers represents an interface to get access to the state of currently
-// connected peers.
-type Peers interface {
-	Addresses(filters ...peer.FilterFunc) []string
+// NetworkMock mocks the network interface.
+type NetworkMock struct {
+	mock.Mock
+}
+
+// Send mocks the broadcast functionality.
+func (nm *NetworkMock) Send(address string, msg interface{}) error {
+	args := nm.Called(address, msg)
+	return args.Error(0)
 }

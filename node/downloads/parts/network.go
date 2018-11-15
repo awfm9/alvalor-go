@@ -15,7 +15,9 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with Alvalor.  If not, see <http://www.gnu.org/licenses/>.
 
-package blocks
+package parts
 
-type Downloader struct {
+// Network defines what we need from the network module.
+type Network interface {
+	Send(address string, msg interface{}) error
 }

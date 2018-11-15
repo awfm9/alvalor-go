@@ -15,13 +15,13 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with Alvalor.  If not, see <http://www.gnu.org/licenses/>.
 
-package download
+package parts
 
 import (
 	"errors"
 	"testing"
 
-	"github.com/alvalor/alvalor-go/node/message"
+	"github.com/alvalor/alvalor-go/node/handlers/message"
 	"github.com/alvalor/alvalor-go/types"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"

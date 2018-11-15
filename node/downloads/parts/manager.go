@@ -15,7 +15,7 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with Alvalor.  If not, see <http://www.gnu.org/licenses/>.
 
-package download
+package parts
 
 import (
 	"math"
@@ -23,8 +23,8 @@ import (
 
 	"github.com/pkg/errors"
 
-	"github.com/alvalor/alvalor-go/node/message"
-	"github.com/alvalor/alvalor-go/node/peer"
+	"github.com/alvalor/alvalor-go/node/handlers/message"
+	"github.com/alvalor/alvalor-go/node/state/peers"
 	"github.com/alvalor/alvalor-go/types"
 )
 
@@ -59,7 +59,7 @@ func (mgr *Manager) Start(hash types.Hash) error {
 
 	// get all active peers that have the desired entity
 	// TODO: we should make the distinction between: has, might, doesn't
-	addresses := mgr.peers.Addresses(peer.IsActive(true), peer.HasEntity(true, hash))
+	addresses := mgr.peers.Addresses(peers.IsActive(true), peers.HasEntity(true, hash))
 	if len(addresses) == 0 {
 		return errors.New("no active peers with entity available")
 	}
