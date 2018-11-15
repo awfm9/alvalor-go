@@ -15,7 +15,7 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with Alvalor.  If not, see <http://www.gnu.org/licenses/>.
 
-package parts
+package downloads
 
 import (
 	"errors"
@@ -27,22 +27,7 @@ import (
 	"github.com/stretchr/testify/mock"
 )
 
-func TestNewManager(t *testing.T) {
-
-	// initialize mocks
-	net := &NetworkMock{}
-	peers := &PeersMock{}
-
-	// initialize manager
-	mgr := NewManager(net, peers)
-
-	// check conditions
-	assert.Equal(t, net, mgr.net)
-	assert.Equal(t, peers, mgr.peers)
-	assert.NotNil(t, mgr.pending)
-}
-
-func TestManagerStartValid(t *testing.T) {
+func TestManagerStartInvValid(t *testing.T) {
 
 	// initialize parameters
 	hash1 := types.Hash{0x1}
@@ -62,21 +47,21 @@ func TestManagerStartValid(t *testing.T) {
 
 	// initialize manager
 	mgr := Manager{
-		net:     net,
-		peers:   peers,
-		pending: make(map[types.Hash]string),
+		net:   net,
+		peers: peers,
+		invs:  make(map[types.Hash]string),
 	}
 
 	// initialize state
-	mgr.pending[hash2] = address2
-	mgr.pending[hash3] = address3
+	mgr.invs[hash2] = address2
+	mgr.invs[hash3] = address3
 
 	// program mocks
 	peers.On("Addresses", mock.Anything, mock.Anything).Return(addresses)
 	net.On("Send", mock.Anything, mock.Anything).Return(nil)
 
-	// execute start
-	err := mgr.Start(hash1)
+	// execute start_inv
+	err := mgr.StartInv(hash1)
 
 	// assert conditions
 	assert.Nil(t, err)
@@ -85,12 +70,12 @@ func TestManagerStartValid(t *testing.T) {
 		net.AssertCalled(t, "Send", address1, request)
 	}
 
-	if assert.Contains(t, mgr.pending, hash1) {
-		assert.Equal(t, address1, mgr.pending[hash1])
+	if assert.Contains(t, mgr.invs, hash1) {
+		assert.Equal(t, address1, mgr.invs[hash1])
 	}
 }
 
-func TestManagerStartExisting(t *testing.T) {
+func TestManagerStartInvExisting(t *testing.T) {
 
 	// initialize parameters
 	hash1 := types.Hash{0x1}
@@ -109,22 +94,22 @@ func TestManagerStartExisting(t *testing.T) {
 
 	// initialize manager
 	mgr := Manager{
-		net:     net,
-		peers:   peers,
-		pending: make(map[types.Hash]string),
+		net:   net,
+		peers: peers,
+		invs:  make(map[types.Hash]string),
 	}
 
 	// initialize state
-	mgr.pending[hash1] = address1
-	mgr.pending[hash2] = address2
-	mgr.pending[hash3] = address3
+	mgr.invs[hash1] = address1
+	mgr.invs[hash2] = address2
+	mgr.invs[hash3] = address3
 
 	// program mocks
 	peers.On("Addresses", mock.Anything, mock.Anything).Return(addresses)
 	net.On("Send", mock.Anything, mock.Anything).Return(nil)
 
-	// execute start
-	err := mgr.Start(hash1)
+	// execute start_inv
+	err := mgr.StartInv(hash1)
 
 	// assert conditions
 	assert.NotNil(t, err)
@@ -132,7 +117,7 @@ func TestManagerStartExisting(t *testing.T) {
 	net.AssertNumberOfCalls(t, "Send", 0)
 }
 
-func TestManagerStartNoPeers(t *testing.T) {
+func TestManagerStartInvNoPeers(t *testing.T) {
 
 	// initialize parameters
 	hash1 := types.Hash{0x1}
@@ -149,31 +134,31 @@ func TestManagerStartNoPeers(t *testing.T) {
 
 	// initialize manager
 	mgr := Manager{
-		net:     net,
-		peers:   peers,
-		pending: make(map[types.Hash]string),
+		net:   net,
+		peers: peers,
+		invs:  make(map[types.Hash]string),
 	}
 
 	// initialize state
-	mgr.pending[hash2] = address2
-	mgr.pending[hash3] = address3
+	mgr.invs[hash2] = address2
+	mgr.invs[hash3] = address3
 
 	// program mocks
 	peers.On("Addresses", mock.Anything, mock.Anything).Return(nil)
 	net.On("Send", mock.Anything, mock.Anything).Return(nil)
 
 	// execute start
-	err := mgr.Start(hash1)
+	err := mgr.StartInv(hash1)
 
 	// assert conditions
 	assert.NotNil(t, err)
 
 	net.AssertNumberOfCalls(t, "Send", 0)
 
-	assert.NotContains(t, mgr.pending, hash1)
+	assert.NotContains(t, mgr.invs, hash1)
 }
 
-func TestManagerStartSendFails(t *testing.T) {
+func TestManagerStartInvSendFails(t *testing.T) {
 
 	// initialize parameters
 	hash1 := types.Hash{0x1}
@@ -193,21 +178,21 @@ func TestManagerStartSendFails(t *testing.T) {
 
 	// initialize manager
 	mgr := Manager{
-		net:     net,
-		peers:   peers,
-		pending: make(map[types.Hash]string),
+		net:   net,
+		peers: peers,
+		invs:  make(map[types.Hash]string),
 	}
 
 	// initialize state
-	mgr.pending[hash2] = address2
-	mgr.pending[hash3] = address3
+	mgr.invs[hash2] = address2
+	mgr.invs[hash3] = address3
 
 	// program mocks
 	peers.On("Addresses", mock.Anything, mock.Anything).Return(addresses)
 	net.On("Send", mock.Anything, mock.Anything).Return(errors.New(""))
 
 	// execute start
-	err := mgr.Start(hash1)
+	err := mgr.StartInv(hash1)
 
 	// assert conditions
 	assert.NotNil(t, err)
@@ -216,10 +201,10 @@ func TestManagerStartSendFails(t *testing.T) {
 		net.AssertCalled(t, "Send", address1, request)
 	}
 
-	assert.NotContains(t, mgr.pending, hash1)
+	assert.NotContains(t, mgr.invs, hash1)
 }
 
-func TestDownloadCancelValid(t *testing.T) {
+func TestDownloadCancelInvValid(t *testing.T) {
 
 	// initialize parameters
 	hash := types.Hash{0x1}
@@ -231,24 +216,24 @@ func TestDownloadCancelValid(t *testing.T) {
 
 	// initialize manager
 	mgr := Manager{
-		net:     net,
-		peers:   peers,
-		pending: make(map[types.Hash]string),
+		net:   net,
+		peers: peers,
+		invs:  make(map[types.Hash]string),
 	}
 
 	// initialize state
-	mgr.pending[hash] = address
+	mgr.invs[hash] = address
 
 	// execute cancel
-	err := mgr.Cancel(hash)
+	err := mgr.CancelInv(hash)
 
 	// check conditions
 	assert.Nil(t, err)
 
-	assert.NotContains(t, mgr.pending, hash)
+	assert.NotContains(t, mgr.invs, hash)
 }
 
-func TestDownloadCancelMissing(t *testing.T) {
+func TestDownloadCancelInvMissing(t *testing.T) {
 
 	// initialize parameters
 	hash := types.Hash{0x1}
@@ -259,13 +244,13 @@ func TestDownloadCancelMissing(t *testing.T) {
 
 	// initialize manager
 	mgr := Manager{
-		net:     net,
-		peers:   peers,
-		pending: make(map[types.Hash]string),
+		net:   net,
+		peers: peers,
+		invs:  make(map[types.Hash]string),
 	}
 
 	// execute cancel
-	err := mgr.Cancel(hash)
+	err := mgr.CancelInv(hash)
 
 	// check conditions
 	assert.NotNil(t, err)

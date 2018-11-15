@@ -15,13 +15,9 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with Alvalor.  If not, see <http://www.gnu.org/licenses/>.
 
-package peers
+package downloads
 
-import "github.com/alvalor/alvalor-go/types"
-
-// Peer represents the state of a peer.
-type Peer struct {
-	active bool
-	has    map[types.Hash]struct{}
-	not    map[types.Hash]struct{}
+// Network defines what we need from the network module.
+type Network interface {
+	Send(address string, msg interface{}) error
 }

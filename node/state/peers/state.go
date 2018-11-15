@@ -32,8 +32,17 @@ type FilterFunc func(*Peer) bool
 // entity (such as transaction or header).
 func HasEntity(has bool, hash types.Hash) func(*Peer) bool {
 	return func(p *Peer) bool {
-		_, ok := p.seen[hash]
+		_, ok := p.has[hash]
 		return ok == has
+	}
+}
+
+// MayEntity allows us to select only peers that may have a certain entity.
+func MayEntity(hash types.Hash) func(*Peer) bool {
+	return func(p *Peer) bool {
+		_, ok1 := p.has[hash]
+		_, ok2 := p.not[hash]
+		return !(ok1 || ok2)
 	}
 }
 
@@ -66,7 +75,8 @@ func (s *State) Active(address string) {
 	p, ok := s.peers[address]
 	if !ok {
 		p = &Peer{
-			seen: make(map[types.Hash]struct{}),
+			has: make(map[types.Hash]struct{}),
+			not: make(map[types.Hash]struct{}),
 		}
 		s.peers[address] = p
 	}
@@ -95,7 +105,7 @@ func (s *State) Received(address string, hash types.Hash) {
 		return
 	}
 
-	p.seen[hash] = struct{}{}
+	p.has[hash] = struct{}{}
 }
 
 // Seen returns a list of entities a peer is aware of.
@@ -108,8 +118,8 @@ func (s *State) Seen(address string) ([]types.Hash, error) {
 		return nil, errors.New("peer not found")
 	}
 
-	seen := make([]types.Hash, 0, len(p.seen))
-	for hash := range p.seen {
+	seen := make([]types.Hash, 0, len(p.has))
+	for hash := range p.has {
 		seen = append(seen, hash)
 	}
 

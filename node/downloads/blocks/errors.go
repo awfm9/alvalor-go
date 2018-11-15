@@ -21,6 +21,6 @@ import "errors"
 
 // Errors exported by the package.
 var (
-	ErrExist    = errors.New("block download already exists")
-	ErrNotExist = errors.New("block download does not exist")
+	ErrExist    = errors.New("block assembly already exists")
+	ErrNotExist = errors.New("block assembly does not exist")
 )

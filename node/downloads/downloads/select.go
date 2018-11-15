@@ -15,12 +15,30 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with Alvalor.  If not, see <http://www.gnu.org/licenses/>.
 
-package parts
+package downloads
 
-import "github.com/alvalor/alvalor-go/node/state/peers"
+import "math"
 
-// Peers represents an interface to get access to the state of currently
-// connected peers.
-type Peers interface {
-	Addresses(filters ...peers.FilterFunc) []string
+// Select will return the best download candidate from a list of candidates
+// who certainly have or possibly have an entity.
+func Select(has []string, may []string, count map[string]uint) string {
+
+	// decide whether we select from certain or potential candidates
+	candidates := has
+	if len(candidates) == 0 {
+		candidates = may
+	}
+
+	// select the available peer with the least amount of pending download
+	var address string
+	best := uint(math.MaxUint32)
+	for _, candidate := range candidates {
+		if count[candidate] >= best {
+			continue
+		}
+		best = count[candidate]
+		address = candidate
+	}
+
+	return address
 }

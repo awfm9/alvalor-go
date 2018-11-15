@@ -22,36 +22,36 @@ import (
 	"github.com/pkg/errors"
 )
 
-// Downloader organizes the block downloads.
-type Downloader struct {
+// Assembler organizes the block downloads.
+type Assembler struct {
 	pending     map[types.Hash]struct{}
 	inventories Inventories
 	downloads   Downloads
 }
 
-// Start starts the download of entities needed for a block.
-func (do *Downloader) Start(hash types.Hash) error {
+// Assemble starts the download of entities needed for a block.
+func (as *Assembler) Assemble(hash types.Hash) error {
 
 	// check if we are already downloading this block
-	_, ok := do.pending[hash]
+	_, ok := as.pending[hash]
 	if ok {
 		return errors.Wrap(ErrExist, "download for block already running")
 	}
 
 	// check if we already have the inventory
-	ok = do.inventories.Has(hash)
+	ok = as.inventories.Has(hash)
 	if ok {
-		return do.Inventory(hash)
+		return as.Inventory(hash)
 	}
 
 	// check if we already download the inventory
-	ok = do.downloads.HasInv(hash)
+	ok = as.downloads.HasInv(hash)
 	if ok {
 		return errors.New("inventory download for block already running")
 	}
 
 	// start the inventory download
-	err := do.downloads.StartInv(hash)
+	err := as.downloads.StartInv(hash)
 	if err != nil {
 		return errors.Wrap(err, "could not start inventory download for block")
 	}
@@ -59,11 +59,11 @@ func (do *Downloader) Start(hash types.Hash) error {
 	return nil
 }
 
-// Cancel stop the download of the entities needed for a block.
-func (do *Downloader) Cancel(hash types.Hash) error {
+// Suspends pauses the download of the entities needed for a block.
+func (as *Assembler) Suspends(hash types.Hash) error {
 
 	// check if we are currently downloading this block
-	_, ok := do.pending[hash]
+	_, ok := as.pending[hash]
 	if !ok {
 		return errors.Wrap(ErrNotExist, "download for block not running")
 	}
@@ -74,27 +74,27 @@ func (do *Downloader) Cancel(hash types.Hash) error {
 }
 
 // Inventory notifies the block downloader when an inventory is received.
-func (do *Downloader) Inventory(hash types.Hash) error {
+func (as *Assembler) Inventory(hash types.Hash) error {
 
 	// check if we are actually waiting for the inventory
-	_, ok := do.pending[hash]
+	_, ok := as.pending[hash]
 	if !ok {
 		return errors.New("received inventory we are not waiting for")
 	}
 
 	// retrieve the inventory
-	inv, err := do.inventories.Get(hash)
+	inv, err := as.inventories.Get(hash)
 	if err != nil {
 		return errors.Wrap(err, "could not get inventory for block download")
 	}
 
 	// start the transaction downloads
 	for _, hash := range inv.Hashes {
-		ok := do.downloads.HasTx(hash)
+		ok := as.downloads.HasTx(hash)
 		if ok {
 			continue
 		}
-		err := do.downloads.StartTx(hash)
+		err := as.downloads.StartTx(hash)
 		if err != nil {
 			return errors.Wrap(err, "could not start transaction download for block")
 		}
@@ -104,7 +104,7 @@ func (do *Downloader) Inventory(hash types.Hash) error {
 }
 
 // Transaction notifies the block downloader when a transaction is received.
-func (do *Downloader) Transaction(hash *types.Hash) error {
+func (as *Assembler) Transaction(hash *types.Hash) error {
 
 	// TODO: register and assemble block when it's the last one required
 	return nil

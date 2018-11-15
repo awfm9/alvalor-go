@@ -15,17 +15,12 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with Alvalor.  If not, see <http://www.gnu.org/licenses/>.
 
-package parts
+package downloads
 
-import "github.com/stretchr/testify/mock"
+import "errors"
 
-// NetworkMock mocks the network interface.
-type NetworkMock struct {
-	mock.Mock
-}
-
-// Send mocks the broadcast functionality.
-func (nm *NetworkMock) Send(address string, msg interface{}) error {
-	args := nm.Called(address, msg)
-	return args.Error(0)
-}
+// Errors exported by the package.
+var (
+	ErrExist    = errors.New("download already exists")
+	ErrNotExist = errors.New("download does not exist")
+)
