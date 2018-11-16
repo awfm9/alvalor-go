@@ -24,81 +24,104 @@ import (
 
 // Assembler organizes the block downloads.
 type Assembler struct {
-	pending     map[types.Hash]struct{}
-	inventories Inventories
-	downloads   Downloads
+	pending      map[types.Hash]struct{}
+	templates    map[types.Hash]map[types.Hash]bool
+	inventories  Inventories
+	transactions Transactions
+	downloads    Downloads
 }
 
-// Assemble starts the download of entities needed for a block.
+// Assemble starts the assembly of the block with the given hash.
 func (as *Assembler) Assemble(hash types.Hash) error {
 
 	// check if we are already downloading this block
 	_, ok := as.pending[hash]
 	if ok {
-		return errors.Wrap(ErrExist, "download for block already running")
+		return errors.Wrap(ErrExist, "block assembly already requested")
 	}
 
-	// check if we already have the inventory
-	ok = as.inventories.Has(hash)
+	// check if we already have the template
+	_, ok = as.templates[hash]
 	if ok {
-		return as.Inventory(hash)
+		return nil
 	}
 
-	// check if we already download the inventory
+	// check if we are already downloading the inventory
 	ok = as.downloads.HasInv(hash)
 	if ok {
-		return errors.New("inventory download for block already running")
+		return nil
 	}
 
 	// start the inventory download
 	err := as.downloads.StartInv(hash)
 	if err != nil {
-		return errors.Wrap(err, "could not start inventory download for block")
+		return errors.Wrap(err, "inventory download already requested")
 	}
+
+	// mark the block assembly as pending
+	as.pending[hash] = struct{}{}
 
 	return nil
 }
 
-// Suspends pauses the download of the entities needed for a block.
-func (as *Assembler) Suspends(hash types.Hash) error {
+// Suspend suspends the assembly of the block with the given hash.
+func (as *Assembler) Suspend(hash types.Hash) error {
 
-	// check if we are currently downloading this block
-	_, ok := as.pending[hash]
-	if !ok {
-		return errors.Wrap(ErrNotExist, "download for block not running")
-	}
-
-	// TODO: cancel stuff
+	// TODO: implement
 
 	return nil
 }
 
-// Inventory notifies the block downloader when an inventory is received.
+// Inventory notifies the block assembler that an inventory was received.
 func (as *Assembler) Inventory(hash types.Hash) error {
 
 	// check if we are actually waiting for the inventory
 	_, ok := as.pending[hash]
 	if !ok {
-		return errors.New("received inventory we are not waiting for")
+		return nil
+	}
+
+	// check if we already have the template in place
+	_, ok = as.templates[hash]
+	if ok {
+		return nil
 	}
 
 	// retrieve the inventory
 	inv, err := as.inventories.Get(hash)
 	if err != nil {
-		return errors.Wrap(err, "could not get inventory for block download")
+		return errors.Wrap(err, "could not get inventory to create template")
 	}
 
-	// start the transaction downloads
+	// create and save the download template
+	template := make(map[types.Hash]bool)
 	for _, hash := range inv.Hashes {
-		ok := as.downloads.HasTx(hash)
+		ok := as.transactions.Has(hash)
+		if ok {
+			template[hash] = true
+		} else {
+			template[hash] = false
+		}
+	}
+
+	// start the transaction downloads that are not pending
+	for hash, ok := range template {
+		if ok {
+			continue
+		}
+		// TODO: what if we already have all of them? can it happen?
+		ok = as.downloads.HasTx(hash)
 		if ok {
 			continue
 		}
 		err := as.downloads.StartTx(hash)
 		if err != nil {
-			return errors.Wrap(err, "could not start transaction download for block")
+			return errors.Wrap(err, "could not start transaction download for block assembly")
 		}
 	}
+
+	// save the template for the block
+	as.templates[hash] = template
 
 	return nil
 }
