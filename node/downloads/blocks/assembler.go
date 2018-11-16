@@ -26,6 +26,8 @@ import (
 type Assembler struct {
 	pending      map[types.Hash]struct{}
 	templates    map[types.Hash]map[types.Hash]bool
+	mapping      map[types.Hash]types.Hash
+	headers      Headers
 	inventories  Inventories
 	transactions Transactions
 	downloads    Downloads
@@ -95,28 +97,31 @@ func (as *Assembler) Inventory(hash types.Hash) error {
 
 	// create and save the download template
 	template := make(map[types.Hash]bool)
-	for _, hash := range inv.Hashes {
-		ok := as.transactions.Has(hash)
+	for _, txHash := range inv.Hashes {
+		ok := as.transactions.Has(txHash)
 		if ok {
-			template[hash] = true
+			template[txHash] = true
 		} else {
-			template[hash] = false
+			as.mapping[txHash] = hash
+			template[txHash] = false
 		}
 	}
 
+	// TODO: move following to another function
+
 	// start the transaction downloads that are not pending
-	for hash, ok := range template {
+	for txHash, ok := range template {
 		if ok {
 			continue
 		}
 		// TODO: what if we already have all of them? can it happen?
-		ok = as.downloads.HasTx(hash)
+		ok = as.downloads.HasTx(txHash)
 		if ok {
 			continue
 		}
-		err := as.downloads.StartTx(hash)
+		err := as.downloads.StartTx(txHash)
 		if err != nil {
-			return errors.Wrap(err, "could not start transaction download for block assembly")
+			return errors.Wrapf(err, "could not start transaction download for block assembly: %v", txHash)
 		}
 	}
 
@@ -127,8 +132,58 @@ func (as *Assembler) Inventory(hash types.Hash) error {
 }
 
 // Transaction notifies the block downloader when a transaction is received.
-func (as *Assembler) Transaction(hash *types.Hash) error {
+func (as *Assembler) Transaction(hash types.Hash) error {
 
-	// TODO: register and assemble block when it's the last one required
+	// check if we are waiting for the given transaction
+	blkHash, ok := as.mapping[hash]
+	if !ok {
+		return nil
+	}
+
+	// retrieve the block template
+	template, ok := as.templates[blkHash]
+	if !ok {
+		return errors.New("block template missing for transaction")
+	}
+
+	// set the given transaction to received
+	template[hash] = true
+
+	// if still transactions missing, do nothing
+	for _, ok := range template {
+		if !ok {
+			return nil
+		}
+	}
+
+	// TODO: move following to another function
+
+	// retrieve the header
+	header, err := as.headers.Get(blkHash)
+	if err != nil {
+		return errors.Wrap(err, "could not retrieve header to finalize block")
+	}
+
+	// retrieve the inventory
+	inv, err := as.inventories.Get(blkHash)
+	if err != nil {
+		return errors.Wrap(err, "could not retrieve inventory to finalize block")
+	}
+
+	// build block
+	block := types.Block{
+		Header: header,
+	}
+	for _, txHash := range inv.Hashes {
+		tx, err := as.transactions.Get(txHash)
+		if err != nil {
+			return errors.Wrapf(err, "could not retrieve transaction to finalize block: %v", txHash)
+		}
+		block.Transactions = append(block.Transactions, tx)
+	}
+
+	// validate block
+	// TODO: validation logic
+
 	return nil
 }

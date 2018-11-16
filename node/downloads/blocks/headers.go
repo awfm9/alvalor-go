@@ -19,8 +19,7 @@ package blocks
 
 import "github.com/alvalor/alvalor-go/types"
 
-// Transactions is an interface to the transaction storage.
-type Transactions interface {
-	Has(hash types.Hash) bool
-	Get(hash types.Hash) (*types.Transaction, error)
+// Headers is an interface to the header storage.
+type Headers interface {
+	Get(hash types.Hash) (*types.Header, error)
 }
