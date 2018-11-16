@@ -15,16 +15,12 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with Alvalor.  If not, see <http://www.gnu.org/licenses/>.
 
-package blocks
+package download
 
-import "github.com/alvalor/alvalor-go/types"
+import "errors"
 
-// Downloads represents an interface to the block inventories storage.
-type Downloads interface {
-	HasInv(hash types.Hash) bool
-	HasTx(hash types.Hash) bool
-	StartInv(hash types.Hash) error
-	StartTx(hash types.Hash) error
-	CancelInv(hash types.Hash) error
-	CancelTx(hash types.Hash) error
-}
+// Errors exported by the package.
+var (
+	ErrExist    = errors.New("download already exists")
+	ErrNotExist = errors.New("download does not exist")
+)

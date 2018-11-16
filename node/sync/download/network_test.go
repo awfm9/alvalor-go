@@ -15,12 +15,17 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with Alvalor.  If not, see <http://www.gnu.org/licenses/>.
 
-package blocks
+package download
 
-import "github.com/alvalor/alvalor-go/types"
+import "github.com/stretchr/testify/mock"
 
-// Transactions is an interface to the transaction storage.
-type Transactions interface {
-	Has(hash types.Hash) bool
-	Get(hash types.Hash) (*types.Transaction, error)
+// NetworkMock mocks the network interface.
+type NetworkMock struct {
+	mock.Mock
+}
+
+// Send mocks the broadcast functionality.
+func (nm *NetworkMock) Send(address string, msg interface{}) error {
+	args := nm.Called(address, msg)
+	return args.Error(0)
 }
