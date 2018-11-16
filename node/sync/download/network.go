@@ -15,12 +15,9 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with Alvalor.  If not, see <http://www.gnu.org/licenses/>.
 
-package blocks
+package download
 
-import "github.com/alvalor/alvalor-go/types"
-
-// Inventories represents an interface to the block inventories storage.
-type Inventories interface {
-	Has(hash types.Hash) bool
-	Get(hash types.Hash) (*types.Inventory, error)
+// Network defines what we need from the network module.
+type Network interface {
+	Send(address string, msg interface{}) error
 }

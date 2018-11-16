@@ -15,9 +15,11 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with Alvalor.  If not, see <http://www.gnu.org/licenses/>.
 
-package downloads
+package orchestration
 
-// Network defines what we need from the network module.
-type Network interface {
-	Send(address string, msg interface{}) error
+import "github.com/alvalor/alvalor-go/types"
+
+// Transactions is an interface to the transaction storage.
+type Transactions interface {
+	Has(hash types.Hash) bool
 }

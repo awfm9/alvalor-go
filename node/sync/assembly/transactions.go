@@ -15,12 +15,11 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with Alvalor.  If not, see <http://www.gnu.org/licenses/>.
 
-package downloads
+package assembly
 
-import "errors"
+import "github.com/alvalor/alvalor-go/types"
 
-// Errors exported by the package.
-var (
-	ErrExist    = errors.New("download already exists")
-	ErrNotExist = errors.New("download does not exist")
-)
+// Transactions is an interface to the transaction storage.
+type Transactions interface {
+	Get(hash types.Hash) (*types.Transaction, error)
+}

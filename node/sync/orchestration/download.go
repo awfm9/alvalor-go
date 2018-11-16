@@ -15,24 +15,16 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with Alvalor.  If not, see <http://www.gnu.org/licenses/>.
 
-package downloads
+package orchestration
 
-import (
-	"github.com/alvalor/alvalor-go/node/state/peers"
-	"github.com/stretchr/testify/mock"
-)
+import "github.com/alvalor/alvalor-go/types"
 
-// PeersMock mocks the peers state interface.
-type PeersMock struct {
-	mock.Mock
-}
-
-// Addresses returns known addresses, filtered by the given filters.
-func (pm *PeersMock) Addresses(filters ...peers.FilterFunc) []string {
-	args := pm.Called(filters)
-	var addresses []string
-	if args.Get(0) != nil {
-		addresses = args.Get(0).([]string)
-	}
-	return addresses
+// Download represents an interface to the block inventories storage.
+type Download interface {
+	HasInv(hash types.Hash) bool
+	HasTx(hash types.Hash) bool
+	StartInv(hash types.Hash) error
+	StartTx(hash types.Hash) error
+	CancelInv(hash types.Hash) error
+	CancelTx(hash types.Hash) error
 }

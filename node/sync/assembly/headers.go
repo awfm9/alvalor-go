@@ -15,11 +15,11 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with Alvalor.  If not, see <http://www.gnu.org/licenses/>.
 
-package blocks
+package assembly
 
 import "github.com/alvalor/alvalor-go/types"
 
-// Headers is an interface to the header storage.
+// Headers in an interface to the header storage.
 type Headers interface {
 	Get(hash types.Hash) (*types.Header, error)
 }

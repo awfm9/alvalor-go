@@ -15,12 +15,11 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with Alvalor.  If not, see <http://www.gnu.org/licenses/>.
 
-package blocks
+package assembly
 
-import "errors"
+import "github.com/alvalor/alvalor-go/types"
 
-// Errors exported by the package.
-var (
-	ErrExist    = errors.New("block assembly already exists")
-	ErrNotExist = errors.New("block assembly does not exist")
-)
+// Inventories is an interface to the inventory storage.
+type Inventories interface {
+	Get(hash types.Hash) (*types.Inventory, error)
+}
