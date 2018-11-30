@@ -17,11 +17,10 @@
 
 package peers
 
-import "github.com/alvalor/alvalor-go/types"
+import "errors"
 
-// Peer represents the state of a peer.
-type Peer struct {
-	active bool
-	yes    map[types.Hash]struct{}
-	no     map[types.Hash]struct{}
-}
+// Errors exported by the package.
+var (
+	ErrExist    = errors.New("peer already exists")
+	ErrNotExist = errors.New("peer does not exist")
+)
