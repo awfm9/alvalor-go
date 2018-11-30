@@ -17,120 +17,95 @@
 
 package transactions
 
-// func TestNewPool(t *testing.T) {
-// 	codec := &CodecMock{}
-// 	store := &StoreMock{}
-// 	pool := newPool(codec, store)
-// 	assert.Equal(t, codec, pool.codec)
-// 	assert.Equal(t, store, pool.store)
-// }
-//
-// func TestPoolAdd(t *testing.T) {
-//
-// 	tx1 := &types.Transaction{Data: []byte{1, 2, 3, 4}}
-// 	tx2 := &types.Transaction{Data: []byte{4, 5, 6, 7}}
-// 	tx3 := &types.Transaction{Data: []byte{8, 9, 0, 1}}
-//
-// 	tx1.Hash = tx1.GetHash()
-// 	tx2.Hash = tx2.GetHash()
-// 	tx3.Hash = tx3.GetHash()
-//
-// 	codec := &CodecMock{}
-// 	codec.On("Encode", mock.Anything, tx1).Return(nil)
-// 	codec.On("Encode", mock.Anything, tx2).Return(errors.New("could not encode"))
-// 	codec.On("Encode", mock.Anything, tx3).Return(nil)
-//
-// 	store := &StoreMock{}
-// 	store.On("Put", tx1.Hash[:], mock.Anything).Return(nil)
-// 	store.On("Put", tx2.Hash[:], mock.Anything).Return(nil)
-// 	store.On("Put", tx3.Hash[:], mock.Anything).Return(errors.New("could not put"))
-//
-// 	pool := simplePool{
-// 		codec:  codec,
-// 		store:  store,
-// 		hashes: make(map[types.Hash]struct{}),
-// 	}
-//
-// 	err := pool.Add(tx1)
-// 	assert.Nil(t, err)
-//
-// 	err = pool.Add(tx2)
-// 	assert.NotNil(t, err)
-//
-// 	err = pool.Add(tx3)
-// 	assert.NotNil(t, err)
-// }
-//
-// func TestPoolGet(t *testing.T) {
-//
-// 	id1 := types.Hash{1, 2, 3, 4}
-// 	id2 := types.Hash{4, 5, 6, 7}
-// 	id3 := types.Hash{8, 9, 0, 1}
-//
-// 	tx1 := &types.Transaction{Data: id1[:]}
-// 	tx3 := &types.Transaction{Data: id3[:]}
-//
-// 	tx1.Hash = tx1.GetHash()
-// 	tx3.Hash = tx3.GetHash()
-//
-// 	store := &StoreMock{}
-// 	store.On("Get", id1[:]).Return(id1[:], nil)
-// 	store.On("Get", id2[:]).Return(id2[:], errors.New("could not get"))
-// 	store.On("Get", id3[:]).Return(id3[:], nil)
-//
-// 	// this is not ideal, but the way returns are evaluated immediately, we can't
-// 	// use the closure of the Run function to switch on the buffer contents
-// 	codec := &CodecMock{}
-// 	codec.On("Decode", mock.Anything).Return(tx1, nil).Once()
-// 	codec.On("Decode", mock.Anything).Return(tx3, errors.New("could not decode"))
-//
-// 	pool := simplePool{codec: codec, store: store}
-//
-// 	tx, err := pool.Get(id1)
-// 	assert.Nil(t, err)
-// 	assert.Equal(t, tx1, tx)
-//
-// 	_, err = pool.Get(id2)
-// 	assert.NotNil(t, err)
-//
-// 	_, err = pool.Get(id3)
-// 	assert.NotNil(t, err)
-// }
-//
-// func TestPoolRemove(t *testing.T) {
-//
-// 	id1 := types.Hash{1, 2, 3, 4}
-// 	id2 := types.Hash{4, 5, 6, 7}
-//
-// 	store := &StoreMock{}
-// 	store.On("Del", id1[:]).Return(nil)
-// 	store.On("Del", id2[:]).Return(errors.New("could not del"))
-//
-// 	pool := simplePool{
-// 		store:  store,
-// 		hashes: make(map[types.Hash]struct{}),
-// 	}
-//
-// 	err := pool.Remove(id1)
-// 	assert.Nil(t, err)
-//
-// 	err = pool.Remove(id2)
-// 	assert.NotNil(t, err)
-// }
-//
-// func TestPoolKnows(t *testing.T) {
-//
-// 	id1 := types.Hash{1, 2, 3, 4}
-// 	id2 := types.Hash{5, 6, 7, 8}
-//
-// 	pool := simplePool{
-// 		hashes: make(map[types.Hash]struct{}),
-// 	}
-// 	pool.hashes[id1] = struct{}{}
-//
-// 	ok := pool.Knows(id1)
-// 	assert.True(t, ok)
-//
-// 	ok = pool.Knows(id2)
-// 	assert.False(t, ok)
-// }
+import (
+	"testing"
+
+	"github.com/alvalor/alvalor-go/types"
+	"github.com/pkg/errors"
+	"github.com/stretchr/testify/assert"
+)
+
+func TestNewRepo(t *testing.T) {
+	repo := NewRepo()
+	assert.NotNil(t, repo.txs)
+}
+
+func TestRepoAdd(t *testing.T) {
+
+	// initialize the repository with required maps
+	repo := &Repo{
+		txs: make(map[types.Hash]*types.Transaction),
+	}
+
+	// create entities and set up state
+	hash1 := types.Hash{0x1}
+	hash2 := types.Hash{0x2}
+
+	tx1 := &types.Transaction{Hash: hash1}
+	tx2 := &types.Transaction{Hash: hash2}
+
+	repo.txs[hash2] = &types.Transaction{}
+
+	// execute add
+	err1 := repo.Add(tx1)
+	err2 := repo.Add(tx2)
+
+	assert.Nil(t, err1)
+	if assert.NotNil(t, err2) {
+		assert.Equal(t, ErrExist, errors.Cause(err2))
+	}
+	if assert.Len(t, repo.txs, 2) {
+		assert.Equal(t, tx1, repo.txs[hash1])
+		assert.NotEqual(t, tx2, repo.txs[hash2])
+	}
+}
+
+func TestRepoHas(t *testing.T) {
+
+	// initialize the repository with required maps
+	repo := &Repo{
+		txs: make(map[types.Hash]*types.Transaction),
+	}
+
+	// create entities and set up state
+	hash1 := types.Hash{0x1}
+	hash2 := types.Hash{0x2}
+
+	repo.txs[hash1] = &types.Transaction{}
+
+	// execute has
+	ok1 := repo.Has(hash1)
+	ok2 := repo.Has(hash2)
+
+	// check conditions
+	assert.True(t, ok1)
+	assert.False(t, ok2)
+}
+
+func TestRepoGet(t *testing.T) {
+
+	// initialize the repository with required maps
+	repo := &Repo{
+		txs: make(map[types.Hash]*types.Transaction),
+	}
+
+	// create entities and set up state
+	hash1 := types.Hash{0x1}
+	hash2 := types.Hash{0x2}
+
+	tx1 := &types.Transaction{Hash: hash1}
+
+	repo.txs[hash1] = tx1
+
+	// execute get
+	out1, err1 := repo.Get(hash1)
+	_, err2 := repo.Get(hash2)
+
+	// check conditions
+	assert.Nil(t, err1)
+	assert.Equal(t, tx1, out1)
+
+	if assert.NotNil(t, err2) {
+		assert.Equal(t, ErrNotExist, errors.Cause(err2))
+	}
+}

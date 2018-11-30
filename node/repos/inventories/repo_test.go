@@ -30,7 +30,7 @@ func TestNewRepo(t *testing.T) {
 	assert.NotNil(t, repo.inventories)
 }
 
-func TestRepoAddValid(t *testing.T) {
+func TestRepoAdd(t *testing.T) {
 
 	// initialize the repository with required maps
 	repo := &Repo{
