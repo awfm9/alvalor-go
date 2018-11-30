@@ -38,7 +38,7 @@ func TestRepoAddExisting(t *testing.T) {
 
 	header := &types.Header{Hash: hash1, Parent: hash2}
 
-	hr.headers[header.Hash] = header
+	hr.headers[header.Hash] = &types.Header{}
 
 	// try adding header already known and check outcome
 	err := hr.Add(header)
@@ -46,7 +46,7 @@ func TestRepoAddExisting(t *testing.T) {
 		assert.Equal(t, ErrExist, errors.Cause(err))
 	}
 	if assert.Len(t, hr.headers, 1) {
-		assert.Equal(t, hr.headers[header.Hash], header)
+		assert.NotEqual(t, hr.headers[header.Hash], header)
 	}
 }
 

@@ -30,31 +30,31 @@ type Repo struct {
 
 // NewRepo creates a new store for block inventories.
 func NewRepo() *Repo {
-	ir := &Repo{
+	repo := &Repo{
 		inventories: make(map[types.Hash]*types.Inventory),
 	}
-	return ir
+	return repo
 }
 
 // Add stores a new inventory.
-func (ir *Repo) Add(inv *types.Inventory) error {
-	_, ok := ir.inventories[inv.Hash]
+func (repo *Repo) Add(inv *types.Inventory) error {
+	_, ok := repo.inventories[inv.Hash]
 	if ok {
 		return errors.Wrap(ErrExist, "inventory already exists")
 	}
-	ir.inventories[inv.Hash] = inv
+	repo.inventories[inv.Hash] = inv
 	return nil
 }
 
 // Has checks if a given inventory is known.
-func (ir *Repo) Has(hash types.Hash) bool {
-	_, ok := ir.inventories[hash]
+func (repo *Repo) Has(hash types.Hash) bool {
+	_, ok := repo.inventories[hash]
 	return ok
 }
 
 // Get retrieves the inventory with the given block hash.
-func (ir *Repo) Get(hash types.Hash) (*types.Inventory, error) {
-	inv, ok := ir.inventories[hash]
+func (repo *Repo) Get(hash types.Hash) (*types.Inventory, error) {
+	inv, ok := repo.inventories[hash]
 	if !ok {
 		return nil, errors.Wrap(ErrNotExist, "inventory does not exist")
 	}
