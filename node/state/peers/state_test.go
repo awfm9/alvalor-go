@@ -131,7 +131,7 @@ func TestStateSeen(t *testing.T) {
 	}
 }
 
-func TestStateAddresses(t *testing.T) {
+func TestStateAddressesCount(t *testing.T) {
 
 	address1 := "192.0.2.100:1337"
 	address2 := "192.0.2.200:1337"
@@ -208,6 +208,8 @@ func TestStateAddresses(t *testing.T) {
 	for name, vector := range vectors {
 		state := &State{peers: vector.peers}
 		addresses := state.Addresses(vector.filters...)
-		assert.Equal(t, vector.addresses, addresses, name)
+		count := state.Count(vector.filters...)
+		assert.ElementsMatch(t, vector.addresses, addresses, name)
+		assert.Equal(t, uint(len(vector.addresses)), count, name)
 	}
 }
