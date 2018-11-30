@@ -99,4 +99,37 @@ func TestHasEntity(t *testing.T) {
 }
 
 func TestIsActive(t *testing.T) {
+
+	vectors := map[string]struct {
+		is     bool
+		active bool
+		ok     bool
+	}{
+		"true_true": {
+			is:     true,
+			active: true,
+			ok:     true,
+		},
+		"true_false": {
+			is:     true,
+			active: false,
+			ok:     false,
+		},
+		"false_false": {
+			is:     false,
+			active: false,
+			ok:     true,
+		},
+		"false_true": {
+			is:     false,
+			active: true,
+			ok:     false,
+		},
+	}
+
+	for name, vector := range vectors {
+		p := &Peer{active: vector.active}
+		ok := IsActive(vector.is)(p)
+		assert.Equal(t, vector.ok, ok, name)
+	}
 }
