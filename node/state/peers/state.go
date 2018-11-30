@@ -18,10 +18,10 @@
 package peers
 
 import (
-	"errors"
 	"sync"
 
 	"github.com/alvalor/alvalor-go/types"
+	"github.com/pkg/errors"
 )
 
 // State represents the state of all peers.
@@ -54,28 +54,30 @@ func (s *State) Active(address string) {
 }
 
 // Inactive marks a peer as inactive.
-func (s *State) Inactive(address string) {
+func (s *State) Inactive(address string) error {
 	s.Lock()
 	defer s.Unlock()
 
 	p, ok := s.peers[address]
 	if !ok {
-		return
+		return errors.Wrap(ErrNotExist, "active peer not found")
 	}
 	p.active = false
+	return nil
 }
 
 // Received marks a download as received for a given peer.
-func (s *State) Received(address string, hash types.Hash) {
+func (s *State) Received(address string, hash types.Hash) error {
 	s.Lock()
 	defer s.Unlock()
 
 	p, ok := s.peers[address]
 	if !ok {
-		return
+		return errors.Wrap(ErrNotExist, "peer for message not found")
 	}
 
 	p.yes[hash] = struct{}{}
+	return nil
 }
 
 // Seen returns a list of entities a peer is aware of.
@@ -85,7 +87,7 @@ func (s *State) Seen(address string) ([]types.Hash, error) {
 
 	p, ok := s.peers[address]
 	if !ok {
-		return nil, errors.New("peer not found")
+		return nil, errors.Wrap(ErrNotExist, "peer for list not found")
 	}
 
 	seen := make([]types.Hash, 0, len(p.yes))

@@ -21,98 +21,193 @@ import (
 	"testing"
 
 	"github.com/alvalor/alvalor-go/types"
+	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 )
 
-func TestNewPeers(t *testing.T) {
-	peers := newPeers()
-	assert.NotNil(t, peers.peers)
+func TestNewState(t *testing.T) {
+	state := NewState()
+	assert.NotNil(t, state.peers)
 }
 
-func TestPeersActive(t *testing.T) {
+func TestStateActive(t *testing.T) {
 	address1 := "192.0.2.100:1337"
 	address2 := "192.0.2.200:1337"
-	peers := &simplePeers{actives: make(map[string]bool)}
+	state := &State{peers: make(map[string]*Peer)}
 
-	peers.Active(address1)
-	if assert.Len(t, peers.actives, 1) {
-		assert.Contains(t, peers.actives, address1)
+	state.Active(address1)
+	if assert.Len(t, state.peers, 1) {
+		if assert.Contains(t, state.peers, address1) {
+			p := state.peers[address1]
+			assert.True(t, p.active)
+		}
 	}
 
-	peers.Active(address1)
-	assert.Len(t, peers.actives, 1)
+	state.peers[address2] = &Peer{active: false}
 
-	peers.Active(address2)
-	if assert.Len(t, peers.actives, 2) {
-		assert.Contains(t, peers.actives, address2)
-	}
-}
-
-func TestPeersInactive(t *testing.T) {
-	address1 := "192.0.2.100:1337"
-	address2 := "192.0.2.200:1337"
-	peers := &simplePeers{actives: make(map[string]bool)}
-
-	peers.actives[address1] = true
-	peers.actives[address2] = true
-	peers.Inactive(address1)
-	if assert.Len(t, peers.actives, 1) {
-		assert.NotContains(t, peers.actives, address1)
-	}
-
-	peers.Inactive(address1)
-	assert.Len(t, peers.actives, 1)
-
-	peers.Inactive(address2)
-	assert.Len(t, peers.actives, 0)
-}
-
-func TestPeersActives(t *testing.T) {
-	address1 := "192.0.2.100:1337"
-	address2 := "192.0.2.200:1337"
-	peers := &simplePeers{actives: make(map[string]bool)}
-
-	actives := peers.Actives()
-	assert.Empty(t, actives)
-
-	peers.actives[address1] = true
-	peers.actives[address2] = true
-	actives = peers.Actives()
-	assert.ElementsMatch(t, []string{address1, address2}, actives)
-}
-
-func TestPeersTag(t *testing.T) {
-	id1 := [32]byte{1, 2, 3, 4}
-	id2 := [32]byte{5, 6, 7, 8}
-	address1 := "192.0.2.100:1337"
-	address2 := "192.0.2.200:1337"
-	peers := &simplePeers{tags: make(map[types.Hash][]string)}
-
-	peers.Tag(address1, id1)
-	if assert.Len(t, peers.tags[id1], 1) {
-		assert.Contains(t, peers.tags[id1], address1)
-	}
-
-	assert.Empty(t, peers.tags[id2])
-
-	peers.Tag(address1, id2)
-	if assert.Len(t, peers.tags[id2], 1) {
-		assert.Contains(t, peers.tags[id2], address1)
-	}
-
-	peers.Tag(address2, id1)
-	if assert.Len(t, peers.tags[id1], 2) {
-		assert.Contains(t, peers.tags[id1], address2)
+	state.Active(address2)
+	if assert.Len(t, state.peers, 2) {
+		if assert.Contains(t, state.peers, address2) {
+			p := state.peers[address2]
+			assert.True(t, p.active)
+		}
 	}
 }
 
-func TestPeersTags(t *testing.T) {
-	id := [32]byte{1, 2, 3, 4}
+func TestStateInactive(t *testing.T) {
 	address1 := "192.0.2.100:1337"
 	address2 := "192.0.2.200:1337"
-	peers := &simplePeers{tags: make(map[types.Hash][]string)}
+	state := &State{peers: make(map[string]*Peer)}
 
-	peers.tags[id] = []string{address1, address2}
-	tags := peers.Tags(id)
-	assert.ElementsMatch(t, []string{address1, address2}, tags)
+	err := state.Inactive(address1)
+	if assert.NotNil(t, err) {
+		assert.Equal(t, ErrNotExist, errors.Cause(err))
+	}
+	assert.Len(t, state.peers, 0)
+
+	state.peers[address2] = &Peer{active: true}
+
+	err = state.Inactive(address2)
+	assert.Nil(t, err)
+	if assert.Len(t, state.peers, 1) {
+		if assert.Contains(t, state.peers, address2) {
+			p := state.peers[address2]
+			assert.False(t, p.active)
+		}
+	}
+}
+
+func TestStateReceived(t *testing.T) {
+
+	address1 := "192.0.2.100:1337"
+	address2 := "192.0.2.200:1337"
+	hash1 := types.Hash{0x1}
+	state := &State{peers: make(map[string]*Peer)}
+
+	err := state.Received(address1, hash1)
+	if assert.NotNil(t, err) {
+		assert.Equal(t, ErrNotExist, errors.Cause(err))
+	}
+
+	state.peers[address2] = &Peer{yes: make(map[types.Hash]struct{})}
+	err = state.Received(address2, hash1)
+	assert.Nil(t, err)
+	if assert.Len(t, state.peers[address2].yes, 1) {
+		assert.Contains(t, state.peers[address2].yes, hash1)
+	}
+}
+
+func TestStateSeen(t *testing.T) {
+
+	address1 := "192.0.2.100:1337"
+	address2 := "192.0.2.200:1337"
+	address3 := "192.0.2.150:1337"
+
+	hash1 := types.Hash{0x1}
+	hash2 := types.Hash{0x2}
+
+	state := &State{peers: make(map[string]*Peer)}
+
+	peer1 := &Peer{yes: make(map[types.Hash]struct{})}
+	peer2 := &Peer{yes: make(map[types.Hash]struct{})}
+
+	peer1.yes[hash1] = struct{}{}
+	peer1.yes[hash2] = struct{}{}
+
+	state.peers[address1] = peer1
+	state.peers[address2] = peer2
+
+	seen, err := state.Seen(address1)
+	assert.Nil(t, err)
+	assert.ElementsMatch(t, []types.Hash{hash1, hash2}, seen)
+
+	seen, err = state.Seen(address2)
+	assert.Nil(t, err)
+	assert.Equal(t, []types.Hash{}, seen)
+
+	_, err = state.Seen(address3)
+	if assert.NotNil(t, err) {
+		assert.Equal(t, ErrNotExist, errors.Cause(err))
+	}
+}
+
+func TestStateAddresses(t *testing.T) {
+
+	address1 := "192.0.2.100:1337"
+	address2 := "192.0.2.200:1337"
+	address3 := "192.0.2.150:1337"
+	address4 := "192.0.2.250:1337"
+
+	hash1 := types.Hash{0x1}
+	hash2 := types.Hash{0x2}
+
+	vectors := map[string]struct {
+		peers     map[string]*Peer
+		filters   []FilterFunc
+		addresses []string
+	}{
+		"active": {
+			peers: map[string]*Peer{
+				address1: &Peer{active: true},
+				address2: &Peer{active: false},
+				address3: &Peer{active: true},
+				address4: &Peer{active: false},
+			},
+			filters: []FilterFunc{
+				IsActive(true),
+			},
+			addresses: []string{
+				address1,
+				address3,
+			},
+		},
+		"entity": {
+			peers: map[string]*Peer{
+				address1: &Peer{yes: map[types.Hash]struct{}{hash1: struct{}{}}},
+				address2: &Peer{yes: map[types.Hash]struct{}{hash2: struct{}{}}},
+				address3: &Peer{yes: map[types.Hash]struct{}{}},
+				address4: &Peer{yes: map[types.Hash]struct{}{hash1: struct{}{}, hash2: struct{}{}}},
+			},
+			filters: []FilterFunc{
+				HasEntity(EntityYes, hash2),
+			},
+			addresses: []string{
+				address2,
+				address4,
+			},
+		},
+		"both": {
+			peers: map[string]*Peer{
+				address1: &Peer{
+					active: true,
+					yes:    map[types.Hash]struct{}{hash1: struct{}{}},
+				},
+				address2: &Peer{
+					active: true,
+					yes:    map[types.Hash]struct{}{},
+				},
+				address3: &Peer{
+					active: false,
+					yes:    map[types.Hash]struct{}{hash1: struct{}{}},
+				},
+				address4: &Peer{
+					active: false,
+					yes:    map[types.Hash]struct{}{},
+				},
+			},
+			filters: []FilterFunc{
+				IsActive(false),
+				HasEntity(EntityYes, hash1),
+			},
+			addresses: []string{
+				address3,
+			},
+		},
+	}
+
+	for name, vector := range vectors {
+		state := &State{peers: vector.peers}
+		addresses := state.Addresses(vector.filters...)
+		assert.Equal(t, vector.addresses, addresses, name)
+	}
 }
