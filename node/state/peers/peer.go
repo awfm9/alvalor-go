@@ -22,6 +22,6 @@ import "github.com/alvalor/alvalor-go/types"
 // Peer represents the state of a peer.
 type Peer struct {
 	active bool
-	has    map[types.Hash]struct{}
-	not    map[types.Hash]struct{}
+	yes    map[types.Hash]struct{}
+	no     map[types.Hash]struct{}
 }

@@ -24,36 +24,6 @@ import (
 	"github.com/alvalor/alvalor-go/types"
 )
 
-// FilterFunc represens a filter that allows us to filter the list of
-// returned peers from the peer states.
-type FilterFunc func(*Peer) bool
-
-// HasEntity allows us to select only peers that have or don't have a certain
-// entity (such as transaction or header).
-func HasEntity(has bool, hash types.Hash) func(*Peer) bool {
-	return func(p *Peer) bool {
-		_, ok := p.has[hash]
-		return ok == has
-	}
-}
-
-// MayEntity allows us to select only peers that may have a certain entity.
-func MayEntity(hash types.Hash) func(*Peer) bool {
-	return func(p *Peer) bool {
-		_, ok1 := p.has[hash]
-		_, ok2 := p.not[hash]
-		return !(ok1 || ok2)
-	}
-}
-
-// IsActive allows us to only select peers that are currently active or
-// inactive.
-func IsActive(active bool) func(*Peer) bool {
-	return func(p *Peer) bool {
-		return p.active == active
-	}
-}
-
 // State represents the state of all peers.
 type State struct {
 	sync.Mutex
@@ -75,8 +45,8 @@ func (s *State) Active(address string) {
 	p, ok := s.peers[address]
 	if !ok {
 		p = &Peer{
-			has: make(map[types.Hash]struct{}),
-			not: make(map[types.Hash]struct{}),
+			yes: make(map[types.Hash]struct{}),
+			no:  make(map[types.Hash]struct{}),
 		}
 		s.peers[address] = p
 	}
@@ -105,7 +75,7 @@ func (s *State) Received(address string, hash types.Hash) {
 		return
 	}
 
-	p.has[hash] = struct{}{}
+	p.yes[hash] = struct{}{}
 }
 
 // Seen returns a list of entities a peer is aware of.
@@ -118,8 +88,8 @@ func (s *State) Seen(address string) ([]types.Hash, error) {
 		return nil, errors.New("peer not found")
 	}
 
-	seen := make([]types.Hash, 0, len(p.has))
-	for hash := range p.has {
+	seen := make([]types.Hash, 0, len(p.yes))
+	for hash := range p.yes {
 		seen = append(seen, hash)
 	}
 
